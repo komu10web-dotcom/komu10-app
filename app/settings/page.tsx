@@ -1,184 +1,404 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import Header from '@/components/Header';
+import Modal from '@/components/Modal';
+import ProjectCard from '@/components/ProjectCard';
+import ProjectForm from '@/components/ProjectForm';
+import { supabase, Transaction, Project } from '@/lib/supabase';
+import { COLORS, DIVISIONS, PROJECT_STATUS, formatYen, formatPercent, getDivision, getStatus, getUser } from '@/lib/constants';
 
-export default function SettingsPage() {
-  const [gasUrl, setGasUrl] = useState('');
+type SortKey = 'name' | 'date' | 'revenue' | 'profit';
+type ViewMode = 'card' | 'list';
+
+// GASレスポンスの型
+interface GASProject {
+  name: string;
+  division: string;
+  status: string;
+  externalId: string;
+  publishDate?: string;
+  category?: string;
+}
+
+interface GASResponse {
+  projects: GASProject[];
+  revenue?: Array<{
+    date: string;
+    amount: number;
+    description: string;
+    division: string;
+  }>;
+  fetchedAt: string;
+}
+
+export default function ProjectsPage() {
+  const [currentUser, setCurrentUser] = useState('all');
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [filters, setFilters] = useState({ division: '', status: '', owner: '' });
+  const [sortKey, setSortKey] = useState<SortKey>('date');
+  const [sortAsc, setSortAsc] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('card');
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | undefined>();
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+  // 同期用のstate
   const [syncing, setSyncing] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<string | null>(null);
-  const [lastSynced, setLastSynced] = useState<string | null>(null);
+  const [syncMessage, setSyncMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  // ローカルストレージからGAS URLを読み込み
   useEffect(() => {
-    const savedUrl = localStorage.getItem('komu10_gas_url');
-    const savedLastSynced = localStorage.getItem('komu10_last_synced');
-    if (savedUrl) setGasUrl(savedUrl);
-    if (savedLastSynced) setLastSynced(savedLastSynced);
+    const fetchData = async () => {
+      setLoading(true);
+      const [txRes, pjRes] = await Promise.all([
+        supabase.from('transactions').select('*'),
+        supabase.from('projects').select('*').order('created_at', { ascending: false }),
+      ]);
+      if (txRes.data) setTransactions(txRes.data);
+      if (pjRes.data) setProjects(pjRes.data);
+      setLoading(false);
+    };
+    fetchData();
   }, []);
 
-  // GAS URLを保存
-  const saveGasUrl = () => {
-    localStorage.setItem('komu10_gas_url', gasUrl);
-    setSyncStatus('URL を保存しました');
-    setTimeout(() => setSyncStatus(null), 3000);
+  useEffect(() => {
+    const cookies = document.cookie.split(';');
+    const userCookie = cookies.find(c => c.trim().startsWith('komu10_user='));
+    if (userCookie) {
+      const user = userCookie.split('=')[1];
+      if (user === 'all' || user === 'tomo' || user === 'toshiki') setCurrentUser(user);
+    }
+  }, []);
+
+  const handleUserChange = (user: string) => {
+    setCurrentUser(user);
+    document.cookie = `komu10_user=${user}; path=/; max-age=31536000`;
   };
 
-  // スプレッドシートと同期
-  const syncWithSheets = async () => {
+  // プロジェクト別の統計
+  const projectStats = useMemo(() => {
+    const stats: { [key: string]: { revenue: number; expense: number } } = {};
+    transactions.forEach(tx => {
+      if (tx.project_id) {
+        if (!stats[tx.project_id]) stats[tx.project_id] = { revenue: 0, expense: 0 };
+        if (tx.tx_type === 'revenue') stats[tx.project_id].revenue += tx.amount;
+        else stats[tx.project_id].expense += tx.amount;
+      }
+    });
+    return stats;
+  }, [transactions]);
+
+  // フィルター・ソート適用
+  const filteredProjects = useMemo(() => {
+    let result = projects.filter(p => {
+      if (filters.division && p.division !== filters.division) return false;
+      if (filters.status && p.status !== filters.status) return false;
+      if (filters.owner && p.owner !== filters.owner) return false;
+      return true;
+    });
+
+    result.sort((a, b) => {
+      const statsA = projectStats[a.id] || { revenue: 0, expense: 0 };
+      const statsB = projectStats[b.id] || { revenue: 0, expense: 0 };
+      let cmp = 0;
+      switch (sortKey) {
+        case 'name': cmp = a.name.localeCompare(b.name); break;
+        case 'date': cmp = (a.created_at || '').localeCompare(b.created_at || ''); break;
+        case 'revenue': cmp = statsA.revenue - statsB.revenue; break;
+        case 'profit': cmp = (statsA.revenue - statsA.expense) - (statsB.revenue - statsB.expense); break;
+      }
+      return sortAsc ? cmp : -cmp;
+    });
+
+    return result;
+  }, [projects, filters, sortKey, sortAsc, projectStats]);
+
+  const handleAdd = () => { setEditingProject(undefined); setIsModalOpen(true); };
+  const handleEdit = (p: Project) => { setEditingProject(p); setIsModalOpen(true); };
+
+  const handleDelete = async (id: string) => {
+    const { error } = await supabase.from('projects').delete().eq('id', id);
+    if (!error) setProjects(prev => prev.filter(p => p.id !== id));
+    setDeleteConfirm(null);
+  };
+
+  const handleSubmit = async (data: Partial<Project>) => {
+    if (editingProject) {
+      const { data: updated, error } = await supabase.from('projects').update({ ...data, updated_at: new Date().toISOString() }).eq('id', editingProject.id).select().single();
+      if (!error && updated) setProjects(prev => prev.map(p => p.id === updated.id ? updated : p));
+    } else {
+      const { data: created, error } = await supabase.from('projects').insert([{ ...data, owner: currentUser === 'all' ? 'tomo' : currentUser }]).select().single();
+      if (!error && created) setProjects(prev => [created, ...prev]);
+    }
+    setIsModalOpen(false);
+    setEditingProject(undefined);
+  };
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) setSortAsc(!sortAsc);
+    else { setSortKey(key); setSortAsc(false); }
+  };
+
+  // スプレッドシート同期処理
+  const handleSync = async () => {
+    const gasUrl = localStorage.getItem('gas_api_url');
+    
     if (!gasUrl) {
-      setSyncStatus('GAS API URL を入力してください');
+      setSyncMessage({ type: 'error', text: '設定ページでGAS URLを設定してください' });
+      setTimeout(() => setSyncMessage(null), 5000);
       return;
     }
-
+    
     setSyncing(true);
-    setSyncStatus('同期中...');
-
+    setSyncMessage(null);
+    
     try {
       const response = await fetch(gasUrl);
-      if (!response.ok) throw new Error('API エラー');
+      if (!response.ok) throw new Error('GASからの取得に失敗しました');
       
-      const data = await response.json();
+      const data: GASResponse = await response.json();
       
-      if (data.error) {
-        throw new Error(data.error);
+      if (!data.projects || data.projects.length === 0) {
+        setSyncMessage({ type: 'error', text: 'プロジェクトデータがありません' });
+        return;
       }
-
-      // プロジェクトデータをローカルストレージに保存（後でSupabaseに移行）
-      localStorage.setItem('komu10_sheets_projects', JSON.stringify(data.projects || []));
-      localStorage.setItem('komu10_sheets_revenue', JSON.stringify(data.revenue || []));
       
-      const now = new Date().toLocaleString('ja-JP');
-      setLastSynced(now);
-      localStorage.setItem('komu10_last_synced', now);
+      const owner = currentUser === 'all' ? 'tomo' : currentUser;
       
-      setSyncStatus(`同期完了: プロジェクト ${data.projects?.length || 0}件, 売上データ ${data.revenue?.length || 0}件`);
+      let insertedCount = 0;
+      let updatedCount = 0;
+      let errorCount = 0;
+      
+      for (const gasProject of data.projects) {
+        const projectData = {
+          name: gasProject.name,
+          division: gasProject.division || 'youtube',
+          owner: owner,
+          status: gasProject.status || 'active',
+          external_id: gasProject.externalId,
+          publish_date: gasProject.publishDate || null,
+          category: gasProject.category || null,
+          updated_at: new Date().toISOString(),
+        };
+        
+        // external_idで既存チェック
+        const { data: existing } = await supabase
+          .from('projects')
+          .select('id')
+          .eq('external_id', gasProject.externalId)
+          .single();
+        
+        if (existing) {
+          const { error } = await supabase
+            .from('projects')
+            .update(projectData)
+            .eq('id', existing.id);
+          
+          if (error) errorCount++;
+          else updatedCount++;
+        } else {
+          const { error } = await supabase
+            .from('projects')
+            .insert(projectData);
+          
+          if (error) errorCount++;
+          else insertedCount++;
+        }
+      }
+      
+      // 結果メッセージ
+      const messages = [];
+      if (insertedCount > 0) messages.push(`${insertedCount}件追加`);
+      if (updatedCount > 0) messages.push(`${updatedCount}件更新`);
+      if (errorCount > 0) messages.push(`${errorCount}件エラー`);
+      
+      setSyncMessage({
+        type: errorCount > 0 ? 'error' : 'success',
+        text: messages.length > 0 ? messages.join('、') : '同期完了（変更なし）',
+      });
+      
+      // プロジェクト一覧を再取得
+      const { data: refreshed } = await supabase.from('projects').select('*').order('created_at', { ascending: false });
+      if (refreshed) setProjects(refreshed);
+      
     } catch (error) {
-      setSyncStatus(`エラー: ${error instanceof Error ? error.message : '不明なエラー'}`);
+      setSyncMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : '同期に失敗しました',
+      });
     } finally {
       setSyncing(false);
+      setTimeout(() => setSyncMessage(null), 5000);
     }
   };
 
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="text-sm" style={{ color: COLORS.textMuted }}>読み込み中...</div></div>;
+
   return (
-    <div className="max-w-2xl mx-auto">
-      <h1 className="text-2xl font-semibold mb-6">設定</h1>
-
-      {/* アプリ情報 */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-        <h2 className="text-lg font-medium mb-4">アプリ情報</h2>
-        <div className="flex justify-between py-2 border-b border-gray-100">
-          <span className="text-gray-600">バージョン</span>
-          <span>0.3.1</span>
+    <div className="min-h-screen" style={{ background: COLORS.bg }}>
+      <Header currentUser={currentUser} onUserChange={handleUserChange} />
+      <main className="max-w-7xl mx-auto px-4 py-6">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-lg font-medium" style={{ color: COLORS.textPrimary }}>プロジェクト</h1>
+          <div className="flex items-center gap-2">
+            {/* 同期ボタン追加 */}
+            <button
+              className="btn"
+              onClick={handleSync}
+              disabled={syncing}
+              style={{ 
+                background: syncing ? COLORS.textMuted : COLORS.green,
+                color: 'white',
+                opacity: syncing ? 0.7 : 1,
+              }}
+            >
+              {syncing ? (
+                <span className="flex items-center gap-2">
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  同期中...
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  同期
+                </span>
+              )}
+            </button>
+            <button className="btn btn-primary" onClick={handleAdd}>+ プロジェクト追加</button>
+          </div>
         </div>
-        <div className="flex justify-between py-2">
-          <span className="text-gray-600">現在のユーザー</span>
-          <span>全体</span>
-        </div>
-      </div>
 
-      {/* Google Sheets 連携 */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-        <h2 className="text-lg font-medium mb-4">Google Sheets 連携</h2>
-        <p className="text-sm text-gray-500 mb-4">
-          Google Apps Script（GAS）を使ってスプレッドシートからプロジェクト・売上データを自動取得します。
-        </p>
-        
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            GAS API URL
-          </label>
-          <input
-            type="text"
-            value={gasUrl}
-            onChange={(e) => setGasUrl(e.target.value)}
-            placeholder="https://script.google.com/macros/s/xxxxx/exec"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D4A03A] focus:border-transparent"
-          />
-          <p className="text-xs text-gray-400 mt-1">
-            GAS をデプロイして取得した URL を貼り付けてください
-          </p>
-        </div>
-
-        <div className="flex gap-3 mb-4">
-          <button
-            onClick={saveGasUrl}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition"
+        {/* 同期メッセージ */}
+        {syncMessage && (
+          <div 
+            className="mb-4 px-4 py-3 rounded-lg text-sm"
+            style={{ 
+              background: syncMessage.type === 'success' ? 'rgba(27,77,62,0.1)' : 'rgba(185,28,28,0.1)',
+              color: syncMessage.type === 'success' ? COLORS.green : COLORS.crimson,
+              border: `1px solid ${syncMessage.type === 'success' ? COLORS.green : COLORS.crimson}20`,
+            }}
           >
-            URL を保存
-          </button>
-          <button
-            onClick={syncWithSheets}
-            disabled={syncing || !gasUrl}
-            className={`px-4 py-2 rounded-md transition flex items-center gap-2 ${
-              gasUrl
-                ? 'bg-[#D4A03A] text-white hover:bg-[#c4902a]'
-                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-            }`}
-          >
-            {syncing ? (
-              <>
-                <span className="animate-spin">⟳</span>
-                同期中...
-              </>
-            ) : (
-              <>🔄 今すぐ同期</>
-            )}
-          </button>
-        </div>
-
-        {syncStatus && (
-          <div className={`p-3 rounded-md text-sm ${
-            syncStatus.includes('エラー') 
-              ? 'bg-red-50 text-red-700' 
-              : syncStatus.includes('完了') 
-                ? 'bg-green-50 text-green-700'
-                : 'bg-blue-50 text-blue-700'
-          }`}>
-            {syncStatus}
+            {syncMessage.text}
           </div>
         )}
 
-        {lastSynced && (
-          <p className="text-xs text-gray-400 mt-3">
-            最終同期: {lastSynced}
-          </p>
-        )}
-      </div>
+        {/* フィルター・ソート・表示切替 */}
+        <div className="card mb-6">
+          <div className="flex flex-wrap items-center gap-3">
+            <select className="input select w-48" value={filters.division} onChange={e => setFilters(prev => ({ ...prev, division: e.target.value }))}>
+              <option value="">全部門</option>
+              {DIVISIONS.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
+            <select className="input select w-32" value={filters.status} onChange={e => setFilters(prev => ({ ...prev, status: e.target.value }))}>
+              <option value="">全ステータス</option>
+              {PROJECT_STATUS.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+            <select className="input select w-32" value={filters.owner} onChange={e => setFilters(prev => ({ ...prev, owner: e.target.value }))}>
+              <option value="">全担当者</option>
+              <option value="tomo">トモ</option>
+              <option value="toshiki">トシキ</option>
+            </select>
 
-      {/* テーマ */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-        <h2 className="text-lg font-medium mb-4">テーマ</h2>
-        <div className="flex gap-3">
-          <button className="px-4 py-2 bg-[#D4A03A] text-white rounded-md">
-            ライト
-          </button>
-          <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">
-            ウォーム
-          </button>
-          <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">
-            クール
-          </button>
+            <div className="flex-1" />
+
+            {/* ソート */}
+            <div className="flex items-center gap-1">
+              <span className="text-xs" style={{ color: COLORS.textMuted }}>並び替え:</span>
+              {(['name', 'date', 'revenue', 'profit'] as SortKey[]).map(key => (
+                <button key={key} onClick={() => toggleSort(key)} className={`px-2 py-1 text-xs rounded ${sortKey === key ? 'bg-gray-100' : ''}`} style={{ color: sortKey === key ? COLORS.green : COLORS.textSecondary }}>
+                  {{ name: '名前', date: '日付', revenue: '売上', profit: '利益' }[key]}
+                  {sortKey === key && (sortAsc ? ' ↑' : ' ↓')}
+                </button>
+              ))}
+            </div>
+
+            {/* 表示切替 */}
+            <div className="flex items-center border rounded" style={{ borderColor: COLORS.border }}>
+              <button onClick={() => setViewMode('card')} className="p-2" style={{ background: viewMode === 'card' ? 'rgba(27,77,62,0.1)' : 'transparent', color: viewMode === 'card' ? COLORS.green : COLORS.textMuted }}>
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>
+              </button>
+              <button onClick={() => setViewMode('list')} className="p-2" style={{ background: viewMode === 'list' ? 'rgba(27,77,62,0.1)' : 'transparent', color: viewMode === 'list' ? COLORS.green : COLORS.textMuted }}>
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="2" rx="1" /><rect x="3" y="11" width="18" height="2" rx="1" /><rect x="3" y="18" width="18" height="2" rx="1" /></svg>
+              </button>
+            </div>
+          </div>
+          <div className="mt-3 text-xs" style={{ color: COLORS.textMuted }}>{filteredProjects.length}件のプロジェクト</div>
         </div>
-        <p className="text-xs text-gray-400 mt-3">
-          ※ テーマ切り替えは今後のアップデートで対応予定
-        </p>
-      </div>
 
-      {/* データ管理 */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-lg font-medium mb-4">データ管理</h2>
-        <button className="w-full py-3 border border-gray-300 rounded-md text-gray-600 hover:bg-gray-50 transition flex items-center justify-center gap-2">
-          ⬇ データをエクスポート
-        </button>
-        <p className="text-xs text-gray-400 mt-3">
-          ※ データエクスポートは今後のアップデートで対応予定
-        </p>
-      </div>
+        {/* カード表示 */}
+        {viewMode === 'card' && (
+          <div className="grid grid-cols-2 gap-4">
+            {filteredProjects.map(p => (
+              <div key={p.id} className="relative group">
+                <ProjectCard project={p} stats={projectStats[p.id] || { revenue: 0, expense: 0 }} onClick={() => handleEdit(p)} />
+                <button onClick={(e) => { e.stopPropagation(); setDeleteConfirm(p.id); }} className="absolute top-2 right-2 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50" style={{ color: COLORS.crimson }}>
+                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
-      <p className="text-center text-xs text-gray-400 mt-8">
-        komu10 会計・事業管理システム<br />
-        Built with Next.js + Supabase + Vercel
-      </p>
+        {/* リスト表示 */}
+        {viewMode === 'list' && (
+          <div className="card overflow-hidden p-0">
+            <table className="table">
+              <thead>
+                <tr><th>プロジェクト</th><th>部門</th><th>担当</th><th>ステータス</th><th className="text-right">売上</th><th className="text-right">経費</th><th className="text-right">利益</th><th className="text-right">ROI</th><th className="text-right">利益率</th><th></th></tr>
+              </thead>
+              <tbody>
+                {filteredProjects.map(p => {
+                  const stats = projectStats[p.id] || { revenue: 0, expense: 0 };
+                  const profit = stats.revenue - stats.expense;
+                  const roi = stats.expense > 0 ? (profit / stats.expense) * 100 : 0;
+                  const margin = stats.revenue > 0 ? (profit / stats.revenue) * 100 : 0;
+                  const div = getDivision(p.division);
+                  const status = getStatus(p.status);
+                  const owner = getUser(p.owner);
+                  return (
+                    <tr key={p.id} className="cursor-pointer" onClick={() => handleEdit(p)}>
+                      <td className="font-medium">{p.name}</td>
+                      <td><div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{ background: div?.color }} />{div?.abbr}</div></td>
+                      <td>{owner?.name}</td>
+                      <td><span className="badge" style={{ background: `${status?.color}15`, color: status?.color }}>{status?.name}</span></td>
+                      <td className="text-right font-number" style={{ color: COLORS.gold }}>{formatYen(stats.revenue)}</td>
+                      <td className="text-right font-number" style={{ color: COLORS.crimson }}>{formatYen(stats.expense)}</td>
+                      <td className="text-right font-number" style={{ color: profit >= 0 ? COLORS.green : COLORS.crimson }}>{formatYen(profit)}</td>
+                      <td className="text-right font-number tooltip" data-tooltip="利益÷経費×100" style={{ color: roi >= 100 ? COLORS.green : COLORS.textSecondary }}>{stats.expense > 0 ? formatPercent(roi) : '—'}</td>
+                      <td className="text-right font-number tooltip" data-tooltip="利益÷売上×100" style={{ color: margin >= 50 ? COLORS.green : COLORS.textSecondary }}>{stats.revenue > 0 ? formatPercent(margin) : '—'}</td>
+                      <td><button onClick={(e) => { e.stopPropagation(); setDeleteConfirm(p.id); }} className="p-1 rounded hover:bg-red-50" style={{ color: COLORS.crimson }}><svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg></button></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {filteredProjects.length === 0 && <div className="text-center py-12" style={{ color: COLORS.textMuted }}>プロジェクトがありません</div>}
+          </div>
+        )}
+
+        {filteredProjects.length === 0 && viewMode === 'card' && <div className="text-center py-12" style={{ color: COLORS.textMuted }}>プロジェクトがありません</div>}
+      </main>
+
+      <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setEditingProject(undefined); }} title={editingProject ? 'プロジェクトを編集' : 'プロジェクトを追加'}>
+        <ProjectForm project={editingProject} currentUser={currentUser} onSubmit={handleSubmit} onCancel={() => { setIsModalOpen(false); setEditingProject(undefined); }} />
+      </Modal>
+
+      <Modal isOpen={!!deleteConfirm} onClose={() => setDeleteConfirm(null)} title="プロジェクトを削除">
+        <p className="text-sm mb-4" style={{ color: COLORS.textSecondary }}>このプロジェクトを削除しますか？紐付いた取引は残りますが、プロジェクト参照は解除されます。</p>
+        <div className="flex gap-2">
+          <button className="btn flex-1" style={{ background: COLORS.crimson, color: 'white' }} onClick={() => deleteConfirm && handleDelete(deleteConfirm)}>削除</button>
+          <button className="btn btn-secondary" onClick={() => setDeleteConfirm(null)}>キャンセル</button>
+        </div>
+      </Modal>
     </div>
   );
 }
