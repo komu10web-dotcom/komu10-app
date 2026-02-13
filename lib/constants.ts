@@ -1,12 +1,12 @@
 // komu10 会計・事業管理システム - 定数定義
 
 export const DIVISIONS = [
-  { id: 'data', name: '観光データサイエンス', abbr: 'DATA', color: '#D4A03A' },
-  { id: 'business', name: '観光事業の設計・実装', abbr: 'BIZ', color: '#1E3A5F' },
-  { id: 'editorial', name: '編集・体験設計', abbr: 'EDIT', color: '#81D8D0' },
-  { id: 'thisplace', name: 'THIS PLACE', abbr: 'TP', color: '#FF5F45' },
-  { id: 'youtube', name: 'YouTube', abbr: 'YT', color: '#C23728' },
-  { id: 'general', name: '共通（按分対象）', abbr: 'GEN', color: '#C4B49A' },
+  { id: 'data', name: '観光データサイエンス', abbr: 'DATA', prefix: 'DT', color: '#D4A03A' },
+  { id: 'business', name: '観光事業の設計・実装', abbr: 'BIZ', prefix: 'BZ', color: '#1E3A5F' },
+  { id: 'editorial', name: '編集・体験設計', abbr: 'EDIT', prefix: 'ED', color: '#81D8D0' },
+  { id: 'thisplace', name: 'THIS PLACE', abbr: 'TP', prefix: 'TP', color: '#FF5F45' },
+  { id: 'youtube', name: 'YouTube', abbr: 'YT', prefix: 'YT', color: '#C23728' },
+  { id: 'general', name: '共通（按分対象）', abbr: 'GEN', prefix: 'GEN', color: '#C4B49A' },
 ] as const;
 
 export const KAMOKU = [

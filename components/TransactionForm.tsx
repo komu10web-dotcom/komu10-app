@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { DIVISIONS, KAMOKU, REVENUE_TYPES, COLORS } from '@/lib/constants';
+import { DIVISIONS, KAMOKU, REVENUE_TYPES, COLORS, getDivision } from '@/lib/constants';
 import { Transaction, Project } from '@/lib/supabase';
 
 interface TransactionFormProps {
@@ -189,9 +189,16 @@ export default function TransactionForm({
           onChange={e => handleChange('project_id', e.target.value)}
         >
           <option value="">なし</option>
-          {projects.map(p => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
+          {projects.map(p => {
+            const div = getDivision(p.division);
+            const seqNo = p.seq_no ? `PJ-${String(p.seq_no).padStart(3, '0')}` : '';
+            const divNo = p.external_id && div?.prefix ? `${div.prefix}-${String(p.external_id).padStart(3, '0')}` : '';
+            return (
+              <option key={p.id} value={p.id}>
+                {seqNo ? `[${seqNo}]` : ''}{divNo ? `[${divNo}]` : ''}{p.category ? `【${p.category}】` : ''}{p.name}
+              </option>
+            );
+          })}
         </select>
       </div>
 

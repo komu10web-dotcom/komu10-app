@@ -37,6 +37,7 @@ export interface Transaction {
 
 export interface Project {
   id: string;
+  seq_no?: number;
   name: string;
   division: string;
   owner: string;
