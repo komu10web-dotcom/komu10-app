@@ -48,7 +48,7 @@ export default function ProjectCard({ project, stats, onClick }: ProjectCardProp
             {project.name}
           </div>
           <div className="text-xs mt-0.5" style={{ color: COLORS.textMuted }}>
-            {division?.name}{owner ? ` · ${owner.name}` : ''}
+            {division?.name}{project.category ? ` · ${project.category}` : ''}{owner ? ` · ${owner.name}` : ''}
           </div>
         </div>
         <span 

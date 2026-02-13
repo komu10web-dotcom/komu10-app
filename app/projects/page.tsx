@@ -91,6 +91,8 @@ export default function ProjectsPage() {
 
   const filteredProjects = useMemo(() => {
     let result = projects.filter(p => {
+      // 空のプロジェクト（名前がないもの）をフィルタリング
+      if (!p.name || p.name.trim() === '') return false;
       if (filters.division && p.division !== filters.division) return false;
       if (filters.status && p.status !== filters.status) return false;
       if (filters.owner && p.owner !== filters.owner) return false;
@@ -160,7 +162,18 @@ export default function ProjectsPage() {
       let insertedCount = 0;
       let updatedCount = 0;
       let errorCount = 0;
+      let skippedCount = 0;
       for (const gasProject of data.projects) {
+        // 空のプロジェクト（名前がないもの）をスキップ
+        if (!gasProject.name || gasProject.name.trim() === '') {
+          skippedCount++;
+          continue;
+        }
+        // externalIdがない場合もスキップ
+        if (!gasProject.externalId || gasProject.externalId.trim() === '') {
+          skippedCount++;
+          continue;
+        }
         const projectData = {
           name: gasProject.name,
           division: gasProject.division || 'youtube',
@@ -189,6 +202,7 @@ export default function ProjectsPage() {
       const messages = [];
       if (insertedCount > 0) messages.push(`${insertedCount}件追加`);
       if (updatedCount > 0) messages.push(`${updatedCount}件更新`);
+      if (skippedCount > 0) messages.push(`${skippedCount}件スキップ（空行）`);
       if (errorCount > 0) messages.push(`${errorCount}件エラー`);
       setSyncMessage({
         type: errorCount > 0 ? 'error' : 'success',
@@ -288,7 +302,7 @@ export default function ProjectsPage() {
           <div className="card overflow-hidden p-0">
             <table className="table">
               <thead>
-                <tr><th>プロジェクト</th><th>部門</th><th>担当</th><th>ステータス</th><th className="text-right">売上</th><th className="text-right">経費</th><th className="text-right">利益</th><th className="text-right">ROI</th><th className="text-right">利益率</th><th></th></tr>
+                <tr><th>プロジェクト</th><th>種別</th><th>部門</th><th>担当</th><th>ステータス</th><th className="text-right">売上</th><th className="text-right">経費</th><th className="text-right">利益</th><th className="text-right">ROI</th><th className="text-right">利益率</th><th></th></tr>
               </thead>
               <tbody>
                 {filteredProjects.map(p => {
@@ -302,6 +316,7 @@ export default function ProjectsPage() {
                   return (
                     <tr key={p.id} className="cursor-pointer" onClick={() => handleEdit(p)}>
                       <td className="font-medium">{p.name}</td>
+                      <td style={{ color: COLORS.textMuted }}>{p.category || '—'}</td>
                       <td><div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{ background: div?.color }} />{div?.abbr}</div></td>
                       <td>{owner?.name}</td>
                       <td><span className="badge" style={{ background: `${status?.color}15`, color: status?.color }}>{status?.name}</span></td>
