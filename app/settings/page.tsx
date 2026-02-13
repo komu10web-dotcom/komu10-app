@@ -1,96 +1,184 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Header from '@/components/Header';
-import { COLORS } from '@/lib/constants';
 
 export default function SettingsPage() {
-  const [currentUser, setCurrentUser] = useState('all');
+  const [gasUrl, setGasUrl] = useState('');
+  const [syncing, setSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<string | null>(null);
+  const [lastSynced, setLastSynced] = useState<string | null>(null);
 
+  // ローカルストレージからGAS URLを読み込み
   useEffect(() => {
-    const cookies = document.cookie.split(';');
-    const userCookie = cookies.find(c => c.trim().startsWith('komu10_user='));
-    if (userCookie) {
-      const user = userCookie.split('=')[1];
-      if (user === 'tomo' || user === 'toshiki') setCurrentUser(user);
-    }
+    const savedUrl = localStorage.getItem('komu10_gas_url');
+    const savedLastSynced = localStorage.getItem('komu10_last_synced');
+    if (savedUrl) setGasUrl(savedUrl);
+    if (savedLastSynced) setLastSynced(savedLastSynced);
   }, []);
 
-  const handleUserChange = (user: string) => {
-    setCurrentUser(user);
-    document.cookie = `komu10_user=${user}; path=/; max-age=31536000`;
+  // GAS URLを保存
+  const saveGasUrl = () => {
+    localStorage.setItem('komu10_gas_url', gasUrl);
+    setSyncStatus('URL を保存しました');
+    setTimeout(() => setSyncStatus(null), 3000);
+  };
+
+  // スプレッドシートと同期
+  const syncWithSheets = async () => {
+    if (!gasUrl) {
+      setSyncStatus('GAS API URL を入力してください');
+      return;
+    }
+
+    setSyncing(true);
+    setSyncStatus('同期中...');
+
+    try {
+      const response = await fetch(gasUrl);
+      if (!response.ok) throw new Error('API エラー');
+      
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      // プロジェクトデータをローカルストレージに保存（後でSupabaseに移行）
+      localStorage.setItem('komu10_sheets_projects', JSON.stringify(data.projects || []));
+      localStorage.setItem('komu10_sheets_revenue', JSON.stringify(data.revenue || []));
+      
+      const now = new Date().toLocaleString('ja-JP');
+      setLastSynced(now);
+      localStorage.setItem('komu10_last_synced', now);
+      
+      setSyncStatus(`同期完了: プロジェクト ${data.projects?.length || 0}件, 売上データ ${data.revenue?.length || 0}件`);
+    } catch (error) {
+      setSyncStatus(`エラー: ${error instanceof Error ? error.message : '不明なエラー'}`);
+    } finally {
+      setSyncing(false);
+    }
   };
 
   return (
-    <div className="min-h-screen" style={{ background: COLORS.bg }}>
-      <Header currentUser={currentUser} onUserChange={handleUserChange} />
-      <main className="max-w-3xl mx-auto px-4 py-6">
-        <h1 className="text-lg font-medium mb-6" style={{ color: COLORS.textPrimary }}>設定</h1>
+    <div className="max-w-2xl mx-auto">
+      <h1 className="text-2xl font-semibold mb-6">設定</h1>
 
-        {/* アプリ情報 */}
-        <div className="card mb-6">
-          <div className="text-sm font-medium mb-3" style={{ color: COLORS.textPrimary }}>アプリ情報</div>
-          <div className="space-y-2 text-sm" style={{ color: COLORS.textSecondary }}>
-            <div className="flex justify-between">
-              <span>バージョン</span>
-              <span className="font-number">0.3.0</span>
-            </div>
-            <div className="flex justify-between">
-              <span>現在のユーザー</span>
-              <span>{currentUser === 'all' ? '全体' : currentUser === 'tomo' ? 'トモ' : 'トシキ'}</span>
-            </div>
-          </div>
+      {/* アプリ情報 */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+        <h2 className="text-lg font-medium mb-4">アプリ情報</h2>
+        <div className="flex justify-between py-2 border-b border-gray-100">
+          <span className="text-gray-600">バージョン</span>
+          <span>0.3.1</span>
         </div>
+        <div className="flex justify-between py-2">
+          <span className="text-gray-600">現在のユーザー</span>
+          <span>全体</span>
+        </div>
+      </div>
 
-        {/* テーマ */}
-        <div className="card mb-6">
-          <div className="text-sm font-medium mb-3" style={{ color: COLORS.textPrimary }}>テーマ</div>
-          <div className="flex gap-2">
-            {['ライト', 'ウォーム', 'クール'].map(theme => (
-              <button
-                key={theme}
-                className="px-4 py-2 rounded-lg text-sm transition-all"
-                style={{
-                  background: theme === 'ライト' ? COLORS.green : 'transparent',
-                  color: theme === 'ライト' ? 'white' : COLORS.textSecondary,
-                  border: `1px solid ${theme === 'ライト' ? COLORS.green : COLORS.border}`,
-                }}
-              >
-                {theme}
-              </button>
-            ))}
-          </div>
-          <p className="text-xs mt-2" style={{ color: COLORS.textMuted }}>
-            ※ テーマ切り替えは今後のアップデートで対応予定
+      {/* Google Sheets 連携 */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+        <h2 className="text-lg font-medium mb-4">Google Sheets 連携</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          Google Apps Script（GAS）を使ってスプレッドシートからプロジェクト・売上データを自動取得します。
+        </p>
+        
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            GAS API URL
+          </label>
+          <input
+            type="text"
+            value={gasUrl}
+            onChange={(e) => setGasUrl(e.target.value)}
+            placeholder="https://script.google.com/macros/s/xxxxx/exec"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#D4A03A] focus:border-transparent"
+          />
+          <p className="text-xs text-gray-400 mt-1">
+            GAS をデプロイして取得した URL を貼り付けてください
           </p>
         </div>
 
-        {/* データ管理 */}
-        <div className="card">
-          <div className="text-sm font-medium mb-3" style={{ color: COLORS.textPrimary }}>データ管理</div>
-          <div className="space-y-3">
-            <button className="btn btn-secondary w-full justify-start">
-              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
-              </svg>
-              データをエクスポート
-            </button>
-            <p className="text-xs" style={{ color: COLORS.textMuted }}>
-              ※ データエクスポートは今後のアップデートで対応予定
-            </p>
-          </div>
+        <div className="flex gap-3 mb-4">
+          <button
+            onClick={saveGasUrl}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition"
+          >
+            URL を保存
+          </button>
+          <button
+            onClick={syncWithSheets}
+            disabled={syncing || !gasUrl}
+            className={`px-4 py-2 rounded-md transition flex items-center gap-2 ${
+              gasUrl
+                ? 'bg-[#D4A03A] text-white hover:bg-[#c4902a]'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
+          >
+            {syncing ? (
+              <>
+                <span className="animate-spin">⟳</span>
+                同期中...
+              </>
+            ) : (
+              <>🔄 今すぐ同期</>
+            )}
+          </button>
         </div>
 
-        {/* 技術情報 */}
-        <div className="mt-8 text-center">
-          <div className="text-xs" style={{ color: COLORS.textMuted }}>
-            komu10 会計・事業管理システム
+        {syncStatus && (
+          <div className={`p-3 rounded-md text-sm ${
+            syncStatus.includes('エラー') 
+              ? 'bg-red-50 text-red-700' 
+              : syncStatus.includes('完了') 
+                ? 'bg-green-50 text-green-700'
+                : 'bg-blue-50 text-blue-700'
+          }`}>
+            {syncStatus}
           </div>
-          <div className="text-xs mt-1" style={{ color: COLORS.textMuted }}>
-            Built with Next.js + Supabase + Vercel
-          </div>
+        )}
+
+        {lastSynced && (
+          <p className="text-xs text-gray-400 mt-3">
+            最終同期: {lastSynced}
+          </p>
+        )}
+      </div>
+
+      {/* テーマ */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+        <h2 className="text-lg font-medium mb-4">テーマ</h2>
+        <div className="flex gap-3">
+          <button className="px-4 py-2 bg-[#D4A03A] text-white rounded-md">
+            ライト
+          </button>
+          <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">
+            ウォーム
+          </button>
+          <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200">
+            クール
+          </button>
         </div>
-      </main>
+        <p className="text-xs text-gray-400 mt-3">
+          ※ テーマ切り替えは今後のアップデートで対応予定
+        </p>
+      </div>
+
+      {/* データ管理 */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <h2 className="text-lg font-medium mb-4">データ管理</h2>
+        <button className="w-full py-3 border border-gray-300 rounded-md text-gray-600 hover:bg-gray-50 transition flex items-center justify-center gap-2">
+          ⬇ データをエクスポート
+        </button>
+        <p className="text-xs text-gray-400 mt-3">
+          ※ データエクスポートは今後のアップデートで対応予定
+        </p>
+      </div>
+
+      <p className="text-center text-xs text-gray-400 mt-8">
+        komu10 会計・事業管理システム<br />
+        Built with Next.js + Supabase + Vercel
+      </p>
     </div>
   );
 }
