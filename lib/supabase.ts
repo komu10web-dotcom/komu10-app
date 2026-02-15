@@ -1,8 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// デバッグ用
+if (typeof window !== 'undefined') {
+  console.log('Supabase URL:', supabaseUrl ? 'SET' : 'MISSING');
+  console.log('Supabase Key:', supabaseAnonKey ? 'SET' : 'MISSING');
+}
 
 // クライアントサイド用
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);

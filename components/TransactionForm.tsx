@@ -196,15 +196,20 @@ JSONのみ出力。説明文は不要。`
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('handleSubmit called');
     
     let receiptUrl = formData.receipt_url;
     if (receiptFile && !formData.receipt_url) {
+      console.log('Uploading to Drive...');
       const driveUrl = await uploadReceiptToDrive();
+      console.log('Drive upload result:', driveUrl);
       if (driveUrl) {
         receiptUrl = driveUrl;
       }
     }
 
+    console.log('Calling onSubmit with:', formData);
+    
     // 按分モードの場合：1件の取引にallocations情報を付与
     if (isSplit && !isEdit) {
       const totalPercent = splits.reduce((sum, s) => sum + s.percent, 0);
