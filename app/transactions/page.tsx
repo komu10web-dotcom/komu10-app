@@ -139,24 +139,44 @@ function TransactionsContent() {
   };
 
   const handleSubmit = async (data: Partial<Transaction>) => {
-    if (editingTransaction) {
-      const { data: updated, error } = await supabase
-        .from('transactions')
-        .update({ ...data, updated_at: new Date().toISOString() })
-        .eq('id', editingTransaction.id)
-        .select()
-        .single();
-      if (!error && updated) setTransactions(prev => prev.map(t => t.id === updated.id ? updated : t));
-    } else {
-      const { data: created, error } = await supabase
-        .from('transactions')
-        .insert([{ ...data, owner: currentUser === 'all' ? 'tomo' : currentUser }])
-        .select()
-        .single();
-      if (!error && created) setTransactions(prev => [created, ...prev]);
+    try {
+      if (editingTransaction) {
+        const { data: updated, error } = await supabase
+          .from('transactions')
+          .update({ ...data, updated_at: new Date().toISOString() })
+          .eq('id', editingTransaction.id)
+          .select()
+          .single();
+        if (error) {
+          console.error('Update error:', error);
+          alert('更新エラー: ' + error.message);
+          return;
+        }
+        if (updated) setTransactions(prev => prev.map(t => t.id === updated.id ? updated : t));
+      } else {
+        const insertData = { ...data, owner: currentUser === 'all' ? 'tomo' : currentUser };
+        console.log('Inserting:', insertData);
+        const { data: created, error } = await supabase
+          .from('transactions')
+          .insert([insertData])
+          .select()
+          .single();
+        if (error) {
+          console.error('Insert error:', error);
+          alert('登録エラー: ' + error.message);
+          return;
+        }
+        if (created) {
+          console.log('Created:', created);
+          setTransactions(prev => [created, ...prev]);
+        }
+      }
+      setIsModalOpen(false);
+      setEditingTransaction(undefined);
+    } catch (e) {
+      console.error('Unexpected error:', e);
+      alert('予期しないエラーが発生しました');
     }
-    setIsModalOpen(false);
-    setEditingTransaction(undefined);
   };
 
   const clearFilters = () => {
