@@ -96,16 +96,26 @@ export default function TransactionForm({
               contentBlock,
               {
                 type: 'text',
-                text: `この領収書/レシートから情報を抽出してJSON形式で返してください。
+                text: `あなたは日本の経理担当者です。この領収書/レシート画像を注意深く読み取り、正確に情報を抽出してください。
+
+【重要な注意事項】
+- 日本語の地名・駅名・空港名は正確に読み取ること（例：小松、羽田、成田、新千歳など）
+- 航空券の場合：出発地→到着地を正確に記載（便名も含める）
+- 金額は税込総額を数値のみで記載
+- 読み取れない文字は推測せず「不明」と記載
+- 日付はYYYY-MM-DD形式
+
+【出力形式】以下のJSONのみを返してください：
 {
-  "date": "YYYY-MM-DD",
-  "store": "店名",
-  "amount": 税込合計金額（数値のみ）,
-  "kamoku": "${kamokuList}" から最適なものを1つ,
-  "division": "${divisionList}" から推定して1つ,
-  "description": "品目や内容の要約"
+  "date": "YYYY-MM-DD形式の日付",
+  "store": "店名・会社名",
+  "amount": 税込合計金額（数値のみ、カンマなし）,
+  "kamoku": "${kamokuList}" から最も適切なものを1つ選択,
+  "division": "${divisionList}" から最も適切なものを1つ選択,
+  "description": "具体的な内容（航空券なら便名と区間、商品なら品目）"
 }
-JSONのみ返してください。`
+
+JSONのみ出力。説明文は不要。`
               }
             ]
           }]
