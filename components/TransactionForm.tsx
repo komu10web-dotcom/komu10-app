@@ -1,8 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { DIVISIONS, KAMOKU, REVENUE_TYPES, COLORS, getDivision } from '@/lib/constants';
 import { Transaction, Project } from '@/lib/supabase';
+
+// GAS URL
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxOOHKgA5fQSFF6HE4gk1CGAJNNzWoSTC9GgXedb-VEYWJmjs3M_HSQrfybkob6Urz9/exec';
 
 interface TransactionFormProps {
   transaction?: Transaction;
@@ -31,7 +34,14 @@ export default function TransactionForm({
     memo: transaction?.memo || '',
     project_id: transaction?.project_id || '',
     revenue_type: transaction?.revenue_type || '',
+    receipt_url: transaction?.receipt_url || '',
   });
+
+  const [extracting, setExtracting] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [aiFields, setAiFields] = useState<Set<string>>(new Set());
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [receiptFile, setReceiptFile] = useState<{ base64: string; filename: string } | null>(null);
 
   const isEdit = !!transaction;
   const isRevenue = formData.tx_type === 'revenue';
@@ -43,15 +53,217 @@ export default function TransactionForm({
 
   const handleChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    // 手動変更した場合はAIハイライトを解除
+    setAiFields(prev => {
+      const next = new Set(prev);
+      next.delete(field);
+      return next;
+    });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // 領収書AI読み取り
+  const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setExtracting(true);
+    try {
+      // ファイルをbase64に変換
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.onerror = () => reject(new Error('ファイル読み込みエラー'));
+        reader.readAsDataURL(file);
+      });
+
+      // 後でDriveにアップロードするために保存
+      setReceiptFile({ base64, filename: file.name });
+
+      const mediaType = file.type || 'image/jpeg';
+      const contentBlock = mediaType.includes('pdf')
+        ? { type: 'document', source: { type: 'base64', media_type: mediaType, data: base64 } }
+        : { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } };
+
+      const kamokuList = KAMOKU.filter(k => k.type === 'expense').map(k => k.id).join('|');
+      const divisionList = DIVISIONS.map(d => d.id).join('|');
+
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 1000,
+          messages: [{
+            role: 'user',
+            content: [
+              contentBlock,
+              {
+                type: 'text',
+                text: `この領収書/レシートから情報を抽出してJSON形式で返してください。
+{
+  "date": "YYYY-MM-DD",
+  "store": "店名",
+  "amount": 税込合計金額（数値のみ）,
+  "kamoku": "${kamokuList}" から最適なものを1つ,
+  "division": "${divisionList}" から推定して1つ,
+  "description": "品目や内容の要約",
+  "confidence": 0.0-1.0
+}
+JSONのみ返してください。`
+              }
+            ]
+          }]
+        }),
+      });
+
+      const data = await response.json();
+      const text = data.content?.[0]?.text || '';
+      
+      // JSONを抽出
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        const newAiFields = new Set<string>();
+        
+        if (parsed.date) {
+          handleChange('date', parsed.date);
+          newAiFields.add('date');
+        }
+        if (parsed.store) {
+          handleChange('store', parsed.store);
+          newAiFields.add('store');
+        }
+        if (parsed.amount) {
+          handleChange('amount', parsed.amount);
+          newAiFields.add('amount');
+        }
+        if (parsed.kamoku) {
+          handleChange('kamoku', parsed.kamoku);
+          newAiFields.add('kamoku');
+        }
+        if (parsed.division) {
+          handleChange('division', parsed.division);
+          newAiFields.add('division');
+        }
+        if (parsed.description) {
+          handleChange('description', parsed.description);
+          newAiFields.add('description');
+        }
+        
+        setAiFields(newAiFields);
+      }
+    } catch (error) {
+      console.error('領収書読み取りエラー:', error);
+      alert('領収書の読み取りに失敗しました');
+    } finally {
+      setExtracting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  // Google Driveに領収書をアップロード
+  const uploadReceiptToDrive = async (): Promise<string | null> => {
+    if (!receiptFile) return null;
+
+    setUploading(true);
+    try {
+      const response = await fetch(GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'uploadReceipt',
+          image: receiptFile.base64,
+          filename: receiptFile.filename,
+          date: formData.date,
+          store: formData.store,
+          amount: formData.amount,
+        }),
+      });
+
+      const result = await response.json();
+      if (result.success && result.url) {
+        return result.url;
+      } else {
+        console.error('Drive upload error:', result.error);
+        return null;
+      }
+    } catch (error) {
+      console.error('Drive upload error:', error);
+      return null;
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    
+    let finalData = { ...formData };
+
+    // 領収書がある場合はDriveにアップロード
+    if (receiptFile && !formData.receipt_url) {
+      const driveUrl = await uploadReceiptToDrive();
+      if (driveUrl) {
+        finalData.receipt_url = driveUrl;
+      }
+    }
+
+    onSubmit(finalData);
+  };
+
+  // AIハイライトスタイル
+  const getFieldStyle = (field: string) => {
+    if (aiFields.has(field)) {
+      return { 
+        borderColor: COLORS.gold, 
+        boxShadow: `0 0 0 2px ${COLORS.gold}30`,
+        background: `${COLORS.gold}08`
+      };
+    }
+    return {};
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* 領収書アップロード（新規追加時のみ） */}
+      {!isEdit && (
+        <div 
+          className="p-4 rounded-lg border-2 border-dashed text-center" 
+          style={{ 
+            borderColor: receiptFile ? COLORS.green : COLORS.border,
+            background: receiptFile ? `${COLORS.green}08` : 'transparent'
+          }}
+        >
+          <input
+            type="file"
+            accept="image/*,.pdf"
+            ref={fileInputRef}
+            onChange={handleReceiptUpload}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={extracting || uploading}
+            className="text-sm font-medium"
+            style={{ color: extracting ? COLORS.textMuted : COLORS.green }}
+          >
+            {extracting ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="inline-block w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                AI解析中...
+              </span>
+            ) : receiptFile ? (
+              <span>✓ 領収書読み取り完了（別の画像を選択）</span>
+            ) : (
+              <span>📷 領収書をアップロード</span>
+            )}
+          </button>
+          <p className="text-xs mt-2" style={{ color: COLORS.textMuted }}>
+            PDF/画像 → Claude AIが自動抽出 → Google Driveに保存
+          </p>
+        </div>
+      )}
+
       {/* 種別 */}
       <div className="flex gap-2">
         <button
@@ -89,6 +301,7 @@ export default function TransactionForm({
           <input
             type="date"
             className="input"
+            style={getFieldStyle('date')}
             value={formData.date}
             onChange={e => handleChange('date', e.target.value)}
             required
@@ -99,6 +312,7 @@ export default function TransactionForm({
           <input
             type="number"
             className="input font-number"
+            style={getFieldStyle('amount')}
             value={formData.amount || ''}
             onChange={e => handleChange('amount', parseInt(e.target.value) || 0)}
             placeholder="0"
@@ -112,6 +326,7 @@ export default function TransactionForm({
         <label className="block text-xs mb-1" style={{ color: COLORS.textMuted }}>勘定科目</label>
         <select
           className="input select"
+          style={getFieldStyle('kamoku')}
           value={formData.kamoku}
           onChange={e => handleChange('kamoku', e.target.value)}
           required
@@ -145,6 +360,7 @@ export default function TransactionForm({
         <label className="block text-xs mb-1" style={{ color: COLORS.textMuted }}>部門</label>
         <select
           className="input select"
+          style={getFieldStyle('division')}
           value={formData.division}
           onChange={e => handleChange('division', e.target.value)}
           required
@@ -163,6 +379,7 @@ export default function TransactionForm({
           <input
             type="text"
             className="input"
+            style={getFieldStyle('store')}
             value={formData.store}
             onChange={e => handleChange('store', e.target.value)}
             placeholder="店名・会社名"
@@ -173,6 +390,7 @@ export default function TransactionForm({
           <input
             type="text"
             className="input"
+            style={getFieldStyle('description')}
             value={formData.description}
             onChange={e => handleChange('description', e.target.value)}
             placeholder="取引内容"
@@ -214,10 +432,26 @@ export default function TransactionForm({
         />
       </div>
 
+      {/* 領収書URL表示（保存済みの場合） */}
+      {formData.receipt_url && (
+        <div className="p-3 rounded-lg" style={{ background: `${COLORS.green}10` }}>
+          <div className="flex items-center gap-2 text-sm" style={{ color: COLORS.green }}>
+            <span>📎</span>
+            <a href={formData.receipt_url} target="_blank" rel="noopener noreferrer" className="underline">
+              領収書を表示
+            </a>
+          </div>
+        </div>
+      )}
+
       {/* ボタン */}
       <div className="flex gap-2 pt-2">
-        <button type="submit" className="btn btn-primary flex-1">
-          {isEdit ? '更新' : '追加'}
+        <button 
+          type="submit" 
+          className="btn btn-primary flex-1"
+          disabled={uploading}
+        >
+          {uploading ? 'アップロード中...' : isEdit ? '更新' : '追加'}
         </button>
         <button type="button" className="btn btn-secondary" onClick={onCancel}>
           キャンセル
