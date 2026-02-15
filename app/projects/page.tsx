@@ -315,7 +315,21 @@ export default function ProjectsPage() {
                   const owner = getUser(p.owner);
                   return (
                     <tr key={p.id} className="cursor-pointer" onClick={() => handleEdit(p)}>
-                      <td className="font-medium">{p.name}</td>
+                      <td className="font-medium">
+                        <div className="flex items-center gap-1 mb-0.5">
+                          {p.seq_no && (
+                            <span className="text-xs font-mono px-1 py-0.5 rounded" style={{ background: 'rgba(10,10,11,0.05)', color: COLORS.textSecondary }}>
+                              PJ-{String(p.seq_no).padStart(3, '0')}
+                            </span>
+                          )}
+                          {p.external_id && div?.prefix && (
+                            <span className="text-xs font-mono px-1 py-0.5 rounded" style={{ background: `${div?.color}15`, color: div?.color }}>
+                              {div.prefix}-{String(p.external_id).padStart(3, '0')}
+                            </span>
+                          )}
+                        </div>
+                        <span>{p.category ? `【${p.category}】` : ''}{p.name}</span>
+                      </td>
                       <td style={{ color: COLORS.textMuted }}>{p.category || '—'}</td>
                       <td><div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{ background: div?.color }} />{div?.abbr}</div></td>
                       <td>{owner?.name}</td>

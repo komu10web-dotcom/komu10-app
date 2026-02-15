@@ -79,7 +79,7 @@ export default function Dashboard() {
       }
     });
 
-    // 部門別データ
+    // 部門別データ（年間合計）
     const byDivision: { [key: string]: { revenue: number; expense: number } } = {};
     DIVISIONS.forEach(d => {
       byDivision[d.id] = { revenue: 0, expense: 0 };
@@ -90,6 +90,30 @@ export default function Dashboard() {
           byDivision[t.division].revenue += t.amount;
         } else {
           byDivision[t.division].expense += t.amount;
+        }
+      }
+    });
+
+    // 部門別月次データ（グラフ用）
+    const byDivisionMonthly: { [divId: string]: { month: string; revenue: number; expense: number }[] } = {};
+    DIVISIONS.forEach(d => {
+      byDivisionMonthly[d.id] = [];
+      for (let m = 1; m <= 12; m++) {
+        const key = `${selectedYear}-${String(m).padStart(2, '0')}`;
+        byDivisionMonthly[d.id].push({ month: key, revenue: 0, expense: 0 });
+      }
+    });
+    yearTx.forEach(t => {
+      const month = t.date.substring(0, 7);
+      const divData = byDivisionMonthly[t.division];
+      if (divData) {
+        const monthData = divData.find(d => d.month === month);
+        if (monthData) {
+          if (t.tx_type === 'revenue') {
+            monthData.revenue += t.amount;
+          } else {
+            monthData.expense += t.amount;
+          }
         }
       }
     });
@@ -118,6 +142,7 @@ export default function Dashboard() {
         ...data,
       })),
       byDivision,
+      byDivisionMonthly,
       byProject,
     };
   }, [transactions, selectedYear]);
@@ -125,8 +150,8 @@ export default function Dashboard() {
   // 最近の取引（5件）
   const recentTransactions = transactions.slice(0, 5);
 
-  // 進行中プロジェクト
-  const activeProjects = projects.filter(p => p.status === 'active').slice(0, 4);
+  // その年に完了したプロジェクト
+  const completedProjects = projects.filter(p => p.status === 'completed').slice(0, 4);
 
   if (loading) {
     return (
@@ -184,15 +209,22 @@ export default function Dashboard() {
           {/* 左カラム: チャート + 部門別 */}
           <div className="col-span-2 space-y-6">
             {/* 月別チャート */}
-            <MonthlyChart data={stats.monthlyData} />
+            <MonthlyChart data={stats.monthlyData} byDivision={stats.byDivisionMonthly} />
 
             {/* 部門別損益 */}
             <div className="card">
-              <div className="text-xs font-medium mb-4" style={{ color: COLORS.textMuted }}>
-                部門別損益
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-xs font-medium" style={{ color: COLORS.textMuted }}>
+                  部門別損益
+                </div>
+                <div className="flex items-center gap-4 text-xs" style={{ color: COLORS.textMuted }}>
+                  <span className="w-20 text-right">売上</span>
+                  <span className="w-20 text-right">経費</span>
+                  <span className="w-24 text-right">利益</span>
+                </div>
               </div>
               <div className="space-y-3">
-                {DIVISIONS.filter(d => d.id !== 'general').map(div => {
+                {DIVISIONS.map(div => {
                   const data = stats.byDivision[div.id] || { revenue: 0, expense: 0 };
                   const profit = data.revenue - data.expense;
                   return (
@@ -210,13 +242,16 @@ export default function Dashboard() {
                         <div className="text-sm truncate" style={{ color: COLORS.textPrimary }}>
                           {div.name}
                         </div>
+                        <div className="text-xs" style={{ color: COLORS.textMuted }}>
+                          {div.abbr}
+                        </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right w-20">
                         <div className="font-number text-sm" style={{ color: COLORS.gold }}>
                           {formatYen(data.revenue)}
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right w-20">
                         <div className="font-number text-sm" style={{ color: COLORS.crimson }}>
                           {formatYen(data.expense)}
                         </div>
@@ -283,35 +318,29 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* 進行中プロジェクト */}
+            {/* 完了プロジェクト */}
             <div className="card">
               <div className="flex items-center justify-between mb-3">
                 <div className="text-xs font-medium" style={{ color: COLORS.textMuted }}>
-                  進行中プロジェクト
+                  完了プロジェクト
                 </div>
                 <button 
                   className="text-xs"
                   style={{ color: COLORS.green }}
-                  onClick={() => router.push('/projects')}
+                  onClick={() => router.push('/projects?status=completed')}
                 >
                   すべて見る →
                 </button>
               </div>
               <div className="space-y-3">
-                {activeProjects.map(pj => {
+                {completedProjects.map(pj => {
                   const pjStats = stats.byProject[pj.id] || { revenue: 0, expense: 0 };
                   const profit = pjStats.revenue - pjStats.expense;
                   const div = getDivision(pj.division);
                   
-                  // ROI計算（%表記）
-                  const roi = pjStats.expense > 0 
-                    ? Math.round((profit / pjStats.expense) * 100)
-                    : 0;
-                  
-                  // 利益率計算（%表記）
-                  const profitMargin = pjStats.revenue > 0
-                    ? Math.round((profit / pjStats.revenue) * 100)
-                    : 0;
+                  // 通し番号・管理番号
+                  const seqNo = pj.seq_no ? `PJ-${String(pj.seq_no).padStart(3, '0')}` : '';
+                  const divNo = pj.external_id && div?.prefix ? `${div.prefix}-${String(pj.external_id).padStart(3, '0')}` : '';
 
                   return (
                     <div 
@@ -325,35 +354,41 @@ export default function Dashboard() {
                           className="w-1.5 h-1.5 rounded-full shrink-0"
                           style={{ background: div?.color || COLORS.sand }}
                         />
-                        <div className="text-xs truncate flex-1" style={{ color: COLORS.textPrimary }}>
-                          {pj.name}
+                        <div className="flex items-center gap-1 flex-1 min-w-0">
+                          {seqNo && (
+                            <span className="text-xs font-mono px-1 rounded shrink-0" style={{ background: 'rgba(10,10,11,0.05)', color: COLORS.textSecondary, fontSize: '10px' }}>
+                              {seqNo}
+                            </span>
+                          )}
+                          {divNo && (
+                            <span className="text-xs font-mono px-1 rounded shrink-0" style={{ background: `${div?.color}15`, color: div?.color, fontSize: '10px' }}>
+                              {divNo}
+                            </span>
+                          )}
+                          <span className="text-xs truncate" style={{ color: COLORS.textPrimary }}>
+                            {pj.name}
+                          </span>
                         </div>
                       </div>
                       <div className="flex items-center gap-3 pl-3.5">
+                        <div className="font-number text-xs" style={{ color: COLORS.gold }}>
+                          売上: {formatYen(pjStats.revenue)}
+                        </div>
                         <div 
                           className="font-number text-xs"
                           style={{ color: profit >= 0 ? COLORS.green : COLORS.crimson }}
                         >
-                          {formatYen(profit)}
-                        </div>
-                        <div 
-                          className="text-xs tooltip"
-                          style={{ color: COLORS.textMuted }}
-                          data-tooltip="ROI = 利益÷経費×100"
-                        >
-                          ROI: {pjStats.expense > 0 ? `${roi}%` : '—'}
-                        </div>
-                        <div 
-                          className="text-xs tooltip"
-                          style={{ color: COLORS.textMuted }}
-                          data-tooltip="利益率 = 利益÷売上×100"
-                        >
-                          利益率: {pjStats.revenue > 0 ? `${profitMargin}%` : '—'}
+                          利益: {formatYen(profit)}
                         </div>
                       </div>
                     </div>
                   );
                 })}
+                {completedProjects.length === 0 && (
+                  <div className="text-xs py-4 text-center" style={{ color: COLORS.textMuted }}>
+                    完了プロジェクトはありません
+                  </div>
+                )}
               </div>
             </div>
           </div>
