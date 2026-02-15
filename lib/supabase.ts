@@ -31,6 +31,7 @@ export interface Transaction {
   ai_confidence?: number;
   confirmed?: boolean;
   external_id?: string;
+  receipt_url?: string;
   created_at?: string;
   updated_at?: string;
 }
