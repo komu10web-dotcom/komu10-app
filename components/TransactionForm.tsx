@@ -359,14 +359,14 @@ JSONのみ出力。説明文は不要。`
         {isSplit && !isEdit ? (
           <div className="space-y-2 p-3 rounded-lg" style={{ background: `${COLORS.green}08`, border: `1px solid ${COLORS.green}30` }}>
             {splits.map((split, idx) => (
-              <div key={idx} className="flex gap-2 items-center">
+              <div key={`split-${idx}-${split.division}`} className="flex gap-2 items-center">
                 <select 
                   className="input select flex-1 text-sm"
-                  value={split.division}
+                  value={split.division || ''}
                   onChange={e => {
-                    const newSplits = [...splits];
-                    newSplits[idx].division = e.target.value;
-                    setSplits(newSplits);
+                    setSplits(prev => prev.map((s, i) => 
+                      i === idx ? { ...s, division: e.target.value, project_id: '' } : s
+                    ));
                   }}
                   required
                 >
@@ -375,11 +375,11 @@ JSONのみ出力。説明文は不要。`
                 </select>
                 <select
                   className="input select flex-1 text-sm"
-                  value={split.project_id}
+                  value={split.project_id || ''}
                   onChange={e => {
-                    const newSplits = [...splits];
-                    newSplits[idx].project_id = e.target.value;
-                    setSplits(newSplits);
+                    setSplits(prev => prev.map((s, i) => 
+                      i === idx ? { ...s, project_id: e.target.value } : s
+                    ));
                   }}
                 >
                   <option value="">PJなし</option>
@@ -394,9 +394,9 @@ JSONのみ出力。説明文は不要。`
                   className="input w-16 text-sm text-center font-number"
                   value={split.percent}
                   onChange={e => {
-                    const newSplits = [...splits];
-                    newSplits[idx].percent = parseInt(e.target.value) || 0;
-                    setSplits(newSplits);
+                    setSplits(prev => prev.map((s, i) => 
+                      i === idx ? { ...s, percent: parseInt(e.target.value) || 0 } : s
+                    ));
                   }}
                   min={0}
                   max={100}
@@ -406,7 +406,7 @@ JSONのみ出力。説明文は不要。`
                   <button
                     type="button"
                     className="text-red-500 text-sm px-1"
-                    onClick={() => setSplits(splits.filter((_, i) => i !== idx))}
+                    onClick={() => setSplits(prev => prev.filter((_, i) => i !== idx))}
                   >×</button>
                 )}
               </div>
@@ -416,7 +416,7 @@ JSONのみ出力。説明文は不要。`
                 type="button"
                 className="text-xs px-2 py-1 rounded"
                 style={{ color: COLORS.green, border: `1px solid ${COLORS.green}` }}
-                onClick={() => setSplits([...splits, { division: '', project_id: '', percent: 0 }])}
+                onClick={() => setSplits(prev => [...prev, { division: '', project_id: '', percent: 0 }])}
               >
                 + 追加
               </button>
