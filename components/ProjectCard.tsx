@@ -44,11 +44,24 @@ export default function ProjectCard({ project, stats, onClick }: ProjectCardProp
       {/* ヘッダー */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 min-w-0">
+          {/* 通し番号・管理番号 */}
+          <div className="flex items-center gap-1 mb-0.5">
+            {project.seq_no && (
+              <span className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ background: 'rgba(10,10,11,0.05)', color: COLORS.textSecondary }}>
+                PJ-{String(project.seq_no).padStart(3, '0')}
+              </span>
+            )}
+            {project.external_id && division?.prefix && (
+              <span className="text-xs font-mono px-1.5 py-0.5 rounded" style={{ background: `${division.color}15`, color: division.color }}>
+                {division.prefix}-{String(project.external_id).padStart(3, '0')}
+              </span>
+            )}
+          </div>
           <div className="text-sm font-medium truncate" style={{ color: COLORS.textPrimary }}>
-            {project.name}
+            {project.category ? `【${project.category}】` : ''}{project.name}
           </div>
           <div className="text-xs mt-0.5" style={{ color: COLORS.textMuted }}>
-            {division?.name}{project.category ? ` · ${project.category}` : ''}{owner ? ` · ${owner.name}` : ''}
+            {division?.name}{owner ? ` · ${owner.name}` : ''}
           </div>
         </div>
         <span 

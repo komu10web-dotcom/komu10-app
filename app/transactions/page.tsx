@@ -171,7 +171,25 @@ function TransactionsContent() {
                     <td className="text-sm max-w-32 truncate">{tx.store || '—'}</td>
                     <td className="text-sm max-w-40 truncate">{tx.description || '—'}</td>
                     <td className="text-right"><span className="font-number" style={{ color: tx.tx_type === 'revenue' ? COLORS.gold : COLORS.crimson }}>{formatYen(tx.amount)}</span></td>
-                    <td className="text-xs truncate max-w-24" style={{ color: COLORS.textMuted }}>{project?.name || '—'}</td>
+                    <td className="text-xs max-w-32" style={{ color: COLORS.textMuted }}>
+                      {project ? (
+                        <div>
+                          <div className="flex items-center gap-0.5 mb-0.5">
+                            {project.seq_no && (
+                              <span className="font-mono px-1 rounded" style={{ background: 'rgba(10,10,11,0.05)', fontSize: '10px' }}>
+                                PJ-{String(project.seq_no).padStart(3, '0')}
+                              </span>
+                            )}
+                            {project.external_id && div && (
+                              <span className="font-mono px-1 rounded" style={{ background: `${getDivision(project.division)?.color}15`, color: getDivision(project.division)?.color, fontSize: '10px' }}>
+                                {getDivision(project.division)?.prefix}-{String(project.external_id).padStart(3, '0')}
+                              </span>
+                            )}
+                          </div>
+                          <span className="truncate block">{project.name}</span>
+                        </div>
+                      ) : '—'}
+                    </td>
                     <td>
                       <div className="flex items-center gap-1">
                         <button className="p-1 rounded hover:bg-gray-100" onClick={() => handleEdit(tx)} style={{ color: COLORS.textMuted }}>
