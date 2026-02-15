@@ -113,7 +113,16 @@ JSONのみ返してください。`
       });
 
       const data = await response.json();
+      console.log('API response:', JSON.stringify(data, null, 2));
+      
+      if (data.error) {
+        console.error('API error:', data.error);
+        alert('APIエラー: ' + (typeof data.error === 'string' ? data.error : JSON.stringify(data.error)));
+        return;
+      }
+      
       const text = data.content?.[0]?.text || '';
+      console.log('Extracted text:', text);
       
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
