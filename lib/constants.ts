@@ -87,7 +87,7 @@ export function getUser(key: string) {
 }
 
 export function formatYen(amount: number): string {
-  return new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(amount);
+  return `¥${amount.toLocaleString('ja-JP')}`;
 }
 
 export function formatPercent(value: number): string {

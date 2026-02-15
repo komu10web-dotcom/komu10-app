@@ -297,8 +297,20 @@ JSONのみ出力。説明文は不要。`
           <input type="date" className="input" style={getFieldStyle('date')} value={formData.date} onChange={e => handleChange('date', e.target.value)} required />
         </div>
         <div>
-          <label className="block text-xs mb-1" style={{ color: COLORS.textMuted }}>金額（税込）</label>
-          <input type="number" className="input font-number" style={getFieldStyle('amount')} value={formData.amount || ''} onChange={e => handleChange('amount', parseInt(e.target.value) || 0)} placeholder="0" required />
+          <label className="block text-xs mb-1" style={{ color: COLORS.textMuted }}>金額（円）<span className="text-xs opacity-60">※税込</span></label>
+          <input 
+            type="text" 
+            inputMode="numeric"
+            className="input font-number text-right" 
+            style={getFieldStyle('amount')} 
+            value={formData.amount ? formData.amount.toLocaleString('ja-JP') : ''} 
+            onChange={e => {
+              const num = parseInt(e.target.value.replace(/,/g, '')) || 0;
+              handleChange('amount', num);
+            }} 
+            placeholder="0" 
+            required 
+          />
         </div>
       </div>
 
