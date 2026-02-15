@@ -140,10 +140,17 @@ function TransactionsContent() {
 
   const handleSubmit = async (data: Partial<Transaction>) => {
     try {
+      // 空文字をnullに変換（UUID型のため）
+      const cleanData = {
+        ...data,
+        project_id: data.project_id || null,
+        receipt_url: data.receipt_url || null,
+      };
+      
       if (editingTransaction) {
         const { data: updated, error } = await supabase
           .from('transactions')
-          .update({ ...data, updated_at: new Date().toISOString() })
+          .update({ ...cleanData, updated_at: new Date().toISOString() })
           .eq('id', editingTransaction.id)
           .select()
           .single();
@@ -154,7 +161,7 @@ function TransactionsContent() {
         }
         if (updated) setTransactions(prev => prev.map(t => t.id === updated.id ? updated : t));
       } else {
-        const insertData = { ...data, owner: currentUser === 'all' ? 'tomo' : currentUser };
+        const insertData = { ...cleanData, owner: currentUser === 'all' ? 'tomo' : currentUser };
         console.log('Inserting:', insertData);
         const { data: created, error } = await supabase
           .from('transactions')
