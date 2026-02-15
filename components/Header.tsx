@@ -14,7 +14,7 @@ const NAV_ITEMS = [
   { href: '/transactions', label: '取引' },
   { href: '/projects', label: 'プロジェクト' },
   { href: '/journal', label: '仕訳帳' },
-  { href: '/report', label: '申告' },
+  { href: '/report', label: '確定申告' },
   { href: '/assets', label: '資産' },
   { href: '/anbun', label: '按分' },
   { href: '/settings', label: '設定' },

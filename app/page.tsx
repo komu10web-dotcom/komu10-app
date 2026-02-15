@@ -79,7 +79,7 @@ export default function Dashboard() {
       }
     });
 
-    // 部門別データ
+    // 部門別データ（年間合計）
     const byDivision: { [key: string]: { revenue: number; expense: number } } = {};
     DIVISIONS.forEach(d => {
       byDivision[d.id] = { revenue: 0, expense: 0 };
@@ -90,6 +90,30 @@ export default function Dashboard() {
           byDivision[t.division].revenue += t.amount;
         } else {
           byDivision[t.division].expense += t.amount;
+        }
+      }
+    });
+
+    // 部門別月次データ（グラフ用）
+    const byDivisionMonthly: { [divId: string]: { month: string; revenue: number; expense: number }[] } = {};
+    DIVISIONS.forEach(d => {
+      byDivisionMonthly[d.id] = [];
+      for (let m = 1; m <= 12; m++) {
+        const key = `${selectedYear}-${String(m).padStart(2, '0')}`;
+        byDivisionMonthly[d.id].push({ month: key, revenue: 0, expense: 0 });
+      }
+    });
+    yearTx.forEach(t => {
+      const month = t.date.substring(0, 7);
+      const divData = byDivisionMonthly[t.division];
+      if (divData) {
+        const monthData = divData.find(d => d.month === month);
+        if (monthData) {
+          if (t.tx_type === 'revenue') {
+            monthData.revenue += t.amount;
+          } else {
+            monthData.expense += t.amount;
+          }
         }
       }
     });
@@ -118,6 +142,7 @@ export default function Dashboard() {
         ...data,
       })),
       byDivision,
+      byDivisionMonthly,
       byProject,
     };
   }, [transactions, selectedYear]);
@@ -184,7 +209,7 @@ export default function Dashboard() {
           {/* 左カラム: チャート + 部門別 */}
           <div className="col-span-2 space-y-6">
             {/* 月別チャート */}
-            <MonthlyChart data={stats.monthlyData} />
+            <MonthlyChart data={stats.monthlyData} byDivision={stats.byDivisionMonthly} />
 
             {/* 部門別損益 */}
             <div className="card">
