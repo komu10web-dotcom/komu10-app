@@ -138,22 +138,8 @@ function TransactionsContent() {
     setDeleteConfirm(null);
   };
 
-  const handleSubmit = async (data: Partial<Transaction> | Partial<Transaction>[]) => {
-    // 配列の場合（按分）
-    if (Array.isArray(data)) {
-      const results: Transaction[] = [];
-      for (const item of data) {
-        const { data: created, error } = await supabase
-          .from('transactions')
-          .insert([{ ...item, owner: currentUser === 'all' ? 'tomo' : currentUser }])
-          .select()
-          .single();
-        if (!error && created) results.push(created);
-      }
-      if (results.length > 0) {
-        setTransactions(prev => [...results, ...prev]);
-      }
-    } else if (editingTransaction) {
+  const handleSubmit = async (data: Partial<Transaction>) => {
+    if (editingTransaction) {
       const { data: updated, error } = await supabase
         .from('transactions')
         .update({ ...data, updated_at: new Date().toISOString() })

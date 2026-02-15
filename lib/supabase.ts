@@ -32,6 +32,7 @@ export interface Transaction {
   confirmed?: boolean;
   external_id?: string;
   receipt_url?: string;
+  allocations?: { division: string; project_id?: string; percent: number }[];
   created_at?: string;
   updated_at?: string;
 }

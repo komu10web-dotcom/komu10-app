@@ -11,7 +11,7 @@ interface TransactionFormProps {
   transaction?: Transaction;
   projects: Project[];
   currentUser: string;
-  onSubmit: (data: Partial<Transaction> | Partial<Transaction>[]) => void;
+  onSubmit: (data: Partial<Transaction>) => void;
   onCancel: () => void;
 }
 
@@ -205,7 +205,7 @@ JSONのみ出力。説明文は不要。`
       }
     }
 
-    // 按分モードの場合
+    // 按分モードの場合：1件の取引にallocations情報を付与
     if (isSplit && !isEdit) {
       const totalPercent = splits.reduce((sum, s) => sum + s.percent, 0);
       if (totalPercent !== 100) {
@@ -213,15 +213,26 @@ JSONのみ出力。説明文は不要。`
         return;
       }
       
-      const transactions = splits.map(split => ({
-        ...formData,
-        receipt_url: receiptUrl,
-        division: split.division,
-        project_id: split.project_id || '',
-        amount: Math.round((formData.amount || 0) * split.percent / 100),
+      // 部門が未選択のものがないかチェック
+      if (splits.some(s => !s.division)) {
+        alert('すべての按分先の部門を選択してください');
+        return;
+      }
+      
+      // 1件の取引として保存（メインの部門は最初の按分先）
+      const allocations = splits.map(s => ({
+        division: s.division,
+        project_id: s.project_id || undefined,
+        percent: s.percent
       }));
       
-      onSubmit(transactions);
+      onSubmit({
+        ...formData,
+        receipt_url: receiptUrl,
+        division: splits[0].division, // メイン部門は最初の按分先
+        project_id: splits[0].project_id || '',
+        allocations: allocations
+      });
     } else {
       onSubmit({ ...formData, receipt_url: receiptUrl });
     }
