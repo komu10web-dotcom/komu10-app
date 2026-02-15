@@ -11,7 +11,7 @@ interface TransactionFormProps {
   transaction?: Transaction;
   projects: Project[];
   currentUser: string;
-  onSubmit: (data: Partial<Transaction>) => void;
+  onSubmit: (data: Partial<Transaction> | Partial<Transaction>[]) => void;
   onCancel: () => void;
 }
 
@@ -42,6 +42,13 @@ export default function TransactionForm({
   const [aiFields, setAiFields] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [receiptFile, setReceiptFile] = useState<{ base64: string; filename: string } | null>(null);
+  
+  // 按分機能
+  const [isSplit, setIsSplit] = useState(false);
+  const [splits, setSplits] = useState<Array<{ division: string; project_id: string; percent: number }>>([
+    { division: '', project_id: '', percent: 50 },
+    { division: '', project_id: '', percent: 50 }
+  ]);
 
   const isEdit = !!transaction;
   const isRevenue = formData.tx_type === 'revenue';
@@ -190,16 +197,34 @@ JSONのみ出力。説明文は不要。`
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    let finalData = { ...formData };
-
+    let receiptUrl = formData.receipt_url;
     if (receiptFile && !formData.receipt_url) {
       const driveUrl = await uploadReceiptToDrive();
       if (driveUrl) {
-        finalData.receipt_url = driveUrl;
+        receiptUrl = driveUrl;
       }
     }
 
-    onSubmit(finalData);
+    // 按分モードの場合
+    if (isSplit && !isEdit) {
+      const totalPercent = splits.reduce((sum, s) => sum + s.percent, 0);
+      if (totalPercent !== 100) {
+        alert('按分の合計が100%になっていません');
+        return;
+      }
+      
+      const transactions = splits.map(split => ({
+        ...formData,
+        receipt_url: receiptUrl,
+        division: split.division,
+        project_id: split.project_id || '',
+        amount: Math.round((formData.amount || 0) * split.percent / 100),
+      }));
+      
+      onSubmit(transactions);
+    } else {
+      onSubmit({ ...formData, receipt_url: receiptUrl });
+    }
   };
 
   const getFieldStyle = (field: string) => {
@@ -285,12 +310,115 @@ JSONのみ出力。説明文は不要。`
       )}
 
       <div>
-        <label className="block text-xs mb-1" style={{ color: COLORS.textMuted }}>部門</label>
-        <select className="input select" style={getFieldStyle('division')} value={formData.division} onChange={e => handleChange('division', e.target.value)} required>
-          <option value="">選択してください</option>
-          {DIVISIONS.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-        </select>
+        <div className="flex items-center justify-between mb-1">
+          <label className="block text-xs" style={{ color: COLORS.textMuted }}>部門</label>
+          {!isEdit && (
+            <button 
+              type="button" 
+              className="text-xs px-2 py-0.5 rounded"
+              style={{ 
+                background: isSplit ? COLORS.green : 'transparent',
+                color: isSplit ? 'white' : COLORS.green,
+                border: `1px solid ${COLORS.green}`
+              }}
+              onClick={() => setIsSplit(!isSplit)}
+            >
+              {isSplit ? '✓ 按分ON' : '按分'}
+            </button>
+          )}
+        </div>
+        
+        {isSplit && !isEdit ? (
+          <div className="space-y-2 p-3 rounded-lg" style={{ background: `${COLORS.green}08`, border: `1px solid ${COLORS.green}30` }}>
+            {splits.map((split, idx) => (
+              <div key={idx} className="flex gap-2 items-center">
+                <select 
+                  className="input select flex-1 text-sm"
+                  value={split.division}
+                  onChange={e => {
+                    const newSplits = [...splits];
+                    newSplits[idx].division = e.target.value;
+                    setSplits(newSplits);
+                  }}
+                  required
+                >
+                  <option value="">部門</option>
+                  {DIVISIONS.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                </select>
+                <select
+                  className="input select flex-1 text-sm"
+                  value={split.project_id}
+                  onChange={e => {
+                    const newSplits = [...splits];
+                    newSplits[idx].project_id = e.target.value;
+                    setSplits(newSplits);
+                  }}
+                >
+                  <option value="">PJなし</option>
+                  {projects.filter(p => !split.division || p.division === split.division).map(p => {
+                    const div = getDivision(p.division);
+                    const seqNo = p.seq_no ? `PJ-${String(p.seq_no).padStart(3, '0')}` : '';
+                    return <option key={p.id} value={p.id}>{seqNo ? `[${seqNo}]` : ''} {p.name}</option>;
+                  })}
+                </select>
+                <input
+                  type="number"
+                  className="input w-16 text-sm text-center font-number"
+                  value={split.percent}
+                  onChange={e => {
+                    const newSplits = [...splits];
+                    newSplits[idx].percent = parseInt(e.target.value) || 0;
+                    setSplits(newSplits);
+                  }}
+                  min={0}
+                  max={100}
+                />
+                <span className="text-xs" style={{ color: COLORS.textMuted }}>%</span>
+                {splits.length > 2 && (
+                  <button
+                    type="button"
+                    className="text-red-500 text-sm px-1"
+                    onClick={() => setSplits(splits.filter((_, i) => i !== idx))}
+                  >×</button>
+                )}
+              </div>
+            ))}
+            <div className="flex justify-between items-center pt-1">
+              <button
+                type="button"
+                className="text-xs px-2 py-1 rounded"
+                style={{ color: COLORS.green, border: `1px solid ${COLORS.green}` }}
+                onClick={() => setSplits([...splits, { division: '', project_id: '', percent: 0 }])}
+              >
+                + 追加
+              </button>
+              <span className="text-xs" style={{ color: splits.reduce((sum, s) => sum + s.percent, 0) === 100 ? COLORS.green : COLORS.crimson }}>
+                合計: {splits.reduce((sum, s) => sum + s.percent, 0)}%
+              </span>
+            </div>
+          </div>
+        ) : (
+          <select className="input select" style={getFieldStyle('division')} value={formData.division} onChange={e => handleChange('division', e.target.value)} required>
+            <option value="">選択してください</option>
+            {DIVISIONS.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+          </select>
+        )}
       </div>
+
+      {(!isSplit || isEdit) && (
+        <div>
+          <label className="block text-xs mb-1" style={{ color: COLORS.textMuted }}>プロジェクト</label>
+          <select className="input select" value={formData.project_id} onChange={e => handleChange('project_id', e.target.value)}>
+            <option value="">なし</option>
+            {projects.map(p => {
+              const div = getDivision(p.division);
+              const seqNo = p.seq_no ? `PJ-${String(p.seq_no).padStart(3, '0')}` : '';
+              const divNo = p.external_id && div?.prefix ? `${div.prefix}-${String(p.external_id).padStart(3, '0')}` : '';
+              return <option key={p.id} value={p.id}>{seqNo ? `[${seqNo}]` : ''}{divNo ? `[${divNo}]` : ''}{p.category ? `【${p.category}】` : ''}{p.name}</option>;
+            })}
+          </select>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -301,19 +429,6 @@ JSONのみ出力。説明文は不要。`
           <label className="block text-xs mb-1" style={{ color: COLORS.textMuted }}>内容</label>
           <input type="text" className="input" style={getFieldStyle('description')} value={formData.description} onChange={e => handleChange('description', e.target.value)} placeholder="取引内容" />
         </div>
-      </div>
-
-      <div>
-        <label className="block text-xs mb-1" style={{ color: COLORS.textMuted }}>プロジェクト</label>
-        <select className="input select" value={formData.project_id} onChange={e => handleChange('project_id', e.target.value)}>
-          <option value="">なし</option>
-          {projects.map(p => {
-            const div = getDivision(p.division);
-            const seqNo = p.seq_no ? `PJ-${String(p.seq_no).padStart(3, '0')}` : '';
-            const divNo = p.external_id && div?.prefix ? `${div.prefix}-${String(p.external_id).padStart(3, '0')}` : '';
-            return <option key={p.id} value={p.id}>{seqNo ? `[${seqNo}]` : ''}{divNo ? `[${divNo}]` : ''}{p.category ? `【${p.category}】` : ''}{p.name}</option>;
-          })}
-        </select>
       </div>
 
       <div>
