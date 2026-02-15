@@ -17,6 +17,7 @@ const NAV_ITEMS = [
   { href: '/report', label: '確定申告' },
   { href: '/assets', label: '資産' },
   { href: '/anbun', label: '按分' },
+  { href: '/help', label: 'Q&A' },
   { href: '/settings', label: '設定' },
 ];
 
