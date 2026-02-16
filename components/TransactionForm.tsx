@@ -357,70 +357,84 @@ JSONのみ出力。説明文は不要。`
         </div>
         
         {isSplit && !isEdit ? (
-          <div className="space-y-2 p-3 rounded-lg" style={{ background: `${COLORS.green}08`, border: `1px solid ${COLORS.green}30` }}>
-            {splits.map((split, idx) => (
-              <div key={idx} className="flex gap-2 items-center">
-                <select 
-                  className="input select flex-1 text-sm"
-                  value={split.division || ''}
-                  onChange={e => {
-                    setSplits(prev => prev.map((s, i) => 
-                      i === idx ? { ...s, division: e.target.value, project_id: '' } : s
-                    ));
-                  }}
-                  required
-                >
-                  <option value="">部門</option>
-                  {DIVISIONS.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                </select>
-                <select
-                  className="input select flex-1 text-sm"
-                  value={split.project_id || ''}
-                  onChange={e => {
-                    setSplits(prev => prev.map((s, i) => 
-                      i === idx ? { ...s, project_id: e.target.value } : s
-                    ));
-                  }}
-                >
-                  <option value="">PJなし</option>
-                  {projects.filter(p => !split.division || p.division === split.division).map(p => {
-                    const div = getDivision(p.division);
-                    const seqNo = p.seq_no ? `PJ-${String(p.seq_no).padStart(3, '0')}` : '';
-                    return <option key={p.id} value={p.id}>{seqNo ? `[${seqNo}]` : ''} {p.name}</option>;
-                  })}
-                </select>
-                <input
-                  type="number"
-                  className="input w-16 text-sm text-center font-number"
-                  value={split.percent}
-                  onChange={e => {
-                    setSplits(prev => prev.map((s, i) => 
-                      i === idx ? { ...s, percent: parseInt(e.target.value) || 0 } : s
-                    ));
-                  }}
-                  min={0}
-                  max={100}
-                />
-                <span className="text-xs" style={{ color: COLORS.textMuted }}>%</span>
-                {splits.length > 2 && (
-                  <button
-                    type="button"
-                    className="text-red-500 text-sm px-1"
-                    onClick={() => setSplits(prev => prev.filter((_, i) => i !== idx))}
-                  >×</button>
-                )}
-              </div>
-            ))}
-            <div className="flex justify-between items-center pt-1">
+          <div className="space-y-3 p-3 rounded-lg" style={{ background: `${COLORS.green}08`, border: `1px solid ${COLORS.green}30` }}>
+            {splits.map((split, idx) => {
+              const handleDivisionChange = (value: string) => {
+                const newSplits = [...splits];
+                newSplits[idx] = { ...newSplits[idx], division: value, project_id: '' };
+                setSplits(newSplits);
+              };
+              const handleProjectChange = (value: string) => {
+                const newSplits = [...splits];
+                newSplits[idx] = { ...newSplits[idx], project_id: value };
+                setSplits(newSplits);
+              };
+              const handlePercentChange = (value: number) => {
+                const newSplits = [...splits];
+                newSplits[idx] = { ...newSplits[idx], percent: value };
+                setSplits(newSplits);
+              };
+              const filteredProjects = projects.filter(p => !split.division || p.division === split.division);
+              
+              return (
+                <div key={idx} className="space-y-2 p-2 rounded" style={{ background: 'rgba(255,255,255,0.5)' }}>
+                  <div className="flex gap-2 items-center">
+                    <span className="text-xs font-bold" style={{ color: COLORS.textMuted }}>#{idx + 1}</span>
+                    <select 
+                      className="input select flex-1"
+                      value={split.division}
+                      onChange={(e) => handleDivisionChange(e.target.value)}
+                    >
+                      <option value="">部門を選択</option>
+                      {DIVISIONS.map(d => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                      ))}
+                    </select>
+                    <input
+                      type="number"
+                      className="input w-20 text-center font-number"
+                      value={split.percent}
+                      onChange={(e) => handlePercentChange(parseInt(e.target.value) || 0)}
+                      min={0}
+                      max={100}
+                    />
+                    <span className="text-xs" style={{ color: COLORS.textMuted }}>%</span>
+                    {splits.length > 2 && (
+                      <button
+                        type="button"
+                        className="text-red-500 text-lg px-2"
+                        onClick={() => setSplits(splits.filter((_, i) => i !== idx))}
+                      >×</button>
+                    )}
+                  </div>
+                  <select
+                    className="input select w-full"
+                    value={split.project_id}
+                    onChange={(e) => handleProjectChange(e.target.value)}
+                  >
+                    <option value="">プロジェクトなし</option>
+                    {filteredProjects.map(p => {
+                      const seqNo = p.seq_no ? `PJ-${String(p.seq_no).padStart(3, '0')}` : '';
+                      return (
+                        <option key={p.id} value={p.id}>
+                          {seqNo ? `[${seqNo}] ` : ''}{p.name}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+              );
+            })}
+            <div className="flex justify-between items-center pt-2">
               <button
                 type="button"
-                className="text-xs px-2 py-1 rounded"
+                className="text-sm px-3 py-1 rounded"
                 style={{ color: COLORS.green, border: `1px solid ${COLORS.green}` }}
-                onClick={() => setSplits(prev => [...prev, { division: '', project_id: '', percent: 0 }])}
+                onClick={() => setSplits([...splits, { division: '', project_id: '', percent: 0 }])}
               >
-                + 追加
+                + 按分先を追加
               </button>
-              <span className="text-xs" style={{ color: splits.reduce((sum, s) => sum + s.percent, 0) === 100 ? COLORS.green : COLORS.crimson }}>
+              <span className="text-sm font-bold" style={{ color: splits.reduce((sum, s) => sum + s.percent, 0) === 100 ? COLORS.green : COLORS.crimson }}>
                 合計: {splits.reduce((sum, s) => sum + s.percent, 0)}%
               </span>
             </div>
