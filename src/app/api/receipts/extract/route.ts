@@ -13,7 +13,7 @@ const supabase = createClient(
 
 export async function POST(request: NextRequest) {
   try {
-    const { imageBase64, fileUrl, mimeType } = await request.json();
+    const { imageBase64, fileUrl, mimeType, fileName } = await request.json();
 
     if (!imageBase64) {
       return NextResponse.json({ error: 'Image data required' }, { status: 400 });
@@ -95,19 +95,13 @@ export async function POST(request: NextRequest) {
 
     const confidenceScore = factors > 0 ? confidence : 0;
 
-    // ステータス判定
-    const status = confidenceScore >= 0.85 ? 'processed' : 'needs_review';
-
-    // DB保存
+    // DB保存 - 既存のreceiptsテーブル構造に合わせる
     const { data: receipt, error } = await supabase
       .from('receipts')
       .insert({
-        file_url: fileUrl,
-        file_name: `receipt_${Date.now()}`,
-        ocr_text: responseText,
-        ai_extracted: extracted,
-        confidence_score: confidenceScore,
-        status,
+        file_name: fileName || `receipt_${Date.now()}`,
+        file_type: mimeType || 'application/pdf',
+        drive_url: fileUrl,
       })
       .select()
       .single();
@@ -116,12 +110,12 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
+    // AI読み取り結果は直接返す（DBには保存せず、フロント側でtransactionsに登録時に使う）
     return NextResponse.json({
       receiptId: receipt.id,
       fileUrl,
       aiExtracted: extracted,
       confidence: confidenceScore,
-      status,
     });
 
   } catch (error) {
