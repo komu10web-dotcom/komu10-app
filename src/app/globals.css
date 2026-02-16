@@ -1,0 +1,61 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Questrial&family=Saira+Condensed:wght@400;500;600&family=Shippori+Mincho:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --surface: #F5F5F3;
+  --gold: #D4A03A;
+  --crimson: #C23728;
+  --navy: #1E3A5F;
+  --forest: #1B4D3E;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--surface);
+  color: #1a1a1a;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 数字は必ずSaira Condensed */
+.font-number {
+  font-family: 'Saira Condensed', sans-serif;
+  font-feature-settings: 'tnum';
+}
+
+/* 日本語見出しはShippori Mincho */
+.font-jp {
+  font-family: 'Shippori Mincho', serif;
+}
+
+/* カスタムスクロールバー */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* フォーカスリング */
+*:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* トランジション */
+.transition-smooth {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
