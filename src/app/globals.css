@@ -5,11 +5,23 @@
 @tailwind utilities;
 
 :root {
+  /* 背景 */
   --surface: #F5F5F3;
+  --card-bg: #FFFFFF;
+  
+  /* komu10カラーパレット */
   --gold: #D4A03A;
   --crimson: #C23728;
+  --teal: #81D8D0;
+  --sunset: #FF5F45;
   --navy: #1E3A5F;
-  --forest: #1B4D3E;
+  --green: #1B4D3E;
+  --sand: #C4B49A;
+  
+  /* テキスト */
+  --text-main: #1a1a1a;
+  --text-sub: #6b6b6b;
+  --text-mute: #999999;
 }
 
 body {
