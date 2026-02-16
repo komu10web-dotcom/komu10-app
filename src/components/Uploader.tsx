@@ -4,6 +4,11 @@ import { useState, useCallback } from 'react';
 import { Upload, Camera, Check, AlertCircle, Loader2, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
+// Cloudinary設定
+const CLOUDINARY_CLOUD_NAME = 'dz4znfok4';
+const CLOUDINARY_API_KEY = '196515814793468';
+const CLOUDINARY_API_SECRET = '-hb3ZLQCeCAKcqcNWIvfPRmaBl8';
+
 interface UploaderProps {
   onUploadComplete?: () => void;
 }
@@ -17,6 +22,63 @@ interface ExtractedData {
 }
 
 type UploadState = 'idle' | 'uploading' | 'processing' | 'review' | 'saving' | 'success' | 'error';
+
+// SHA-1署名生成
+async function generateSignature(params: Record<string, string>, apiSecret: string): Promise<string> {
+  const sortedParams = Object.keys(params)
+    .sort()
+    .map(key => `${key}=${params[key]}`)
+    .join('&');
+  const stringToSign = sortedParams + apiSecret;
+  
+  const encoder = new TextEncoder();
+  const data = encoder.encode(stringToSign);
+  const hashBuffer = await crypto.subtle.digest('SHA-1', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Cloudinaryにアップロード
+async function uploadToCloudinary(
+  file: File,
+  extractedData?: ExtractedData
+): Promise<{ secure_url: string; public_id: string }> {
+  const timestamp = Math.floor(Date.now() / 1000).toString();
+  
+  // ファイル名を生成（日付_店舗_金額）
+  const date = extractedData?.date?.replace(/-/g, '') || new Date().toISOString().split('T')[0].replace(/-/g, '');
+  const store = (extractedData?.vendor || 'unknown').replace(/[\/\\:*?"<>|]/g, '_').substring(0, 20);
+  const amount = extractedData?.amount ? `${extractedData.amount}円` : '';
+  const publicId = `komu10-receipts/${date}_${store}${amount ? '_' + amount : ''}`;
+  
+  const params: Record<string, string> = {
+    folder: 'komu10-receipts',
+    public_id: publicId,
+    timestamp: timestamp,
+  };
+  
+  const signature = await generateSignature(params, CLOUDINARY_API_SECRET);
+  
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('api_key', CLOUDINARY_API_KEY);
+  formData.append('timestamp', timestamp);
+  formData.append('signature', signature);
+  formData.append('folder', 'komu10-receipts');
+  formData.append('public_id', publicId);
+  
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`,
+    { method: 'POST', body: formData }
+  );
+  
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error?.message || 'Upload failed');
+  }
+  
+  return response.json();
+}
 
 export function Uploader({ onUploadComplete }: UploaderProps) {
   const [state, setState] = useState<UploadState>('idle');
@@ -80,53 +142,24 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
 
       const result = await aiResponse.json();
       
-      // 2. Google Drive保存（AI結果を使ってファイル名生成）
-      const gasUrl = process.env.NEXT_PUBLIC_GAS_URL;
-      let driveUrl = '';
+      // 2. Cloudinaryに領収書を保存
+      let receiptUrl = '';
       
-      console.log('GAS URL:', gasUrl);
-      
-      if (gasUrl) {
-        try {
-          console.log('Sending to GAS:', {
-            action: 'uploadReceipt',
-            filename: file.name,
-            date: result.aiExtracted?.date,
-            store: result.aiExtracted?.vendor,
-            amount: result.aiExtracted?.amount,
-          });
-          
-          const response = await fetch(gasUrl, {
-            method: 'POST',
-            body: JSON.stringify({
-              action: 'uploadReceipt',
-              image: base64,
-              filename: file.name,
-              date: result.aiExtracted?.date || new Date().toISOString().split('T')[0],
-              store: result.aiExtracted?.vendor || '',
-              amount: result.aiExtracted?.amount || 0,
-            }),
-          });
-
-          console.log('GAS response status:', response.status);
-          const gasResult = await response.json();
-          console.log('GAS result:', gasResult);
-          
-          if (gasResult.success && gasResult.url) {
-            driveUrl = gasResult.url;
-          }
-        } catch (gasError) {
-          console.error('GAS upload failed:', gasError);
-          // GAS失敗してもAI読み取り結果は使える
+      try {
+        const uploadResult = await uploadToCloudinary(file, result.aiExtracted);
+        if (uploadResult.secure_url) {
+          receiptUrl = uploadResult.secure_url;
+          console.log('Receipt uploaded to Cloudinary:', receiptUrl);
         }
-      } else {
-        console.warn('GAS URL not configured');
+      } catch (cloudinaryError) {
+        console.error('Cloudinary upload failed:', cloudinaryError);
+        // 失敗してもAI読み取り結果は使える
       }
       
       // 読み取り結果をセット
       setExtracted(result.aiExtracted);
       setReceiptId(result.receiptId);
-      setFileUrl(driveUrl);
+      setFileUrl(receiptUrl);
       
       // フォームに初期値をセット
       setFormData({
