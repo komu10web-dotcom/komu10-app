@@ -59,42 +59,15 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
       // Base64変換
       const base64 = await fileToBase64(file);
       
-      // 1. Google Drive保存
-      const gasUrl = process.env.NEXT_PUBLIC_GAS_URL;
-      let driveUrl = '';
-      
-      if (gasUrl) {
-        try {
-          const gasResponse = await fetch(gasUrl, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: {
-              'Content-Type': 'text/plain',
-            },
-            body: JSON.stringify({
-              action: 'upload',
-              fileName: file.name,
-              mimeType: file.type,
-              data: base64,
-            }),
-          });
-          // no-corsの場合、レスポンスは読めないが保存は実行される
-          // URLはGAS側で生成され、receiptsテーブルには保存されない
-          driveUrl = 'saved_to_drive';
-        } catch (gasError) {
-          console.warn('GAS upload failed:', gasError);
-        }
-      }
-
       setState('processing');
 
-      // 2. AI読み取り
+      // 1. AI読み取り（先に実行）
       const aiResponse = await fetch('/api/receipts/extract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           imageBase64: base64,
-          fileUrl: driveUrl,
+          fileUrl: '',
           mimeType: file.type,
           fileName: file.name,
         }),
@@ -106,6 +79,34 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
       }
 
       const result = await aiResponse.json();
+      
+      // 2. Google Drive保存（AI結果を使ってファイル名生成）
+      const gasUrl = process.env.NEXT_PUBLIC_GAS_URL;
+      let driveUrl = '';
+      
+      if (gasUrl) {
+        try {
+          const response = await fetch(gasUrl, {
+            method: 'POST',
+            body: JSON.stringify({
+              action: 'uploadReceipt',
+              image: base64,
+              filename: file.name,
+              date: result.aiExtracted?.date || new Date().toISOString().split('T')[0],
+              store: result.aiExtracted?.vendor || '',
+              amount: result.aiExtracted?.amount || 0,
+            }),
+          });
+
+          const gasResult = await response.json();
+          if (gasResult.success && gasResult.url) {
+            driveUrl = gasResult.url;
+          }
+        } catch (gasError) {
+          console.warn('GAS upload failed:', gasError);
+          // GAS失敗してもAI読み取り結果は使える
+        }
+      }
       
       // 読み取り結果をセット
       setExtracted(result.aiExtracted);
