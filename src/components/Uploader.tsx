@@ -84,8 +84,18 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
       const gasUrl = process.env.NEXT_PUBLIC_GAS_URL;
       let driveUrl = '';
       
+      console.log('GAS URL:', gasUrl);
+      
       if (gasUrl) {
         try {
+          console.log('Sending to GAS:', {
+            action: 'uploadReceipt',
+            filename: file.name,
+            date: result.aiExtracted?.date,
+            store: result.aiExtracted?.vendor,
+            amount: result.aiExtracted?.amount,
+          });
+          
           const response = await fetch(gasUrl, {
             method: 'POST',
             body: JSON.stringify({
@@ -98,14 +108,19 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
             }),
           });
 
+          console.log('GAS response status:', response.status);
           const gasResult = await response.json();
+          console.log('GAS result:', gasResult);
+          
           if (gasResult.success && gasResult.url) {
             driveUrl = gasResult.url;
           }
         } catch (gasError) {
-          console.warn('GAS upload failed:', gasError);
+          console.error('GAS upload failed:', gasError);
           // GAS失敗してもAI読み取り結果は使える
         }
+      } else {
+        console.warn('GAS URL not configured');
       }
       
       // 読み取り結果をセット
