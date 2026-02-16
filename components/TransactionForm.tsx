@@ -359,7 +359,7 @@ JSONのみ出力。説明文は不要。`
         {isSplit && !isEdit ? (
           <div className="space-y-2 p-3 rounded-lg" style={{ background: `${COLORS.green}08`, border: `1px solid ${COLORS.green}30` }}>
             {splits.map((split, idx) => (
-              <div key={`split-${idx}-${split.division}`} className="flex gap-2 items-center">
+              <div key={idx} className="flex gap-2 items-center">
                 <select 
                   className="input select flex-1 text-sm"
                   value={split.division || ''}
