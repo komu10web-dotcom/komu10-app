@@ -77,6 +77,7 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
         body: JSON.stringify({
           imageBase64: base64,
           fileUrl: gasResult.url,
+          mimeType: file.type,
         }),
       });
 

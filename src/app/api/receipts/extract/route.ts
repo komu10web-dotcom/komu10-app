@@ -13,13 +13,35 @@ const supabase = createClient(
 
 export async function POST(request: NextRequest) {
   try {
-    const { imageBase64, fileUrl } = await request.json();
+    const { imageBase64, fileUrl, mimeType } = await request.json();
 
     if (!imageBase64) {
       return NextResponse.json({ error: 'Image data required' }, { status: 400 });
     }
 
+    // メディアタイプを判定
+    const mediaType = mimeType === 'application/pdf' ? 'application/pdf' : 
+                      mimeType?.startsWith('image/') ? mimeType : 'image/jpeg';
+
     // Claude Vision API で読み取り
+    const contentItem = mediaType === 'application/pdf' 
+      ? {
+          type: 'document' as const,
+          source: {
+            type: 'base64' as const,
+            media_type: 'application/pdf' as const,
+            data: imageBase64,
+          },
+        }
+      : {
+          type: 'image' as const,
+          source: {
+            type: 'base64' as const,
+            media_type: mediaType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+            data: imageBase64,
+          },
+        };
+
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1024,
@@ -27,14 +49,7 @@ export async function POST(request: NextRequest) {
         {
           role: 'user',
           content: [
-            {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: 'image/jpeg',
-                data: imageBase64,
-              },
-            },
+            contentItem,
             {
               type: 'text',
               text: `この領収書から以下の情報を抽出してください。JSON形式で回答してください。
