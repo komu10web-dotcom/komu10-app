@@ -59,7 +59,7 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
       // Base64変換
       const base64 = await fileToBase64(file);
       
-      // 1. Google Drive保存（GASがなくてもAI読み取りは進める）
+      // 1. Google Drive保存
       const gasUrl = process.env.NEXT_PUBLIC_GAS_URL;
       let driveUrl = '';
       
@@ -67,6 +67,10 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
         try {
           const gasResponse = await fetch(gasUrl, {
             method: 'POST',
+            mode: 'no-cors',
+            headers: {
+              'Content-Type': 'text/plain',
+            },
             body: JSON.stringify({
               action: 'upload',
               fileName: file.name,
@@ -74,10 +78,11 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
               data: base64,
             }),
           });
-          const gasResult = await gasResponse.json();
-          driveUrl = gasResult.url || '';
+          // no-corsの場合、レスポンスは読めないが保存は実行される
+          // URLはGAS側で生成され、receiptsテーブルには保存されない
+          driveUrl = 'saved_to_drive';
         } catch (gasError) {
-          console.warn('GAS upload failed, continuing with AI extraction:', gasError);
+          console.warn('GAS upload failed:', gasError);
         }
       }
 
@@ -241,13 +246,18 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
           </div>
 
           <div>
-            <label className="text-xs text-black/40 block mb-1">金額（税込）</label>
+            <label className="text-xs text-black/40 block mb-1">金額（円）※税込</label>
             <input
-              type="number"
-              value={formData.amount}
-              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+              type="text"
+              value={formData.amount ? Number(formData.amount).toLocaleString() : ''}
+              onChange={(e) => {
+                const value = e.target.value.replace(/,/g, '');
+                if (/^\d*$/.test(value)) {
+                  setFormData({ ...formData, amount: value });
+                }
+              }}
               className="w-full px-3 py-2 bg-surface rounded-lg text-sm border-0 focus:ring-2 focus:ring-gold/50"
-              placeholder="15300"
+              placeholder="15,300"
             />
           </div>
 
