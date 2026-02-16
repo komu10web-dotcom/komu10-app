@@ -6,6 +6,7 @@ import Header from '@/components/Header';
 import KPICard from '@/components/KPICard';
 import MonthlyChart from '@/components/MonthlyChart';
 import ProjectCard from '@/components/ProjectCard';
+import ReceiptUploader from '@/components/ReceiptUploader';
 import { supabase, Transaction, Project } from '@/lib/supabase';
 import { COLORS, DIVISIONS, formatYen, getDivision } from '@/lib/constants';
 
@@ -166,10 +167,15 @@ export default function Dashboard() {
       <Header currentUser={currentUser} onUserChange={handleUserChange} />
       
       <main className="max-w-7xl mx-auto px-4 py-6">
+        {/* 領収書アップローダー */}
+        <div className="mb-6">
+          <ReceiptUploader />
+        </div>
+
         {/* 年度選択 */}
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-lg font-medium" style={{ color: COLORS.textPrimary }}>
-            ダッシュボード
+            {selectedYear}年 ダッシュボード
           </h1>
           <select
             className="input select w-auto"

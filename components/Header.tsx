@@ -10,14 +10,14 @@ interface HeaderProps {
 }
 
 const NAV_ITEMS = [
-  { href: '/', label: 'ダッシュボード' },
-  { href: '/transactions', label: '取引' },
-  { href: '/projects', label: 'プロジェクト' },
-  { href: '/journal', label: '仕訳帳' },
-  { href: '/report', label: '確定申告' },
-  { href: '/assets', label: '資産' },
-  { href: '/anbun', label: '按分' },
-  { href: '/help', label: 'Q&A' },
+  { href: '/', label: 'ホーム' },
+  { 
+    href: '/transactions', 
+    label: '会計',
+    children: ['/transactions', '/journal', '/report', '/assets', '/anbun']
+  },
+  { href: '/management', label: '経営' },
+  { href: '/projects', label: 'PJ' },
   { href: '/settings', label: '設定' },
 ];
 
@@ -37,7 +37,8 @@ export default function Header({ currentUser, onUserChange }: HeaderProps) {
           <nav className="flex items-center gap-1">
             {NAV_ITEMS.map(item => {
               const isActive = pathname === item.href || 
-                (item.href !== '/' && pathname.startsWith(item.href));
+                (item.href !== '/' && pathname.startsWith(item.href)) ||
+                (item.children && item.children.some(c => pathname.startsWith(c)));
               return (
                 <Link
                   key={item.href}
