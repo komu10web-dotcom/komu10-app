@@ -126,7 +126,14 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Receipt extraction error:', error);
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    let errorMessage: string;
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (typeof error === 'object' && error !== null) {
+      errorMessage = JSON.stringify(error);
+    } else {
+      errorMessage = String(error);
+    }
     return NextResponse.json(
       { error: 'Failed to process receipt', details: errorMessage },
       { status: 500 }
