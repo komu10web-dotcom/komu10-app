@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -65,7 +67,7 @@ export async function POST(request: NextRequest) {
     }
 
     // バッチインサート
-    const { error } = await supabase.from('transactions').insert(transactions);
+    const { error } = await getSupabase().from('transactions').insert(transactions);
 
     if (error) {
       throw error;
