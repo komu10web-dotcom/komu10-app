@@ -45,42 +45,21 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
     }
 
     setError(null);
-    setState('uploading');
+    setState('reading');
 
     try {
       // Base64変換
       const base64 = await fileToBase64(file);
+      setFileName(file.name);
 
-      // ===== 1. Google Driveに保存（API Route経由） =====
-      const uploadResponse = await fetch('/api/upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          image: base64,
-          filename: file.name,
-          date: new Date().toISOString().split('T')[0],
-          mimeType: file.type,
-        }),
-      });
-
-      const uploadResult = await uploadResponse.json();
-      
-      if (!uploadResult.success) {
-        throw new Error(uploadResult.error || 'Google Drive保存に失敗しました');
-      }
-
-      setDriveUrl(uploadResult.url || null);
-      setFileName(uploadResult.fileName || file.name);
-
-      // ===== 2. AI読み取り =====
-      setState('reading');
+      // ===== AI読み取り（Google Drive保存はスキップ） =====
 
       const aiResponse = await fetch('/api/receipts/extract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           imageBase64: base64,
-          fileUrl: uploadResult.url || '',
+          fileUrl: '',
           mimeType: file.type,
           fileName: file.name,
         }),
@@ -101,7 +80,7 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
           description: '',
         });
       } else {
-        // AI読み取り失敗しても、Drive保存は成功しているので続行
+        // AI読み取り失敗しても、手入力で対応可能
         console.warn('AI読み取り失敗。手入力で対応。');
       }
 
@@ -225,10 +204,10 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
           </button>
         </div>
 
-        {driveUrl && (
+        {fileName && (
           <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-[#1B4D3E]/5 rounded-lg">
             <Check className="w-4 h-4 text-[#1B4D3E]" />
-            <span className="text-xs text-[#1B4D3E]">Google Driveに保存済み</span>
+            <span className="text-xs text-[#1B4D3E]">{fileName} を読み取りました</span>
           </div>
         )}
 
@@ -386,13 +365,6 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
               PDF · JPG · PNG · HEIC
             </p>
           </>
-        )}
-
-        {state === 'uploading' && (
-          <div className="flex flex-col items-center">
-            <Loader2 className="w-8 h-8 text-[#D4A03A] animate-spin mb-2" />
-            <p className="text-sm text-[#6b6b6b]">Google Driveに保存中...</p>
-          </div>
         )}
 
         {state === 'reading' && (

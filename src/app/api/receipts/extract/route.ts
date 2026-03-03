@@ -97,25 +97,8 @@ export async function POST(request: NextRequest) {
 
     const confidenceScore = factors > 0 ? confidence : 0;
 
-    // DB保存 - 既存のreceiptsテーブル構造に合わせる
-    const { data: receipt, error } = await getSupabase()
-      .from('receipts')
-      .insert({
-        file_name: fileName || `receipt_${Date.now()}`,
-        file_type: mimeType || 'application/pdf',
-        drive_url: fileUrl,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      throw error;
-    }
-
-    // AI読み取り結果は直接返す（DBには保存せず、フロント側でtransactionsに登録時に使う）
+    // AI読み取り結果を直接返す
     return NextResponse.json({
-      receiptId: receipt.id,
-      fileUrl,
       aiExtracted: extracted,
       confidence: confidenceScore,
     });
