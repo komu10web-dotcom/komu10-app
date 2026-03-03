@@ -45,12 +45,32 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
     }
 
     setError(null);
-    setState('reading');
+    setState('uploading');
 
     try {
       // Base64変換
       const base64 = await fileToBase64(file);
       setFileName(file.name);
+
+      // ===== 1. Google Driveに保存 =====
+      const uploadResponse = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image: base64,
+          filename: file.name,
+          date: new Date().toISOString().split('T')[0],
+          mimeType: file.type,
+        }),
+      });
+
+      const uploadResult = await uploadResponse.json();
+      if (uploadResult.success) {
+        setDriveUrl(uploadResult.url || null);
+      }
+
+      // ===== 2. AI読み取り =====
+      setState('reading');
 
       // ===== AI読み取り（Google Drive保存はスキップ） =====
 
@@ -204,10 +224,16 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
           </button>
         </div>
 
-        {fileName && (
+        {driveUrl && (
           <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-[#1B4D3E]/5 rounded-lg">
             <Check className="w-4 h-4 text-[#1B4D3E]" />
-            <span className="text-xs text-[#1B4D3E]">{fileName} を読み取りました</span>
+            <span className="text-xs text-[#1B4D3E]">Google Driveに保存済み</span>
+          </div>
+        )}
+        {!driveUrl && fileName && (
+          <div className="flex items-center gap-2 mb-4 px-3 py-2 bg-yellow-50 rounded-lg">
+            <AlertCircle className="w-4 h-4 text-yellow-600" />
+            <span className="text-xs text-yellow-700">Drive保存スキップ（読み取りは完了）</span>
           </div>
         )}
 
@@ -365,6 +391,13 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
               PDF · JPG · PNG · HEIC
             </p>
           </>
+        )}
+
+        {state === 'uploading' && (
+          <div className="flex flex-col items-center">
+            <Loader2 className="w-8 h-8 text-[#D4A03A] animate-spin mb-2" />
+            <p className="text-sm text-[#6b6b6b]">Google Driveに保存中...</p>
+          </div>
         )}
 
         {state === 'reading' && (
