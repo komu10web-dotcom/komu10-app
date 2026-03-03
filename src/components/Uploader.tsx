@@ -45,34 +45,16 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
     }
 
     setError(null);
-    setState('uploading');
+    setState('reading');
 
     try {
       // Base64変換
       const base64 = await fileToBase64(file);
       setFileName(file.name);
 
-      // ===== 1. Google Driveに保存 =====
-      const uploadResponse = await fetch('/api/upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          image: base64,
-          filename: file.name,
-          date: new Date().toISOString().split('T')[0],
-          mimeType: file.type,
-        }),
-      });
-
-      const uploadResult = await uploadResponse.json();
-      if (uploadResult.success) {
-        setDriveUrl(uploadResult.url || null);
-      }
-
-      // ===== 2. AI読み取り =====
-      setState('reading');
-
-      // ===== AI読み取り（Google Drive保存はスキップ） =====
+      // ===== 1. AI読み取り（利用日を取得するため先に実行） =====
+      let extractedDate = new Date().toISOString().split('T')[0];
+      let extracted: any = {};
 
       const aiResponse = await fetch('/api/receipts/extract', {
         method: 'POST',
@@ -87,23 +69,41 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
 
       if (aiResponse.ok) {
         const aiResult = await aiResponse.json();
-        const extracted = aiResult.aiExtracted || {};
-
-        // フォームに初期値をセット
-        setFormData({
-          date: extracted.date || new Date().toISOString().split('T')[0],
-          amount: extracted.amount?.toString() || '',
-          store: extracted.vendor || '',
-          kamoku: guessKamokuId(extracted.vendor),
-          division: 'general',
-          owner: 'tomo',
-          description: '',
-        });
-      } else {
-        // AI読み取り失敗しても、手入力で対応可能
-        console.warn('AI読み取り失敗。手入力で対応。');
+        extracted = aiResult.aiExtracted || {};
+        if (extracted.date) {
+          extractedDate = extracted.date;
+        }
       }
 
+      // ===== 2. Google Driveに保存（利用日ベースのフォルダ） =====
+      setState('uploading');
+
+      const uploadResponse = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image: base64,
+          filename: file.name,
+          date: extractedDate,
+          mimeType: file.type,
+        }),
+      });
+
+      const uploadResult = await uploadResponse.json();
+      if (uploadResult.success) {
+        setDriveUrl(uploadResult.url || null);
+      }
+
+      // フォームに初期値をセット
+      setFormData({
+        date: extracted.date || new Date().toISOString().split('T')[0],
+        amount: extracted.amount?.toString() || '',
+        store: extracted.vendor || '',
+        kamoku: guessKamokuId(extracted.vendor),
+        division: 'general',
+        owner: 'tomo',
+        description: '',
+        });
       setState('review');
 
       // 触覚フィードバック

@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
 
 抽出項目:
 - vendor: 店舗名・会社名
-- date: 日付（YYYY-MM-DD形式）
+- date: 利用日（YYYY-MM-DD形式）。搭乗日・宿泊日・利用日など実際にサービスを利用した日付を優先。発行日や購入日ではなく利用日を返すこと。利用日が不明な場合のみ発行日を使用。
 - amount: 合計金額（数値のみ、円記号不要）
 - tax: 消費税額（あれば）
 - items: 品目リスト（あれば）[{name, quantity, price}]
