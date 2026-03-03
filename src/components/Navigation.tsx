@@ -5,10 +5,10 @@ import { usePathname } from 'next/navigation';
 
 const navItems = [
   { href: '/', label: 'ホーム' },
-  { href: '/accounting', label: '会計' },
+  { href: '/expenses', label: '出金' },
+  { href: '/income', label: '入金' },
   { href: '/tax-return', label: '確定申告' },
   { href: '/management', label: '経営' },
-  { href: '/projects', label: 'PJ' },
   { href: '/settings', label: '設定' },
 ];
 

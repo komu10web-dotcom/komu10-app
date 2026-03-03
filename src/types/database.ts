@@ -107,6 +107,102 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['anbun_settings']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['anbun_settings']['Insert']>;
       };
+
+      // 交通費詳細
+      transport_details: {
+        Row: {
+          id: string;
+          transaction_id: string;
+          from_location: string;
+          to_location: string;
+          transport_type: string;
+          purpose: string;
+          carrier: string;
+          class: string | null;
+          class_reason: string | null;
+          round_trip: string;
+          companion: string | null;
+          flight_train_no: string | null;
+          route_note: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['transport_details']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['transport_details']['Insert']>;
+      };
+
+      // 銀行口座
+      bank_accounts: {
+        Row: {
+          id: string;
+          name: string;
+          bank_name: string;
+          branch_name: string | null;
+          account_type: string;
+          account_number_last4: string | null;
+          owner: string;
+          balance: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['bank_accounts']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['bank_accounts']['Insert']>;
+      };
+
+      // 入出金明細
+      bank_transactions: {
+        Row: {
+          id: string;
+          bank_account_id: string;
+          date: string;
+          amount: number;
+          description: string | null;
+          match_status: string;
+          matched_transaction_id: string | null;
+          created_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['bank_transactions']['Row'], 'id' | 'created_at'>;
+        Update: Partial<Database['public']['Tables']['bank_transactions']['Insert']>;
+      };
+
+      // 請求書
+      invoices: {
+        Row: {
+          id: string;
+          invoice_number: string;
+          client_name: string;
+          client_address: string | null;
+          owner: string;
+          project_id: string | null;
+          issue_date: string;
+          due_date: string;
+          status: string;
+          subtotal: number;
+          tax_amount: number;
+          total: number;
+          note: string | null;
+          paid_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['invoices']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['invoices']['Insert']>;
+      };
+
+      // 請求書明細
+      invoice_items: {
+        Row: {
+          id: string;
+          invoice_id: string;
+          description: string;
+          quantity: number;
+          unit_price: number;
+          amount: number;
+          sort_order: number;
+        };
+        Insert: Omit<Database['public']['Tables']['invoice_items']['Row'], 'id'>;
+        Update: Partial<Database['public']['Tables']['invoice_items']['Insert']>;
+      };
     };
   };
 }
@@ -117,6 +213,11 @@ export type Transaction = Database['public']['Tables']['transactions']['Row'];
 export type Project = Database['public']['Tables']['projects']['Row'];
 export type Asset = Database['public']['Tables']['assets']['Row'];
 export type AnbunSetting = Database['public']['Tables']['anbun_settings']['Row'];
+export type TransportDetail = Database['public']['Tables']['transport_details']['Row'];
+export type BankAccount = Database['public']['Tables']['bank_accounts']['Row'];
+export type BankTransaction = Database['public']['Tables']['bank_transactions']['Row'];
+export type Invoice = Database['public']['Tables']['invoices']['Row'];
+export type InvoiceItem = Database['public']['Tables']['invoice_items']['Row'];
 
 // 部門定義（定数）
 export const DIVISIONS = {

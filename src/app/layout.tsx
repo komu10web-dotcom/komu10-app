@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import './globals.css';
 import Navigation from '@/components/Navigation';
+import HeaderControls from '@/components/HeaderControls';
 
 export const metadata: Metadata = {
   title: 'komu10 会計',
@@ -18,7 +20,7 @@ export default function RootLayout({
         <div className="min-h-screen flex flex-col">
           {/* ヘッダー（sticky） */}
           <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
-            {/* 上段: ロゴ + ユーザー */}
+            {/* 上段: ロゴ + フィルター */}
             <div className="px-6 py-4 flex items-center justify-between">
               {/* 左: ロゴ */}
               <div className="flex items-center gap-3">
@@ -26,13 +28,10 @@ export default function RootLayout({
                 <div className="text-[10px] font-light tracking-wider text-gray-400">ACCOUNTING</div>
               </div>
               
-              {/* 右: ユーザー名+アバター */}
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-600">トモ</span>
-                <div className="w-8 h-8 rounded-full bg-[#1B4D3E] flex items-center justify-center">
-                  <span className="text-white text-xs font-medium">T</span>
-                </div>
-              </div>
+              {/* 右: 担当者フィルター + 年度セレクター */}
+              <Suspense fallback={<div className="h-8" />}>
+                <HeaderControls />
+              </Suspense>
             </div>
             
             {/* 下段: ナビゲーション */}
