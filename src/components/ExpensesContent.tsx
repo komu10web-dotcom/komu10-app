@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { KAMOKU, DIVISIONS } from '@/types/database';
+import { KAMOKU } from '@/types/database';
 import type { Transaction } from '@/types/database';
 import { Plus, Upload, Pencil, Trash2, Search, Loader2 } from 'lucide-react';
 import TransactionModal from './TransactionModal';
@@ -16,17 +16,6 @@ const MONTHS = [
   })),
 ];
 
-const TX_TYPES = [
-  { value: 'all', label: '全種別' },
-  { value: 'expense', label: '経費' },
-  { value: 'revenue', label: '売上' },
-];
-
-const DIVISION_FILTER = [
-  { value: 'all', label: '全部門' },
-  ...Object.entries(DIVISIONS).map(([id, v]) => ({ value: id, label: v.name })),
-];
-
 export default function ExpensesContent() {
   const searchParams = useSearchParams();
   const owner = searchParams.get('owner') || 'all';
@@ -37,8 +26,6 @@ export default function ExpensesContent() {
 
   // フィルター
   const [filterMonth, setFilterMonth] = useState('0');
-  const [filterType, setFilterType] = useState('all');
-  const [filterDivision, setFilterDivision] = useState('all');
   const [searchText, setSearchText] = useState('');
 
   // モーダル
@@ -60,6 +47,7 @@ export default function ExpensesContent() {
       let query = supabase
         .from('transactions')
         .select('*')
+        .eq('tx_type', 'expense')
         .gte('date', `${year}-01-01`)
         .lt('date', `${parseInt(year) + 1}-01-01`)
         .order('date', { ascending: false })
@@ -89,8 +77,6 @@ export default function ExpensesContent() {
       const m = parseInt(tx.date.split('-')[1]);
       if (m !== parseInt(filterMonth)) return false;
     }
-    if (filterType !== 'all' && tx.tx_type !== filterType) return false;
-    if (filterDivision !== 'all' && tx.division !== filterDivision) return false;
     if (searchText) {
       const q = searchText.toLowerCase();
       const haystack = `${tx.store || ''} ${tx.description || ''}`.toLowerCase();
@@ -100,8 +86,7 @@ export default function ExpensesContent() {
   });
 
   // 集計
-  const expenseSum = filtered.filter((t) => t.tx_type === 'expense').reduce((s, t) => s + t.amount, 0);
-  const revenueSum = filtered.filter((t) => t.tx_type === 'revenue').reduce((s, t) => s + t.amount, 0);
+  const expenseSum = filtered.reduce((s, t) => s + t.amount, 0);
 
   const formatAmount = (n: number) => `¥${n.toLocaleString()}`;
 
@@ -191,24 +176,6 @@ export default function ExpensesContent() {
               <option key={m.value} value={m.value}>{m.label}</option>
             ))}
           </select>
-          <select
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-            className="px-3 py-2 bg-white rounded-lg text-xs border border-gray-200 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
-          >
-            {TX_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>{t.label}</option>
-            ))}
-          </select>
-          <select
-            value={filterDivision}
-            onChange={(e) => setFilterDivision(e.target.value)}
-            className="px-3 py-2 bg-white rounded-lg text-xs border border-gray-200 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
-          >
-            {DIVISION_FILTER.map((d) => (
-              <option key={d.value} value={d.value}>{d.label}</option>
-            ))}
-          </select>
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#999]" />
             <input
@@ -240,7 +207,6 @@ export default function ExpensesContent() {
                 <thead>
                   <tr className="border-b border-gray-100">
                     <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">日付</th>
-                    <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">種別</th>
                     <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">取引先</th>
                     <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">科目</th>
                     <th className="text-right px-4 py-3 text-xs text-[#999] font-normal">金額</th>
@@ -256,24 +222,13 @@ export default function ExpensesContent() {
                           {formatDate(tx.date)}
                         </td>
                         <td className="px-4 py-3">
-                          <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium ${
-                            tx.tx_type === 'expense'
-                              ? 'bg-[#C23728]/10 text-[#C23728]'
-                              : 'bg-[#1B4D3E]/10 text-[#1B4D3E]'
-                          }`}>
-                            {tx.tx_type === 'expense' ? '経費' : '売上'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3">
                           <div className="text-[#1a1a1a]">{tx.store || '—'}</div>
                           {tx.description && (
                             <div className="text-xs text-[#999] mt-0.5">{tx.description}</div>
                           )}
                         </td>
                         <td className="px-4 py-3 text-xs text-[#6b6b6b]">{kamokuName}</td>
-                        <td className={`px-4 py-3 text-right font-['Saira_Condensed'] tabular-nums ${
-                          tx.tx_type === 'revenue' ? 'text-[#1B4D3E]' : 'text-[#1a1a1a]'
-                        }`}>
+                        <td className="px-4 py-3 text-right font-['Saira_Condensed'] tabular-nums text-[#1a1a1a]">
                           {formatAmount(tx.amount)}
                         </td>
                         <td className="px-4 py-3 text-right">
@@ -304,22 +259,10 @@ export default function ExpensesContent() {
 
           {/* ── フッター集計 ── */}
           {!loading && filtered.length > 0 && (
-            <div className="flex items-center justify-end gap-6 px-4 py-3 border-t border-gray-100 bg-[#F5F5F3]/50">
+            <div className="flex items-center justify-end px-4 py-3 border-t border-gray-100 bg-[#F5F5F3]/50">
               <div className="text-xs">
-                <span className="text-[#999]">経費計: </span>
+                <span className="text-[#999]">合計: </span>
                 <span className="font-['Saira_Condensed'] text-[#1a1a1a] tabular-nums">{formatAmount(expenseSum)}</span>
-              </div>
-              <div className="text-xs">
-                <span className="text-[#999]">売上計: </span>
-                <span className="font-['Saira_Condensed'] text-[#1B4D3E] tabular-nums">{formatAmount(revenueSum)}</span>
-              </div>
-              <div className="text-xs">
-                <span className="text-[#999]">差引: </span>
-                <span className={`font-['Saira_Condensed'] tabular-nums ${
-                  revenueSum - expenseSum >= 0 ? 'text-[#1B4D3E]' : 'text-[#C23728]'
-                }`}>
-                  {formatAmount(revenueSum - expenseSum)}
-                </span>
               </div>
             </div>
           )}

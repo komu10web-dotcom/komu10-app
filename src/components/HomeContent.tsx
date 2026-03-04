@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Uploader } from '@/components/Uploader';
 import { supabase } from '@/lib/supabase';
-import { KAMOKU, DIVISIONS } from '@/types/database';
+import { KAMOKU } from '@/types/database';
 import { CheckCircle2, AlertTriangle, ArrowRight, Camera, PenLine, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -39,7 +39,6 @@ export default function HomeContent() {
     amount: '',
     store: '',
     kamoku: 'misc',
-    division: 'general',
     owner: owner === 'all' ? 'tomo' : owner,
     description: '',
   });
@@ -123,8 +122,6 @@ export default function HomeContent() {
     .filter(([, v]) => v.type === 'expense')
     .map(([id, v]) => ({ id, name: v.name }));
 
-  const divisionList = Object.entries(DIVISIONS).map(([id, v]) => ({ id, name: v.name }));
-
   const handleManualSave = async () => {
     if (!manualForm.amount || !manualForm.date) {
       setManualError('日付と金額は必須です');
@@ -144,7 +141,7 @@ export default function HomeContent() {
           amount: parseInt(manualForm.amount.replace(/,/g, '')) || 0,
           store: manualForm.store || null,
           kamoku: manualForm.kamoku,
-          division: manualForm.division,
+          division: 'general',
           owner: manualForm.owner,
           description: manualForm.description || null,
           source: 'manual',
@@ -162,7 +159,6 @@ export default function HomeContent() {
           amount: '',
           store: '',
           kamoku: 'misc',
-          division: 'general',
           owner: owner === 'all' ? 'tomo' : owner,
           description: '',
         });
@@ -312,30 +308,16 @@ export default function HomeContent() {
                       ))}
                     </select>
                   </div>
-                  <div className="flex gap-3">
-                    <div className="flex-1">
-                      <label className="text-xs text-[#999] block mb-1">担当者</label>
-                      <select
-                        value={manualForm.owner}
-                        onChange={(e) => setManualForm({ ...manualForm, owner: e.target.value })}
-                        className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
-                      >
-                        <option value="tomo">トモ</option>
-                        <option value="toshiki">トシキ</option>
-                      </select>
-                    </div>
-                    <div className="flex-1">
-                      <label className="text-xs text-[#999] block mb-1">事業</label>
-                      <select
-                        value={manualForm.division}
-                        onChange={(e) => setManualForm({ ...manualForm, division: e.target.value })}
-                        className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
-                      >
-                        {divisionList.map((d) => (
-                          <option key={d.id} value={d.id}>{d.name}</option>
-                        ))}
-                      </select>
-                    </div>
+                  <div>
+                    <label className="text-xs text-[#999] block mb-1">担当者</label>
+                    <select
+                      value={manualForm.owner}
+                      onChange={(e) => setManualForm({ ...manualForm, owner: e.target.value })}
+                      className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+                    >
+                      <option value="tomo">トモ</option>
+                      <option value="toshiki">トシキ</option>
+                    </select>
                   </div>
                   <div>
                     <label className="text-xs text-[#999] block mb-1">メモ</label>
