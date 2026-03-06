@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { DIVISIONS } from '@/types/database';
 import { RefreshCw, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
 interface ProjectRow {
@@ -15,6 +16,25 @@ interface ProjectRow {
   shoot_date: string | null;
   publish_date: string | null;
   external_id: string | null;
+  seq_no: number | null;
+}
+
+const DIVISION_FILTER = [
+  { value: 'all', label: '全事業' },
+  ...Object.entries(DIVISIONS).map(([id, v]) => ({ value: id, label: v.label })),
+];
+
+// external_idから事業別IDを生成（例: yt-3 → YT-003）
+function formatProjectId(pj: ProjectRow): string {
+  const parts: string[] = [];
+  if (pj.seq_no) parts.push(`PJ-${String(pj.seq_no).padStart(3, '0')}`);
+  if (pj.external_id) {
+    const div = DIVISIONS[pj.division as keyof typeof DIVISIONS];
+    const prefix = div?.prefix || 'GEN';
+    const num = pj.external_id.replace(/^yt-/, '');
+    parts.push(`${prefix}-${String(num).padStart(3, '0')}`);
+  }
+  return parts.length > 0 ? parts.map(p => `[${p}]`).join('') : '';
 }
 
 export default function ManagementContent() {
@@ -25,6 +45,7 @@ export default function ManagementContent() {
   const [syncResult, setSyncResult] = useState<{ success: boolean; message: string } | null>(null);
   const [projects, setProjects] = useState<ProjectRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [divFilter, setDivFilter] = useState('all');
 
   const fetchProjects = useCallback(async () => {
     if (!supabase) return;
@@ -32,7 +53,7 @@ export default function ManagementContent() {
     try {
       let query = supabase
         .from('projects')
-        .select('id, name, division, status, category, location, shoot_date, publish_date, external_id')
+        .select('id, name, division, status, category, location, shoot_date, publish_date, external_id, seq_no')
         .order('created_at', { ascending: false });
 
       if (owner !== 'all') {
@@ -68,17 +89,20 @@ export default function ManagementContent() {
       }
     } catch (err) {
       console.error('Sync error:', err);
-      setSyncResult({ success: false, message: '同期に失敗しました。ネットワークを確認してください。' });
+      setSyncResult({ success: false, message: '同期に失敗しました' });
     } finally {
       setSyncing(false);
     }
   };
 
+  const filtered = divFilter === 'all'
+    ? projects
+    : projects.filter((p) => p.division === divFilter);
+
   return (
     <div className="bg-[#F5F5F3] min-h-screen">
       <div className="max-w-4xl mx-auto px-6 py-8">
 
-        {/* ヘッダー */}
         <div className="flex items-end justify-between mb-6">
           <div>
             <h1 className="font-['Shippori_Mincho'] text-xl text-[#1a1a1a]">経営</h1>
@@ -90,11 +114,10 @@ export default function ManagementContent() {
             className="flex items-center gap-1.5 px-4 py-2 bg-[#1a1a1a] text-white rounded-lg text-xs font-medium hover:bg-[#333] disabled:opacity-40 transition-colors"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
-            {syncing ? '同期中...' : 'スプレッドシート同期'}
+            {syncing ? '同期中...' : 'プロジェクト同期'}
           </button>
         </div>
 
-        {/* 同期結果 */}
         {syncResult && (
           <div className={`flex items-center gap-2 px-4 py-3 rounded-xl mb-4 ${
             syncResult.success ? 'bg-[#1B4D3E]/5' : 'bg-[#C23728]/5'
@@ -110,52 +133,75 @@ export default function ManagementContent() {
           </div>
         )}
 
-        {/* Phase 3で部門別損益・月別チャート等を実装 */}
-        <p className="text-xs text-[#999] mb-4">部門別損益・月別チャートはPhase 3で実装</p>
+        <p className="text-xs text-[#999] mb-4">部門別損益・月別チャート・PJ別損益はPhase 3で実装</p>
 
-        {/* プロジェクト一覧（簡易） */}
+        {/* プロジェクト管理 */}
         <div className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
-          <div className="px-4 py-3 border-b border-gray-100">
-            <h2 className="text-xs text-[#999]">プロジェクト（{projects.length}件）</h2>
+          <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+            <h2 className="text-xs text-[#999]">プロジェクト（{filtered.length}件）</h2>
+            <select
+              value={divFilter}
+              onChange={(e) => setDivFilter(e.target.value)}
+              className="px-2 py-1 bg-[#F5F5F3] rounded-lg text-xs border-0 outline-none"
+            >
+              {DIVISION_FILTER.map((d) => (
+                <option key={d.value} value={d.value}>{d.label}</option>
+              ))}
+            </select>
           </div>
 
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-5 h-5 text-[#D4A03A] animate-spin" />
             </div>
-          ) : projects.length === 0 ? (
+          ) : filtered.length === 0 ? (
             <div className="py-12 text-center text-sm text-[#ccc]">
               プロジェクトがありません
             </div>
           ) : (
             <div className="divide-y divide-gray-50">
-              {projects.map((pj) => (
-                <div key={pj.id} className="px-4 py-3 hover:bg-[#F5F5F3]/50 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <div className="min-w-0">
-                      <div className="text-sm text-[#1a1a1a] truncate">{pj.name}</div>
-                      <div className="flex items-center gap-2 mt-1">
-                        {pj.category && (
-                          <span className="text-[10px] text-[#999] bg-[#F5F5F3] px-1.5 py-0.5 rounded">{pj.category}</span>
-                        )}
-                        {pj.location && (
-                          <span className="text-[10px] text-[#999]">{pj.location}</span>
-                        )}
-                        {pj.shoot_date && (
-                          <span className="text-[10px] text-[#999] font-['Saira_Condensed'] tabular-nums">{pj.shoot_date}</span>
-                        )}
+              {filtered.map((pj) => {
+                const div = DIVISIONS[pj.division as keyof typeof DIVISIONS];
+                const pjId = formatProjectId(pj);
+                return (
+                  <div key={pj.id} className="px-4 py-3 hover:bg-[#F5F5F3]/50 transition-colors">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <div
+                          className="w-2.5 h-2.5 rounded-sm shrink-0 mt-1"
+                          style={{ background: div?.color || '#C4B49A' }}
+                        />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            {pjId && (
+                              <span className="text-[10px] font-['Saira_Condensed'] text-[#999] tabular-nums shrink-0">{pjId}</span>
+                            )}
+                            <span className="text-sm text-[#1a1a1a] truncate">{pj.name}</span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[10px] font-medium" style={{ color: div?.color || '#999' }}>
+                              {div?.label || pj.division}
+                            </span>
+                            {pj.category && (
+                              <span className="text-[10px] text-[#999] bg-[#F5F5F3] px-1.5 py-0.5 rounded">{pj.category}</span>
+                            )}
+                            {pj.location && (
+                              <span className="text-[10px] text-[#999]">{pj.location}</span>
+                            )}
+                          </div>
+                        </div>
                       </div>
+                      <span className={`text-[10px] px-2 py-0.5 rounded font-medium shrink-0 ${
+                        pj.status === 'completed' ? 'bg-[#1B4D3E]/10 text-[#1B4D3E]' :
+                        pj.status === 'active' ? 'bg-[#D4A03A]/10 text-[#D4A03A]' :
+                        'bg-gray-100 text-[#999]'
+                      }`}>
+                        {pj.status === 'completed' ? '完了' : pj.status === 'active' ? '進行中' : pj.status === 'ordered' ? '受注' : pj.status}
+                      </span>
                     </div>
-                    <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${
-                      pj.status === 'completed' ? 'bg-[#1B4D3E]/10 text-[#1B4D3E]' :
-                      pj.status === 'active' ? 'bg-[#D4A03A]/10 text-[#D4A03A]' :
-                      'bg-gray-100 text-[#999]'
-                    }`}>
-                      {pj.status === 'completed' ? '完了' : pj.status === 'active' ? '進行中' : pj.status === 'ordered' ? '受注' : pj.status}
-                    </span>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
