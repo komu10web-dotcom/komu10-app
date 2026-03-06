@@ -8,6 +8,9 @@ import type { Transaction } from '@/types/database';
 import TransportFields, { EMPTY_TRANSPORT } from '@/components/TransportFields';
 import type { TransportData } from '@/components/TransportFields';
 import { saveTransportDetails, updateTransportDetails, loadTransportDetails } from '@/lib/transportUtils';
+import EntertainmentFields, { EMPTY_ENTERTAINMENT } from '@/components/EntertainmentFields';
+import type { EntertainmentData } from '@/components/EntertainmentFields';
+import { entertainmentToDescription } from '@/lib/entertainmentUtils';
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -31,6 +34,7 @@ export default function TransactionModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [transportData, setTransportData] = useState<TransportData>({ ...EMPTY_TRANSPORT });
+  const [entertainmentData, setEntertainmentData] = useState<EntertainmentData>({ ...EMPTY_ENTERTAINMENT });
 
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -59,6 +63,7 @@ export default function TransactionModal({
       } else {
         setTransportData({ ...EMPTY_TRANSPORT });
       }
+      setEntertainmentData({ ...EMPTY_ENTERTAINMENT });
     } else {
       setForm({
         date: new Date().toISOString().split('T')[0],
@@ -69,6 +74,7 @@ export default function TransactionModal({
         description: '',
       });
       setTransportData({ ...EMPTY_TRANSPORT });
+      setEntertainmentData({ ...EMPTY_ENTERTAINMENT });
     }
     setError(null);
   }, [editData, isOpen, defaultOwner]);
@@ -82,10 +88,19 @@ export default function TransactionModal({
       setError('交通費の出発地・到着地・利用会社は必須です');
       return;
     }
+    if (form.kamoku === 'entertainment' && !entertainmentData.guest_name) {
+      setError('接待交際費の相手先名は必須です');
+      return;
+    }
     if (!supabase) return;
 
     setSaving(true);
     setError(null);
+
+    let finalDescription = form.description || null;
+    if (form.kamoku === 'entertainment') {
+      finalDescription = entertainmentToDescription(entertainmentData, form.description);
+    }
 
     const payload = {
       tx_type: 'expense' as const,
@@ -95,7 +110,7 @@ export default function TransactionModal({
       kamoku: form.kamoku,
       division: 'general',
       owner: form.owner,
-      description: form.description || null,
+      description: finalDescription,
       source: 'manual' as const,
       confirmed: true,
     };
@@ -202,6 +217,10 @@ export default function TransactionModal({
 
           {form.kamoku === 'travel' && (
             <TransportFields data={transportData} onChange={setTransportData} />
+          )}
+
+          {form.kamoku === 'entertainment' && (
+            <EntertainmentFields data={entertainmentData} onChange={setEntertainmentData} />
           )}
 
           <div>

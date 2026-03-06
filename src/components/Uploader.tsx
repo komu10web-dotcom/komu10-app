@@ -7,6 +7,9 @@ import { KAMOKU } from '@/types/database';
 import TransportFields, { EMPTY_TRANSPORT } from '@/components/TransportFields';
 import type { TransportData } from '@/components/TransportFields';
 import { saveTransportDetails } from '@/lib/transportUtils';
+import EntertainmentFields, { EMPTY_ENTERTAINMENT } from '@/components/EntertainmentFields';
+import type { EntertainmentData } from '@/components/EntertainmentFields';
+import { entertainmentToDescription } from '@/lib/entertainmentUtils';
 
 interface UploaderProps {
   onUploadComplete?: () => void;
@@ -30,6 +33,7 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
     description: '',
   });
   const [transportData, setTransportData] = useState<TransportData>({ ...EMPTY_TRANSPORT });
+  const [entertainmentData, setEntertainmentData] = useState<EntertainmentData>({ ...EMPTY_ENTERTAINMENT });
 
   const handleFile = useCallback(async (file: File) => {
     // バリデーション
@@ -131,8 +135,17 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
       setError('交通費の出発地・到着地・利用会社は必須です');
       return;
     }
+    if (formData.kamoku === 'entertainment' && !entertainmentData.guest_name) {
+      setError('接待交際費の相手先名は必須です');
+      return;
+    }
 
     setState('saving');
+
+    let finalDescription = formData.description || null;
+    if (formData.kamoku === 'entertainment') {
+      finalDescription = entertainmentToDescription(entertainmentData, formData.description);
+    }
 
     try {
       const { data: inserted, error: dbError } = await supabase
@@ -145,7 +158,7 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
           division: 'general',
           owner: formData.owner,
           store: formData.store || null,
-          description: formData.description || null,
+          description: finalDescription,
           memo: driveUrl || null,
           source: 'receipt_ai',
           confirmed: true,
@@ -194,6 +207,7 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
       description: '',
     });
     setTransportData({ ...EMPTY_TRANSPORT });
+    setEntertainmentData({ ...EMPTY_ENTERTAINMENT });
   };
 
   const handleDrag = useCallback((e: React.DragEvent) => {
@@ -304,6 +318,10 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
 
           {formData.kamoku === 'travel' && (
             <TransportFields data={transportData} onChange={setTransportData} />
+          )}
+
+          {formData.kamoku === 'entertainment' && (
+            <EntertainmentFields data={entertainmentData} onChange={setEntertainmentData} />
           )}
 
           <div>

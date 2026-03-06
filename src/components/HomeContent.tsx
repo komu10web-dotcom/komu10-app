@@ -10,6 +10,9 @@ import Link from 'next/link';
 import TransportFields, { EMPTY_TRANSPORT } from '@/components/TransportFields';
 import type { TransportData } from '@/components/TransportFields';
 import { saveTransportDetails } from '@/lib/transportUtils';
+import EntertainmentFields, { EMPTY_ENTERTAINMENT } from '@/components/EntertainmentFields';
+import type { EntertainmentData } from '@/components/EntertainmentFields';
+import { entertainmentToDescription } from '@/lib/entertainmentUtils';
 
 interface TransactionRow {
   id: string;
@@ -22,6 +25,13 @@ interface TransactionRow {
   confirmed: boolean;
 }
 
+type SummaryMode = 'single' | 'ytd' | 'range';
+
+const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
+  value: i + 1,
+  label: `${i + 1}月`,
+}));
+
 export default function HomeContent() {
   const searchParams = useSearchParams();
   const owner = searchParams.get('owner') || 'all';
@@ -32,6 +42,12 @@ export default function HomeContent() {
   const [unconfirmedCount, setUnconfirmedCount] = useState(0);
   const [recentTx, setRecentTx] = useState<TransactionRow[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // サマリーモード
+  const [summaryMode, setSummaryMode] = useState<SummaryMode>('single');
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [rangeFrom, setRangeFrom] = useState(1);
+  const [rangeTo, setRangeTo] = useState(new Date().getMonth() + 1);
 
   // 撮影 / 手入力 切替
   const [inputMode, setInputMode] = useState<'camera' | 'manual'>('camera');
@@ -49,21 +65,39 @@ export default function HomeContent() {
   const [manualSuccess, setManualSuccess] = useState(false);
   const [manualError, setManualError] = useState<string | null>(null);
   const [transportData, setTransportData] = useState<TransportData>({ ...EMPTY_TRANSPORT });
+  const [entertainmentData, setEntertainmentData] = useState<EntertainmentData>({ ...EMPTY_ENTERTAINMENT });
+
+  // サマリー期間の計算
+  const getDateRange = useCallback(() => {
+    let startMonth: number;
+    let endMonth: number;
+
+    if (summaryMode === 'single') {
+      startMonth = selectedMonth;
+      endMonth = selectedMonth;
+    } else if (summaryMode === 'ytd') {
+      startMonth = 1;
+      endMonth = selectedMonth;
+    } else {
+      startMonth = rangeFrom;
+      endMonth = rangeTo;
+    }
+
+    const startDate = `${year}-${String(startMonth).padStart(2, '0')}-01`;
+    const endDate = endMonth === 12
+      ? `${parseInt(year) + 1}-01-01`
+      : `${year}-${String(endMonth + 1).padStart(2, '0')}-01`;
+
+    return { startDate, endDate };
+  }, [summaryMode, selectedMonth, rangeFrom, rangeTo, year]);
 
   const fetchData = useCallback(async () => {
     if (!supabase) return;
     setLoading(true);
 
-    const now = new Date();
-    const currentMonth = now.getMonth() + 1;
-    const monthStr = `${year}-${String(currentMonth).padStart(2, '0')}`;
-    const startDate = `${monthStr}-01`;
-    const endDate = currentMonth === 12
-      ? `${parseInt(year) + 1}-01-01`
-      : `${year}-${String(currentMonth + 1).padStart(2, '0')}-01`;
+    const { startDate, endDate } = getDateRange();
 
     try {
-      // 今月の取引（サマリー用）
       let summaryQuery = supabase
         .from('transactions')
         .select('amount, tx_type, confirmed')
@@ -90,7 +124,6 @@ export default function HomeContent() {
         setUnconfirmedCount(uncCount);
       }
 
-      // 最近の取引5件
       let recentQuery = supabase
         .from('transactions')
         .select('id, date, store, description, amount, tx_type, kamoku, confirmed')
@@ -109,7 +142,7 @@ export default function HomeContent() {
     } finally {
       setLoading(false);
     }
-  }, [owner, year]);
+  }, [owner, year, getDateRange]);
 
   useEffect(() => {
     fetchData();
@@ -126,6 +159,13 @@ export default function HomeContent() {
     .filter(([, v]) => v.type === 'expense')
     .map(([id, v]) => ({ id, name: v.name }));
 
+  // サマリーラベル
+  const summaryLabel = (() => {
+    if (summaryMode === 'single') return `${selectedMonth}月`;
+    if (summaryMode === 'ytd') return `1月〜${selectedMonth}月`;
+    return `${rangeFrom}月〜${rangeTo}月`;
+  })();
+
   const handleManualSave = async () => {
     if (!manualForm.amount || !manualForm.date) {
       setManualError('日付と金額は必須です');
@@ -135,10 +175,20 @@ export default function HomeContent() {
       setManualError('交通費の出発地・到着地・利用会社は必須です');
       return;
     }
+    if (manualForm.kamoku === 'entertainment' && !entertainmentData.guest_name) {
+      setManualError('接待交際費の相手先名は必須です');
+      return;
+    }
     if (!supabase) return;
 
     setManualSaving(true);
     setManualError(null);
+
+    // 接待交際費の場合、descriptionを構造化
+    let finalDescription = manualForm.description || null;
+    if (manualForm.kamoku === 'entertainment') {
+      finalDescription = entertainmentToDescription(entertainmentData, manualForm.description);
+    }
 
     try {
       const { data: inserted, error: dbErr } = await supabase
@@ -151,7 +201,7 @@ export default function HomeContent() {
           kamoku: manualForm.kamoku,
           division: 'general',
           owner: manualForm.owner,
-          description: manualForm.description || null,
+          description: finalDescription,
           source: 'manual',
           confirmed: true,
         } as any)
@@ -159,7 +209,6 @@ export default function HomeContent() {
         .single();
       if (dbErr) throw dbErr;
 
-      // 旅費交通費の場合、transport_detailsも保存
       if (manualForm.kamoku === 'travel' && inserted) {
         await saveTransportDetails((inserted as any).id, transportData);
       }
@@ -167,7 +216,6 @@ export default function HomeContent() {
       setManualSuccess(true);
       if ('vibrate' in navigator) navigator.vibrate([50, 50, 50]);
 
-      // リセット
       setTimeout(() => {
         setManualForm({
           date: new Date().toISOString().split('T')[0],
@@ -178,6 +226,7 @@ export default function HomeContent() {
           description: '',
         });
         setTransportData({ ...EMPTY_TRANSPORT });
+        setEntertainmentData({ ...EMPTY_ENTERTAINMENT });
         setManualSuccess(false);
       }, 1500);
 
@@ -194,23 +243,84 @@ export default function HomeContent() {
     <div className="bg-[#F5F5F3] min-h-screen">
       <div className="max-w-lg mx-auto px-4 py-8 space-y-6">
 
-        {/* ── 今月サマリー ── */}
+        {/* ── サマリー ── */}
         <div className="bg-white rounded-2xl p-5" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
+          {/* モード切替 */}
+          <div className="flex bg-[#F5F5F3] rounded-lg p-0.5 mb-4">
+            {([
+              { key: 'single', label: '単月' },
+              { key: 'ytd', label: '累計' },
+              { key: 'range', label: '期間' },
+            ] as const).map((m) => (
+              <button
+                key={m.key}
+                onClick={() => setSummaryMode(m.key)}
+                className={`flex-1 py-1.5 text-xs rounded-md transition-all ${
+                  summaryMode === m.key
+                    ? 'bg-white text-[#1a1a1a] shadow-sm font-medium'
+                    : 'text-[#999]'
+                }`}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+
+          {/* 月選択 */}
+          <div className="flex items-center gap-2 mb-4">
+            {summaryMode === 'range' ? (
+              <>
+                <select
+                  value={rangeFrom}
+                  onChange={(e) => setRangeFrom(parseInt(e.target.value))}
+                  className="px-2 py-1 bg-[#F5F5F3] rounded-lg text-xs border-0 outline-none font-['Saira_Condensed']"
+                >
+                  {MONTH_OPTIONS.map((m) => (
+                    <option key={m.value} value={m.value}>{m.label}</option>
+                  ))}
+                </select>
+                <span className="text-xs text-[#999]">〜</span>
+                <select
+                  value={rangeTo}
+                  onChange={(e) => setRangeTo(parseInt(e.target.value))}
+                  className="px-2 py-1 bg-[#F5F5F3] rounded-lg text-xs border-0 outline-none font-['Saira_Condensed']"
+                >
+                  {MONTH_OPTIONS.map((m) => (
+                    <option key={m.value} value={m.value}>{m.label}</option>
+                  ))}
+                </select>
+              </>
+            ) : (
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                className="px-2 py-1 bg-[#F5F5F3] rounded-lg text-xs border-0 outline-none font-['Saira_Condensed']"
+              >
+                {MONTH_OPTIONS.map((m) => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
+              </select>
+            )}
+            <span className="text-xs text-[#999] ml-1">
+              {summaryMode === 'ytd' && `(1月〜${selectedMonth}月)`}
+            </span>
+          </div>
+
           {loading ? (
-            <div className="h-24 flex items-center justify-center">
+            <div className="h-20 flex items-center justify-center">
               <div className="w-5 h-5 border-2 border-[#D4A03A] border-t-transparent rounded-full animate-spin" />
             </div>
           ) : (
             <>
               <div className="space-y-3">
                 <div className="flex items-baseline justify-between">
-                  <span className="text-xs text-[#999]">今月の経費</span>
+                  <span className="text-xs text-[#999]">{summaryLabel}の経費</span>
                   <span className="font-['Saira_Condensed'] text-2xl text-[#1a1a1a] tabular-nums">
                     {formatAmount(expenseTotal)}
                   </span>
                 </div>
                 <div className="flex items-baseline justify-between">
-                  <span className="text-xs text-[#999]">今月の売上</span>
+                  <span className="text-xs text-[#999]">{summaryLabel}の売上</span>
                   <span className="font-['Saira_Condensed'] text-2xl text-[#1B4D3E] tabular-nums">
                     {formatAmount(revenueTotal)}
                   </span>
@@ -238,7 +348,6 @@ export default function HomeContent() {
 
         {/* ── 入力モード切替 + 入力エリア ── */}
         <div>
-          {/* タブ */}
           <div className="flex bg-white rounded-t-2xl overflow-hidden" style={{ boxShadow: '0 -2px 10px rgba(0,0,0,0.02)' }}>
             <button
               onClick={() => setInputMode('camera')}
@@ -264,12 +373,10 @@ export default function HomeContent() {
             </button>
           </div>
 
-          {/* 撮影モード */}
           {inputMode === 'camera' && (
             <Uploader onUploadComplete={fetchData} />
           )}
 
-          {/* 手入力モード */}
           {inputMode === 'manual' && (
             <div className="bg-white rounded-b-2xl p-5" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
               {manualSuccess ? (
@@ -326,6 +433,9 @@ export default function HomeContent() {
                   </div>
                   {manualForm.kamoku === 'travel' && (
                     <TransportFields data={transportData} onChange={setTransportData} />
+                  )}
+                  {manualForm.kamoku === 'entertainment' && (
+                    <EntertainmentFields data={entertainmentData} onChange={setEntertainmentData} />
                   )}
                   <div>
                     <label className="text-xs text-[#999] block mb-1">担当者</label>
