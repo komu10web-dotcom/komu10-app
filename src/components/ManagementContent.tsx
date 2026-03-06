@@ -62,12 +62,36 @@ export default function ManagementContent() {
       const res = await fetch(`${GAS_URL}?action=sync`);
       const result = await res.json();
 
-      if (result.success || result.status === 'ok') {
-        setSyncResult({ success: true, message: `同期完了（${result.count || 0}件）` });
-        fetchProjects();
-      } else {
-        setSyncResult({ success: false, message: result.error || '同期に失敗しました' });
+      if (!result.projects || !Array.isArray(result.projects)) {
+        setSyncResult({ success: false, message: '同期データの形式が不正です' });
+        return;
       }
+
+      // Supabaseにupsert
+      let savedCount = 0;
+      for (const pj of result.projects) {
+        if (!pj.externalId || !pj.name) continue;
+
+        const { error: upsertErr } = await supabase!
+          .from('projects')
+          .upsert({
+            external_id: `yt-${pj.externalId}`,
+            name: pj.name,
+            division: pj.division || 'youtube',
+            owner: 'tomo',
+            status: pj.status === 'published' || pj.status === 'completed' ? 'completed' : 'active',
+            category: pj.category || null,
+            location: pj.location || null,
+            shoot_date: pj.shootDate || null,
+            publish_date: pj.publishDate || null,
+            youtube_id: pj.youtubeId || null,
+          } as any, { onConflict: 'external_id' });
+
+        if (!upsertErr) savedCount++;
+      }
+
+      setSyncResult({ success: true, message: `同期完了（${savedCount}件）` });
+      fetchProjects();
     } catch (err) {
       console.error('Sync error:', err);
       setSyncResult({ success: false, message: '同期に失敗しました。ネットワークを確認してください。' });
