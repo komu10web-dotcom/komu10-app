@@ -5,6 +5,9 @@ import { X, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { KAMOKU } from '@/types/database';
 import type { Transaction } from '@/types/database';
+import TransportFields, { EMPTY_TRANSPORT } from '@/components/TransportFields';
+import type { TransportData } from '@/components/TransportFields';
+import { saveTransportDetails, updateTransportDetails, loadTransportDetails } from '@/lib/transportUtils';
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -27,6 +30,7 @@ export default function TransactionModal({
 }: TransactionModalProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [transportData, setTransportData] = useState<TransportData>({ ...EMPTY_TRANSPORT });
 
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -47,6 +51,14 @@ export default function TransactionModal({
         owner: editData.owner,
         description: editData.description || '',
       });
+      // 編集時、旅費交通費なら既存transport_detailsを読み込む
+      if (editData.kamoku === 'travel') {
+        loadTransportDetails(editData.id).then((td) => {
+          setTransportData(td || { ...EMPTY_TRANSPORT });
+        });
+      } else {
+        setTransportData({ ...EMPTY_TRANSPORT });
+      }
     } else {
       setForm({
         date: new Date().toISOString().split('T')[0],
@@ -56,6 +68,7 @@ export default function TransactionModal({
         owner: defaultOwner === 'all' ? 'tomo' : defaultOwner,
         description: '',
       });
+      setTransportData({ ...EMPTY_TRANSPORT });
     }
     setError(null);
   }, [editData, isOpen, defaultOwner]);
@@ -63,6 +76,10 @@ export default function TransactionModal({
   const handleSave = async () => {
     if (!form.amount || !form.date) {
       setError('日付と金額は必須です');
+      return;
+    }
+    if (form.kamoku === 'travel' && (!transportData.from_location || !transportData.to_location || !transportData.carrier)) {
+      setError('交通費の出発地・到着地・利用会社は必須です');
       return;
     }
     if (!supabase) return;
@@ -90,11 +107,21 @@ export default function TransactionModal({
           .update(payload as any)
           .eq('id', editData.id);
         if (dbErr) throw dbErr;
+
+        if (form.kamoku === 'travel') {
+          await updateTransportDetails(editData.id, transportData);
+        }
       } else {
-        const { error: dbErr } = await supabase
+        const { data: inserted, error: dbErr } = await supabase
           .from('transactions')
-          .insert(payload as any);
+          .insert(payload as any)
+          .select('id')
+          .single();
         if (dbErr) throw dbErr;
+
+        if (form.kamoku === 'travel' && inserted) {
+          await saveTransportDetails((inserted as any).id, transportData);
+        }
       }
       onSaved();
       onClose();
@@ -172,6 +199,10 @@ export default function TransactionModal({
               ))}
             </select>
           </div>
+
+          {form.kamoku === 'travel' && (
+            <TransportFields data={transportData} onChange={setTransportData} />
+          )}
 
           <div>
             <label className="text-xs text-[#999] block mb-1">担当者</label>

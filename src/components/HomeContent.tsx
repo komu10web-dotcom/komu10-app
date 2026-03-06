@@ -7,6 +7,9 @@ import { supabase } from '@/lib/supabase';
 import { KAMOKU } from '@/types/database';
 import { CheckCircle2, AlertTriangle, ArrowRight, Camera, PenLine, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import TransportFields, { EMPTY_TRANSPORT } from '@/components/TransportFields';
+import type { TransportData } from '@/components/TransportFields';
+import { saveTransportDetails } from '@/lib/transportUtils';
 
 interface TransactionRow {
   id: string;
@@ -45,6 +48,7 @@ export default function HomeContent() {
   const [manualSaving, setManualSaving] = useState(false);
   const [manualSuccess, setManualSuccess] = useState(false);
   const [manualError, setManualError] = useState<string | null>(null);
+  const [transportData, setTransportData] = useState<TransportData>({ ...EMPTY_TRANSPORT });
 
   const fetchData = useCallback(async () => {
     if (!supabase) return;
@@ -127,13 +131,17 @@ export default function HomeContent() {
       setManualError('日付と金額は必須です');
       return;
     }
+    if (manualForm.kamoku === 'travel' && (!transportData.from_location || !transportData.to_location || !transportData.carrier)) {
+      setManualError('交通費の出発地・到着地・利用会社は必須です');
+      return;
+    }
     if (!supabase) return;
 
     setManualSaving(true);
     setManualError(null);
 
     try {
-      const { error: dbErr } = await supabase
+      const { data: inserted, error: dbErr } = await supabase
         .from('transactions')
         .insert({
           tx_type: 'expense',
@@ -146,8 +154,15 @@ export default function HomeContent() {
           description: manualForm.description || null,
           source: 'manual',
           confirmed: true,
-        } as any);
+        } as any)
+        .select('id')
+        .single();
       if (dbErr) throw dbErr;
+
+      // 旅費交通費の場合、transport_detailsも保存
+      if (manualForm.kamoku === 'travel' && inserted) {
+        await saveTransportDetails((inserted as any).id, transportData);
+      }
 
       setManualSuccess(true);
       if ('vibrate' in navigator) navigator.vibrate([50, 50, 50]);
@@ -162,6 +177,7 @@ export default function HomeContent() {
           owner: owner === 'all' ? 'tomo' : owner,
           description: '',
         });
+        setTransportData({ ...EMPTY_TRANSPORT });
         setManualSuccess(false);
       }, 1500);
 
@@ -308,6 +324,9 @@ export default function HomeContent() {
                       ))}
                     </select>
                   </div>
+                  {manualForm.kamoku === 'travel' && (
+                    <TransportFields data={transportData} onChange={setTransportData} />
+                  )}
                   <div>
                     <label className="text-xs text-[#999] block mb-1">担当者</label>
                     <select

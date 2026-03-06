@@ -4,6 +4,9 @@ import { useState, useCallback } from 'react';
 import { Upload, Check, AlertCircle, Loader2, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { KAMOKU } from '@/types/database';
+import TransportFields, { EMPTY_TRANSPORT } from '@/components/TransportFields';
+import type { TransportData } from '@/components/TransportFields';
+import { saveTransportDetails } from '@/lib/transportUtils';
 
 interface UploaderProps {
   onUploadComplete?: () => void;
@@ -26,6 +29,7 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
     owner: 'tomo',
     description: '',
   });
+  const [transportData, setTransportData] = useState<TransportData>({ ...EMPTY_TRANSPORT });
 
   const handleFile = useCallback(async (file: File) => {
     // バリデーション
@@ -123,11 +127,15 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
       setError('日付と金額は必須です');
       return;
     }
+    if (formData.kamoku === 'travel' && (!transportData.from_location || !transportData.to_location || !transportData.carrier)) {
+      setError('交通費の出発地・到着地・利用会社は必須です');
+      return;
+    }
 
     setState('saving');
 
     try {
-      const { error: dbError } = await supabase
+      const { data: inserted, error: dbError } = await supabase
         .from('transactions')
         .insert({
           tx_type: 'expense',
@@ -141,9 +149,16 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
           memo: driveUrl || null,
           source: 'receipt_ai',
           confirmed: true,
-        } as any);
+        } as any)
+        .select('id')
+        .single();
 
       if (dbError) throw dbError;
+
+      // 旅費交通費の場合
+      if (formData.kamoku === 'travel' && inserted) {
+        await saveTransportDetails((inserted as any).id, transportData);
+      }
 
       setState('success');
 
@@ -178,6 +193,7 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
       owner: 'tomo',
       description: '',
     });
+    setTransportData({ ...EMPTY_TRANSPORT });
   };
 
   const handleDrag = useCallback((e: React.DragEvent) => {
@@ -285,6 +301,10 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
               ))}
             </select>
           </div>
+
+          {formData.kamoku === 'travel' && (
+            <TransportFields data={transportData} onChange={setTransportData} />
+          )}
 
           <div>
             <label className="text-xs text-[#999] block mb-1">担当者</label>
