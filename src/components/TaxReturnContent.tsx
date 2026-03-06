@@ -149,7 +149,8 @@ function calcDepreciation(asset: Asset, year: number): DepreciationRow {
 function generateJournalEntries(
   transactions: Transaction[],
   kamokuSummaries: KamokuSummary[],
-  depreciationRows: DepreciationRow[]
+  depreciationRows: DepreciationRow[],
+  year: number
 ): JournalEntry[] {
   const entries: JournalEntry[] = [];
 
@@ -187,7 +188,7 @@ function generateJournalEntries(
   for (const dep of depreciationRows) {
     if (dep.currentYearAmount <= 0) continue;
     entries.push({
-      date: `${new Date().getFullYear()}-12-31`,
+      date: `${year}-12-31`,
       debitAccount: '減価償却費',
       debitAmount: dep.currentYearAmount,
       creditAccount: '工具器具備品',
@@ -346,7 +347,7 @@ export default function TaxReturnContent() {
   const income = revenueTotal - expenseTotal;
 
   // 仕訳帳
-  const journalEntries = generateJournalEntries(transactions, kamokuSummaries, depreciationRows);
+  const journalEntries = generateJournalEntries(transactions, kamokuSummaries, depreciationRows, year);
 
   // 按分対象で設定がない科目の警告
   const missingAnbun = kamokuSummaries.filter(
