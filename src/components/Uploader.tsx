@@ -23,7 +23,6 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
     amount: '',
     store: '',
     kamoku: 'misc',
-    division: 'general',
     owner: 'tomo',
     description: '',
   });
@@ -100,7 +99,6 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
         amount: extracted.amount?.toString() || '',
         store: extracted.vendor || '',
         kamoku: guessKamokuId(extracted.vendor),
-        division: 'general',
         owner: 'tomo',
         description: '',
         });
@@ -136,7 +134,7 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
           date: formData.date,
           amount: parseInt(formData.amount) || 0,
           kamoku: formData.kamoku,
-          division: formData.division,
+          division: 'general',
           owner: formData.owner,
           store: formData.store || null,
           description: formData.description || null,
@@ -177,7 +175,6 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
       amount: '',
       store: '',
       kamoku: 'misc',
-      division: 'general',
       owner: 'tomo',
       description: '',
     });
@@ -289,33 +286,16 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
             </select>
           </div>
 
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <label className="text-xs text-[#999] block mb-1">担当者</label>
-              <select
-                value={formData.owner}
-                onChange={(e) => setFormData({ ...formData, owner: e.target.value })}
-                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
-              >
-                <option value="tomo">トモ</option>
-                <option value="toshiki">トシキ</option>
-              </select>
-            </div>
-            <div className="flex-1">
-              <label className="text-xs text-[#999] block mb-1">事業</label>
-              <select
-                value={formData.division}
-                onChange={(e) => setFormData({ ...formData, division: e.target.value })}
-                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
-              >
-                <option value="general">共通</option>
-                <option value="data">データサイエンス</option>
-                <option value="business">観光事業設計</option>
-                <option value="editorial">編集・体験設計</option>
-                <option value="thisplace">THIS PLACE</option>
-                <option value="youtube">YouTube</option>
-              </select>
-            </div>
+          <div>
+            <label className="text-xs text-[#999] block mb-1">担当者</label>
+            <select
+              value={formData.owner}
+              onChange={(e) => setFormData({ ...formData, owner: e.target.value })}
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+            >
+              <option value="tomo">トモ</option>
+              <option value="toshiki">トシキ</option>
+            </select>
           </div>
 
           <div>
