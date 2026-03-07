@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { KAMOKU } from '@/types/database';
-import type { AnbunSetting, Asset } from '@/types/database';
+import { KAMOKU, DIVISIONS } from '@/types/database';
+import type { AnbunSetting, Asset, RevenueType, RevenueTypeDivision, ContractType } from '@/types/database';
 import { Plus, Pencil, Trash2, Save, X, Loader2, ChevronDown, ChevronUp, HelpCircle } from 'lucide-react';
 
 // ============================================================
@@ -96,6 +96,23 @@ export default function SettingsContent() {
   // Q&A
   const [openQA, setOpenQA] = useState<number | null>(null);
 
+  // 契約区分
+  const [contractTypes, setContractTypes] = useState<ContractType[]>([]);
+  const [ctEditId, setCtEditId] = useState<string | null>(null);
+  const [ctEditName, setCtEditName] = useState('');
+  const [ctNewName, setCtNewName] = useState('');
+  const [ctSaving, setCtSaving] = useState(false);
+
+  // 収益タイプ
+  const [revenueTypes, setRevenueTypes] = useState<RevenueType[]>([]);
+  const [revenueTypeDivisions, setRevenueTypeDivisions] = useState<RevenueTypeDivision[]>([]);
+  const [rtEditId, setRtEditId] = useState<string | null>(null);
+  const [rtEditName, setRtEditName] = useState('');
+  const [rtEditDivisions, setRtEditDivisions] = useState<string[]>([]);
+  const [rtNewName, setRtNewName] = useState('');
+  const [rtNewDivisions, setRtNewDivisions] = useState<string[]>([]);
+  const [rtSaving, setRtSaving] = useState(false);
+
   // ============================================================
   // データ取得
   // ============================================================
@@ -124,9 +141,29 @@ export default function SettingsContent() {
         .eq('user_key', effectiveOwner)
         .single();
 
+      // 契約区分
+      const { data: ctData } = await supabase
+        .from('contract_types')
+        .select('*')
+        .order('sort_order');
+
+      // 収益タイプ
+      const { data: rtData } = await supabase
+        .from('revenue_types')
+        .select('*')
+        .order('sort_order');
+
+      // 収益タイプ×事業
+      const { data: rtdData } = await supabase
+        .from('revenue_type_divisions')
+        .select('*');
+
       setAnbunSettings(anbunData || []);
       setAssets(assetData || []);
       if (profileData) setCurrentTheme(profileData.theme || 'light');
+      setContractTypes(ctData || []);
+      setRevenueTypes(rtData || []);
+      setRevenueTypeDivisions(rtdData || []);
 
       // 按分ドラフト初期化
       const draft: Record<string, { ratio: number; note: string }> = {};
@@ -274,6 +311,117 @@ export default function SettingsContent() {
     } finally {
       setThemeSaving(false);
     }
+  };
+
+  // ============================================================
+  // 契約区分 CRUD
+  // ============================================================
+  const addContractType = async () => {
+    if (!supabase || !ctNewName.trim()) return;
+    setCtSaving(true);
+    try {
+      const maxSort = contractTypes.length > 0 ? Math.max(...contractTypes.map(c => c.sort_order)) : 0;
+      await supabase.from('contract_types').insert({ name: ctNewName.trim(), sort_order: maxSort + 1 });
+      setCtNewName('');
+      const { data } = await supabase.from('contract_types').select('*').order('sort_order');
+      setContractTypes(data || []);
+    } catch (err) { console.error('契約区分追加エラー:', err); }
+    finally { setCtSaving(false); }
+  };
+
+  const updateContractType = async (id: string) => {
+    if (!supabase || !ctEditName.trim()) return;
+    setCtSaving(true);
+    try {
+      await supabase.from('contract_types').update({ name: ctEditName.trim() }).eq('id', id);
+      setCtEditId(null);
+      const { data } = await supabase.from('contract_types').select('*').order('sort_order');
+      setContractTypes(data || []);
+    } catch (err) { console.error('契約区分更新エラー:', err); }
+    finally { setCtSaving(false); }
+  };
+
+  const deleteContractType = async (id: string) => {
+    if (!supabase) return;
+    if (!confirm('この契約区分を削除しますか？')) return;
+    try {
+      await supabase.from('contract_types').delete().eq('id', id);
+      const { data } = await supabase.from('contract_types').select('*').order('sort_order');
+      setContractTypes(data || []);
+    } catch (err) { console.error('契約区分削除エラー:', err); }
+  };
+
+  // ============================================================
+  // 収益タイプ CRUD
+  // ============================================================
+  const addRevenueType = async () => {
+    if (!supabase || !rtNewName.trim()) return;
+    setRtSaving(true);
+    try {
+      const maxSort = revenueTypes.length > 0 ? Math.max(...revenueTypes.map(r => r.sort_order)) : 0;
+      const { data: inserted } = await supabase
+        .from('revenue_types')
+        .insert({ name: rtNewName.trim(), sort_order: maxSort + 1 })
+        .select()
+        .single();
+      // 事業紐付け
+      if (inserted && rtNewDivisions.length > 0) {
+        const links = rtNewDivisions.map(div => ({ revenue_type_id: inserted.id, division: div }));
+        await supabase.from('revenue_type_divisions').insert(links);
+      }
+      setRtNewName('');
+      setRtNewDivisions([]);
+      await refreshRevenueTypes();
+    } catch (err) { console.error('収益タイプ追加エラー:', err); }
+    finally { setRtSaving(false); }
+  };
+
+  const startEditRevenueType = (rt: RevenueType) => {
+    setRtEditId(rt.id);
+    setRtEditName(rt.name);
+    const linked = revenueTypeDivisions.filter(d => d.revenue_type_id === rt.id).map(d => d.division);
+    setRtEditDivisions(linked);
+  };
+
+  const updateRevenueType = async (id: string) => {
+    if (!supabase || !rtEditName.trim()) return;
+    setRtSaving(true);
+    try {
+      await supabase.from('revenue_types').update({ name: rtEditName.trim() }).eq('id', id);
+      // 事業紐付け差し替え
+      await supabase.from('revenue_type_divisions').delete().eq('revenue_type_id', id);
+      if (rtEditDivisions.length > 0) {
+        const links = rtEditDivisions.map(div => ({ revenue_type_id: id, division: div }));
+        await supabase.from('revenue_type_divisions').insert(links);
+      }
+      setRtEditId(null);
+      await refreshRevenueTypes();
+    } catch (err) { console.error('収益タイプ更新エラー:', err); }
+    finally { setRtSaving(false); }
+  };
+
+  const deleteRevenueType = async (id: string) => {
+    if (!supabase) return;
+    if (!confirm('この収益タイプを削除しますか？')) return;
+    try {
+      await supabase.from('revenue_type_divisions').delete().eq('revenue_type_id', id);
+      await supabase.from('revenue_types').delete().eq('id', id);
+      await refreshRevenueTypes();
+    } catch (err) { console.error('収益タイプ削除エラー:', err); }
+  };
+
+  const refreshRevenueTypes = async () => {
+    if (!supabase) return;
+    const [rtRes, rtdRes] = await Promise.all([
+      supabase.from('revenue_types').select('*').order('sort_order'),
+      supabase.from('revenue_type_divisions').select('*'),
+    ]);
+    setRevenueTypes(rtRes.data || []);
+    setRevenueTypeDivisions(rtdRes.data || []);
+  };
+
+  const toggleDivision = (list: string[], setList: (v: string[]) => void, div: string) => {
+    setList(list.includes(div) ? list.filter(d => d !== div) : [...list, div]);
   };
 
   // ============================================================
@@ -521,6 +669,183 @@ export default function SettingsContent() {
                 )}
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* ── 契約区分管理 ── */}
+        <section className="mb-10">
+          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+            契約区分
+          </div>
+          <div className="bg-white rounded-xl shadow-sm">
+            {contractTypes.map((ct) => (
+              <div key={ct.id} className="flex items-center gap-2 px-5 py-3 border-b border-[#f0f0f0] last:border-b-0">
+                {ctEditId === ct.id ? (
+                  <>
+                    <input
+                      type="text"
+                      value={ctEditName}
+                      onChange={(e) => setCtEditName(e.target.value)}
+                      className="flex-1 px-2 py-1 text-sm border border-[#D4A03A] rounded-md outline-none"
+                      onKeyDown={(e) => { if (e.key === 'Enter') updateContractType(ct.id); if (e.key === 'Escape') setCtEditId(null); }}
+                      autoFocus
+                    />
+                    <button onClick={() => updateContractType(ct.id)} disabled={ctSaving} className="p-1 hover:bg-black/5 rounded-md">
+                      <Save className="w-3.5 h-3.5 text-[#1B4D3E]" />
+                    </button>
+                    <button onClick={() => setCtEditId(null)} className="p-1 hover:bg-black/5 rounded-md">
+                      <X className="w-3.5 h-3.5 text-[#999]" />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span className="flex-1 text-sm text-[#333]">{ct.name}</span>
+                    <button onClick={() => { setCtEditId(ct.id); setCtEditName(ct.name); }} className="p-1 hover:bg-black/5 rounded-md">
+                      <Pencil className="w-3.5 h-3.5 text-[#999]" />
+                    </button>
+                    <button onClick={() => deleteContractType(ct.id)} className="p-1 hover:bg-[#C23728]/10 rounded-md">
+                      <Trash2 className="w-3.5 h-3.5 text-[#999]" />
+                    </button>
+                  </>
+                )}
+              </div>
+            ))}
+            {/* 新規追加 */}
+            <div className="flex items-center gap-2 px-5 py-3">
+              <input
+                type="text"
+                value={ctNewName}
+                onChange={(e) => setCtNewName(e.target.value)}
+                placeholder="新しい契約区分..."
+                className="flex-1 px-2 py-1 text-sm bg-[#F5F5F3] rounded-md outline-none focus:ring-1 focus:ring-[#D4A03A]/50"
+                onKeyDown={(e) => { if (e.key === 'Enter') addContractType(); }}
+              />
+              <button
+                onClick={addContractType}
+                disabled={!ctNewName.trim() || ctSaving}
+                className="p-1.5 bg-[#1a1a1a] text-white rounded-md disabled:opacity-30"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* ── 収益タイプ管理 ── */}
+        <section className="mb-10">
+          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+            収益タイプ
+          </div>
+          <div className="bg-white rounded-xl shadow-sm">
+            {revenueTypes.map((rt) => {
+              const linkedDivs = revenueTypeDivisions.filter(d => d.revenue_type_id === rt.id).map(d => d.division);
+              const isEditing = rtEditId === rt.id;
+
+              return (
+                <div key={rt.id} className="px-5 py-3 border-b border-[#f0f0f0] last:border-b-0">
+                  {isEditing ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={rtEditName}
+                          onChange={(e) => setRtEditName(e.target.value)}
+                          className="flex-1 px-2 py-1 text-sm border border-[#D4A03A] rounded-md outline-none"
+                          autoFocus
+                        />
+                        <button onClick={() => updateRevenueType(rt.id)} disabled={rtSaving} className="p-1 hover:bg-black/5 rounded-md">
+                          <Save className="w-3.5 h-3.5 text-[#1B4D3E]" />
+                        </button>
+                        <button onClick={() => setRtEditId(null)} className="p-1 hover:bg-black/5 rounded-md">
+                          <X className="w-3.5 h-3.5 text-[#999]" />
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {Object.entries(DIVISIONS).map(([divId, divVal]) => (
+                          <button
+                            key={divId}
+                            onClick={() => toggleDivision(rtEditDivisions, setRtEditDivisions, divId)}
+                            className={`px-2 py-0.5 text-[10px] rounded-full border transition-colors ${
+                              rtEditDivisions.includes(divId)
+                                ? 'text-white border-transparent'
+                                : 'text-[#999] border-[#e0e0e0] bg-white'
+                            }`}
+                            style={rtEditDivisions.includes(divId) ? { backgroundColor: divVal.color } : undefined}
+                          >
+                            {divVal.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1">
+                        <span className="text-sm text-[#333]">{rt.name}</span>
+                        {linkedDivs.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {linkedDivs.map(divId => {
+                              const divVal = DIVISIONS[divId as keyof typeof DIVISIONS];
+                              return divVal ? (
+                                <span
+                                  key={divId}
+                                  className="px-1.5 py-0.5 text-[9px] rounded-full text-white"
+                                  style={{ backgroundColor: divVal.color }}
+                                >
+                                  {divVal.label}
+                                </span>
+                              ) : null;
+                            })}
+                          </div>
+                        )}
+                      </div>
+                      <button onClick={() => startEditRevenueType(rt)} className="p-1 hover:bg-black/5 rounded-md">
+                        <Pencil className="w-3.5 h-3.5 text-[#999]" />
+                      </button>
+                      <button onClick={() => deleteRevenueType(rt.id)} className="p-1 hover:bg-[#C23728]/10 rounded-md">
+                        <Trash2 className="w-3.5 h-3.5 text-[#999]" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {/* 新規追加 */}
+            <div className="px-5 py-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={rtNewName}
+                  onChange={(e) => setRtNewName(e.target.value)}
+                  placeholder="新しい収益タイプ..."
+                  className="flex-1 px-2 py-1 text-sm bg-[#F5F5F3] rounded-md outline-none focus:ring-1 focus:ring-[#D4A03A]/50"
+                />
+                <button
+                  onClick={addRevenueType}
+                  disabled={!rtNewName.trim() || rtSaving}
+                  className="p-1.5 bg-[#1a1a1a] text-white rounded-md disabled:opacity-30"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              {rtNewName.trim() && (
+                <div className="flex flex-wrap gap-1.5">
+                  {Object.entries(DIVISIONS).map(([divId, divVal]) => (
+                    <button
+                      key={divId}
+                      onClick={() => toggleDivision(rtNewDivisions, setRtNewDivisions, divId)}
+                      className={`px-2 py-0.5 text-[10px] rounded-full border transition-colors ${
+                        rtNewDivisions.includes(divId)
+                          ? 'text-white border-transparent'
+                          : 'text-[#999] border-[#e0e0e0] bg-white'
+                      }`}
+                      style={rtNewDivisions.includes(divId) ? { backgroundColor: divVal.color } : undefined}
+                    >
+                      {divVal.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </section>
       </div>
