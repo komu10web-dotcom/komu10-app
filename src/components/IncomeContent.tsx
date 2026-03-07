@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { DIVISIONS } from '@/types/database';
-import type { Transaction, RevenueType, RevenueTypeDivision } from '@/types/database';
+import type { Transaction, RevenueType, RevenueTypeDivision, ContractType } from '@/types/database';
 import { Plus, Upload, Pencil, Trash2, Search, Loader2, X } from 'lucide-react';
 
 const MONTHS = [
@@ -34,6 +34,7 @@ export default function IncomeContent() {
   // 収益タイプマスタ（DBから取得）
   const [revenueTypes, setRevenueTypes] = useState<RevenueType[]>([]);
   const [revenueTypeDivisions, setRevenueTypeDivisions] = useState<RevenueTypeDivision[]>([]);
+  const [contractTypes, setContractTypes] = useState<ContractType[]>([]);
 
   // フィルター
   const [filterMonth, setFilterMonth] = useState('0');
@@ -54,12 +55,14 @@ export default function IncomeContent() {
   const fetchRevenueTypes = useCallback(async () => {
     if (!supabase) return;
     try {
-      const [rtRes, rtdRes] = await Promise.all([
+      const [rtRes, rtdRes, ctRes] = await Promise.all([
         supabase.from('revenue_types').select('*').order('sort_order'),
         supabase.from('revenue_type_divisions').select('*'),
+        supabase.from('contract_types').select('*').order('sort_order'),
       ]);
       if (rtRes.data) setRevenueTypes(rtRes.data as RevenueType[]);
       if (rtdRes.data) setRevenueTypeDivisions(rtdRes.data as RevenueTypeDivision[]);
+      if (ctRes.data) setContractTypes(ctRes.data as ContractType[]);
     } catch (err) {
       console.error('Fetch revenue types error:', err);
     }
@@ -104,6 +107,13 @@ export default function IncomeContent() {
     if (!revenueTypeId) return '—';
     const rt = revenueTypes.find((r) => r.id === revenueTypeId);
     return rt ? rt.name : revenueTypeId;
+  };
+
+  // ── 契約区分名引き当て ──
+  const getContractTypeName = (contractTypeId: string | null): string => {
+    if (!contractTypeId) return '—';
+    const ct = contractTypes.find((c) => c.id === contractTypeId);
+    return ct ? ct.name : contractTypeId;
   };
 
   // ── フィルター適用 ──
@@ -304,6 +314,7 @@ export default function IncomeContent() {
                     <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">日付</th>
                     <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">取引先</th>
                     <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">事業</th>
+                    <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">契約区分</th>
                     <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">収益タイプ</th>
                     <th className="text-right px-4 py-3 text-xs text-[#999] font-normal">金額</th>
                     <th className="text-right px-4 py-3 text-xs text-[#999] font-normal w-20">操作</th>
@@ -312,6 +323,7 @@ export default function IncomeContent() {
                 <tbody>
                   {filtered.map((tx) => {
                     const rtName = getRevenueTypeName(tx.revenue_type);
+                    const ctName = getContractTypeName(tx.contract_type_id);
                     const div = DIVISIONS[tx.division as keyof typeof DIVISIONS];
                     return (
                       <tr key={tx.id} className="border-b border-gray-50 hover:bg-[#F5F5F3]/50 transition-colors">
@@ -337,6 +349,7 @@ export default function IncomeContent() {
                             <span className="text-xs text-[#999]">—</span>
                           )}
                         </td>
+                        <td className="px-4 py-3 text-xs text-[#6b6b6b]">{ctName}</td>
                         <td className="px-4 py-3 text-xs text-[#6b6b6b]">{rtName}</td>
                         <td className="px-4 py-3 text-right font-['Saira_Condensed'] tabular-nums text-[#1B4D3E]">
                           {formatAmount(tx.amount)}
@@ -386,6 +399,7 @@ export default function IncomeContent() {
           defaultOwner={owner === 'all' ? 'tomo' : owner}
           revenueTypes={revenueTypes}
           revenueTypeDivisions={revenueTypeDivisions}
+          contractTypes={contractTypes}
           onClose={() => { setModalOpen(false); setEditTarget(null); }}
           onSaved={() => { setModalOpen(false); setEditTarget(null); fetchTransactions(); }}
         />
@@ -428,11 +442,12 @@ interface IncomeModalProps {
   defaultOwner: string;
   revenueTypes: RevenueType[];
   revenueTypeDivisions: RevenueTypeDivision[];
+  contractTypes: ContractType[];
   onClose: () => void;
   onSaved: () => void;
 }
 
-function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivisions, onClose, onSaved }: IncomeModalProps) {
+function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivisions, contractTypes, onClose, onSaved }: IncomeModalProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -441,6 +456,7 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
     amount: editData?.amount.toString() || '',
     store: editData?.store || '',
     division: editData?.division || '',
+    contract_type_id: editData?.contract_type_id || '',
     revenue_type: editData?.revenue_type || '',
     owner: editData?.owner || defaultOwner,
     description: editData?.description || '',
@@ -500,6 +516,7 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
         store: form.store || null,
         description: form.description || null,
         revenue_type: form.revenue_type || null,
+        contract_type_id: form.contract_type_id || null,
         source: 'manual',
         confirmed: true,
       };
@@ -589,6 +606,21 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
               <option value="">未選択</option>
               {DIVISION_OPTIONS.map((d) => (
                 <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* 契約区分 */}
+          <div>
+            <label className="block text-xs text-[#999] mb-1">契約区分（任意）</label>
+            <select
+              value={form.contract_type_id}
+              onChange={(e) => handleChange('contract_type_id', e.target.value)}
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+            >
+              <option value="">未選択</option>
+              {contractTypes.map((ct) => (
+                <option key={ct.id} value={ct.id}>{ct.name}</option>
               ))}
             </select>
           </div>

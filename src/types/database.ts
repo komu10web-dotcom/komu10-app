@@ -36,6 +36,7 @@ export interface Database {
           project_id: string | null; // プロジェクト紐付け
           tags: string[] | null; // タグ配列
           revenue_type: string | null; // 収益タイプID（売上時）
+          contract_type_id: string | null; // 契約区分ID（売上時）
           source: string; // 'manual' | 'receipt_ai' | 'csv' | 'google_sheets'
           ai_confidence: number | null; // AI推定確信度 0-1
           confirmed: boolean; // AI入力の確認済み
@@ -227,6 +228,19 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['revenue_type_divisions']['Row'], 'id'>;
         Update: Partial<Database['public']['Tables']['revenue_type_divisions']['Insert']>;
       };
+
+      // 契約区分マスタ
+      contract_types: {
+        Row: {
+          id: string;
+          name: string;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['contract_types']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['contract_types']['Insert']>;
+      };
     };
   };
 }
@@ -244,6 +258,7 @@ export type Invoice = Database['public']['Tables']['invoices']['Row'];
 export type InvoiceItem = Database['public']['Tables']['invoice_items']['Row'];
 export type RevenueType = Database['public']['Tables']['revenue_types']['Row'];
 export type RevenueTypeDivision = Database['public']['Tables']['revenue_type_divisions']['Row'];
+export type ContractType = Database['public']['Tables']['contract_types']['Row'];
 
 // 部門定義（定数）
 export const DIVISIONS = {
