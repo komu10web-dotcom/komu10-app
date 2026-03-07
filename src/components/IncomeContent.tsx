@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { DIVISIONS } from '@/types/database';
-import type { Transaction, RevenueType, RevenueTypeDivision, ContractType } from '@/types/database';
+import type { Transaction, RevenueType, RevenueTypeDivision, ContractType, Project } from '@/types/database';
 import { Plus, Upload, Pencil, Trash2, Search, Loader2, X } from 'lucide-react';
 
 const MONTHS = [
@@ -31,10 +31,11 @@ export default function IncomeContent() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 収益タイプマスタ（DBから取得）
+  // マスタデータ（DBから取得）
   const [revenueTypes, setRevenueTypes] = useState<RevenueType[]>([]);
   const [revenueTypeDivisions, setRevenueTypeDivisions] = useState<RevenueTypeDivision[]>([]);
   const [contractTypes, setContractTypes] = useState<ContractType[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
 
   // フィルター
   const [filterMonth, setFilterMonth] = useState('0');
@@ -55,16 +56,18 @@ export default function IncomeContent() {
   const fetchRevenueTypes = useCallback(async () => {
     if (!supabase) return;
     try {
-      const [rtRes, rtdRes, ctRes] = await Promise.all([
+      const [rtRes, rtdRes, ctRes, pjRes] = await Promise.all([
         supabase.from('revenue_types').select('*').order('sort_order'),
         supabase.from('revenue_type_divisions').select('*'),
         supabase.from('contract_types').select('*').order('sort_order'),
+        supabase.from('projects').select('*').order('name'),
       ]);
       if (rtRes.data) setRevenueTypes(rtRes.data as RevenueType[]);
       if (rtdRes.data) setRevenueTypeDivisions(rtdRes.data as RevenueTypeDivision[]);
       if (ctRes.data) setContractTypes(ctRes.data as ContractType[]);
+      if (pjRes.data) setProjects(pjRes.data as Project[]);
     } catch (err) {
-      console.error('Fetch revenue types error:', err);
+      console.error('Fetch master data error:', err);
     }
   }, []);
 
@@ -114,6 +117,13 @@ export default function IncomeContent() {
     if (!contractTypeId) return '—';
     const ct = contractTypes.find((c) => c.id === contractTypeId);
     return ct ? ct.name : contractTypeId;
+  };
+
+  // ── プロジェクト名引き当て ──
+  const getProjectName = (projectId: string | null): string => {
+    if (!projectId) return '—';
+    const pj = projects.find((p) => p.id === projectId);
+    return pj ? pj.name : projectId;
   };
 
   // ── フィルター適用 ──
@@ -316,6 +326,7 @@ export default function IncomeContent() {
                     <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">事業</th>
                     <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">契約区分</th>
                     <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">収益タイプ</th>
+                    <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">PJ</th>
                     <th className="text-right px-4 py-3 text-xs text-[#999] font-normal">金額</th>
                     <th className="text-right px-4 py-3 text-xs text-[#999] font-normal w-20">操作</th>
                   </tr>
@@ -324,6 +335,7 @@ export default function IncomeContent() {
                   {filtered.map((tx) => {
                     const rtName = getRevenueTypeName(tx.revenue_type);
                     const ctName = getContractTypeName(tx.contract_type_id);
+                    const pjName = getProjectName(tx.project_id);
                     const div = DIVISIONS[tx.division as keyof typeof DIVISIONS];
                     return (
                       <tr key={tx.id} className="border-b border-gray-50 hover:bg-[#F5F5F3]/50 transition-colors">
@@ -351,6 +363,7 @@ export default function IncomeContent() {
                         </td>
                         <td className="px-4 py-3 text-xs text-[#6b6b6b]">{ctName}</td>
                         <td className="px-4 py-3 text-xs text-[#6b6b6b]">{rtName}</td>
+                        <td className="px-4 py-3 text-xs text-[#6b6b6b] max-w-[120px] truncate" title={pjName !== '—' ? pjName : undefined}>{pjName}</td>
                         <td className="px-4 py-3 text-right font-['Saira_Condensed'] tabular-nums text-[#1B4D3E]">
                           {formatAmount(tx.amount)}
                         </td>
@@ -400,6 +413,7 @@ export default function IncomeContent() {
           revenueTypes={revenueTypes}
           revenueTypeDivisions={revenueTypeDivisions}
           contractTypes={contractTypes}
+          projects={projects}
           onClose={() => { setModalOpen(false); setEditTarget(null); }}
           onSaved={() => { setModalOpen(false); setEditTarget(null); fetchTransactions(); }}
         />
@@ -443,11 +457,12 @@ interface IncomeModalProps {
   revenueTypes: RevenueType[];
   revenueTypeDivisions: RevenueTypeDivision[];
   contractTypes: ContractType[];
+  projects: Project[];
   onClose: () => void;
   onSaved: () => void;
 }
 
-function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivisions, contractTypes, onClose, onSaved }: IncomeModalProps) {
+function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivisions, contractTypes, projects, onClose, onSaved }: IncomeModalProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -456,6 +471,7 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
     amount: editData?.amount.toString() || '',
     store: editData?.store || '',
     division: editData?.division || '',
+    project_id: editData?.project_id || '',
     contract_type_id: editData?.contract_type_id || '',
     revenue_type: editData?.revenue_type || '',
     owner: editData?.owner || defaultOwner,
@@ -466,10 +482,19 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
     setForm((prev) => {
       const next = { ...prev, [field]: value };
       // 事業変更時、現在の収益タイプがその事業に紐づかなければリセット
-      if (field === 'division' && next.revenue_type) {
-        const available = getFilteredRevenueTypes(value);
-        if (!available.find((rt) => rt.id === next.revenue_type)) {
-          next.revenue_type = '';
+      if (field === 'division') {
+        if (next.revenue_type) {
+          const available = getFilteredRevenueTypes(value);
+          if (!available.find((rt) => rt.id === next.revenue_type)) {
+            next.revenue_type = '';
+          }
+        }
+        // PJが変更後の事業に紐づかなければリセット
+        if (next.project_id) {
+          const availablePJ = getFilteredProjects(value);
+          if (!availablePJ.find((pj) => pj.id === next.project_id)) {
+            next.project_id = '';
+          }
         }
       }
       return next;
@@ -487,7 +512,14 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
     return revenueTypes.filter((rt) => linkedIds.has(rt.id));
   };
 
+  // 選択事業に紐づくPJを返す（未選択時は全件）
+  const getFilteredProjects = (divisionId: string): Project[] => {
+    if (!divisionId) return projects;
+    return projects.filter((pj) => pj.division === divisionId);
+  };
+
   const filteredRT = getFilteredRevenueTypes(form.division);
+  const filteredPJ = getFilteredProjects(form.division);
 
   const handleSave = async () => {
     if (!supabase) return;
@@ -517,6 +549,7 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
         description: form.description || null,
         revenue_type: form.revenue_type || null,
         contract_type_id: form.contract_type_id || null,
+        project_id: form.project_id || null,
         source: 'manual',
         confirmed: true,
       };
@@ -606,6 +639,21 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
               <option value="">未選択</option>
               {DIVISION_OPTIONS.map((d) => (
                 <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* プロジェクト */}
+          <div>
+            <label className="block text-xs text-[#999] mb-1">プロジェクト（任意）</label>
+            <select
+              value={form.project_id}
+              onChange={(e) => handleChange('project_id', e.target.value)}
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+            >
+              <option value="">未選択</option>
+              {filteredPJ.map((pj) => (
+                <option key={pj.id} value={pj.id}>{pj.name}</option>
               ))}
             </select>
           </div>
