@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { REVENUE_TYPES } from '@/types/database';
-import type { Transaction } from '@/types/database';
+import { DIVISIONS } from '@/types/database';
+import type { Transaction, RevenueType, RevenueTypeDivision } from '@/types/database';
 import { Plus, Upload, Pencil, Trash2, Search, Loader2, X } from 'lucide-react';
 
 const MONTHS = [
@@ -15,9 +15,12 @@ const MONTHS = [
   })),
 ];
 
-const REVENUE_TYPE_OPTIONS = Object.entries(REVENUE_TYPES).map(([id, label]) => ({
+// 売上で選択可能な事業
+const DIVISION_OPTIONS = Object.entries(DIVISIONS).map(([id, v]) => ({
   id,
-  label,
+  name: v.name,
+  label: v.label,
+  color: v.color,
 }));
 
 export default function IncomeContent() {
@@ -27,6 +30,10 @@ export default function IncomeContent() {
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // 収益タイプマスタ（DBから取得）
+  const [revenueTypes, setRevenueTypes] = useState<RevenueType[]>([]);
+  const [revenueTypeDivisions, setRevenueTypeDivisions] = useState<RevenueTypeDivision[]>([]);
 
   // フィルター
   const [filterMonth, setFilterMonth] = useState('0');
@@ -43,7 +50,22 @@ export default function IncomeContent() {
   // 削除確認
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
-  // ── データ取得 ──
+  // ── 収益タイプマスタ取得 ──
+  const fetchRevenueTypes = useCallback(async () => {
+    if (!supabase) return;
+    try {
+      const [rtRes, rtdRes] = await Promise.all([
+        supabase.from('revenue_types').select('*').order('sort_order'),
+        supabase.from('revenue_type_divisions').select('*'),
+      ]);
+      if (rtRes.data) setRevenueTypes(rtRes.data as RevenueType[]);
+      if (rtdRes.data) setRevenueTypeDivisions(rtdRes.data as RevenueTypeDivision[]);
+    } catch (err) {
+      console.error('Fetch revenue types error:', err);
+    }
+  }, []);
+
+  // ── 取引データ取得 ──
   const fetchTransactions = useCallback(async () => {
     if (!supabase) return;
     setLoading(true);
@@ -73,8 +95,16 @@ export default function IncomeContent() {
   }, [owner, year]);
 
   useEffect(() => {
+    fetchRevenueTypes();
     fetchTransactions();
-  }, [fetchTransactions]);
+  }, [fetchRevenueTypes, fetchTransactions]);
+
+  // ── 収益タイプ名引き当て ──
+  const getRevenueTypeName = (revenueTypeId: string | null): string => {
+    if (!revenueTypeId) return '—';
+    const rt = revenueTypes.find((r) => r.id === revenueTypeId);
+    return rt ? rt.name : revenueTypeId;
+  };
 
   // ── フィルター適用 ──
   const filtered = transactions.filter((tx) => {
@@ -84,7 +114,10 @@ export default function IncomeContent() {
     }
     if (searchText) {
       const q = searchText.toLowerCase();
-      const haystack = `${tx.store || ''} ${tx.description || ''} ${tx.revenue_type ? REVENUE_TYPES[tx.revenue_type as keyof typeof REVENUE_TYPES] || '' : ''}`.toLowerCase();
+      const rtName = getRevenueTypeName(tx.revenue_type);
+      const div = DIVISIONS[tx.division as keyof typeof DIVISIONS];
+      const divName = div ? div.name : '';
+      const haystack = `${tx.store || ''} ${tx.description || ''} ${rtName} ${divName}`.toLowerCase();
       if (!haystack.includes(q)) return false;
     }
     return true;
@@ -118,7 +151,6 @@ export default function IncomeContent() {
     setImporting(true);
     try {
       const text = await file.text();
-      // 売上CSVの手動パース: 日付, 取引先, 金額, 収益タイプ, 摘要
       const lines = text.split('\n').filter((l) => l.trim());
       if (lines.length < 2) {
         alert('CSVにデータがありません');
@@ -134,7 +166,7 @@ export default function IncomeContent() {
         owner: string;
         store: string;
         description: string;
-        revenue_type: string;
+        revenue_type: string | null;
         source: string;
         confirmed: boolean;
       }> = [];
@@ -167,7 +199,7 @@ export default function IncomeContent() {
             owner: owner === 'all' ? 'tomo' : owner,
             store,
             description: '',
-            revenue_type: 'other',
+            revenue_type: null,
             source: 'csv',
             confirmed: true,
           });
@@ -271,6 +303,7 @@ export default function IncomeContent() {
                   <tr className="border-b border-gray-100">
                     <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">日付</th>
                     <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">取引先</th>
+                    <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">事業</th>
                     <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">収益タイプ</th>
                     <th className="text-right px-4 py-3 text-xs text-[#999] font-normal">金額</th>
                     <th className="text-right px-4 py-3 text-xs text-[#999] font-normal w-20">操作</th>
@@ -278,9 +311,8 @@ export default function IncomeContent() {
                 </thead>
                 <tbody>
                   {filtered.map((tx) => {
-                    const revTypeLabel = tx.revenue_type
-                      ? REVENUE_TYPES[tx.revenue_type as keyof typeof REVENUE_TYPES] || tx.revenue_type
-                      : '—';
+                    const rtName = getRevenueTypeName(tx.revenue_type);
+                    const div = DIVISIONS[tx.division as keyof typeof DIVISIONS];
                     return (
                       <tr key={tx.id} className="border-b border-gray-50 hover:bg-[#F5F5F3]/50 transition-colors">
                         <td className="px-4 py-3 font-['Saira_Condensed'] text-xs text-[#999] tabular-nums">
@@ -292,7 +324,20 @@ export default function IncomeContent() {
                             <div className="text-xs text-[#999] mt-0.5">{tx.description}</div>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-xs text-[#6b6b6b]">{revTypeLabel}</td>
+                        <td className="px-4 py-3">
+                          {div ? (
+                            <span className="inline-flex items-center gap-1 text-xs text-[#6b6b6b]">
+                              <span
+                                className="w-2 h-2 rounded-full inline-block"
+                                style={{ backgroundColor: div.color }}
+                              />
+                              {div.label}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-[#999]">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-[#6b6b6b]">{rtName}</td>
                         <td className="px-4 py-3 text-right font-['Saira_Condensed'] tabular-nums text-[#1B4D3E]">
                           {formatAmount(tx.amount)}
                         </td>
@@ -339,6 +384,8 @@ export default function IncomeContent() {
         <IncomeModal
           editData={editTarget}
           defaultOwner={owner === 'all' ? 'tomo' : owner}
+          revenueTypes={revenueTypes}
+          revenueTypeDivisions={revenueTypeDivisions}
           onClose={() => { setModalOpen(false); setEditTarget(null); }}
           onSaved={() => { setModalOpen(false); setEditTarget(null); fetchTransactions(); }}
         />
@@ -373,17 +420,19 @@ export default function IncomeContent() {
 
 
 // ═══════════════════════════════════════════
-// 売上入力モーダル（IncomeContent内で自己完結）
+// 売上入力モーダル
 // ═══════════════════════════════════════════
 
 interface IncomeModalProps {
   editData: Transaction | null;
   defaultOwner: string;
+  revenueTypes: RevenueType[];
+  revenueTypeDivisions: RevenueTypeDivision[];
   onClose: () => void;
   onSaved: () => void;
 }
 
-function IncomeModal({ editData, defaultOwner, onClose, onSaved }: IncomeModalProps) {
+function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivisions, onClose, onSaved }: IncomeModalProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -391,19 +440,43 @@ function IncomeModal({ editData, defaultOwner, onClose, onSaved }: IncomeModalPr
     date: editData?.date || new Date().toISOString().split('T')[0],
     amount: editData?.amount.toString() || '',
     store: editData?.store || '',
-    revenue_type: editData?.revenue_type || 'consulting',
+    division: editData?.division || '',
+    revenue_type: editData?.revenue_type || '',
     owner: editData?.owner || defaultOwner,
     description: editData?.description || '',
   });
 
   const handleChange = (field: string, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
+    setForm((prev) => {
+      const next = { ...prev, [field]: value };
+      // 事業変更時、現在の収益タイプがその事業に紐づかなければリセット
+      if (field === 'division' && next.revenue_type) {
+        const available = getFilteredRevenueTypes(value);
+        if (!available.find((rt) => rt.id === next.revenue_type)) {
+          next.revenue_type = '';
+        }
+      }
+      return next;
+    });
   };
+
+  // 選択事業に紐づく収益タイプを返す（未選択時は全件）
+  const getFilteredRevenueTypes = (divisionId: string): RevenueType[] => {
+    if (!divisionId) return revenueTypes;
+    const linkedIds = new Set(
+      revenueTypeDivisions
+        .filter((rtd) => rtd.division === divisionId)
+        .map((rtd) => rtd.revenue_type_id)
+    );
+    return revenueTypes.filter((rt) => linkedIds.has(rt.id));
+  };
+
+  const filteredRT = getFilteredRevenueTypes(form.division);
 
   const handleSave = async () => {
     if (!supabase) return;
-    if (!form.date || !form.amount || !form.revenue_type) {
-      setError('日付・金額・収益タイプは必須です');
+    if (!form.date || !form.amount) {
+      setError('日付と金額は必須です');
       return;
     }
 
@@ -422,11 +495,11 @@ function IncomeModal({ editData, defaultOwner, onClose, onSaved }: IncomeModalPr
         date: form.date,
         amount,
         kamoku: 'sales',
-        division: 'general',
+        division: form.division || 'general',
         owner: form.owner,
         store: form.store || null,
         description: form.description || null,
-        revenue_type: form.revenue_type,
+        revenue_type: form.revenue_type || null,
         source: 'manual',
         confirmed: true,
       };
@@ -505,16 +578,32 @@ function IncomeModal({ editData, defaultOwner, onClose, onSaved }: IncomeModalPr
             />
           </div>
 
+          {/* 事業 */}
+          <div>
+            <label className="block text-xs text-[#999] mb-1">事業</label>
+            <select
+              value={form.division}
+              onChange={(e) => handleChange('division', e.target.value)}
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+            >
+              <option value="">未選択</option>
+              {DIVISION_OPTIONS.map((d) => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+          </div>
+
           {/* 収益タイプ */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">収益タイプ</label>
+            <label className="block text-xs text-[#999] mb-1">収益タイプ（任意）</label>
             <select
               value={form.revenue_type}
               onChange={(e) => handleChange('revenue_type', e.target.value)}
               className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
             >
-              {REVENUE_TYPE_OPTIONS.map((rt) => (
-                <option key={rt.id} value={rt.id}>{rt.label}</option>
+              <option value="">未選択</option>
+              {filteredRT.map((rt) => (
+                <option key={rt.id} value={rt.id}>{rt.name}</option>
               ))}
             </select>
           </div>

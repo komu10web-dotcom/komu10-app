@@ -203,6 +203,30 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['invoice_items']['Row'], 'id'>;
         Update: Partial<Database['public']['Tables']['invoice_items']['Insert']>;
       };
+
+      // 収益タイプマスタ
+      revenue_types: {
+        Row: {
+          id: string;
+          name: string;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['revenue_types']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['revenue_types']['Insert']>;
+      };
+
+      // 収益タイプ×事業 中間テーブル
+      revenue_type_divisions: {
+        Row: {
+          id: string;
+          revenue_type_id: string;
+          division: string;
+        };
+        Insert: Omit<Database['public']['Tables']['revenue_type_divisions']['Row'], 'id'>;
+        Update: Partial<Database['public']['Tables']['revenue_type_divisions']['Insert']>;
+      };
     };
   };
 }
@@ -218,6 +242,8 @@ export type BankAccount = Database['public']['Tables']['bank_accounts']['Row'];
 export type BankTransaction = Database['public']['Tables']['bank_transactions']['Row'];
 export type Invoice = Database['public']['Tables']['invoices']['Row'];
 export type InvoiceItem = Database['public']['Tables']['invoice_items']['Row'];
+export type RevenueType = Database['public']['Tables']['revenue_types']['Row'];
+export type RevenueTypeDivision = Database['public']['Tables']['revenue_type_divisions']['Row'];
 
 // 部門定義（定数）
 export const DIVISIONS = {
