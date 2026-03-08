@@ -30,7 +30,7 @@ function formatProjectId(pj: Project): string {
 const kamokuName = (k: string) => KAMOKU[k as keyof typeof KAMOKU]?.name || k;
 
 const ASSIGN_DIVISIONS = Object.entries(DIVISIONS)
-  .filter(([id]) => id !== 'general')
+  .filter(([id]) => id !== 'general' && id !== 'thisplace')
   .map(([id, v]) => ({ id, name: v.name, label: v.label, color: v.color }));
 
 const ALL_DIV_FILTER = [
@@ -257,8 +257,8 @@ export default function ManagementContent() {
   });
   const maxMonthVal = Math.max(...monthlyData.map(m => Math.max(m.revenue, m.expense)), 1);
 
-  // 部門別損益（allocationsベース）
-  const activeDivisions = Object.entries(DIVISIONS).filter(([id]) => id !== 'general');
+  // 部門別損益（allocationsベース）— thisplace（ポートフォリオサイト化）とgeneralは除外
+  const activeDivisions = Object.entries(DIVISIONS).filter(([id]) => id !== 'general' && id !== 'thisplace');
 
   // 按分ベースの経費集計
   // allocがある経費 → allocのdivision_id × amount で各事業に配分
@@ -600,7 +600,8 @@ export default function ManagementContent() {
                 <div key={d.id} className="bg-white rounded-2xl px-4 py-4" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
                   <div className="flex items-center gap-2 mb-3">
                     <div className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: d.color }} />
-                    <span className="text-xs font-medium text-[#1a1a1a]">{d.label}</span>
+                    <span className="text-xs font-medium text-[#1a1a1a]">{d.name}</span>
+                    <span className="text-[9px] text-[#999]">{d.label}</span>
                   </div>
                   <div className="mb-1.5">
                     <div className="flex items-center justify-between mb-0.5">
