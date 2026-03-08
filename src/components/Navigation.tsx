@@ -5,8 +5,8 @@ import { usePathname } from 'next/navigation';
 
 const navItems = [
   { href: '/', label: 'ホーム' },
-  { href: '/expenses', label: '出金' },
-  { href: '/income', label: '入金' },
+  { href: '/expenses', label: '経費' },
+  { href: '/income', label: '売上' },
   { href: '/tax-return', label: '確定申告' },
   { href: '/management', label: '経営' },
   { href: '/settings', label: '設定' },

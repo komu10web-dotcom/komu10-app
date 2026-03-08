@@ -252,8 +252,8 @@ export default function IncomeContent() {
         {/* ── ヘッダー ── */}
         <div className="flex items-end justify-between mb-6">
           <div>
-            <h1 className="font-['Shippori_Mincho'] text-xl text-[#1a1a1a]">入金</h1>
-            <p className="text-[10px] font-light tracking-wider text-[#999] mt-1">INCOME</p>
+            <h1 className="font-['Shippori_Mincho'] text-xl text-[#1a1a1a]">売上</h1>
+            <p className="text-[10px] font-light tracking-wider text-[#999] mt-1">SALES</p>
           </div>
           <div className="flex items-center gap-2">
             <button

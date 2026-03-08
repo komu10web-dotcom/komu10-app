@@ -522,7 +522,7 @@ export default function HomeContent() {
             href={`/expenses?owner=${owner}&year=${year}`}
             className="flex items-center justify-center gap-1 mt-3 pt-3 border-t border-gray-100 text-xs text-[#999] hover:text-[#D4A03A] transition-colors"
           >
-            出金ページで全て見る
+            経費ページで全て見る
             <ArrowRight className="w-3 h-3" />
           </Link>
         </div>

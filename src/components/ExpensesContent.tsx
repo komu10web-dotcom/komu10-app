@@ -137,7 +137,7 @@ export default function ExpensesContent() {
         {/* ── ヘッダー ── */}
         <div className="flex items-end justify-between mb-6">
           <div>
-            <h1 className="font-['Shippori_Mincho'] text-xl text-[#1a1a1a]">出金</h1>
+            <h1 className="font-['Shippori_Mincho'] text-xl text-[#1a1a1a]">経費</h1>
             <p className="text-[10px] font-light tracking-wider text-[#999] mt-1">EXPENSES</p>
           </div>
           <div className="flex items-center gap-2">
