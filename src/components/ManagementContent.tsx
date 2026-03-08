@@ -30,7 +30,7 @@ function formatProjectId(pj: Project): string {
 const kamokuName = (k: string) => KAMOKU[k as keyof typeof KAMOKU]?.name || k;
 
 const ASSIGN_DIVISIONS = Object.entries(DIVISIONS)
-  .filter(([id]) => id !== 'general' && id !== 'thisplace')
+  .filter(([id]) => id !== 'general')
   .map(([id, v]) => ({ id, name: v.name, label: v.label, color: v.color }));
 
 const ALL_DIV_FILTER = [
@@ -257,8 +257,8 @@ export default function ManagementContent() {
   });
   const maxMonthVal = Math.max(...monthlyData.map(m => Math.max(m.revenue, m.expense)), 1);
 
-  // 部門別損益（allocationsベース）— thisplace（ポートフォリオサイト化）とgeneralは除外
-  const activeDivisions = Object.entries(DIVISIONS).filter(([id]) => id !== 'general' && id !== 'thisplace');
+  // 部門別損益（allocationsベース）— generalは除外
+  const activeDivisions = Object.entries(DIVISIONS).filter(([id]) => id !== 'general');
 
   // 按分ベースの経費集計
   // allocがある経費 → allocのdivision_id × amount で各事業に配分
