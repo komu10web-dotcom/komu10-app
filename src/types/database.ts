@@ -241,6 +241,21 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['contract_types']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['contract_types']['Insert']>;
       };
+
+      // 取引按分（1取引→複数事業・PJに比率配分）
+      transaction_allocations: {
+        Row: {
+          id: string;
+          transaction_id: string;
+          division_id: string;       // 事業ID
+          project_id: string | null; // PJ ID（任意）
+          percent: number;           // 比率 1-100
+          amount: number;            // 按分後金額
+          created_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['transaction_allocations']['Row'], 'id' | 'created_at'>;
+        Update: Partial<Database['public']['Tables']['transaction_allocations']['Insert']>;
+      };
     };
   };
 }
@@ -259,6 +274,7 @@ export type InvoiceItem = Database['public']['Tables']['invoice_items']['Row'];
 export type RevenueType = Database['public']['Tables']['revenue_types']['Row'];
 export type RevenueTypeDivision = Database['public']['Tables']['revenue_type_divisions']['Row'];
 export type ContractType = Database['public']['Tables']['contract_types']['Row'];
+export type TransactionAllocation = Database['public']['Tables']['transaction_allocations']['Row'];
 
 // 部門定義（定数）
 export const DIVISIONS = {
