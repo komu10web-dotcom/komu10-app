@@ -65,6 +65,12 @@ export default function ManagementContent() {
 
   const [viewMonth, setViewMonth] = useState('0');
 
+  // チャート
+  const [chartMode, setChartMode] = useState<'bar' | 'profit'>('bar');
+  const [multiYear, setMultiYear] = useState(false);
+  const [prevYearTx, setPrevYearTx] = useState<Transaction[]>([]);
+  const [prevPrevYearTx, setPrevPrevYearTx] = useState<Transaction[]>([]);
+
   // 按分編集
   const [editingTxId, setEditingTxId] = useState<string | null>(null);
   const [editRows, setEditRows] = useState<AllocRow[]>([]);
@@ -113,6 +119,21 @@ export default function ManagementContent() {
       } else {
         setAllocations([]);
       }
+
+      // 過去2年分（複数年推移用）
+      const prevYear = String(parseInt(year) - 1);
+      const prevPrevYear = String(parseInt(year) - 2);
+      let pq1 = supabase.from('transactions').select('date, amount, tx_type')
+        .gte('date', `${prevYear}-01-01`).lte('date', `${prevYear}-12-31`);
+      if (owner !== 'all') pq1 = pq1.eq('owner', owner);
+      const { data: py1 } = await pq1;
+      setPrevYearTx((py1 as Transaction[]) || []);
+
+      let pq2 = supabase.from('transactions').select('date, amount, tx_type')
+        .gte('date', `${prevPrevYear}-01-01`).lte('date', `${prevPrevYear}-12-31`);
+      if (owner !== 'all') pq2 = pq2.eq('owner', owner);
+      const { data: py2 } = await pq2;
+      setPrevPrevYearTx((py2 as Transaction[]) || []);
     } catch (err) {
       console.error('Fetch error:', err);
     } finally {
@@ -244,18 +265,30 @@ export default function ManagementContent() {
   const totalProfit = totalRevenue - totalExpense;
   const profitRate = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
 
-  // 月別チャート（常に12ヶ月表示）
-  const monthlyData = Array.from({ length: 12 }, (_, i) => {
+  // 月別集計ヘルパー
+  const calcMonthly = (txArr: Transaction[], yr: string) => Array.from({ length: 12 }, (_, i) => {
     const m = i + 1;
     const mStr = String(m).padStart(2, '0');
-    const mTx = transactions.filter(t => t.date.startsWith(`${year}-${mStr}`));
-    return {
-      month: m,
-      revenue: mTx.filter(t => t.tx_type === 'revenue').reduce((s, t) => s + t.amount, 0),
-      expense: mTx.filter(t => t.tx_type === 'expense').reduce((s, t) => s + t.amount, 0),
-    };
+    const mTx = txArr.filter(t => t.date.startsWith(`${yr}-${mStr}`));
+    const rev = mTx.filter(t => t.tx_type === 'revenue').reduce((s, t) => s + t.amount, 0);
+    const exp = mTx.filter(t => t.tx_type === 'expense').reduce((s, t) => s + t.amount, 0);
+    return { month: m, revenue: rev, expense: exp, profit: rev - exp };
   });
+
+  // 当年
+  const monthlyData = calcMonthly(transactions, year);
   const maxMonthVal = Math.max(...monthlyData.map(m => Math.max(m.revenue, m.expense)), 1);
+  const maxProfit = Math.max(...monthlyData.map(m => Math.abs(m.profit)), 1);
+
+  // 過去2年
+  const prevYear = String(parseInt(year) - 1);
+  const prevPrevYear = String(parseInt(year) - 2);
+  const prevMonthly = calcMonthly(prevYearTx, prevYear);
+  const prevPrevMonthly = calcMonthly(prevPrevYearTx, prevPrevYear);
+
+  // 複数年の利益max（折れ線スケール用）
+  const allProfits = [...monthlyData, ...prevMonthly, ...prevPrevMonthly].map(m => Math.abs(m.profit));
+  const maxMultiProfit = Math.max(...allProfits, 1);
 
   // 部門別損益（allocationsベース）— generalは除外
   const activeDivisions = Object.entries(DIVISIONS).filter(([id]) => id !== 'general');
@@ -364,7 +397,7 @@ export default function ManagementContent() {
                 className="px-2 py-1.5 bg-white rounded text-[11px] border border-gray-200 outline-none flex-1 truncate"
               >
                 <option value="">PJ（任意）</option>
-                {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                {projects.filter(p => p.division === row.division_id && p.status !== 'completed').map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
               <div className="flex items-center gap-1">
                 <input
@@ -564,21 +597,138 @@ export default function ManagementContent() {
 
         {/* ===== 月別チャート ===== */}
         <div className="bg-white rounded-2xl px-5 py-5 mb-8" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
-          <p className="text-[10px] tracking-wider text-[#999] mb-5">{year}年 月別推移（年間）</p>
-          <div className="flex items-end gap-1" style={{ height: 160 }}>
-            {monthlyData.map(m => (
-              <div key={m.month} className="flex-1 flex flex-col items-center h-full justify-end cursor-pointer" onClick={() => setViewMonth(viewMonth === String(m.month) ? '0' : String(m.month))}>
-                <div className="flex gap-0.5 items-end w-full justify-center" style={{ flex: 1 }}>
-                  <div className="rounded-t transition-all duration-300" style={{ width: '40%', height: `${Math.max((m.revenue / maxMonthVal) * 100, m.revenue > 0 ? 3 : 0)}%`, background: '#D4A03A', opacity: 0.8 }} />
-                  <div className="rounded-t transition-all duration-300" style={{ width: '40%', height: `${Math.max((m.expense / maxMonthVal) * 100, m.expense > 0 ? 3 : 0)}%`, background: '#C23728', opacity: 0.65 }} />
-                </div>
-                <p className={`text-[9px] mt-2 font-['Saira_Condensed'] tabular-nums ${viewMonth === String(m.month) ? 'text-[#1a1a1a] font-bold' : 'text-[#999]'}`}>{m.month}</p>
-              </div>
-            ))}
+          {/* チャートヘッダー: タイトル + 切り替え */}
+          <div className="flex items-center justify-between mb-5">
+            <p className="text-[10px] tracking-wider text-[#999]">
+              {multiYear ? `${prevPrevYear}〜${year}年 月別推移` : `${year}年 月別推移`}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setMultiYear(!multiYear)}
+                className={`px-2 py-0.5 rounded text-[9px] transition-colors ${multiYear ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#999] hover:text-[#666]'}`}
+              >
+                複数年
+              </button>
+              <button
+                onClick={() => setChartMode('bar')}
+                className={`px-2 py-0.5 rounded text-[9px] transition-colors ${chartMode === 'bar' ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#999] hover:text-[#666]'}`}
+              >
+                売上/経費
+              </button>
+              <button
+                onClick={() => setChartMode('profit')}
+                className={`px-2 py-0.5 rounded text-[9px] transition-colors ${chartMode === 'profit' ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#999] hover:text-[#666]'}`}
+              >
+                利益
+              </button>
+            </div>
           </div>
-          <div className="flex gap-5 mt-4">
-            <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm" style={{ background: '#D4A03A', opacity: 0.8 }} /><span className="text-[10px] text-[#999]">売上</span></div>
-            <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm" style={{ background: '#C23728', opacity: 0.65 }} /><span className="text-[10px] text-[#999]">経費</span></div>
+
+          {/* チャート本体 */}
+          <div className="relative" style={{ height: 180 }}>
+            {chartMode === 'bar' ? (
+              /* ===== 棒グラフ: 売上 vs 経費 ===== */
+              <div className="flex items-end gap-1 h-full">
+                {monthlyData.map(m => (
+                  <div key={m.month} className="flex-1 flex flex-col items-center h-full justify-end cursor-pointer"
+                    onClick={() => setViewMonth(viewMonth === String(m.month) ? '0' : String(m.month))}>
+                    <div className="flex gap-0.5 items-end w-full justify-center" style={{ flex: 1 }}>
+                      <div className="rounded-t transition-all duration-300" style={{ width: '40%', height: `${Math.max((m.revenue / maxMonthVal) * 100, m.revenue > 0 ? 3 : 0)}%`, background: '#D4A03A', opacity: 0.8 }} />
+                      <div className="rounded-t transition-all duration-300" style={{ width: '40%', height: `${Math.max((m.expense / maxMonthVal) * 100, m.expense > 0 ? 3 : 0)}%`, background: '#C23728', opacity: 0.65 }} />
+                    </div>
+                    <p className={`text-[9px] mt-2 font-['Saira_Condensed'] tabular-nums ${viewMonth === String(m.month) ? 'text-[#1a1a1a] font-bold' : 'text-[#999]'}`}>{m.month}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              /* ===== 利益折れ線 ===== */
+              <div className="h-full flex flex-col">
+                {/* ゼロライン + SVG */}
+                <div className="flex-1 relative">
+                  {/* ゼロライン */}
+                  <div className="absolute left-0 right-0 border-t border-dashed border-gray-200" style={{ top: '50%' }} />
+                  <svg viewBox="0 0 120 100" className="w-full h-full" preserveAspectRatio="none">
+                    {/* 当年 */}
+                    <polyline
+                      fill="none"
+                      stroke="#1B4D3E"
+                      strokeWidth="2"
+                      points={monthlyData.map((m, i) => {
+                        const x = (i * 10) + 5;
+                        const scale = multiYear ? maxMultiProfit : maxProfit;
+                        const y = 50 - (m.profit / scale) * 45;
+                        return `${x},${y}`;
+                      }).join(' ')}
+                    />
+                    {monthlyData.map((m, i) => {
+                      const x = (i * 10) + 5;
+                      const scale = multiYear ? maxMultiProfit : maxProfit;
+                      const y = 50 - (m.profit / scale) * 45;
+                      return <circle key={i} cx={x} cy={y} r="2" fill="#1B4D3E" />;
+                    })}
+                    {/* 前年 */}
+                    {multiYear && (
+                      <>
+                        <polyline
+                          fill="none"
+                          stroke="#D4A03A"
+                          strokeWidth="1.5"
+                          strokeDasharray="3,2"
+                          opacity="0.6"
+                          points={prevMonthly.map((m, i) => {
+                            const x = (i * 10) + 5;
+                            const y = 50 - (m.profit / maxMultiProfit) * 45;
+                            return `${x},${y}`;
+                          }).join(' ')}
+                        />
+                        {/* 前々年 */}
+                        <polyline
+                          fill="none"
+                          stroke="#C4B49A"
+                          strokeWidth="1"
+                          strokeDasharray="2,3"
+                          opacity="0.4"
+                          points={prevPrevMonthly.map((m, i) => {
+                            const x = (i * 10) + 5;
+                            const y = 50 - (m.profit / maxMultiProfit) * 45;
+                            return `${x},${y}`;
+                          }).join(' ')}
+                        />
+                      </>
+                    )}
+                  </svg>
+                </div>
+                {/* 月ラベル */}
+                <div className="flex">
+                  {monthlyData.map(m => (
+                    <div key={m.month} className="flex-1 text-center cursor-pointer"
+                      onClick={() => setViewMonth(viewMonth === String(m.month) ? '0' : String(m.month))}>
+                      <p className={`text-[9px] font-['Saira_Condensed'] tabular-nums ${viewMonth === String(m.month) ? 'text-[#1a1a1a] font-bold' : 'text-[#999]'}`}>{m.month}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 凡例 */}
+          <div className="flex gap-4 mt-3">
+            {chartMode === 'bar' ? (
+              <>
+                <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm" style={{ background: '#D4A03A', opacity: 0.8 }} /><span className="text-[10px] text-[#999]">売上</span></div>
+                <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm" style={{ background: '#C23728', opacity: 0.65 }} /><span className="text-[10px] text-[#999]">経費</span></div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-1.5"><div className="w-4 h-0 border-t-2 border-[#1B4D3E]" /><span className="text-[10px] text-[#999]">{year}年</span></div>
+                {multiYear && (
+                  <>
+                    <div className="flex items-center gap-1.5"><div className="w-4 h-0 border-t border-dashed border-[#D4A03A] opacity-60" /><span className="text-[10px] text-[#999]">{prevYear}年</span></div>
+                    <div className="flex items-center gap-1.5"><div className="w-4 h-0 border-t border-dashed border-[#C4B49A] opacity-40" /><span className="text-[10px] text-[#999]">{prevPrevYear}年</span></div>
+                  </>
+                )}
+              </>
+            )}
           </div>
         </div>
 

@@ -500,7 +500,7 @@ export default function HomeContent() {
                     {allocRows.length > 0 ? (
                       <div className="space-y-2">
                         {allocRows.map((row, idx) => {
-                          const filteredPJ = row.division_id ? projects.filter(p => p.division === row.division_id) : [];
+                          const filteredPJ = row.division_id ? projects.filter(p => p.division === row.division_id && p.status !== 'completed') : [];
                           return (
                             <div key={idx} className="flex items-center gap-1.5">
                               <select value={row.division_id}
