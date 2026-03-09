@@ -280,9 +280,10 @@ export type TransactionAllocation = Database['public']['Tables']['transaction_al
 export const DIVISIONS = {
   youtube: { name: 'YouTube', label: 'YT', color: '#C23728', prefix: 'YT' },
   editorial: { name: '編集・体験設計', label: 'EDIT', color: '#81D8D0', prefix: 'ED' },
+  thisplace: { name: 'THIS PLACE', label: 'TP', color: '#FF5F45', prefix: 'TP' },
   data: { name: '観光データサイエンス', label: 'DATA', color: '#D4A03A', prefix: 'DT' },
   business: { name: '観光事業設計・実装', label: 'BIZ', color: '#1E3A5F', prefix: 'BZ' },
-  support: { name: '事業伴走・業務支援', label: 'SUP', color: '#FF5F45', prefix: 'SP' },
+  support: { name: '事業伴走・業務支援', label: 'SUP', color: '#8B6914', prefix: 'SP' },
   general: { name: 'その他', label: 'GEN', color: '#C4B49A', prefix: 'GEN' },
 } as const;
 
