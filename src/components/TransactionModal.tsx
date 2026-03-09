@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { KAMOKU } from '@/types/database';
-import type { Transaction } from '@/types/database';
+import { KAMOKU, DIVISIONS } from '@/types/database';
+import type { Transaction, Project } from '@/types/database';
 import TransportFields, { EMPTY_TRANSPORT } from '@/components/TransportFields';
 import type { TransportData } from '@/components/TransportFields';
 import { saveTransportDetails, updateTransportDetails, loadTransportDetails } from '@/lib/transportUtils';
@@ -18,11 +18,16 @@ interface TransactionModalProps {
   onSaved: () => void;
   editData?: Transaction | null;
   defaultOwner?: string;
+  projects?: Project[];
 }
 
 const EXPENSE_KAMOKU = Object.entries(KAMOKU)
   .filter(([, v]) => v.type === 'expense')
   .map(([id, v]) => ({ id, name: v.name }));
+
+const DIV_OPTIONS = Object.entries(DIVISIONS)
+  .filter(([id]) => id !== 'general')
+  .map(([id, v]) => ({ id, name: v.name, label: v.label }));
 
 export default function TransactionModal({
   isOpen,
@@ -30,11 +35,14 @@ export default function TransactionModal({
   onSaved,
   editData,
   defaultOwner = 'tomo',
+  projects = [],
 }: TransactionModalProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [transportData, setTransportData] = useState<TransportData>({ ...EMPTY_TRANSPORT });
   const [entertainmentData, setEntertainmentData] = useState<EntertainmentData>({ ...EMPTY_ENTERTAINMENT });
+  const [allocDivision, setAllocDivision] = useState('');
+  const [allocProject, setAllocProject] = useState('');
 
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -64,6 +72,18 @@ export default function TransactionModal({
         setTransportData({ ...EMPTY_TRANSPORT });
       }
       setEntertainmentData({ ...EMPTY_ENTERTAINMENT });
+      // 編集時、既存allocation読み込み
+      if (supabase) {
+        supabase.from('transaction_allocations').select('*').eq('transaction_id', editData.id).then(({ data }: { data: any }) => {
+          if (data && data.length === 1) {
+            setAllocDivision(data[0].division_id || '');
+            setAllocProject(data[0].project_id || '');
+          } else {
+            setAllocDivision('');
+            setAllocProject('');
+          }
+        });
+      }
     } else {
       setForm({
         date: new Date().toISOString().split('T')[0],
@@ -75,6 +95,8 @@ export default function TransactionModal({
       });
       setTransportData({ ...EMPTY_TRANSPORT });
       setEntertainmentData({ ...EMPTY_ENTERTAINMENT });
+      setAllocDivision('');
+      setAllocProject('');
     }
     setError(null);
   }, [editData, isOpen, defaultOwner]);
@@ -116,7 +138,10 @@ export default function TransactionModal({
     };
 
     try {
+      let txId: string;
+
       if (editData) {
+        txId = editData.id;
         const { error: dbErr } = await supabase
           .from('transactions')
           .update(payload as any)
@@ -133,11 +158,31 @@ export default function TransactionModal({
           .select('id')
           .single();
         if (dbErr) throw dbErr;
+        txId = (inserted as any).id;
 
         if (form.kamoku === 'travel' && inserted) {
           await saveTransportDetails((inserted as any).id, transportData);
         }
       }
+
+      // allocation保存（事業が選択されている場合）
+      if (allocDivision) {
+        const txAmount = parseInt(form.amount.replace(/,/g, '')) || 0;
+        // 既存alloc削除
+        await supabase.from('transaction_allocations').delete().eq('transaction_id', txId);
+        // 新規挿入（単一事業100%）
+        await supabase.from('transaction_allocations').insert({
+          transaction_id: txId,
+          division_id: allocDivision,
+          project_id: allocProject || null,
+          percent: 100,
+          amount: txAmount,
+        });
+      } else if (editData) {
+        // 事業未選択に戻した場合、既存allocを削除
+        await supabase.from('transaction_allocations').delete().eq('transaction_id', txId);
+      }
+
       onSaved();
       onClose();
     } catch (err) {
@@ -244,6 +289,36 @@ export default function TransactionModal({
               className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
               placeholder="任意"
             />
+          </div>
+
+          {/* 事業・PJ割り当て（任意） */}
+          <div className="pt-2 border-t border-gray-50">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs text-[#999]">事業・PJ（任意）</label>
+            </div>
+            <select
+              value={allocDivision}
+              onChange={(e) => setAllocDivision(e.target.value)}
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50 mb-2"
+            >
+              <option value="">未選択</option>
+              {DIV_OPTIONS.map((d) => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+            {allocDivision && projects.length > 0 && (
+              <select
+                value={allocProject}
+                onChange={(e) => setAllocProject(e.target.value)}
+                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50 mb-2"
+              >
+                <option value="">PJ未選択</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            )}
+            <p className="text-[10px] text-[#999]">後から経営ページでも割り当て・変更できます</p>
           </div>
 
           {error && <p className="text-xs text-[#C23728]">{error}</p>}

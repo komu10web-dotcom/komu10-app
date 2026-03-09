@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Uploader } from '@/components/Uploader';
 import { supabase } from '@/lib/supabase';
-import { KAMOKU } from '@/types/database';
+import { KAMOKU, DIVISIONS } from '@/types/database';
+import type { Project } from '@/types/database';
 import { CheckCircle2, AlertTriangle, ArrowRight, Camera, PenLine, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import TransportFields, { EMPTY_TRANSPORT } from '@/components/TransportFields';
@@ -66,6 +67,9 @@ export default function HomeContent() {
   const [manualError, setManualError] = useState<string | null>(null);
   const [transportData, setTransportData] = useState<TransportData>({ ...EMPTY_TRANSPORT });
   const [entertainmentData, setEntertainmentData] = useState<EntertainmentData>({ ...EMPTY_ENTERTAINMENT });
+  const [allocDivision, setAllocDivision] = useState('');
+  const [allocProject, setAllocProject] = useState('');
+  const [projects, setProjects] = useState<Project[]>([]);
 
   // サマリー期間の計算
   const getDateRange = useCallback(() => {
@@ -137,6 +141,10 @@ export default function HomeContent() {
 
       const { data: recentData } = await recentQuery;
       setRecentTx((recentData as TransactionRow[]) || []);
+
+      // プロジェクト取得
+      const { data: pjData } = await supabase.from('projects').select('*').order('name');
+      setProjects((pjData as Project[]) || []);
     } catch (err) {
       console.error('Fetch error:', err);
     } finally {
@@ -213,6 +221,18 @@ export default function HomeContent() {
         await saveTransportDetails((inserted as any).id, transportData);
       }
 
+      // allocation保存（事業が選択されている場合）
+      if (allocDivision && inserted) {
+        const txAmount = parseInt(manualForm.amount.replace(/,/g, '')) || 0;
+        await supabase.from('transaction_allocations').insert({
+          transaction_id: (inserted as any).id,
+          division_id: allocDivision,
+          project_id: allocProject || null,
+          percent: 100,
+          amount: txAmount,
+        });
+      }
+
       setManualSuccess(true);
       if ('vibrate' in navigator) navigator.vibrate([50, 50, 50]);
 
@@ -227,6 +247,8 @@ export default function HomeContent() {
         });
         setTransportData({ ...EMPTY_TRANSPORT });
         setEntertainmentData({ ...EMPTY_ENTERTAINMENT });
+        setAllocDivision('');
+        setAllocProject('');
         setManualSuccess(false);
       }, 1500);
 
@@ -459,6 +481,37 @@ export default function HomeContent() {
                     />
                   </div>
                   {manualError && <p className="text-xs text-[#C23728]">{manualError}</p>}
+
+                  {/* 事業・PJ割り当て（任意） */}
+                  <div className="pt-2 border-t border-gray-50">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs text-[#999]">事業・PJ（任意）</label>
+                    </div>
+                    <select
+                      value={allocDivision}
+                      onChange={(e) => setAllocDivision(e.target.value)}
+                      className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50 mb-2"
+                    >
+                      <option value="">未選択</option>
+                      {Object.entries(DIVISIONS).filter(([id]) => id !== 'general').map(([id, v]) => (
+                        <option key={id} value={id}>{v.name}</option>
+                      ))}
+                    </select>
+                    {allocDivision && projects.length > 0 && (
+                      <select
+                        value={allocProject}
+                        onChange={(e) => setAllocProject(e.target.value)}
+                        className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50 mb-2"
+                      >
+                        <option value="">PJ未選択</option>
+                        {projects.map((p) => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
+                    )}
+                    <p className="text-[10px] text-[#999]">後から経営ページでも割り当て・変更できます</p>
+                  </div>
+
                   <button
                     onClick={handleManualSave}
                     disabled={manualSaving || !manualForm.amount || !manualForm.date}

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { KAMOKU } from '@/types/database';
-import type { Transaction } from '@/types/database';
+import type { Transaction, Project } from '@/types/database';
 import { Plus, Upload, Pencil, Trash2, Search, Loader2 } from 'lucide-react';
 import TransactionModal from './TransactionModal';
 
@@ -39,6 +39,9 @@ export default function ExpensesContent() {
   // 削除確認
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
+  // プロジェクト（TransactionModalに渡す）
+  const [projects, setProjects] = useState<Project[]>([]);
+
   const fetchTransactions = useCallback(async () => {
     if (!supabase) return;
     setLoading(true);
@@ -60,6 +63,10 @@ export default function ExpensesContent() {
       const { data, error } = await query;
       if (error) throw error;
       setTransactions((data as Transaction[]) || []);
+
+      // プロジェクト取得
+      const { data: pjData } = await supabase.from('projects').select('*').order('name');
+      setProjects((pjData as Project[]) || []);
     } catch (err) {
       console.error('Fetch error:', err);
     } finally {
@@ -276,6 +283,7 @@ export default function ExpensesContent() {
         onSaved={fetchTransactions}
         editData={editTarget}
         defaultOwner={owner}
+        projects={projects}
       />
 
       {/* ── 削除確認 ── */}
