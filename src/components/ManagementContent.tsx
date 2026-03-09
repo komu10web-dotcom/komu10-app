@@ -643,67 +643,71 @@ export default function ManagementContent() {
             ) : (
               /* ===== 利益折れ線 ===== */
               <div className="h-full flex flex-col">
-                {/* ゼロライン + SVG */}
-                <div className="flex-1 relative">
+                <div className="flex-1 relative overflow-hidden">
                   {/* ゼロライン */}
                   <div className="absolute left-0 right-0 border-t border-dashed border-gray-200" style={{ top: '50%' }} />
-                  <svg viewBox="0 0 120 100" className="w-full h-full" preserveAspectRatio="none">
+                  <svg
+                    className="absolute inset-0 w-full h-full"
+                    viewBox="0 0 1200 1000"
+                    preserveAspectRatio="none"
+                  >
                     {/* 当年 */}
                     <polyline
-                      fill="none"
-                      stroke="#1B4D3E"
-                      strokeWidth="2"
+                      fill="none" stroke="#1B4D3E" strokeWidth="2"
+                      vectorEffect="non-scaling-stroke"
+                      strokeLinejoin="round" strokeLinecap="round"
                       points={monthlyData.map((m, i) => {
-                        const x = (i * 10) + 5;
+                        const x = (i * 100) + 50;
                         const scale = multiYear ? maxMultiProfit : maxProfit;
-                        const y = 50 - (m.profit / scale) * 45;
+                        const y = 500 - (m.profit / scale) * 420;
                         return `${x},${y}`;
                       }).join(' ')}
                     />
-                    {monthlyData.map((m, i) => {
-                      const x = (i * 10) + 5;
-                      const scale = multiYear ? maxMultiProfit : maxProfit;
-                      const y = 50 - (m.profit / scale) * 45;
-                      return <circle key={i} cx={x} cy={y} r="2" fill="#1B4D3E" />;
-                    })}
                     {/* 前年 */}
                     {multiYear && (
                       <>
                         <polyline
-                          fill="none"
-                          stroke="#D4A03A"
-                          strokeWidth="1.5"
-                          strokeDasharray="3,2"
-                          opacity="0.6"
+                          fill="none" stroke="#D4A03A" strokeWidth="1.5"
+                          vectorEffect="non-scaling-stroke"
+                          strokeLinejoin="round" strokeDasharray="6,4" opacity="0.6"
                           points={prevMonthly.map((m, i) => {
-                            const x = (i * 10) + 5;
-                            const y = 50 - (m.profit / maxMultiProfit) * 45;
+                            const x = (i * 100) + 50;
+                            const y = 500 - (m.profit / maxMultiProfit) * 420;
                             return `${x},${y}`;
                           }).join(' ')}
                         />
-                        {/* 前々年 */}
                         <polyline
-                          fill="none"
-                          stroke="#C4B49A"
-                          strokeWidth="1"
-                          strokeDasharray="2,3"
-                          opacity="0.4"
+                          fill="none" stroke="#C4B49A" strokeWidth="1"
+                          vectorEffect="non-scaling-stroke"
+                          strokeLinejoin="round" strokeDasharray="4,6" opacity="0.4"
                           points={prevPrevMonthly.map((m, i) => {
-                            const x = (i * 10) + 5;
-                            const y = 50 - (m.profit / maxMultiProfit) * 45;
+                            const x = (i * 100) + 50;
+                            const y = 500 - (m.profit / maxMultiProfit) * 420;
                             return `${x},${y}`;
                           }).join(' ')}
                         />
                       </>
                     )}
                   </svg>
+                  {/* ドット（HTML要素） */}
+                  {monthlyData.map((m, i) => {
+                    const scale = multiYear ? maxMultiProfit : maxProfit;
+                    const leftPct = ((i * 100 + 50) / 1200) * 100;
+                    const topPct = ((500 - (m.profit / scale) * 420) / 1000) * 100;
+                    return (
+                      <div key={i}
+                        className="absolute w-1.5 h-1.5 rounded-full bg-[#1B4D3E]"
+                        style={{ left: `${leftPct}%`, top: `${topPct}%`, transform: 'translate(-50%,-50%)' }}
+                      />
+                    );
+                  })}
                 </div>
                 {/* 月ラベル */}
                 <div className="flex">
                   {monthlyData.map(m => (
                     <div key={m.month} className="flex-1 text-center cursor-pointer"
                       onClick={() => setViewMonth(viewMonth === String(m.month) ? '0' : String(m.month))}>
-                      <p className={`text-[9px] font-['Saira_Condensed'] tabular-nums ${viewMonth === String(m.month) ? 'text-[#1a1a1a] font-bold' : 'text-[#999]'}`}>{m.month}</p>
+                      <p className={`text-[9px] mt-1 font-['Saira_Condensed'] tabular-nums ${viewMonth === String(m.month) ? 'text-[#1a1a1a] font-bold' : 'text-[#999]'}`}>{m.month}</p>
                     </div>
                   ))}
                 </div>
