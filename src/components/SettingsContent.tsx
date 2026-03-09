@@ -640,6 +640,27 @@ export default function SettingsContent() {
           </div>
         </section>
 
+        {/* ── データバックアップ ── */}
+        <section className="mb-10">
+          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">データバックアップ</div>
+          <div className="bg-white rounded-2xl px-5 py-5" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
+            <p className="text-xs text-[#666] mb-3">
+              全テーブルのデータをJSON形式でダウンロードします。アプリの改修・移行時にデータを復元できます。定期的にバックアップを取ることを推奨します。
+            </p>
+            <div className="flex items-center gap-3">
+              <a
+                href="/api/backup"
+                download
+                className="flex items-center gap-1.5 px-4 py-2 bg-[#1a1a1a] text-white rounded-lg text-xs font-medium hover:bg-[#333] transition-colors"
+              >
+                <Save className="w-3.5 h-3.5" />
+                JSONバックアップをダウンロード
+              </a>
+              <span className="text-[10px] text-[#999]">transactions, projects, assets, 按分設定 等すべて含む</span>
+            </div>
+          </div>
+        </section>
+
         {/* ── Q&A ── */}
         <section className="mb-10">
           <div className="flex items-center gap-2 mb-3">

@@ -29,6 +29,25 @@ function formatProjectId(pj: Project): string {
 
 const kamokuName = (k: string) => KAMOKU[k as keyof typeof KAMOKU]?.name || k;
 
+// 縦軸ラベル生成（きれいな区切り値を5段階で返す）
+function calcAxisTicks(maxVal: number, steps: number = 4): number[] {
+  if (maxVal <= 0) return [0];
+  const raw = maxVal / steps;
+  const magnitude = Math.pow(10, Math.floor(Math.log10(raw)));
+  const nice = [1, 2, 2.5, 5, 10].find(n => n * magnitude >= raw) || 10;
+  const step = nice * magnitude;
+  const ticks: number[] = [];
+  for (let i = 0; i <= steps; i++) ticks.push(Math.round(step * i));
+  return ticks;
+}
+
+function yenShort(n: number): string {
+  if (n >= 10000000) return `¥${(n / 10000000).toFixed(0)}千万`;
+  if (n >= 1000000) return `¥${(n / 10000).toFixed(0)}万`;
+  if (n >= 10000) return `¥${(n / 10000).toFixed(1)}万`;
+  return `¥${n.toLocaleString()}`;
+}
+
 const ASSIGN_DIVISIONS = Object.entries(DIVISIONS)
   .filter(([id]) => id !== 'general')
   .map(([id, v]) => ({ id, name: v.name, label: v.label, color: v.color }));
@@ -539,7 +558,7 @@ export default function ManagementContent() {
         <div className="bg-white rounded-2xl mb-6 overflow-hidden" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
           <button onClick={() => setUnassignedOpen(!unassignedOpen)} className="w-full px-5 py-4 flex items-center justify-between hover:bg-[#F5F5F3]/30 transition-colors">
             <div className="flex items-center gap-3">
-              <p className="text-[10px] tracking-wider text-[#999]">未分類の経費</p>
+              <p className="text-[10px] tracking-wider text-[#999]">事業・PJ未割り当ての経費</p>
               {unassignedExpenses.length > 0 && (
                 <span className="text-[10px] font-['Saira_Condensed'] tabular-nums px-2 py-0.5 rounded-full bg-[#C23728]/10 text-[#C23728]">{unassignedExpenses.length}件</span>
               )}
@@ -549,7 +568,7 @@ export default function ManagementContent() {
           {unassignedOpen && (
             <div className="border-t border-gray-50">
               {unassignedExpenses.length === 0 ? (
-                <p className="px-5 py-8 text-xs text-[#ccc] text-center">未分類の経費はありません</p>
+                <p className="px-5 py-8 text-xs text-[#ccc] text-center">未割り当ての経費はありません</p>
               ) : (
                 <>
                   <div className="px-5 py-2 flex items-center gap-3 text-[9px] text-[#999] border-b border-gray-50 bg-[#FAFAF8]">
@@ -625,95 +644,124 @@ export default function ManagementContent() {
           </div>
 
           {/* チャート本体 */}
-          <div className="relative" style={{ height: 180 }}>
-            {chartMode === 'bar' ? (
-              /* ===== 棒グラフ: 売上 vs 経費 ===== */
-              <div className="flex items-end gap-1 h-full">
-                {monthlyData.map(m => (
-                  <div key={m.month} className="flex-1 flex flex-col items-center h-full justify-end cursor-pointer"
-                    onClick={() => setViewMonth(viewMonth === String(m.month) ? '0' : String(m.month))}>
-                    <div className="flex gap-0.5 items-end w-full justify-center" style={{ flex: 1 }}>
-                      <div className="rounded-t transition-all duration-300" style={{ width: '40%', height: `${Math.max((m.revenue / maxMonthVal) * 100, m.revenue > 0 ? 3 : 0)}%`, background: '#D4A03A', opacity: 0.8 }} />
-                      <div className="rounded-t transition-all duration-300" style={{ width: '40%', height: `${Math.max((m.expense / maxMonthVal) * 100, m.expense > 0 ? 3 : 0)}%`, background: '#C23728', opacity: 0.65 }} />
+          {(() => {
+            const barTicks = calcAxisTicks(maxMonthVal);
+            const barMax = barTicks[barTicks.length - 1] || 1;
+            const profitScale = multiYear ? maxMultiProfit : maxProfit;
+            const profitTicks = calcAxisTicks(profitScale);
+            const profitTickMax = profitTicks[profitTicks.length - 1] || 1;
+
+            return (
+              <div style={{ height: 220 }}>
+                {chartMode === 'bar' ? (
+                  /* ===== 棒グラフ ===== */
+                  <div className="flex h-full">
+                    {/* 縦軸 */}
+                    <div className="flex flex-col justify-between pr-2 pb-5 shrink-0" style={{ width: 56 }}>
+                      {[...barTicks].reverse().map((t, i) => (
+                        <span key={i} className="text-[8px] font-['Saira_Condensed'] tabular-nums text-[#999] text-right">{yenShort(t)}</span>
+                      ))}
                     </div>
-                    <p className={`text-[9px] mt-2 font-['Saira_Condensed'] tabular-nums ${viewMonth === String(m.month) ? 'text-[#1a1a1a] font-bold' : 'text-[#999]'}`}>{m.month}</p>
+                    {/* グラフ領域 */}
+                    <div className="flex-1 flex flex-col">
+                      <div className="flex-1 relative">
+                        {/* グリッド横線 */}
+                        {barTicks.map((t, i) => (
+                          <div key={i} className="absolute left-0 right-0 border-t border-gray-100"
+                            style={{ bottom: `${(t / barMax) * 100}%` }} />
+                        ))}
+                        {/* バー */}
+                        <div className="absolute inset-0 flex items-end gap-1">
+                          {monthlyData.map(m => (
+                            <div key={m.month} className="flex-1 flex gap-0.5 items-end justify-center h-full cursor-pointer"
+                              onClick={() => setViewMonth(viewMonth === String(m.month) ? '0' : String(m.month))}>
+                              <div className="rounded-t transition-all duration-300" style={{ width: '35%', height: `${Math.max((m.revenue / barMax) * 100, m.revenue > 0 ? 2 : 0)}%`, background: '#D4A03A', opacity: 0.8 }} />
+                              <div className="rounded-t transition-all duration-300" style={{ width: '35%', height: `${Math.max((m.expense / barMax) * 100, m.expense > 0 ? 2 : 0)}%`, background: '#C23728', opacity: 0.65 }} />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      {/* 横軸 */}
+                      <div className="flex border-t border-gray-200 pt-1">
+                        {monthlyData.map(m => (
+                          <div key={m.month} className="flex-1 text-center cursor-pointer"
+                            onClick={() => setViewMonth(viewMonth === String(m.month) ? '0' : String(m.month))}>
+                            <p className={`text-[9px] font-['Saira_Condensed'] tabular-nums ${viewMonth === String(m.month) ? 'text-[#1a1a1a] font-bold' : 'text-[#999]'}`}>{m.month}月</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              /* ===== 利益折れ線 ===== */
-              <div className="h-full flex flex-col">
-                <div className="flex-1 relative overflow-hidden">
-                  {/* ゼロライン */}
-                  <div className="absolute left-0 right-0 border-t border-dashed border-gray-200" style={{ top: '50%' }} />
-                  <svg
-                    className="absolute inset-0 w-full h-full"
-                    viewBox="0 0 1200 1000"
-                    preserveAspectRatio="none"
-                  >
-                    {/* 当年 */}
-                    <polyline
-                      fill="none" stroke="#1B4D3E" strokeWidth="2"
-                      vectorEffect="non-scaling-stroke"
-                      strokeLinejoin="round" strokeLinecap="round"
-                      points={monthlyData.map((m, i) => {
-                        const x = (i * 100) + 50;
-                        const scale = multiYear ? maxMultiProfit : maxProfit;
-                        const y = 500 - (m.profit / scale) * 420;
-                        return `${x},${y}`;
-                      }).join(' ')}
-                    />
-                    {/* 前年 */}
-                    {multiYear && (
-                      <>
-                        <polyline
-                          fill="none" stroke="#D4A03A" strokeWidth="1.5"
-                          vectorEffect="non-scaling-stroke"
-                          strokeLinejoin="round" strokeDasharray="6,4" opacity="0.6"
-                          points={prevMonthly.map((m, i) => {
-                            const x = (i * 100) + 50;
-                            const y = 500 - (m.profit / maxMultiProfit) * 420;
-                            return `${x},${y}`;
-                          }).join(' ')}
-                        />
-                        <polyline
-                          fill="none" stroke="#C4B49A" strokeWidth="1"
-                          vectorEffect="non-scaling-stroke"
-                          strokeLinejoin="round" strokeDasharray="4,6" opacity="0.4"
-                          points={prevPrevMonthly.map((m, i) => {
-                            const x = (i * 100) + 50;
-                            const y = 500 - (m.profit / maxMultiProfit) * 420;
-                            return `${x},${y}`;
-                          }).join(' ')}
-                        />
-                      </>
-                    )}
-                  </svg>
-                  {/* ドット（HTML要素） */}
-                  {monthlyData.map((m, i) => {
-                    const scale = multiYear ? maxMultiProfit : maxProfit;
-                    const leftPct = ((i * 100 + 50) / 1200) * 100;
-                    const topPct = ((500 - (m.profit / scale) * 420) / 1000) * 100;
-                    return (
-                      <div key={i}
-                        className="absolute w-1.5 h-1.5 rounded-full bg-[#1B4D3E]"
-                        style={{ left: `${leftPct}%`, top: `${topPct}%`, transform: 'translate(-50%,-50%)' }}
-                      />
-                    );
-                  })}
-                </div>
-                {/* 月ラベル */}
-                <div className="flex">
-                  {monthlyData.map(m => (
-                    <div key={m.month} className="flex-1 text-center cursor-pointer"
-                      onClick={() => setViewMonth(viewMonth === String(m.month) ? '0' : String(m.month))}>
-                      <p className={`text-[9px] mt-1 font-['Saira_Condensed'] tabular-nums ${viewMonth === String(m.month) ? 'text-[#1a1a1a] font-bold' : 'text-[#999]'}`}>{m.month}</p>
+                ) : (
+                  /* ===== 利益折れ線 ===== */
+                  <div className="flex h-full">
+                    {/* 縦軸 */}
+                    <div className="flex flex-col justify-between pr-2 pb-5 shrink-0" style={{ width: 56 }}>
+                      <span className="text-[8px] font-['Saira_Condensed'] tabular-nums text-[#999] text-right">{yenShort(profitTickMax)}</span>
+                      <span className="text-[8px] font-['Saira_Condensed'] tabular-nums text-[#999] text-right">¥0</span>
+                      <span className="text-[8px] font-['Saira_Condensed'] tabular-nums text-[#999] text-right">-{yenShort(profitTickMax)}</span>
                     </div>
-                  ))}
-                </div>
+                    {/* グラフ領域 */}
+                    <div className="flex-1 flex flex-col">
+                      <div className="flex-1 relative overflow-hidden">
+                        {/* ゼロライン */}
+                        <div className="absolute left-0 right-0 border-t border-dashed border-gray-300" style={{ top: '50%' }} />
+                        {/* グリッド */}
+                        <div className="absolute left-0 right-0 border-t border-gray-100" style={{ top: '25%' }} />
+                        <div className="absolute left-0 right-0 border-t border-gray-100" style={{ top: '75%' }} />
+                        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 1200 1000" preserveAspectRatio="none">
+                          <polyline fill="none" stroke="#1B4D3E" strokeWidth="2" vectorEffect="non-scaling-stroke"
+                            strokeLinejoin="round" strokeLinecap="round"
+                            points={monthlyData.map((m, i) => {
+                              const x = (i * 100) + 50;
+                              const y = 500 - (m.profit / profitTickMax) * 450;
+                              return `${x},${Math.max(20, Math.min(980, y))}`;
+                            }).join(' ')} />
+                          {multiYear && (
+                            <>
+                              <polyline fill="none" stroke="#D4A03A" strokeWidth="1.5" vectorEffect="non-scaling-stroke"
+                                strokeLinejoin="round" strokeDasharray="6,4" opacity="0.6"
+                                points={prevMonthly.map((m, i) => {
+                                  const x = (i * 100) + 50;
+                                  const y = 500 - (m.profit / profitTickMax) * 450;
+                                  return `${x},${Math.max(20, Math.min(980, y))}`;
+                                }).join(' ')} />
+                              <polyline fill="none" stroke="#C4B49A" strokeWidth="1" vectorEffect="non-scaling-stroke"
+                                strokeLinejoin="round" strokeDasharray="4,6" opacity="0.4"
+                                points={prevPrevMonthly.map((m, i) => {
+                                  const x = (i * 100) + 50;
+                                  const y = 500 - (m.profit / profitTickMax) * 450;
+                                  return `${x},${Math.max(20, Math.min(980, y))}`;
+                                }).join(' ')} />
+                            </>
+                          )}
+                        </svg>
+                        {/* ドット */}
+                        {monthlyData.map((m, i) => {
+                          const leftPct = ((i * 100 + 50) / 1200) * 100;
+                          const rawTopPct = ((500 - (m.profit / profitTickMax) * 450) / 1000) * 100;
+                          const topPct = Math.max(2, Math.min(98, rawTopPct));
+                          return (
+                            <div key={i} className="absolute w-1.5 h-1.5 rounded-full bg-[#1B4D3E]"
+                              style={{ left: `${leftPct}%`, top: `${topPct}%`, transform: 'translate(-50%,-50%)' }} />
+                          );
+                        })}
+                      </div>
+                      {/* 横軸 */}
+                      <div className="flex border-t border-gray-200 pt-1">
+                        {monthlyData.map(m => (
+                          <div key={m.month} className="flex-1 text-center cursor-pointer"
+                            onClick={() => setViewMonth(viewMonth === String(m.month) ? '0' : String(m.month))}>
+                            <p className={`text-[9px] font-['Saira_Condensed'] tabular-nums ${viewMonth === String(m.month) ? 'text-[#1a1a1a] font-bold' : 'text-[#999]'}`}>{m.month}月</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            );
+          })()}
 
           {/* 凡例 */}
           <div className="flex gap-4 mt-3">
@@ -742,7 +790,7 @@ export default function ManagementContent() {
             <p className="text-[10px] tracking-wider text-[#999]">部門別損益</p>
             {unallocatedExpense > 0 && (
               <p className="text-[10px] text-[#999]">
-                未分類共通経費 <span className="font-['Saira_Condensed'] tabular-nums text-[#C23728]">{yen(unallocatedExpense)}</span>
+                未割り当て共通経費 <span className="font-['Saira_Condensed'] tabular-nums text-[#C23728]">{yen(unallocatedExpense)}</span>
                 <span className="ml-1 text-[9px]">（売上比率で配賦）</span>
               </p>
             )}
