@@ -6,7 +6,7 @@ import { Uploader } from '@/components/Uploader';
 import { supabase } from '@/lib/supabase';
 import { KAMOKU, DIVISIONS } from '@/types/database';
 import type { Project } from '@/types/database';
-import { CheckCircle2, AlertTriangle, ArrowRight, Camera, PenLine, Loader2 } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, ArrowRight, Camera, PenLine, Loader2, Plus, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import TransportFields, { EMPTY_TRANSPORT } from '@/components/TransportFields';
 import type { TransportData } from '@/components/TransportFields';
@@ -67,8 +67,7 @@ export default function HomeContent() {
   const [manualError, setManualError] = useState<string | null>(null);
   const [transportData, setTransportData] = useState<TransportData>({ ...EMPTY_TRANSPORT });
   const [entertainmentData, setEntertainmentData] = useState<EntertainmentData>({ ...EMPTY_ENTERTAINMENT });
-  const [allocDivision, setAllocDivision] = useState('');
-  const [allocProject, setAllocProject] = useState('');
+  const [allocRows, setAllocRows] = useState<{ division_id: string; project_id: string; percent: number }[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
 
   // サマリー期間の計算
@@ -187,6 +186,11 @@ export default function HomeContent() {
       setManualError('接待交際費の相手先名は必須です');
       return;
     }
+    if (allocRows.length > 0) {
+      const total = allocRows.reduce((s, r) => s + r.percent, 0);
+      if (total !== 100) { setManualError('事業割り当ての合計が100%になるようにしてください'); return; }
+      if (allocRows.some(r => !r.division_id)) { setManualError('事業を選択してください'); return; }
+    }
     if (!supabase) return;
 
     setManualSaving(true);
@@ -221,16 +225,17 @@ export default function HomeContent() {
         await saveTransportDetails((inserted as any).id, transportData);
       }
 
-      // allocation保存（事業が選択されている場合）
-      if (allocDivision && inserted) {
+      // allocation保存（事業割り当てがある場合）
+      if (allocRows.length > 0 && inserted) {
         const txAmount = parseInt(manualForm.amount.replace(/,/g, '')) || 0;
-        await supabase.from('transaction_allocations').insert({
+        const inserts = allocRows.map(r => ({
           transaction_id: (inserted as any).id,
-          division_id: allocDivision,
-          project_id: allocProject || null,
-          percent: 100,
-          amount: txAmount,
-        });
+          division_id: r.division_id,
+          project_id: r.project_id || null,
+          percent: r.percent,
+          amount: Math.round(txAmount * r.percent / 100),
+        }));
+        await supabase.from('transaction_allocations').insert(inserts);
       }
 
       setManualSuccess(true);
@@ -247,8 +252,7 @@ export default function HomeContent() {
         });
         setTransportData({ ...EMPTY_TRANSPORT });
         setEntertainmentData({ ...EMPTY_ENTERTAINMENT });
-        setAllocDivision('');
-        setAllocProject('');
+        setAllocRows([]);
         setManualSuccess(false);
       }, 1500);
 
@@ -482,34 +486,62 @@ export default function HomeContent() {
                   </div>
                   {manualError && <p className="text-xs text-[#C23728]">{manualError}</p>}
 
-                  {/* 事業・PJ割り当て（任意） */}
+                  {/* 事業・PJ割り当て（複数行按分） */}
                   <div className="pt-2 border-t border-gray-50">
                     <div className="flex items-center justify-between mb-2">
-                      <label className="text-xs text-[#999]">事業・PJ（任意）</label>
+                      <label className="text-xs text-[#999]">事業・PJ割り当て（任意）</label>
+                      {allocRows.length === 0 && (
+                        <button onClick={() => setAllocRows([{ division_id: '', project_id: '', percent: 100 }])}
+                          className="flex items-center gap-1 text-[10px] text-[#D4A03A] hover:underline">
+                          <Plus className="w-3 h-3" />追加
+                        </button>
+                      )}
                     </div>
-                    <select
-                      value={allocDivision}
-                      onChange={(e) => setAllocDivision(e.target.value)}
-                      className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50 mb-2"
-                    >
-                      <option value="">未選択</option>
-                      {Object.entries(DIVISIONS).filter(([id]) => id !== 'general').map(([id, v]) => (
-                        <option key={id} value={id}>{v.name}</option>
-                      ))}
-                    </select>
-                    {allocDivision && projects.length > 0 && (
-                      <select
-                        value={allocProject}
-                        onChange={(e) => setAllocProject(e.target.value)}
-                        className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50 mb-2"
-                      >
-                        <option value="">PJ未選択</option>
-                        {projects.map((p) => (
-                          <option key={p.id} value={p.id}>{p.name}</option>
-                        ))}
-                      </select>
+                    {allocRows.length > 0 ? (
+                      <div className="space-y-2">
+                        {allocRows.map((row, idx) => {
+                          const filteredPJ = row.division_id ? projects.filter(p => p.division === row.division_id) : [];
+                          return (
+                            <div key={idx} className="flex items-center gap-1.5">
+                              <select value={row.division_id}
+                                onChange={e => setAllocRows(prev => prev.map((r, i) => i === idx ? { ...r, division_id: e.target.value, project_id: '' } : r))}
+                                className="px-2 py-1.5 bg-[#F5F5F3] rounded text-[11px] border-0 outline-none flex-1">
+                                <option value="">事業</option>
+                                {Object.entries(DIVISIONS).filter(([id]) => id !== 'general').map(([id, v]) => (
+                                  <option key={id} value={id}>{v.name}</option>
+                                ))}
+                              </select>
+                              <select value={row.project_id}
+                                onChange={e => setAllocRows(prev => prev.map((r, i) => i === idx ? { ...r, project_id: e.target.value } : r))}
+                                className="px-2 py-1.5 bg-[#F5F5F3] rounded text-[11px] border-0 outline-none flex-1 truncate">
+                                <option value="">PJ</option>
+                                {filteredPJ.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                              </select>
+                              <input type="number" value={row.percent}
+                                onChange={e => setAllocRows(prev => prev.map((r, i) => i === idx ? { ...r, percent: parseInt(e.target.value, 10) || 0 } : r))}
+                                className="w-12 px-1.5 py-1.5 bg-[#F5F5F3] rounded text-[11px] border-0 outline-none text-right font-['Saira_Condensed'] tabular-nums"
+                                min={0} max={100} />
+                              <span className="text-[10px] text-[#999]">%</span>
+                              <button onClick={() => setAllocRows(prev => prev.filter((_, i) => i !== idx))}
+                                className="text-[#C23728]/60 hover:text-[#C23728] p-0.5">
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          );
+                        })}
+                        <div className="flex items-center justify-between pt-1">
+                          <button onClick={() => setAllocRows(prev => [...prev, { division_id: '', project_id: '', percent: 0 }])}
+                            className="flex items-center gap-1 text-[10px] text-[#D4A03A] hover:underline">
+                            <Plus className="w-3 h-3" />行を追加
+                          </button>
+                          <span className={`text-[10px] font-['Saira_Condensed'] tabular-nums ${allocRows.reduce((s, r) => s + r.percent, 0) === 100 ? 'text-[#1B4D3E]' : 'text-[#C23728]'}`}>
+                            合計 {allocRows.reduce((s, r) => s + r.percent, 0)}%
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-[10px] text-[#999]">後から経営ページでも割り当て・変更できます</p>
                     )}
-                    <p className="text-[10px] text-[#999]">後から経営ページでも割り当て・変更できます</p>
                   </div>
 
                   <button
