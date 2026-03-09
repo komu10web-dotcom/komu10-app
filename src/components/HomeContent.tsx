@@ -49,6 +49,14 @@ export default function HomeContent() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [rangeFrom, setRangeFrom] = useState(1);
   const [rangeTo, setRangeTo] = useState(new Date().getMonth() + 1);
+  const [rangeFromYear, setRangeFromYear] = useState(year);
+  const [rangeToYear, setRangeToYear] = useState(year);
+
+  // ヘッダーの年度変更に追従
+  useEffect(() => {
+    setRangeFromYear(year);
+    setRangeToYear(year);
+  }, [year]);
 
   // 撮影 / 手入力 切替
   const [inputMode, setInputMode] = useState<'camera' | 'manual'>('camera');
@@ -72,27 +80,35 @@ export default function HomeContent() {
 
   // サマリー期間の計算
   const getDateRange = useCallback(() => {
+    let startYear: string;
     let startMonth: number;
+    let endYear: string;
     let endMonth: number;
 
     if (summaryMode === 'single') {
+      startYear = year;
       startMonth = selectedMonth;
+      endYear = year;
       endMonth = selectedMonth;
     } else if (summaryMode === 'ytd') {
+      startYear = year;
       startMonth = 1;
+      endYear = year;
       endMonth = selectedMonth;
     } else {
+      startYear = rangeFromYear;
       startMonth = rangeFrom;
+      endYear = rangeToYear;
       endMonth = rangeTo;
     }
 
-    const startDate = `${year}-${String(startMonth).padStart(2, '0')}-01`;
+    const startDate = `${startYear}-${String(startMonth).padStart(2, '0')}-01`;
     const endDate = endMonth === 12
-      ? `${parseInt(year) + 1}-01-01`
-      : `${year}-${String(endMonth + 1).padStart(2, '0')}-01`;
+      ? `${parseInt(endYear) + 1}-01-01`
+      : `${endYear}-${String(endMonth + 1).padStart(2, '0')}-01`;
 
     return { startDate, endDate };
-  }, [summaryMode, selectedMonth, rangeFrom, rangeTo, year]);
+  }, [summaryMode, selectedMonth, rangeFrom, rangeTo, rangeFromYear, rangeToYear, year]);
 
   const fetchData = useCallback(async () => {
     if (!supabase) return;
@@ -168,9 +184,10 @@ export default function HomeContent() {
 
   // サマリーラベル
   const summaryLabel = (() => {
-    if (summaryMode === 'single') return `${selectedMonth}月`;
-    if (summaryMode === 'ytd') return `1月〜${selectedMonth}月`;
-    return `${rangeFrom}月〜${rangeTo}月`;
+    if (summaryMode === 'single') return `${year}年${selectedMonth}月`;
+    if (summaryMode === 'ytd') return `${year}年1月〜${selectedMonth}月`;
+    if (rangeFromYear === rangeToYear) return `${rangeFromYear}年${rangeFrom}月〜${rangeTo}月`;
+    return `${rangeFromYear}年${rangeFrom}月〜${rangeToYear}年${rangeTo}月`;
   })();
 
   const handleManualSave = async () => {
@@ -297,6 +314,15 @@ export default function HomeContent() {
             {summaryMode === 'range' ? (
               <>
                 <select
+                  value={rangeFromYear}
+                  onChange={(e) => setRangeFromYear(e.target.value)}
+                  className="px-2 py-1 bg-[#F5F5F3] rounded-lg text-xs border-0 outline-none font-['Saira_Condensed']"
+                >
+                  {Array.from({ length: 5 }, (_, i) => parseInt(year) - 2 + i).map(y => (
+                    <option key={y} value={String(y)}>{y}年</option>
+                  ))}
+                </select>
+                <select
                   value={rangeFrom}
                   onChange={(e) => setRangeFrom(parseInt(e.target.value))}
                   className="px-2 py-1 bg-[#F5F5F3] rounded-lg text-xs border-0 outline-none font-['Saira_Condensed']"
@@ -306,6 +332,15 @@ export default function HomeContent() {
                   ))}
                 </select>
                 <span className="text-xs text-[#999]">〜</span>
+                <select
+                  value={rangeToYear}
+                  onChange={(e) => setRangeToYear(e.target.value)}
+                  className="px-2 py-1 bg-[#F5F5F3] rounded-lg text-xs border-0 outline-none font-['Saira_Condensed']"
+                >
+                  {Array.from({ length: 5 }, (_, i) => parseInt(year) - 2 + i).map(y => (
+                    <option key={y} value={String(y)}>{y}年</option>
+                  ))}
+                </select>
                 <select
                   value={rangeTo}
                   onChange={(e) => setRangeTo(parseInt(e.target.value))}
