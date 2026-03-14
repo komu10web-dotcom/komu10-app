@@ -13,6 +13,7 @@ export interface Database {
           display_name: string; // 'トモ' | 'トシキ'
           theme: string; // 'light' | 'warm' | 'cool'
           gas_api_url: string | null;
+          fiscal_start_month: number; // 決算期開始月（1=1月, 4=4月等）デフォルト1
           created_at: string;
           updated_at: string;
         };

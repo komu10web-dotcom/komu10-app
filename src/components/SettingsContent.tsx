@@ -93,6 +93,12 @@ export default function SettingsContent() {
   const [currentTheme, setCurrentTheme] = useState('light');
   const [themeSaving, setThemeSaving] = useState(false);
 
+  // 決算期
+  const [fiscalStartMonth, setFiscalStartMonth] = useState(1);
+  const [fiscalSaving, setFiscalSaving] = useState(false);
+  const [fiscalConfirmOpen, setFiscalConfirmOpen] = useState(false);
+  const [fiscalPendingMonth, setFiscalPendingMonth] = useState(1);
+
   // Q&A
   const [openQA, setOpenQA] = useState<number | null>(null);
 
@@ -160,7 +166,10 @@ export default function SettingsContent() {
 
       setAnbunSettings(anbunData || []);
       setAssets(assetData || []);
-      if (profileData) setCurrentTheme(profileData.theme || 'light');
+      if (profileData) {
+        setCurrentTheme(profileData.theme || 'light');
+        setFiscalStartMonth((profileData as any).fiscal_start_month || 1);
+      }
       setContractTypes(ctData || []);
       setRevenueTypes(rtData || []);
       setRevenueTypeDivisions(rtdData || []);
@@ -310,6 +319,23 @@ export default function SettingsContent() {
       console.error('テーマ保存エラー:', err);
     } finally {
       setThemeSaving(false);
+    }
+  };
+
+  // 決算期保存
+  const saveFiscalMonth = async (month: number) => {
+    if (!supabase) return;
+    setFiscalSaving(true);
+    try {
+      await supabase
+        .from('profiles')
+        .update({ fiscal_start_month: month } as any)
+        .eq('user_key', effectiveOwner);
+      setFiscalStartMonth(month);
+    } catch (err) {
+      console.error('決算期保存エラー:', err);
+    } finally {
+      setFiscalSaving(false);
     }
   };
 
@@ -639,6 +665,77 @@ export default function SettingsContent() {
             </div>
           </div>
         </section>
+
+        {/* ── 決算期 ── */}
+        <section className="mb-10">
+          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">決算期</div>
+          <div className="bg-white rounded-2xl px-5 py-5" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
+            <div className="flex items-center gap-4 mb-3">
+              <div>
+                <label className="text-xs text-[#999] block mb-1">決算期の開始月</label>
+                <select
+                  value={fiscalStartMonth}
+                  onChange={(e) => {
+                    const newMonth = parseInt(e.target.value);
+                    if (newMonth !== 1) {
+                      setFiscalPendingMonth(newMonth);
+                      setFiscalConfirmOpen(true);
+                    } else {
+                      saveFiscalMonth(1);
+                    }
+                  }}
+                  className="px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none"
+                >
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                    <option key={m} value={m}>{m}月</option>
+                  ))}
+                </select>
+              </div>
+              <div className="text-xs text-[#666] pt-4">
+                {fiscalStartMonth === 1
+                  ? '1月〜12月（暦年・個人事業主の標準）'
+                  : `${fiscalStartMonth}月〜${fiscalStartMonth === 1 ? 12 : fiscalStartMonth - 1 + 12 > 12 ? fiscalStartMonth - 1 : fiscalStartMonth + 11}月`
+                }
+              </div>
+            </div>
+            <p className="text-[10px] text-[#999]">個人事業主は暦年（1月〜12月）が法定です。法人化した場合のみ変更してください。</p>
+          </div>
+        </section>
+
+        {/* 決算期変更確認ダイアログ */}
+        {fiscalConfirmOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/30" onClick={() => setFiscalConfirmOpen(false)} />
+            <div className="relative bg-white rounded-2xl p-6 max-w-sm mx-4" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
+              <div className="mb-4">
+                <p className="text-sm font-medium text-[#1a1a1a] mb-2">決算期を変更しますか？</p>
+                <div className="bg-[#C23728]/5 rounded-lg px-3 py-2 mb-3">
+                  <p className="text-xs text-[#C23728]">個人事業主は暦年（1月〜12月）が税法で定められています。変更不可です。</p>
+                </div>
+                <p className="text-xs text-[#666]">法人（合同会社等）として届出済みの場合のみ、決算期を変更してください。</p>
+              </div>
+              <p className="text-xs text-[#999] mb-4">開始月を <strong>{fiscalPendingMonth}月</strong> に変更します。本当に変更しますか？</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setFiscalConfirmOpen(false)}
+                  className="flex-1 py-2 rounded-lg text-xs text-[#999] bg-[#F5F5F3] hover:bg-gray-200 transition-colors"
+                >
+                  キャンセル
+                </button>
+                <button
+                  onClick={() => {
+                    saveFiscalMonth(fiscalPendingMonth);
+                    setFiscalConfirmOpen(false);
+                  }}
+                  disabled={fiscalSaving}
+                  className="flex-1 py-2 rounded-lg text-xs text-white bg-[#C23728] hover:bg-[#a02020] transition-colors disabled:opacity-40"
+                >
+                  {fiscalSaving ? '保存中...' : '変更する'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── データバックアップ ── */}
         <section className="mb-10">
