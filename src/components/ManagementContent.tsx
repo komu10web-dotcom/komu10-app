@@ -702,16 +702,17 @@ export default function ManagementContent() {
                             const ppm = prevPrevMonthly[idx];
                             const dimOpacity = isHighlighted ? 1 : 0.25;
 
-                            const barTip = (type: string, label: string, value: number, color: string) => (
-                              <div className="relative group/bar"
+                            const barTip = (type: string, label: string, value: number, color: string, baseOpacity: number) => (
+                              <div className="relative h-full flex items-end"
                                 onMouseEnter={() => !isFuture && setHoveredMonth({ month: m.month, type })}
-                                onMouseLeave={() => setHoveredMonth(null)}>
-                                <div className="rounded-t transition-all duration-300" style={{ width: '100%', height: `${Math.max((value / barMax) * 100, value > 0 ? 2 : 0)}%`, background: color, opacity: dimOpacity * (type === 'revenue' ? 0.8 : 0.65) }} />
+                                onMouseLeave={() => setHoveredMonth(null)}
+                                style={{ width: '100%' }}>
+                                <div className="rounded-t transition-all duration-300 w-full" style={{ height: `${Math.max((value / barMax) * 100, value > 0 ? 2 : 0)}%`, background: color, opacity: dimOpacity * baseOpacity }} />
                                 {hoveredMonth?.month === m.month && hoveredMonth?.type === type && (
                                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-[#1a1a1a] text-white rounded-lg px-2 py-1 text-[10px] whitespace-nowrap z-10 pointer-events-none"
                                     style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
                                     <span style={{ color }}>{label}</span> {yen(value)}
-                                    <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-3 border-r-3 border-t-3 border-transparent border-t-[#1a1a1a]" />
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-[#1a1a1a]" />
                                   </div>
                                 )}
                               </div>
@@ -722,11 +723,11 @@ export default function ManagementContent() {
                                 <div key={m.month} className="flex-1 flex gap-0.5 items-end justify-center h-full">
                                   {!isFuture && (
                                     <>
-                                      <div className="h-full flex items-end" style={{ width: '35%' }}>
-                                        {barTip('revenue', '売上', m.revenue, '#D4A03A')}
+                                      <div className="h-full" style={{ width: '35%' }}>
+                                        {barTip('revenue', '売上', m.revenue, '#D4A03A', 0.8)}
                                       </div>
-                                      <div className="h-full flex items-end" style={{ width: '35%' }}>
-                                        {barTip('expense', '経費', m.expense, '#C23728')}
+                                      <div className="h-full" style={{ width: '35%' }}>
+                                        {barTip('expense', '経費', m.expense, '#C23728', 0.65)}
                                       </div>
                                     </>
                                   )}
@@ -784,12 +785,12 @@ export default function ManagementContent() {
                                     </div>
                                   )}
                                   {!isFuture && (
-                                    <div className="flex gap-px items-end" style={{ opacity: 0.85 * dimOpacity }}>
-                                      <div className="h-full flex items-end" style={{ minWidth: 4 }}>
-                                        {barTip('revenue', '売上', m.revenue, '#D4A03A')}
+                                    <div className="flex gap-px items-end h-full" style={{ opacity: 0.85 * dimOpacity }}>
+                                      <div className="h-full" style={{ minWidth: 4 }}>
+                                        {barTip('revenue', '売上', m.revenue, '#D4A03A', 1)}
                                       </div>
-                                      <div className="h-full flex items-end" style={{ minWidth: 4 }}>
-                                        {barTip('expense', '経費', m.expense, '#C23728')}
+                                      <div className="h-full" style={{ minWidth: 4 }}>
+                                        {barTip('expense', '経費', m.expense, '#C23728', 1)}
                                       </div>
                                     </div>
                                   )}
