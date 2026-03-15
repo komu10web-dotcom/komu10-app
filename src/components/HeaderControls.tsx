@@ -173,7 +173,7 @@ export default function HeaderControls() {
             </div>
 
             {showMonthPicker && (
-              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-white rounded-xl border border-[#e5e5e3] z-50 p-3 w-[220px]"
+              <div className="absolute top-full right-0 mt-2 bg-white rounded-xl border border-[#e5e5e3] z-50 p-3 w-[220px]"
                 style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}>
                 <div className="flex justify-between items-center mb-2.5">
                   <button onClick={() => setPickerYear(y => y - 1)} className="p-1 hover:bg-[#F5F5F3] rounded">
