@@ -85,7 +85,7 @@ export default function ManagementContent() {
   const [prevYearTx, setPrevYearTx] = useState<Transaction[]>([]);
   const [prevPrevYearTx, setPrevPrevYearTx] = useState<Transaction[]>([]);
   const [chartYearTx, setChartYearTx] = useState<Transaction[]>([]);
-  const [hoveredMonth, setHoveredMonth] = useState<number | null>(null);
+  const [hoveredMonth, setHoveredMonth] = useState<{ month: number; type: string } | null>(null);
 
   // 按分編集
   const [editingTxId, setEditingTxId] = useState<string | null>(null);
@@ -701,60 +701,101 @@ export default function ManagementContent() {
                             const pm = prevMonthly[idx];
                             const ppm = prevPrevMonthly[idx];
                             const dimOpacity = isHighlighted ? 1 : 0.25;
-                            const isHovered = hoveredMonth === m.month;
 
-                            return (
-                              <div key={m.month} className="flex-1 flex gap-0.5 items-end justify-center h-full relative"
-                                onMouseEnter={() => !isFuture && setHoveredMonth(m.month)}
+                            const barTip = (type: string, label: string, value: number, color: string) => (
+                              <div className="relative group/bar"
+                                onMouseEnter={() => !isFuture && setHoveredMonth({ month: m.month, type })}
                                 onMouseLeave={() => setHoveredMonth(null)}>
-                                {/* ツールチップ */}
-                                {isHovered && !isFuture && (
-                                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-[#1a1a1a] text-white rounded-lg px-2.5 py-1.5 text-[10px] whitespace-nowrap z-10 pointer-events-none"
+                                <div className="rounded-t transition-all duration-300" style={{ width: '100%', height: `${Math.max((value / barMax) * 100, value > 0 ? 2 : 0)}%`, background: color, opacity: dimOpacity * (type === 'revenue' ? 0.8 : 0.65) }} />
+                                {hoveredMonth?.month === m.month && hoveredMonth?.type === type && (
+                                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-[#1a1a1a] text-white rounded-lg px-2 py-1 text-[10px] whitespace-nowrap z-10 pointer-events-none"
                                     style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
-                                    <div className="font-medium mb-0.5">{m.month}月</div>
-                                    <div><span className="text-[#D4A03A]">売上</span> {yen(m.revenue)}</div>
-                                    <div><span className="text-[#F09595]">経費</span> {yen(m.expense)}</div>
-                                    <div className={m.profit >= 0 ? 'text-[#5DCAA5]' : 'text-[#F09595]'}>利益 {yen(m.profit)}</div>
-                                    {multiYear && pm && (
-                                      <div className="border-t border-white/20 mt-1 pt-1 text-[#D4A03A] opacity-70">{prevYear}年 売上{yen(pm.revenue)} 経費{yen(pm.expense)}</div>
-                                    )}
-                                    {multiYear && ppm && (
-                                      <div className="text-[#C4B49A] opacity-70">{prevPrevYear}年 売上{yen(ppm.revenue)} 経費{yen(ppm.expense)}</div>
-                                    )}
-                                    <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-[#1a1a1a]" />
+                                    <span style={{ color }}>{label}</span> {yen(value)}
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-3 border-r-3 border-t-3 border-transparent border-t-[#1a1a1a]" />
                                   </div>
-                                )}
-                                {!multiYear ? (
-                                  !isFuture ? (
-                                    <>
-                                      <div className="rounded-t transition-all duration-300" style={{ width: '35%', height: `${Math.max((m.revenue / barMax) * 100, m.revenue > 0 ? 2 : 0)}%`, background: '#D4A03A', opacity: 0.8 * dimOpacity }} />
-                                      <div className="rounded-t transition-all duration-300" style={{ width: '35%', height: `${Math.max((m.expense / barMax) * 100, m.expense > 0 ? 2 : 0)}%`, background: '#C23728', opacity: 0.65 * dimOpacity }} />
-                                    </>
-                                  ) : null
-                                ) : (
-                                  <>
-                                    {ppm && (
-                                      <div className="flex gap-px items-end" style={{ opacity: 0.35 * dimOpacity }}>
-                                        <div className="rounded-t" style={{ width: '15%', height: `${Math.max((ppm.revenue / barMax) * 100, ppm.revenue > 0 ? 2 : 0)}%`, background: '#C4B49A' }} />
-                                        <div className="rounded-t" style={{ width: '15%', height: `${Math.max((ppm.expense / barMax) * 100, ppm.expense > 0 ? 2 : 0)}%`, background: '#C4B49A' }} />
-                                      </div>
-                                    )}
-                                    {pm && (
-                                      <div className="flex gap-px items-end" style={{ opacity: 0.55 * dimOpacity }}>
-                                        <div className="rounded-t" style={{ width: '15%', height: `${Math.max((pm.revenue / barMax) * 100, pm.revenue > 0 ? 2 : 0)}%`, background: '#D4A03A' }} />
-                                        <div className="rounded-t" style={{ width: '15%', height: `${Math.max((pm.expense / barMax) * 100, pm.expense > 0 ? 2 : 0)}%`, background: '#D4A03A' }} />
-                                      </div>
-                                    )}
-                                    {!isFuture && (
-                                      <div className="flex gap-px items-end" style={{ opacity: 0.85 * dimOpacity }}>
-                                        <div className="rounded-t" style={{ width: '15%', height: `${Math.max((m.revenue / barMax) * 100, m.revenue > 0 ? 2 : 0)}%`, background: '#D4A03A' }} />
-                                        <div className="rounded-t" style={{ width: '15%', height: `${Math.max((m.expense / barMax) * 100, m.expense > 0 ? 2 : 0)}%`, background: '#C23728' }} />
-                                      </div>
-                                    )}
-                                  </>
                                 )}
                               </div>
                             );
+
+                            if (!multiYear) {
+                              return (
+                                <div key={m.month} className="flex-1 flex gap-0.5 items-end justify-center h-full">
+                                  {!isFuture && (
+                                    <>
+                                      <div className="h-full flex items-end" style={{ width: '35%' }}>
+                                        {barTip('revenue', '売上', m.revenue, '#D4A03A')}
+                                      </div>
+                                      <div className="h-full flex items-end" style={{ width: '35%' }}>
+                                        {barTip('expense', '経費', m.expense, '#C23728')}
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              );
+                            } else {
+                              return (
+                                <div key={m.month} className="flex-1 flex gap-px items-end justify-center h-full">
+                                  {ppm && (
+                                    <div className="flex gap-px items-end" style={{ opacity: 0.35 * dimOpacity }}>
+                                      <div className="relative"
+                                        onMouseEnter={() => setHoveredMonth({ month: m.month, type: `pp-rev` })}
+                                        onMouseLeave={() => setHoveredMonth(null)}>
+                                        <div className="rounded-t" style={{ width: '100%', minWidth: 4, height: `${Math.max((ppm.revenue / barMax) * 100, ppm.revenue > 0 ? 2 : 0)}%`, background: '#C4B49A' }} />
+                                        {hoveredMonth?.month === m.month && hoveredMonth?.type === 'pp-rev' && (
+                                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-[#1a1a1a] text-white rounded-lg px-2 py-1 text-[10px] whitespace-nowrap z-10 pointer-events-none">
+                                            <span className="text-[#C4B49A]">{prevPrevYear}年 売上</span> {yen(ppm.revenue)}
+                                          </div>
+                                        )}
+                                      </div>
+                                      <div className="relative"
+                                        onMouseEnter={() => setHoveredMonth({ month: m.month, type: `pp-exp` })}
+                                        onMouseLeave={() => setHoveredMonth(null)}>
+                                        <div className="rounded-t" style={{ width: '100%', minWidth: 4, height: `${Math.max((ppm.expense / barMax) * 100, ppm.expense > 0 ? 2 : 0)}%`, background: '#C4B49A' }} />
+                                        {hoveredMonth?.month === m.month && hoveredMonth?.type === 'pp-exp' && (
+                                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-[#1a1a1a] text-white rounded-lg px-2 py-1 text-[10px] whitespace-nowrap z-10 pointer-events-none">
+                                            <span className="text-[#C4B49A]">{prevPrevYear}年 経費</span> {yen(ppm.expense)}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {pm && (
+                                    <div className="flex gap-px items-end" style={{ opacity: 0.55 * dimOpacity }}>
+                                      <div className="relative"
+                                        onMouseEnter={() => setHoveredMonth({ month: m.month, type: `p-rev` })}
+                                        onMouseLeave={() => setHoveredMonth(null)}>
+                                        <div className="rounded-t" style={{ width: '100%', minWidth: 4, height: `${Math.max((pm.revenue / barMax) * 100, pm.revenue > 0 ? 2 : 0)}%`, background: '#D4A03A' }} />
+                                        {hoveredMonth?.month === m.month && hoveredMonth?.type === 'p-rev' && (
+                                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-[#1a1a1a] text-white rounded-lg px-2 py-1 text-[10px] whitespace-nowrap z-10 pointer-events-none">
+                                            <span className="text-[#D4A03A]">{prevYear}年 売上</span> {yen(pm.revenue)}
+                                          </div>
+                                        )}
+                                      </div>
+                                      <div className="relative"
+                                        onMouseEnter={() => setHoveredMonth({ month: m.month, type: `p-exp` })}
+                                        onMouseLeave={() => setHoveredMonth(null)}>
+                                        <div className="rounded-t" style={{ width: '100%', minWidth: 4, height: `${Math.max((pm.expense / barMax) * 100, pm.expense > 0 ? 2 : 0)}%`, background: '#D4A03A' }} />
+                                        {hoveredMonth?.month === m.month && hoveredMonth?.type === 'p-exp' && (
+                                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-[#1a1a1a] text-white rounded-lg px-2 py-1 text-[10px] whitespace-nowrap z-10 pointer-events-none">
+                                            <span className="text-[#D4A03A]">{prevYear}年 経費</span> {yen(pm.expense)}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {!isFuture && (
+                                    <div className="flex gap-px items-end" style={{ opacity: 0.85 * dimOpacity }}>
+                                      <div className="h-full flex items-end" style={{ minWidth: 4 }}>
+                                        {barTip('revenue', '売上', m.revenue, '#D4A03A')}
+                                      </div>
+                                      <div className="h-full flex items-end" style={{ minWidth: 4 }}>
+                                        {barTip('expense', '経費', m.expense, '#C23728')}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            }
                           })}
                         </div>
                       </div>
@@ -831,13 +872,13 @@ export default function ManagementContent() {
                           const rawTopPct = ((500 - (m.profit / profitTickMax) * 450) / 1000) * 100;
                           const topPct = Math.max(2, Math.min(98, rawTopPct));
                           const isHL = selectedMonth !== null && m.month === selectedMonth;
-                          const isHovered = hoveredMonth === m.month;
+                          const isHovered = hoveredMonth?.month === m.month && hoveredMonth?.type === 'profit';
                           const pm = prevMonthly[i];
                           const ppm = prevPrevMonthly[i];
                           return (
                             <div key={i} className="absolute"
                               style={{ left: `${leftPct}%`, top: `${topPct}%`, transform: 'translate(-50%,-50%)' }}
-                              onMouseEnter={() => setHoveredMonth(m.month)}
+                              onMouseEnter={() => setHoveredMonth({ month: m.month, type: 'profit' })}
                               onMouseLeave={() => setHoveredMonth(null)}>
                               {/* ヒットエリア（大きめ） */}
                               <div className="absolute w-6 h-6 -left-3 -top-3 cursor-pointer" />
