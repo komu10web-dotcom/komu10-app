@@ -659,14 +659,28 @@ export default function ManagementContent() {
 
           {/* チャート本体 */}
           {(() => {
-            // 複数年時は過去年も含めたmax
-            const allBarVals = multiYear
-              ? [...monthlyData, ...prevMonthly, ...prevPrevMonthly].map(m => Math.max(m.revenue, m.expense))
-              : monthlyData.map(m => Math.max(m.revenue, m.expense));
-            const barTicks = calcAxisTicks(Math.max(...allBarVals, 1));
+            // 軸スケール: 月モード時は選択月のデータに合わせる
+            let barScaleBase: number;
+            if (selectedMonth !== null) {
+              const sm = monthlyData[selectedMonth - 1];
+              barScaleBase = sm ? Math.max(sm.revenue, sm.expense, 1) : 1;
+            } else if (multiYear) {
+              barScaleBase = Math.max(...[...monthlyData, ...prevMonthly, ...prevPrevMonthly].map(m => Math.max(m.revenue, m.expense)), 1);
+            } else {
+              barScaleBase = Math.max(...monthlyData.map(m => Math.max(m.revenue, m.expense)), 1);
+            }
+            const barTicks = calcAxisTicks(barScaleBase);
             const barMax = barTicks[barTicks.length - 1] || 1;
-            const profitScale = multiYear ? maxMultiProfit : maxProfit;
-            const profitTicks = calcAxisTicks(profitScale);
+
+            // 利益軸も同様
+            let profitScaleBase: number;
+            if (selectedMonth !== null) {
+              const sm = monthlyData[selectedMonth - 1];
+              profitScaleBase = sm ? Math.max(Math.abs(sm.profit), 1) : 1;
+            } else {
+              profitScaleBase = multiYear ? maxMultiProfit : maxProfit;
+            }
+            const profitTicks = calcAxisTicks(profitScaleBase);
             const profitTickMax = profitTicks[profitTicks.length - 1] || 1;
 
             return (
@@ -682,7 +696,7 @@ export default function ManagementContent() {
                     </div>
                     {/* グラフ領域 */}
                     <div className="flex-1 flex flex-col">
-                      <div className="flex-1 relative">
+                      <div className="flex-1 relative overflow-hidden">
                         {/* グリッド横線 */}
                         {barTicks.map((t, i) => (
                           <div key={i} className="absolute left-0 right-0 border-t border-gray-100"
