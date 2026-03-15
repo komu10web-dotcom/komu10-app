@@ -1,19 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { DIVISIONS } from '@/types/database';
 import type { Transaction, RevenueType, RevenueTypeDivision, ContractType, Project } from '@/types/database';
 import { Plus, Upload, Pencil, Trash2, Search, Loader2, X } from 'lucide-react';
-
-const MONTHS = [
-  { value: '0', label: '全月' },
-  ...Array.from({ length: 12 }, (_, i) => ({
-    value: String(i + 1),
-    label: `${i + 1}月`,
-  })),
-];
+import { usePeriodRange } from './HeaderControls';
 
 // 売上で選択可能な事業
 const DIVISION_OPTIONS = Object.entries(DIVISIONS).map(([id, v]) => ({
@@ -24,9 +16,7 @@ const DIVISION_OPTIONS = Object.entries(DIVISIONS).map(([id, v]) => ({
 }));
 
 export default function IncomeContent() {
-  const searchParams = useSearchParams();
-  const owner = searchParams.get('owner') || 'all';
-  const year = searchParams.get('year') || new Date().getFullYear().toString();
+  const { owner, startDate, endDate } = usePeriodRange();
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,7 +28,6 @@ export default function IncomeContent() {
   const [projects, setProjects] = useState<Project[]>([]);
 
   // フィルター
-  const [filterMonth, setFilterMonth] = useState('0');
   const [searchText, setSearchText] = useState('');
 
   // モーダル
@@ -81,8 +70,8 @@ export default function IncomeContent() {
         .from('transactions')
         .select('*')
         .eq('tx_type', 'revenue')
-        .gte('date', `${year}-01-01`)
-        .lt('date', `${parseInt(year) + 1}-01-01`)
+        .gte('date', startDate)
+        .lt('date', endDate)
         .order('date', { ascending: false })
         .order('created_at', { ascending: false });
 
@@ -98,7 +87,7 @@ export default function IncomeContent() {
     } finally {
       setLoading(false);
     }
-  }, [owner, year]);
+  }, [owner, startDate, endDate]);
 
   useEffect(() => {
     fetchRevenueTypes();
@@ -128,10 +117,6 @@ export default function IncomeContent() {
 
   // ── フィルター適用 ──
   const filtered = transactions.filter((tx) => {
-    if (filterMonth !== '0') {
-      const m = parseInt(tx.date.split('-')[1]);
-      if (m !== parseInt(filterMonth)) return false;
-    }
     if (searchText) {
       const q = searchText.toLowerCase();
       const rtName = getRevenueTypeName(tx.revenue_type);
@@ -282,15 +267,6 @@ export default function IncomeContent() {
 
         {/* ── フィルター ── */}
         <div className="flex flex-wrap items-center gap-2 mb-4">
-          <select
-            value={filterMonth}
-            onChange={(e) => setFilterMonth(e.target.value)}
-            className="px-3 py-2 bg-white rounded-lg text-xs border border-gray-200 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
-          >
-            {MONTHS.map((m) => (
-              <option key={m.value} value={m.value}>{m.label}</option>
-            ))}
-          </select>
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#999]" />
             <input

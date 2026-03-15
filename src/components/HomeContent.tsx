@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { Uploader } from '@/components/Uploader';
 import { supabase } from '@/lib/supabase';
 import { KAMOKU, DIVISIONS } from '@/types/database';
 import type { Project } from '@/types/database';
 import { CheckCircle2, AlertTriangle, ArrowRight, Camera, PenLine, Loader2, Plus, Trash2 } from 'lucide-react';
 import Link from 'next/link';
+import { usePeriodRange } from './HeaderControls';
 import TransportFields, { EMPTY_TRANSPORT } from '@/components/TransportFields';
 import type { TransportData } from '@/components/TransportFields';
 import { saveTransportDetails } from '@/lib/transportUtils';
@@ -26,37 +26,14 @@ interface TransactionRow {
   confirmed: boolean;
 }
 
-type SummaryMode = 'single' | 'ytd' | 'range';
-
-const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => ({
-  value: i + 1,
-  label: `${i + 1}月`,
-}));
-
 export default function HomeContent() {
-  const searchParams = useSearchParams();
-  const owner = searchParams.get('owner') || 'all';
-  const year = searchParams.get('year') || new Date().getFullYear().toString();
+  const { owner, startDate, endDate } = usePeriodRange();
 
   const [expenseTotal, setExpenseTotal] = useState(0);
   const [revenueTotal, setRevenueTotal] = useState(0);
   const [unconfirmedCount, setUnconfirmedCount] = useState(0);
   const [recentTx, setRecentTx] = useState<TransactionRow[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // サマリーモード
-  const [summaryMode, setSummaryMode] = useState<SummaryMode>('single');
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
-  const [rangeFrom, setRangeFrom] = useState(1);
-  const [rangeTo, setRangeTo] = useState(new Date().getMonth() + 1);
-  const [rangeFromYear, setRangeFromYear] = useState(year);
-  const [rangeToYear, setRangeToYear] = useState(year);
-
-  // ヘッダーの年度変更に追従
-  useEffect(() => {
-    setRangeFromYear(year);
-    setRangeToYear(year);
-  }, [year]);
 
   // 撮影 / 手入力 切替
   const [inputMode, setInputMode] = useState<'camera' | 'manual'>('camera');
@@ -78,43 +55,9 @@ export default function HomeContent() {
   const [allocRows, setAllocRows] = useState<{ division_id: string; project_id: string; percent: number }[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
 
-  // サマリー期間の計算
-  const getDateRange = useCallback(() => {
-    let startYear: string;
-    let startMonth: number;
-    let endYear: string;
-    let endMonth: number;
-
-    if (summaryMode === 'single') {
-      startYear = year;
-      startMonth = selectedMonth;
-      endYear = year;
-      endMonth = selectedMonth;
-    } else if (summaryMode === 'ytd') {
-      startYear = year;
-      startMonth = 1;
-      endYear = year;
-      endMonth = selectedMonth;
-    } else {
-      startYear = rangeFromYear;
-      startMonth = rangeFrom;
-      endYear = rangeToYear;
-      endMonth = rangeTo;
-    }
-
-    const startDate = `${startYear}-${String(startMonth).padStart(2, '0')}-01`;
-    const endDate = endMonth === 12
-      ? `${parseInt(endYear) + 1}-01-01`
-      : `${endYear}-${String(endMonth + 1).padStart(2, '0')}-01`;
-
-    return { startDate, endDate };
-  }, [summaryMode, selectedMonth, rangeFrom, rangeTo, rangeFromYear, rangeToYear, year]);
-
   const fetchData = useCallback(async () => {
     if (!supabase) return;
     setLoading(true);
-
-    const { startDate, endDate } = getDateRange();
 
     try {
       let summaryQuery = supabase
@@ -146,6 +89,8 @@ export default function HomeContent() {
       let recentQuery = supabase
         .from('transactions')
         .select('id, date, store, description, amount, tx_type, kamoku, confirmed')
+        .gte('date', startDate)
+        .lt('date', endDate)
         .order('date', { ascending: false })
         .order('created_at', { ascending: false })
         .limit(5);
@@ -165,7 +110,7 @@ export default function HomeContent() {
     } finally {
       setLoading(false);
     }
-  }, [owner, year, getDateRange]);
+  }, [owner, startDate, endDate]);
 
   useEffect(() => {
     fetchData();
@@ -181,14 +126,6 @@ export default function HomeContent() {
   const expenseKamoku = Object.entries(KAMOKU)
     .filter(([, v]) => v.type === 'expense')
     .map(([id, v]) => ({ id, name: v.name }));
-
-  // サマリーラベル
-  const summaryLabel = (() => {
-    if (summaryMode === 'single') return `${year}年${selectedMonth}月`;
-    if (summaryMode === 'ytd') return `${year}年1月〜${selectedMonth}月`;
-    if (rangeFromYear === rangeToYear) return `${rangeFromYear}年${rangeFrom}月〜${rangeTo}月`;
-    return `${rangeFromYear}年${rangeFrom}月〜${rangeToYear}年${rangeTo}月`;
-  })();
 
   const handleManualSave = async () => {
     if (!manualForm.amount || !manualForm.date) {
@@ -288,85 +225,6 @@ export default function HomeContent() {
 
         {/* ── サマリー ── */}
         <div className="bg-white rounded-2xl p-5" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
-          {/* モード切替 */}
-          <div className="flex bg-[#F5F5F3] rounded-lg p-0.5 mb-4">
-            {([
-              { key: 'single', label: '単月' },
-              { key: 'ytd', label: '累計' },
-              { key: 'range', label: '期間' },
-            ] as const).map((m) => (
-              <button
-                key={m.key}
-                onClick={() => setSummaryMode(m.key)}
-                className={`flex-1 py-1.5 text-xs rounded-md transition-all ${
-                  summaryMode === m.key
-                    ? 'bg-white text-[#1a1a1a] shadow-sm font-medium'
-                    : 'text-[#999]'
-                }`}
-              >
-                {m.label}
-              </button>
-            ))}
-          </div>
-
-          {/* 月選択 */}
-          <div className="flex items-center gap-2 mb-4">
-            {summaryMode === 'range' ? (
-              <>
-                <select
-                  value={rangeFromYear}
-                  onChange={(e) => setRangeFromYear(e.target.value)}
-                  className="px-2 py-1 bg-[#F5F5F3] rounded-lg text-xs border-0 outline-none font-['Saira_Condensed']"
-                >
-                  {Array.from({ length: 5 }, (_, i) => parseInt(year) - 2 + i).map(y => (
-                    <option key={y} value={String(y)}>{y}年</option>
-                  ))}
-                </select>
-                <select
-                  value={rangeFrom}
-                  onChange={(e) => setRangeFrom(parseInt(e.target.value))}
-                  className="px-2 py-1 bg-[#F5F5F3] rounded-lg text-xs border-0 outline-none font-['Saira_Condensed']"
-                >
-                  {MONTH_OPTIONS.map((m) => (
-                    <option key={m.value} value={m.value}>{m.label}</option>
-                  ))}
-                </select>
-                <span className="text-xs text-[#999]">〜</span>
-                <select
-                  value={rangeToYear}
-                  onChange={(e) => setRangeToYear(e.target.value)}
-                  className="px-2 py-1 bg-[#F5F5F3] rounded-lg text-xs border-0 outline-none font-['Saira_Condensed']"
-                >
-                  {Array.from({ length: 5 }, (_, i) => parseInt(year) - 2 + i).map(y => (
-                    <option key={y} value={String(y)}>{y}年</option>
-                  ))}
-                </select>
-                <select
-                  value={rangeTo}
-                  onChange={(e) => setRangeTo(parseInt(e.target.value))}
-                  className="px-2 py-1 bg-[#F5F5F3] rounded-lg text-xs border-0 outline-none font-['Saira_Condensed']"
-                >
-                  {MONTH_OPTIONS.map((m) => (
-                    <option key={m.value} value={m.value}>{m.label}</option>
-                  ))}
-                </select>
-              </>
-            ) : (
-              <select
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                className="px-2 py-1 bg-[#F5F5F3] rounded-lg text-xs border-0 outline-none font-['Saira_Condensed']"
-              >
-                {MONTH_OPTIONS.map((m) => (
-                  <option key={m.value} value={m.value}>{m.label}</option>
-                ))}
-              </select>
-            )}
-            <span className="text-xs text-[#999] ml-1">
-              {summaryMode === 'ytd' && `(1月〜${selectedMonth}月)`}
-            </span>
-          </div>
-
           {loading ? (
             <div className="h-20 flex items-center justify-center">
               <div className="w-5 h-5 border-2 border-[#D4A03A] border-t-transparent rounded-full animate-spin" />
@@ -375,13 +233,13 @@ export default function HomeContent() {
             <>
               <div className="space-y-3">
                 <div className="flex items-baseline justify-between">
-                  <span className="text-xs text-[#999]">{summaryLabel}の経費</span>
+                  <span className="text-xs text-[#999]">経費</span>
                   <span className="font-['Saira_Condensed'] text-2xl text-[#1a1a1a] tabular-nums">
                     {formatAmount(expenseTotal)}
                   </span>
                 </div>
                 <div className="flex items-baseline justify-between">
-                  <span className="text-xs text-[#999]">{summaryLabel}の売上</span>
+                  <span className="text-xs text-[#999]">売上</span>
                   <span className="font-['Saira_Condensed'] text-2xl text-[#1B4D3E] tabular-nums">
                     {formatAmount(revenueTotal)}
                   </span>
@@ -639,7 +497,7 @@ export default function HomeContent() {
           )}
 
           <Link
-            href={`/expenses?owner=${owner}&year=${year}`}
+            href="/expenses"
             className="flex items-center justify-center gap-1 mt-3 pt-3 border-t border-gray-100 text-xs text-[#999] hover:text-[#D4A03A] transition-colors"
           >
             経費ページで全て見る

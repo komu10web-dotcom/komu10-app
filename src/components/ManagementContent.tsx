@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { DIVISIONS, KAMOKU } from '@/types/database';
 import type { Transaction, Project, TransactionAllocation } from '@/types/database';
 import { RefreshCw, CheckCircle2, AlertCircle, Loader2, ChevronDown, ChevronUp, Plus, Trash2, Save } from 'lucide-react';
+import { usePeriodRange } from './HeaderControls';
 
 // ========== ヘルパー ==========
 
@@ -57,38 +57,30 @@ const ALL_DIV_FILTER = [
   ...Object.entries(DIVISIONS).map(([id, v]) => ({ value: id, label: v.label })),
 ];
 
-const MONTHS = [
-  { value: '0', label: '年間累計' },
-  ...Array.from({ length: 12 }, (_, i) => ({ value: String(i + 1), label: `${i + 1}月` })),
-];
-
 // 按分行の編集用
 interface AllocRow {
-  id?: string;         // 既存行のID（新規はundefined）
+  id?: string;
   division_id: string;
-  project_id: string;  // ''はnull扱い
+  project_id: string;
   percent: number;
 }
 
 // ========== コンポーネント ==========
 
 export default function ManagementContent() {
-  const searchParams = useSearchParams();
-  const owner = searchParams.get('owner') || 'all';
-  const year = searchParams.get('year') || new Date().getFullYear().toString();
+  const { owner, startDate, endDate, year } = usePeriodRange();
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [allocations, setAllocations] = useState<TransactionAllocation[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [viewMonth, setViewMonth] = useState('0');
-
   // チャート
   const [chartMode, setChartMode] = useState<'bar' | 'profit'>('bar');
   const [multiYear, setMultiYear] = useState(false);
   const [prevYearTx, setPrevYearTx] = useState<Transaction[]>([]);
   const [prevPrevYearTx, setPrevPrevYearTx] = useState<Transaction[]>([]);
+  const [chartYearTx, setChartYearTx] = useState<Transaction[]>([]);
 
   // 按分編集
   const [editingTxId, setEditingTxId] = useState<string | null>(null);
@@ -113,9 +105,9 @@ export default function ManagementContent() {
     if (!supabase) return;
     setLoading(true);
     try {
-      // トランザクション
+      // トランザクション（期間バーの範囲）
       let txQ = supabase.from('transactions').select('*')
-        .gte('date', `${year}-01-01`).lte('date', `${year}-12-31`);
+        .gte('date', startDate).lt('date', endDate);
       if (owner !== 'all') txQ = txQ.eq('owner', owner);
       const { data: txData } = await txQ;
       const txList = (txData as Transaction[]) || [];
@@ -127,7 +119,7 @@ export default function ManagementContent() {
       const { data: pjData } = await pjQ;
       setProjects((pjData as Project[]) || []);
 
-      // 按分データ（この年の取引IDに紐づくもの）
+      // 按分データ
       if (txList.length > 0) {
         const txIds = txList.map(t => t.id);
         const { data: allocData } = await supabase
@@ -139,9 +131,10 @@ export default function ManagementContent() {
         setAllocations([]);
       }
 
-      // 過去2年分（複数年推移用）
-      const prevYear = String(parseInt(year) - 1);
-      const prevPrevYear = String(parseInt(year) - 2);
+      // チャート用: 当年+過去2年（年単位12ヶ月）
+      const chartYear = year;
+      const prevYear = String(parseInt(chartYear) - 1);
+      const prevPrevYear = String(parseInt(chartYear) - 2);
       let pq1 = supabase.from('transactions').select('date, amount, tx_type')
         .gte('date', `${prevYear}-01-01`).lte('date', `${prevYear}-12-31`);
       if (owner !== 'all') pq1 = pq1.eq('owner', owner);
@@ -153,21 +146,28 @@ export default function ManagementContent() {
       if (owner !== 'all') pq2 = pq2.eq('owner', owner);
       const { data: py2 } = await pq2;
       setPrevPrevYearTx((py2 as Transaction[]) || []);
+
+      // チャート用: 当年全件（期間バーが月や期間の場合でもチャートは年間表示）
+      if (startDate !== `${chartYear}-01-01` || endDate !== `${parseInt(chartYear) + 1}-01-01`) {
+        let cyQ = supabase.from('transactions').select('date, amount, tx_type')
+          .gte('date', `${chartYear}-01-01`).lte('date', `${chartYear}-12-31`);
+        if (owner !== 'all') cyQ = cyQ.eq('owner', owner);
+        const { data: cyData } = await cyQ;
+        setChartYearTx((cyData as Transaction[]) || []);
+      } else {
+        setChartYearTx(txList);
+      }
     } catch (err) {
       console.error('Fetch error:', err);
     } finally {
       setLoading(false);
     }
-  }, [owner, year]);
+  }, [owner, startDate, endDate, year]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // ========== 月フィルター ==========
-
-  const filteredTx = viewMonth === '0'
-    ? transactions
-    : transactions.filter(t => parseInt(t.date.split('-')[1], 10) === parseInt(viewMonth, 10));
-
+  // filteredTx = transactions（期間バーで既に絞り込み済み）
+  const filteredTx = transactions;
   const filteredTxIds = new Set(filteredTx.map(t => t.id));
   const filteredAlloc = allocations.filter(a => filteredTxIds.has(a.transaction_id));
 
@@ -295,7 +295,7 @@ export default function ManagementContent() {
   });
 
   // 当年
-  const monthlyData = calcMonthly(transactions, year);
+  const monthlyData = calcMonthly(chartYearTx.length > 0 ? chartYearTx : transactions, year);
   const maxMonthVal = Math.max(...monthlyData.map(m => Math.max(m.revenue, m.expense)), 1);
   const maxProfit = Math.max(...monthlyData.map(m => Math.abs(m.profit)), 1);
 
@@ -511,20 +511,12 @@ export default function ManagementContent() {
     <div className="bg-[#F5F5F3] min-h-screen">
       <div className="max-w-5xl mx-auto px-6 py-8">
 
-        {/* ── ヘッダー + 月セレクター ── */}
+        {/* ── ヘッダー ── */}
         <div className="flex items-end justify-between mb-8">
           <div>
             <h1 className="font-['Shippori_Mincho'] text-xl text-[#1a1a1a]">経営</h1>
             <p className="text-[10px] font-light tracking-wider text-[#999] mt-1">MANAGEMENT</p>
           </div>
-          <select
-            value={viewMonth}
-            onChange={e => setViewMonth(e.target.value)}
-            className="px-3 py-1.5 bg-white rounded-lg text-xs border-0 outline-none"
-            style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}
-          >
-            {MONTHS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-          </select>
         </div>
 
         {/* ===== KPIサマリー ===== */}
@@ -674,7 +666,7 @@ export default function ManagementContent() {
                         <div className="absolute inset-0 flex items-end gap-1">
                           {monthlyData.map(m => (
                             <div key={m.month} className="flex-1 flex gap-0.5 items-end justify-center h-full cursor-pointer"
-                              onClick={() => setViewMonth(viewMonth === String(m.month) ? '0' : String(m.month))}>
+                              >
                               <div className="rounded-t transition-all duration-300" style={{ width: '35%', height: `${Math.max((m.revenue / barMax) * 100, m.revenue > 0 ? 2 : 0)}%`, background: '#D4A03A', opacity: 0.8 }} />
                               <div className="rounded-t transition-all duration-300" style={{ width: '35%', height: `${Math.max((m.expense / barMax) * 100, m.expense > 0 ? 2 : 0)}%`, background: '#C23728', opacity: 0.65 }} />
                             </div>
@@ -685,8 +677,8 @@ export default function ManagementContent() {
                       <div className="flex border-t border-gray-200 pt-1">
                         {monthlyData.map(m => (
                           <div key={m.month} className="flex-1 text-center cursor-pointer"
-                            onClick={() => setViewMonth(viewMonth === String(m.month) ? '0' : String(m.month))}>
-                            <p className={`text-[9px] font-['Saira_Condensed'] tabular-nums ${viewMonth === String(m.month) ? 'text-[#1a1a1a] font-bold' : 'text-[#999]'}`}>{m.month}月</p>
+                            >
+                            <p className={`text-[9px] font-['Saira_Condensed'] tabular-nums ${'text-[#999]'}`}>{m.month}月</p>
                           </div>
                         ))}
                       </div>
@@ -751,8 +743,8 @@ export default function ManagementContent() {
                       <div className="flex border-t border-gray-200 pt-1">
                         {monthlyData.map(m => (
                           <div key={m.month} className="flex-1 text-center cursor-pointer"
-                            onClick={() => setViewMonth(viewMonth === String(m.month) ? '0' : String(m.month))}>
-                            <p className={`text-[9px] font-['Saira_Condensed'] tabular-nums ${viewMonth === String(m.month) ? 'text-[#1a1a1a] font-bold' : 'text-[#999]'}`}>{m.month}月</p>
+                            >
+                            <p className={`text-[9px] font-['Saira_Condensed'] tabular-nums ${'text-[#999]'}`}>{m.month}月</p>
                           </div>
                         ))}
                       </div>
