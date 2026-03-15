@@ -85,6 +85,7 @@ export default function ManagementContent() {
   const [prevYearTx, setPrevYearTx] = useState<Transaction[]>([]);
   const [prevPrevYearTx, setPrevPrevYearTx] = useState<Transaction[]>([]);
   const [chartYearTx, setChartYearTx] = useState<Transaction[]>([]);
+  const [hoveredMonth, setHoveredMonth] = useState<number | null>(null);
 
   // 按分編集
   const [editingTxId, setEditingTxId] = useState<string | null>(null);
@@ -696,50 +697,64 @@ export default function ManagementContent() {
                         <div className="absolute inset-0 flex items-end gap-1">
                           {monthlyData.map((m, idx) => {
                             const isHighlighted = selectedMonth === null || m.month === selectedMonth;
-                            // 未来月 = 当年で現在月より先の月
                             const isFuture = parseInt(year) === currentYear && m.month > currentMonth;
                             const pm = prevMonthly[idx];
                             const ppm = prevPrevMonthly[idx];
                             const dimOpacity = isHighlighted ? 1 : 0.25;
+                            const isHovered = hoveredMonth === m.month;
 
-                            if (!multiYear) {
-                              // 単年: 売上+経費の2本棒（未来月は空欄）
-                              return (
-                                <div key={m.month} className="flex-1 flex gap-0.5 items-end justify-center h-full">
-                                  {!isFuture && (
+                            return (
+                              <div key={m.month} className="flex-1 flex gap-0.5 items-end justify-center h-full relative"
+                                onMouseEnter={() => !isFuture && setHoveredMonth(m.month)}
+                                onMouseLeave={() => setHoveredMonth(null)}>
+                                {/* ツールチップ */}
+                                {isHovered && !isFuture && (
+                                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-[#1a1a1a] text-white rounded-lg px-2.5 py-1.5 text-[10px] whitespace-nowrap z-10 pointer-events-none"
+                                    style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+                                    <div className="font-medium mb-0.5">{m.month}月</div>
+                                    <div><span className="text-[#D4A03A]">売上</span> {yen(m.revenue)}</div>
+                                    <div><span className="text-[#F09595]">経費</span> {yen(m.expense)}</div>
+                                    <div className={m.profit >= 0 ? 'text-[#5DCAA5]' : 'text-[#F09595]'}>利益 {yen(m.profit)}</div>
+                                    {multiYear && pm && (
+                                      <div className="border-t border-white/20 mt-1 pt-1 text-[#D4A03A] opacity-70">{prevYear}年 売上{yen(pm.revenue)} 経費{yen(pm.expense)}</div>
+                                    )}
+                                    {multiYear && ppm && (
+                                      <div className="text-[#C4B49A] opacity-70">{prevPrevYear}年 売上{yen(ppm.revenue)} 経費{yen(ppm.expense)}</div>
+                                    )}
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-[#1a1a1a]" />
+                                  </div>
+                                )}
+                                {!multiYear ? (
+                                  !isFuture ? (
                                     <>
                                       <div className="rounded-t transition-all duration-300" style={{ width: '35%', height: `${Math.max((m.revenue / barMax) * 100, m.revenue > 0 ? 2 : 0)}%`, background: '#D4A03A', opacity: 0.8 * dimOpacity }} />
                                       <div className="rounded-t transition-all duration-300" style={{ width: '35%', height: `${Math.max((m.expense / barMax) * 100, m.expense > 0 ? 2 : 0)}%`, background: '#C23728', opacity: 0.65 * dimOpacity }} />
                                     </>
-                                  )}
-                                </div>
-                              );
-                            } else {
-                              // 複数年: 前々年/前年/当年をグループ化（過去年は全月表示、当年は未来月のみ非表示）
-                              const barW = '15%';
-                              return (
-                                <div key={m.month} className="flex-1 flex gap-px items-end justify-center h-full">
-                                  {ppm && (
-                                    <div className="flex gap-px items-end" style={{ opacity: 0.35 * dimOpacity }}>
-                                      <div className="rounded-t" style={{ width: barW, height: `${Math.max((ppm.revenue / barMax) * 100, ppm.revenue > 0 ? 2 : 0)}%`, background: '#C4B49A' }} />
-                                      <div className="rounded-t" style={{ width: barW, height: `${Math.max((ppm.expense / barMax) * 100, ppm.expense > 0 ? 2 : 0)}%`, background: '#C4B49A' }} />
-                                    </div>
-                                  )}
-                                  {pm && (
-                                    <div className="flex gap-px items-end" style={{ opacity: 0.55 * dimOpacity }}>
-                                      <div className="rounded-t" style={{ width: barW, height: `${Math.max((pm.revenue / barMax) * 100, pm.revenue > 0 ? 2 : 0)}%`, background: '#D4A03A' }} />
-                                      <div className="rounded-t" style={{ width: barW, height: `${Math.max((pm.expense / barMax) * 100, pm.expense > 0 ? 2 : 0)}%`, background: '#D4A03A' }} />
-                                    </div>
-                                  )}
-                                  {!isFuture && (
-                                    <div className="flex gap-px items-end" style={{ opacity: 0.85 * dimOpacity }}>
-                                      <div className="rounded-t" style={{ width: barW, height: `${Math.max((m.revenue / barMax) * 100, m.revenue > 0 ? 2 : 0)}%`, background: '#D4A03A' }} />
-                                      <div className="rounded-t" style={{ width: barW, height: `${Math.max((m.expense / barMax) * 100, m.expense > 0 ? 2 : 0)}%`, background: '#C23728' }} />
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            }
+                                  ) : null
+                                ) : (
+                                  <>
+                                    {ppm && (
+                                      <div className="flex gap-px items-end" style={{ opacity: 0.35 * dimOpacity }}>
+                                        <div className="rounded-t" style={{ width: '15%', height: `${Math.max((ppm.revenue / barMax) * 100, ppm.revenue > 0 ? 2 : 0)}%`, background: '#C4B49A' }} />
+                                        <div className="rounded-t" style={{ width: '15%', height: `${Math.max((ppm.expense / barMax) * 100, ppm.expense > 0 ? 2 : 0)}%`, background: '#C4B49A' }} />
+                                      </div>
+                                    )}
+                                    {pm && (
+                                      <div className="flex gap-px items-end" style={{ opacity: 0.55 * dimOpacity }}>
+                                        <div className="rounded-t" style={{ width: '15%', height: `${Math.max((pm.revenue / barMax) * 100, pm.revenue > 0 ? 2 : 0)}%`, background: '#D4A03A' }} />
+                                        <div className="rounded-t" style={{ width: '15%', height: `${Math.max((pm.expense / barMax) * 100, pm.expense > 0 ? 2 : 0)}%`, background: '#D4A03A' }} />
+                                      </div>
+                                    )}
+                                    {!isFuture && (
+                                      <div className="flex gap-px items-end" style={{ opacity: 0.85 * dimOpacity }}>
+                                        <div className="rounded-t" style={{ width: '15%', height: `${Math.max((m.revenue / barMax) * 100, m.revenue > 0 ? 2 : 0)}%`, background: '#D4A03A' }} />
+                                        <div className="rounded-t" style={{ width: '15%', height: `${Math.max((m.expense / barMax) * 100, m.expense > 0 ? 2 : 0)}%`, background: '#C23728' }} />
+                                      </div>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            );
                           })}
                         </div>
                       </div>
@@ -808,7 +823,7 @@ export default function ManagementContent() {
                             </>
                           )}
                         </svg>
-                        {/* ドット — 未来月のみ非表示（過去の0は事実として表示） */}
+                        {/* ドット + ツールチップ — 未来月のみ非表示 */}
                         {monthlyData.map((m, i) => {
                           const isFuture = parseInt(year) === currentYear && m.month > currentMonth;
                           if (isFuture) return null;
@@ -816,9 +831,36 @@ export default function ManagementContent() {
                           const rawTopPct = ((500 - (m.profit / profitTickMax) * 450) / 1000) * 100;
                           const topPct = Math.max(2, Math.min(98, rawTopPct));
                           const isHL = selectedMonth !== null && m.month === selectedMonth;
+                          const isHovered = hoveredMonth === m.month;
+                          const pm = prevMonthly[i];
+                          const ppm = prevPrevMonthly[i];
                           return (
-                            <div key={i} className={`absolute rounded-full bg-[#1B4D3E] ${isHL ? 'w-2.5 h-2.5 ring-2 ring-[#D4A03A] ring-offset-1' : 'w-1.5 h-1.5'}`}
-                              style={{ left: `${leftPct}%`, top: `${topPct}%`, transform: 'translate(-50%,-50%)' }} />
+                            <div key={i} className="absolute"
+                              style={{ left: `${leftPct}%`, top: `${topPct}%`, transform: 'translate(-50%,-50%)' }}
+                              onMouseEnter={() => setHoveredMonth(m.month)}
+                              onMouseLeave={() => setHoveredMonth(null)}>
+                              {/* ヒットエリア（大きめ） */}
+                              <div className="absolute w-6 h-6 -left-3 -top-3 cursor-pointer" />
+                              {/* ドット */}
+                              <div className={`rounded-full bg-[#1B4D3E] ${isHL ? 'w-2.5 h-2.5 ring-2 ring-[#D4A03A] ring-offset-1' : isHovered ? 'w-2 h-2' : 'w-1.5 h-1.5'}`}
+                                style={{ transform: `translate(-50%,-50%)`, position: 'absolute' }} />
+                              {/* ツールチップ */}
+                              {isHovered && (
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 bg-[#1a1a1a] text-white rounded-lg px-2.5 py-1.5 text-[10px] whitespace-nowrap z-10 pointer-events-none"
+                                  style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+                                  <div className="font-medium mb-0.5">{m.month}月</div>
+                                  <div className={m.profit >= 0 ? 'text-[#5DCAA5]' : 'text-[#F09595]'}>利益 {yen(m.profit)}</div>
+                                  <div className="text-white/60">売上{yen(m.revenue)} 経費{yen(m.expense)}</div>
+                                  {multiYear && pm && (
+                                    <div className="border-t border-white/20 mt-1 pt-1 text-[#D4A03A] opacity-70">{prevYear}年 利益{yen(pm.profit)}</div>
+                                  )}
+                                  {multiYear && ppm && (
+                                    <div className="text-[#C4B49A] opacity-70">{prevPrevYear}年 利益{yen(ppm.profit)}</div>
+                                  )}
+                                  <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-[#1a1a1a]" />
+                                </div>
+                              )}
+                            </div>
                           );
                         })}
                       </div>
