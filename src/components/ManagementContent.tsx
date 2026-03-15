@@ -654,7 +654,11 @@ export default function ManagementContent() {
 
           {/* チャート本体 */}
           {(() => {
-            const barTicks = calcAxisTicks(maxMonthVal);
+            // 複数年時は過去年も含めたmax
+            const allBarVals = multiYear
+              ? [...monthlyData, ...prevMonthly, ...prevPrevMonthly].map(m => Math.max(m.revenue, m.expense))
+              : monthlyData.map(m => Math.max(m.revenue, m.expense));
+            const barTicks = calcAxisTicks(Math.max(...allBarVals, 1));
             const barMax = barTicks[barTicks.length - 1] || 1;
             const profitScale = multiYear ? maxMultiProfit : maxProfit;
             const profitTicks = calcAxisTicks(profitScale);
@@ -686,16 +690,53 @@ export default function ManagementContent() {
                         )}
                         {/* バー */}
                         <div className="absolute inset-0 flex items-end gap-1">
-                          {monthlyData.map(m => {
+                          {monthlyData.map((m, idx) => {
                             const isHighlighted = selectedMonth === null || m.month === selectedMonth;
-                            const revOpacity = isHighlighted ? 0.8 : 0.2;
-                            const expOpacity = isHighlighted ? 0.65 : 0.15;
-                            return (
-                              <div key={m.month} className="flex-1 flex gap-0.5 items-end justify-center h-full cursor-pointer">
-                                <div className="rounded-t transition-all duration-300" style={{ width: '35%', height: `${Math.max((m.revenue / barMax) * 100, m.revenue > 0 ? 2 : 0)}%`, background: '#D4A03A', opacity: revOpacity }} />
-                                <div className="rounded-t transition-all duration-300" style={{ width: '35%', height: `${Math.max((m.expense / barMax) * 100, m.expense > 0 ? 2 : 0)}%`, background: '#C23728', opacity: expOpacity }} />
-                              </div>
-                            );
+                            const hasData = m.revenue > 0 || m.expense > 0;
+                            const pm = prevMonthly[idx];
+                            const ppm = prevPrevMonthly[idx];
+                            const hasPrevData = multiYear && pm && (pm.revenue > 0 || pm.expense > 0);
+                            const hasPPData = multiYear && ppm && (ppm.revenue > 0 || ppm.expense > 0);
+                            const dimOpacity = isHighlighted ? 1 : 0.25;
+
+                            if (!multiYear) {
+                              // 単年: 売上+経費の2本棒
+                              return (
+                                <div key={m.month} className="flex-1 flex gap-0.5 items-end justify-center h-full">
+                                  {hasData ? (
+                                    <>
+                                      <div className="rounded-t transition-all duration-300" style={{ width: '35%', height: `${Math.max((m.revenue / barMax) * 100, m.revenue > 0 ? 2 : 0)}%`, background: '#D4A03A', opacity: 0.8 * dimOpacity }} />
+                                      <div className="rounded-t transition-all duration-300" style={{ width: '35%', height: `${Math.max((m.expense / barMax) * 100, m.expense > 0 ? 2 : 0)}%`, background: '#C23728', opacity: 0.65 * dimOpacity }} />
+                                    </>
+                                  ) : null}
+                                </div>
+                              );
+                            } else {
+                              // 複数年: 前々年/前年/当年の経費+売上をグループ化
+                              const barW = '15%';
+                              return (
+                                <div key={m.month} className="flex-1 flex gap-px items-end justify-center h-full">
+                                  {hasPPData && (
+                                    <div className="flex gap-px items-end" style={{ opacity: 0.35 * dimOpacity }}>
+                                      <div className="rounded-t" style={{ width: barW, height: `${Math.max((ppm.revenue / barMax) * 100, ppm.revenue > 0 ? 2 : 0)}%`, background: '#C4B49A' }} />
+                                      <div className="rounded-t" style={{ width: barW, height: `${Math.max((ppm.expense / barMax) * 100, ppm.expense > 0 ? 2 : 0)}%`, background: '#C4B49A' }} />
+                                    </div>
+                                  )}
+                                  {hasPrevData && (
+                                    <div className="flex gap-px items-end" style={{ opacity: 0.55 * dimOpacity }}>
+                                      <div className="rounded-t" style={{ width: barW, height: `${Math.max((pm.revenue / barMax) * 100, pm.revenue > 0 ? 2 : 0)}%`, background: '#D4A03A' }} />
+                                      <div className="rounded-t" style={{ width: barW, height: `${Math.max((pm.expense / barMax) * 100, pm.expense > 0 ? 2 : 0)}%`, background: '#D4A03A' }} />
+                                    </div>
+                                  )}
+                                  {hasData && (
+                                    <div className="flex gap-px items-end" style={{ opacity: 0.85 * dimOpacity }}>
+                                      <div className="rounded-t" style={{ width: barW, height: `${Math.max((m.revenue / barMax) * 100, m.revenue > 0 ? 2 : 0)}%`, background: '#D4A03A' }} />
+                                      <div className="rounded-t" style={{ width: barW, height: `${Math.max((m.expense / barMax) * 100, m.expense > 0 ? 2 : 0)}%`, background: '#C23728' }} />
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            }
                           })}
                         </div>
                       </div>
@@ -764,8 +805,10 @@ export default function ManagementContent() {
                             </>
                           )}
                         </svg>
-                        {/* ドット */}
+                        {/* ドット — データのある月のみ */}
                         {monthlyData.map((m, i) => {
+                          const hasData = m.revenue !== 0 || m.expense !== 0 || m.profit !== 0;
+                          if (!hasData && !(selectedMonth !== null && m.month === selectedMonth)) return null;
                           const leftPct = ((i * 100 + 50) / 1200) * 100;
                           const rawTopPct = ((500 - (m.profit / profitTickMax) * 450) / 1000) * 100;
                           const topPct = Math.max(2, Math.min(98, rawTopPct));
@@ -795,12 +838,21 @@ export default function ManagementContent() {
           })()}
 
           {/* 凡例 */}
-          <div className="flex gap-4 mt-3">
+          <div className="flex gap-4 mt-3 flex-wrap">
             {chartMode === 'bar' ? (
-              <>
-                <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm" style={{ background: '#D4A03A', opacity: 0.8 }} /><span className="text-[10px] text-[#999]">売上</span></div>
-                <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm" style={{ background: '#C23728', opacity: 0.65 }} /><span className="text-[10px] text-[#999]">経費</span></div>
-              </>
+              multiYear ? (
+                <>
+                  <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm" style={{ background: '#D4A03A', opacity: 0.85 }} /><span className="text-[10px] text-[#999]">{year}年 売上</span></div>
+                  <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm" style={{ background: '#C23728', opacity: 0.85 }} /><span className="text-[10px] text-[#999]">{year}年 経費</span></div>
+                  <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm" style={{ background: '#D4A03A', opacity: 0.45 }} /><span className="text-[10px] text-[#999]">{prevYear}年</span></div>
+                  <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm" style={{ background: '#C4B49A', opacity: 0.5 }} /><span className="text-[10px] text-[#999]">{prevPrevYear}年</span></div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm" style={{ background: '#D4A03A', opacity: 0.8 }} /><span className="text-[10px] text-[#999]">売上</span></div>
+                  <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-sm" style={{ background: '#C23728', opacity: 0.65 }} /><span className="text-[10px] text-[#999]">経費</span></div>
+                </>
+              )
             ) : (
               <>
                 <div className="flex items-center gap-1.5"><div className="w-4 h-0 border-t-2 border-[#1B4D3E]" /><span className="text-[10px] text-[#999]">{year}年</span></div>
