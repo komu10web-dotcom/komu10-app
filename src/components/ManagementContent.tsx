@@ -659,27 +659,14 @@ export default function ManagementContent() {
 
           {/* チャート本体 */}
           {(() => {
-            // 軸スケール: 月モード時は選択月のデータに合わせる
-            let barScaleBase: number;
-            if (selectedMonth !== null) {
-              const sm = monthlyData[selectedMonth - 1];
-              barScaleBase = sm ? Math.max(sm.revenue, sm.expense, 1) : 1;
-            } else if (multiYear) {
-              barScaleBase = Math.max(...[...monthlyData, ...prevMonthly, ...prevPrevMonthly].map(m => Math.max(m.revenue, m.expense)), 1);
-            } else {
-              barScaleBase = Math.max(...monthlyData.map(m => Math.max(m.revenue, m.expense)), 1);
-            }
-            const barTicks = calcAxisTicks(barScaleBase);
+            // 軸スケール: 常に年間（or 複数年）の最大値でスケール
+            const allBarVals = multiYear
+              ? [...monthlyData, ...prevMonthly, ...prevPrevMonthly].map(m => Math.max(m.revenue, m.expense))
+              : monthlyData.map(m => Math.max(m.revenue, m.expense));
+            const barTicks = calcAxisTicks(Math.max(...allBarVals, 1));
             const barMax = barTicks[barTicks.length - 1] || 1;
 
-            // 利益軸も同様
-            let profitScaleBase: number;
-            if (selectedMonth !== null) {
-              const sm = monthlyData[selectedMonth - 1];
-              profitScaleBase = sm ? Math.max(Math.abs(sm.profit), 1) : 1;
-            } else {
-              profitScaleBase = multiYear ? maxMultiProfit : maxProfit;
-            }
+            const profitScaleBase = multiYear ? maxMultiProfit : maxProfit;
             const profitTicks = calcAxisTicks(profitScaleBase);
             const profitTickMax = profitTicks[profitTicks.length - 1] || 1;
 
