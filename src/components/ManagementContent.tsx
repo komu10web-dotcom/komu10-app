@@ -68,7 +68,7 @@ interface AllocRow {
 // ========== コンポーネント ==========
 
 export default function ManagementContent() {
-  const { owner, startDate, endDate, year } = usePeriodRange();
+  const { mode, owner, startDate, endDate, year } = usePeriodRange();
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -308,6 +308,23 @@ export default function ManagementContent() {
   // 複数年の利益max（折れ線スケール用）
   const allProfits = [...monthlyData, ...prevMonthly, ...prevPrevMonthly].map(m => Math.abs(m.profit));
   const maxMultiProfit = Math.max(...allProfits, 1);
+
+  // 月モード時の選択月（ハイライト用）
+  const selectedMonth = mode === 'month' ? parseInt(startDate.split('-')[1]) : null;
+
+  // チャートタイトル
+  const chartTitle = (() => {
+    if (multiYear) return `${prevPrevYear}〜${year}年 月別推移`;
+    if (mode === 'month') return `${year}年 月別推移`;
+    if (mode === 'fiscal') return `${year}年度 月別推移`;
+    if (mode === 'year') return `${year}年 月別推移`;
+    // range
+    const fromM = parseInt(startDate.split('-')[1]);
+    const toM = parseInt(endDate.split('-')[1]) - 1 || 12;
+    const fromY = startDate.split('-')[0];
+    const toY = endDate.split('-')[0];
+    return fromY === toY ? `${fromY}年${fromM}月〜${toM}月 月別推移` : `${fromY}年${fromM}月〜${toY}年${toM}月 月別推移`;
+  })();
 
   // 部門別損益（allocationsベース）— generalは除外
   const activeDivisions = Object.entries(DIVISIONS).filter(([id]) => id !== 'general');
@@ -611,7 +628,7 @@ export default function ManagementContent() {
           {/* チャートヘッダー: タイトル + 切り替え */}
           <div className="flex items-center justify-between mb-5">
             <p className="text-[10px] tracking-wider text-[#999]">
-              {multiYear ? `${prevPrevYear}〜${year}年 月別推移` : `${year}年 月別推移`}
+              {chartTitle}
             </p>
             <div className="flex items-center gap-2">
               <button
@@ -664,23 +681,29 @@ export default function ManagementContent() {
                         ))}
                         {/* バー */}
                         <div className="absolute inset-0 flex items-end gap-1">
-                          {monthlyData.map(m => (
-                            <div key={m.month} className="flex-1 flex gap-0.5 items-end justify-center h-full cursor-pointer"
-                              >
-                              <div className="rounded-t transition-all duration-300" style={{ width: '35%', height: `${Math.max((m.revenue / barMax) * 100, m.revenue > 0 ? 2 : 0)}%`, background: '#D4A03A', opacity: 0.8 }} />
-                              <div className="rounded-t transition-all duration-300" style={{ width: '35%', height: `${Math.max((m.expense / barMax) * 100, m.expense > 0 ? 2 : 0)}%`, background: '#C23728', opacity: 0.65 }} />
-                            </div>
-                          ))}
+                          {monthlyData.map(m => {
+                            const isHighlighted = selectedMonth === null || m.month === selectedMonth;
+                            const revOpacity = isHighlighted ? 0.8 : 0.2;
+                            const expOpacity = isHighlighted ? 0.65 : 0.15;
+                            return (
+                              <div key={m.month} className="flex-1 flex gap-0.5 items-end justify-center h-full cursor-pointer">
+                                <div className="rounded-t transition-all duration-300" style={{ width: '35%', height: `${Math.max((m.revenue / barMax) * 100, m.revenue > 0 ? 2 : 0)}%`, background: '#D4A03A', opacity: revOpacity }} />
+                                <div className="rounded-t transition-all duration-300" style={{ width: '35%', height: `${Math.max((m.expense / barMax) * 100, m.expense > 0 ? 2 : 0)}%`, background: '#C23728', opacity: expOpacity }} />
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                       {/* 横軸 */}
                       <div className="flex border-t border-gray-200 pt-1">
-                        {monthlyData.map(m => (
-                          <div key={m.month} className="flex-1 text-center cursor-pointer"
-                            >
-                            <p className={`text-[9px] font-['Saira_Condensed'] tabular-nums ${'text-[#999]'}`}>{m.month}月</p>
-                          </div>
-                        ))}
+                        {monthlyData.map(m => {
+                          const isHL = selectedMonth !== null && m.month === selectedMonth;
+                          return (
+                            <div key={m.month} className="flex-1 text-center cursor-pointer">
+                              <p className={`text-[9px] font-['Saira_Condensed'] tabular-nums ${isHL ? 'text-[#D4A03A] font-medium' : 'text-[#999]'}`}>{m.month}月</p>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
@@ -733,20 +756,23 @@ export default function ManagementContent() {
                           const leftPct = ((i * 100 + 50) / 1200) * 100;
                           const rawTopPct = ((500 - (m.profit / profitTickMax) * 450) / 1000) * 100;
                           const topPct = Math.max(2, Math.min(98, rawTopPct));
+                          const isHL = selectedMonth !== null && m.month === selectedMonth;
                           return (
-                            <div key={i} className="absolute w-1.5 h-1.5 rounded-full bg-[#1B4D3E]"
+                            <div key={i} className={`absolute rounded-full bg-[#1B4D3E] ${isHL ? 'w-2.5 h-2.5 ring-2 ring-[#D4A03A] ring-offset-1' : 'w-1.5 h-1.5'}`}
                               style={{ left: `${leftPct}%`, top: `${topPct}%`, transform: 'translate(-50%,-50%)' }} />
                           );
                         })}
                       </div>
                       {/* 横軸 */}
                       <div className="flex border-t border-gray-200 pt-1">
-                        {monthlyData.map(m => (
-                          <div key={m.month} className="flex-1 text-center cursor-pointer"
-                            >
-                            <p className={`text-[9px] font-['Saira_Condensed'] tabular-nums ${'text-[#999]'}`}>{m.month}月</p>
-                          </div>
-                        ))}
+                        {monthlyData.map(m => {
+                          const isHL = selectedMonth !== null && m.month === selectedMonth;
+                          return (
+                            <div key={m.month} className="flex-1 text-center cursor-pointer">
+                              <p className={`text-[9px] font-['Saira_Condensed'] tabular-nums ${isHL ? 'text-[#D4A03A] font-medium' : 'text-[#999]'}`}>{m.month}月</p>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
