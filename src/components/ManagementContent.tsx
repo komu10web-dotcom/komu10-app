@@ -679,6 +679,11 @@ export default function ManagementContent() {
                           <div key={i} className="absolute left-0 right-0 border-t border-gray-100"
                             style={{ bottom: `${(t / barMax) * 100}%` }} />
                         ))}
+                        {/* 選択月の縦マーカー */}
+                        {selectedMonth !== null && (
+                          <div className="absolute top-0 bottom-0 border-l border-dashed border-[#D4A03A] opacity-40 pointer-events-none"
+                            style={{ left: `${((selectedMonth - 1) / 12) * 100 + (100 / 24)}%` }} />
+                        )}
                         {/* バー */}
                         <div className="absolute inset-0 flex items-end gap-1">
                           {monthlyData.map(m => {
@@ -725,6 +730,14 @@ export default function ManagementContent() {
                         <div className="absolute left-0 right-0 border-t border-gray-100" style={{ top: '25%' }} />
                         <div className="absolute left-0 right-0 border-t border-gray-100" style={{ top: '75%' }} />
                         <svg className="absolute inset-0 w-full h-full" viewBox="0 0 1200 1000" preserveAspectRatio="none">
+                          {/* 選択月の縦マーカー */}
+                          {selectedMonth !== null && (
+                            <line
+                              x1={(selectedMonth - 1) * 100 + 50} y1="0"
+                              x2={(selectedMonth - 1) * 100 + 50} y2="1000"
+                              stroke="#D4A03A" strokeWidth="1" vectorEffect="non-scaling-stroke"
+                              strokeDasharray="4,4" opacity="0.5" />
+                          )}
                           <polyline fill="none" stroke="#1B4D3E" strokeWidth="2" vectorEffect="non-scaling-stroke"
                             strokeLinejoin="round" strokeLinecap="round"
                             points={monthlyData.map((m, i) => {
