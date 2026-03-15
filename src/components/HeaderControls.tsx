@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
@@ -33,6 +33,26 @@ export default function HeaderControls() {
   const toParam = searchParams.get('to') || `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
 
   const [fiscalStartMonth, setFiscalStartMonth] = useState(1);
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [pickerYear, setPickerYear] = useState(() => parseInt(ymParam.split('-')[0]));
+  const monthPickerRef = useRef<HTMLDivElement>(null);
+
+  // ポップオーバー外クリックで閉じる
+  useEffect(() => {
+    if (!showMonthPicker) return;
+    const handler = (e: MouseEvent) => {
+      if (monthPickerRef.current && !monthPickerRef.current.contains(e.target as Node)) {
+        setShowMonthPicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showMonthPicker]);
+
+  // ymParam変更時にpickerYearを同期
+  useEffect(() => {
+    setPickerYear(parseInt(ymParam.split('-')[0]));
+  }, [ymParam]);
 
   // 決算期開始月を取得
   useEffect(() => {
@@ -135,17 +155,78 @@ export default function HeaderControls() {
       {/* 期間コントロール */}
       <div className="flex items-center gap-1.5">
         {modeParam === 'month' && (
-          <>
-            <button onClick={() => shiftMonth(-1)} className="p-1 hover:bg-[#F5F5F3] rounded">
-              <ChevronLeft className="w-3.5 h-3.5 text-[#999]" />
-            </button>
-            <button onClick={goToday} className="text-[11px] font-['Saira_Condensed'] tabular-nums text-[#1a1a1a] hover:text-[#D4A03A] transition-colors px-1">
-              {periodLabel}
-            </button>
-            <button onClick={() => shiftMonth(1)} className="p-1 hover:bg-[#F5F5F3] rounded">
-              <ChevronRight className="w-3.5 h-3.5 text-[#999]" />
-            </button>
-          </>
+          <div className="relative" ref={monthPickerRef}>
+            <div className="flex items-center">
+              <button onClick={() => shiftMonth(-1)} className="p-1 hover:bg-[#F5F5F3] rounded">
+                <ChevronLeft className="w-3.5 h-3.5 text-[#999]" />
+              </button>
+              <button
+                onClick={() => { setPickerYear(parseInt(ymParam.split('-')[0])); setShowMonthPicker(!showMonthPicker); }}
+                className="text-[11px] font-['Saira_Condensed'] tabular-nums text-[#1a1a1a] hover:text-[#D4A03A] transition-colors px-1 border-b border-transparent hover:border-[#D4A03A]"
+                style={showMonthPicker ? { color: '#D4A03A', borderBottomColor: '#D4A03A' } : {}}
+              >
+                {periodLabel}
+              </button>
+              <button onClick={() => shiftMonth(1)} className="p-1 hover:bg-[#F5F5F3] rounded">
+                <ChevronRight className="w-3.5 h-3.5 text-[#999]" />
+              </button>
+            </div>
+
+            {showMonthPicker && (
+              <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-white rounded-xl border border-[#e5e5e3] z-50 p-3 w-[220px]"
+                style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}>
+                <div className="flex justify-between items-center mb-2.5">
+                  <button onClick={() => setPickerYear(y => y - 1)} className="p-1 hover:bg-[#F5F5F3] rounded">
+                    <ChevronLeft className="w-3 h-3 text-[#999]" />
+                  </button>
+                  <span className="text-[13px] font-medium font-['Saira_Condensed'] tabular-nums text-[#1a1a1a]">{pickerYear}</span>
+                  <button onClick={() => setPickerYear(y => y + 1)} className="p-1 hover:bg-[#F5F5F3] rounded">
+                    <ChevronRight className="w-3 h-3 text-[#999]" />
+                  </button>
+                </div>
+                <div className="grid grid-cols-4 gap-1">
+                  {Array.from({ length: 12 }, (_, i) => {
+                    const m = i + 1;
+                    const [selY, selM] = ymParam.split('-').map(Number);
+                    const isSelected = pickerYear === selY && m === selM;
+                    const isCurrent = pickerYear === currentYear && m === currentMonth;
+                    const isFuture = pickerYear > currentYear || (pickerYear === currentYear && m > currentMonth);
+                    return (
+                      <button
+                        key={m}
+                        onClick={() => {
+                          updateParams({ mode: 'month', ym: `${pickerYear}-${String(m).padStart(2, '0')}` });
+                          setShowMonthPicker(false);
+                        }}
+                        className={`py-1.5 text-[12px] rounded-md transition-all duration-150 ${
+                          isSelected
+                            ? 'bg-[#D4A03A] text-white font-medium'
+                            : isCurrent
+                            ? 'text-[#D4A03A] font-medium hover:bg-[#F5F5F3]'
+                            : isFuture
+                            ? 'text-[#ccc] hover:bg-[#F5F5F3] hover:text-[#999]'
+                            : 'text-[#666] hover:bg-[#F5F5F3]'
+                        }`}
+                      >
+                        {m}月
+                      </button>
+                    );
+                  })}
+                </div>
+                {!(parseInt(ymParam.split('-')[0]) === currentYear && parseInt(ymParam.split('-')[1]) === currentMonth) && (
+                  <button
+                    onClick={() => {
+                      updateParams({ mode: 'month', ym: `${currentYear}-${String(currentMonth).padStart(2, '0')}` });
+                      setShowMonthPicker(false);
+                    }}
+                    className="w-full mt-2 text-[10px] text-[#D4A03A] hover:text-[#b8882e] transition-colors"
+                  >
+                    今月に戻る
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         )}
 
         {modeParam === 'fiscal' && (
