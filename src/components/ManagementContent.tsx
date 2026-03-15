@@ -683,7 +683,7 @@ export default function ManagementContent() {
                     </div>
                     {/* グラフ領域 */}
                     <div className="flex-1 flex flex-col">
-                      <div className="flex-1 relative overflow-hidden">
+                      <div className="flex-1 relative">
                         {/* グリッド横線 */}
                         {barTicks.map((t, i) => (
                           <div key={i} className="absolute left-0 right-0 border-t border-gray-100"
