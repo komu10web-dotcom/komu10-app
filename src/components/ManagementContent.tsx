@@ -52,6 +52,10 @@ const ASSIGN_DIVISIONS = Object.entries(DIVISIONS)
   .filter(([id]) => id !== 'general')
   .map(([id, v]) => ({ id, name: v.name, label: v.label, color: v.color }));
 
+const now = new Date();
+const currentYear = now.getFullYear();
+const currentMonth = now.getMonth() + 1;
+
 const ALL_DIV_FILTER = [
   { value: 'all', label: '全事業' },
   ...Object.entries(DIVISIONS).map(([id, v]) => ({ value: id, label: v.label })),
@@ -692,43 +696,42 @@ export default function ManagementContent() {
                         <div className="absolute inset-0 flex items-end gap-1">
                           {monthlyData.map((m, idx) => {
                             const isHighlighted = selectedMonth === null || m.month === selectedMonth;
-                            const hasData = m.revenue > 0 || m.expense > 0;
+                            // 未来月 = 当年で現在月より先の月
+                            const isFuture = parseInt(year) === currentYear && m.month > currentMonth;
                             const pm = prevMonthly[idx];
                             const ppm = prevPrevMonthly[idx];
-                            const hasPrevData = multiYear && pm && (pm.revenue > 0 || pm.expense > 0);
-                            const hasPPData = multiYear && ppm && (ppm.revenue > 0 || ppm.expense > 0);
                             const dimOpacity = isHighlighted ? 1 : 0.25;
 
                             if (!multiYear) {
-                              // 単年: 売上+経費の2本棒
+                              // 単年: 売上+経費の2本棒（未来月は空欄）
                               return (
                                 <div key={m.month} className="flex-1 flex gap-0.5 items-end justify-center h-full">
-                                  {hasData ? (
+                                  {!isFuture && (
                                     <>
                                       <div className="rounded-t transition-all duration-300" style={{ width: '35%', height: `${Math.max((m.revenue / barMax) * 100, m.revenue > 0 ? 2 : 0)}%`, background: '#D4A03A', opacity: 0.8 * dimOpacity }} />
                                       <div className="rounded-t transition-all duration-300" style={{ width: '35%', height: `${Math.max((m.expense / barMax) * 100, m.expense > 0 ? 2 : 0)}%`, background: '#C23728', opacity: 0.65 * dimOpacity }} />
                                     </>
-                                  ) : null}
+                                  )}
                                 </div>
                               );
                             } else {
-                              // 複数年: 前々年/前年/当年の経費+売上をグループ化
+                              // 複数年: 前々年/前年/当年をグループ化（過去年は全月表示、当年は未来月のみ非表示）
                               const barW = '15%';
                               return (
                                 <div key={m.month} className="flex-1 flex gap-px items-end justify-center h-full">
-                                  {hasPPData && (
+                                  {ppm && (
                                     <div className="flex gap-px items-end" style={{ opacity: 0.35 * dimOpacity }}>
                                       <div className="rounded-t" style={{ width: barW, height: `${Math.max((ppm.revenue / barMax) * 100, ppm.revenue > 0 ? 2 : 0)}%`, background: '#C4B49A' }} />
                                       <div className="rounded-t" style={{ width: barW, height: `${Math.max((ppm.expense / barMax) * 100, ppm.expense > 0 ? 2 : 0)}%`, background: '#C4B49A' }} />
                                     </div>
                                   )}
-                                  {hasPrevData && (
+                                  {pm && (
                                     <div className="flex gap-px items-end" style={{ opacity: 0.55 * dimOpacity }}>
                                       <div className="rounded-t" style={{ width: barW, height: `${Math.max((pm.revenue / barMax) * 100, pm.revenue > 0 ? 2 : 0)}%`, background: '#D4A03A' }} />
                                       <div className="rounded-t" style={{ width: barW, height: `${Math.max((pm.expense / barMax) * 100, pm.expense > 0 ? 2 : 0)}%`, background: '#D4A03A' }} />
                                     </div>
                                   )}
-                                  {hasData && (
+                                  {!isFuture && (
                                     <div className="flex gap-px items-end" style={{ opacity: 0.85 * dimOpacity }}>
                                       <div className="rounded-t" style={{ width: barW, height: `${Math.max((m.revenue / barMax) * 100, m.revenue > 0 ? 2 : 0)}%`, background: '#D4A03A' }} />
                                       <div className="rounded-t" style={{ width: barW, height: `${Math.max((m.expense / barMax) * 100, m.expense > 0 ? 2 : 0)}%`, background: '#C23728' }} />
@@ -805,10 +808,10 @@ export default function ManagementContent() {
                             </>
                           )}
                         </svg>
-                        {/* ドット — データのある月のみ */}
+                        {/* ドット — 未来月のみ非表示（過去の0は事実として表示） */}
                         {monthlyData.map((m, i) => {
-                          const hasData = m.revenue !== 0 || m.expense !== 0 || m.profit !== 0;
-                          if (!hasData && !(selectedMonth !== null && m.month === selectedMonth)) return null;
+                          const isFuture = parseInt(year) === currentYear && m.month > currentMonth;
+                          if (isFuture) return null;
                           const leftPct = ((i * 100 + 50) / 1200) * 100;
                           const rawTopPct = ((500 - (m.profit / profitTickMax) * 450) / 1000) * 100;
                           const topPct = Math.max(2, Math.min(98, rawTopPct));
