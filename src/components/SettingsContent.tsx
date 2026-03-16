@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { KAMOKU, DIVISIONS } from '@/types/database';
 import type { AnbunSetting, Asset, RevenueType, RevenueTypeDivision, ContractType } from '@/types/database';
-import { Plus, Pencil, Trash2, Save, X, Loader2, ChevronDown, ChevronUp, HelpCircle } from 'lucide-react';
+import { Plus, Pencil, Trash2, Save, X, Loader2, ChevronDown, ChevronUp, HelpCircle, Cloud, CheckCircle2 } from 'lucide-react';
 
 // ============================================================
 // 定数
@@ -118,6 +118,11 @@ export default function SettingsContent() {
   const [rtNewName, setRtNewName] = useState('');
   const [rtNewDivisions, setRtNewDivisions] = useState<string[]>([]);
   const [rtSaving, setRtSaving] = useState(false);
+
+  // ── Drive バックアップ ──
+  const [driveBackupStatus, setDriveBackupStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [driveBackupFileName, setDriveBackupFileName] = useState('');
+  const [driveBackupError, setDriveBackupError] = useState('');
 
   // ============================================================
   // データ取得
@@ -742,19 +747,57 @@ export default function SettingsContent() {
           <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">データバックアップ</div>
           <div className="bg-white rounded-2xl px-5 py-5" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
             <p className="text-xs text-[#666] mb-3">
-              全テーブルのデータをJSON形式でダウンロードします。アプリの改修・移行時にデータを復元できます。定期的にバックアップを取ることを推奨します。
+              全テーブルのデータをJSON形式で保存します。Google Driveへの保存、またはローカルへのダウンロードが選べます。
             </p>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
+              <button
+                onClick={async () => {
+                  setDriveBackupStatus('loading');
+                  try {
+                    const res = await fetch('/api/backup', { method: 'POST' });
+                    const data = await res.json();
+                    if (data.success) {
+                      setDriveBackupStatus('success');
+                      setDriveBackupFileName(data.fileName);
+                      setTimeout(() => setDriveBackupStatus('idle'), 5000);
+                    } else {
+                      setDriveBackupStatus('error');
+                      setDriveBackupError(data.error || '保存に失敗しました');
+                      setTimeout(() => setDriveBackupStatus('idle'), 5000);
+                    }
+                  } catch {
+                    setDriveBackupStatus('error');
+                    setDriveBackupError('通信エラー');
+                    setTimeout(() => setDriveBackupStatus('idle'), 5000);
+                  }
+                }}
+                disabled={driveBackupStatus === 'loading'}
+                className="flex items-center gap-1.5 px-4 py-2 bg-[#1a1a1a] text-white rounded-lg text-xs font-medium hover:bg-[#333] transition-colors disabled:opacity-50"
+              >
+                {driveBackupStatus === 'loading' ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : driveBackupStatus === 'success' ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                ) : (
+                  <Cloud className="w-3.5 h-3.5" />
+                )}
+                {driveBackupStatus === 'loading' ? 'Driveに保存中...' : driveBackupStatus === 'success' ? '保存完了' : 'Google Driveに保存'}
+              </button>
               <a
                 href="/api/backup"
                 download
-                className="flex items-center gap-1.5 px-4 py-2 bg-[#1a1a1a] text-white rounded-lg text-xs font-medium hover:bg-[#333] transition-colors"
+                className="flex items-center gap-1.5 px-4 py-2 border border-[#ddd] text-[#333] rounded-lg text-xs font-medium hover:bg-[#f5f5f5] transition-colors"
               >
                 <Save className="w-3.5 h-3.5" />
-                JSONバックアップをダウンロード
+                ローカルにダウンロード
               </a>
-              <span className="text-[10px] text-[#999]">transactions, projects, assets, 按分設定 等すべて含む</span>
             </div>
+            {driveBackupStatus === 'success' && driveBackupFileName && (
+              <p className="text-[10px] text-emerald-600 mt-2">✓ {driveBackupFileName} を 00_会社/09_アプリ/backups/ に保存しました</p>
+            )}
+            {driveBackupStatus === 'error' && driveBackupError && (
+              <p className="text-[10px] text-red-500 mt-2">{driveBackupError}</p>
+            )}
           </div>
         </section>
 
