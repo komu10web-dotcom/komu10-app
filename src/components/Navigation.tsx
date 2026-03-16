@@ -9,6 +9,7 @@ const navItems = [
   { href: '/income', label: '売上' },
   { href: '/tax-return', label: '確定申告' },
   { href: '/management', label: '経営' },
+  { href: '/simulation', label: '案件検討' },
   { href: '/settings', label: '設定' },
 ];
 
