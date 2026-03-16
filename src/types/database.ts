@@ -42,6 +42,11 @@ export interface Database {
           ai_confidence: number | null; // AI推定確信度 0-1
           confirmed: boolean; // AI入力の確認済み
           external_id: string | null; // 外部システム連携ID
+          status: string; // 'forecast' | 'accrued' | 'billed' | 'settled'
+          accrual_date: string | null; // PL計上月（納品予定日）
+          expected_payment_date: string | null; // CF計上予定日
+          actual_payment_date: string | null; // 実際の入出金日
+          client_id: string | null; // 取引先マスタID
           created_at: string;
           updated_at: string;
         };
@@ -243,6 +248,45 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['contract_types']['Insert']>;
       };
 
+      // 取引先マスタ
+      clients: {
+        Row: {
+          id: string;
+          name: string;
+          owner: string;
+          payment_terms: string | null;       // 表示用（月末締翌月末 等）
+          payment_terms_days: number | null;  // 日数（30, 60, 0等）
+          default_contact: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['clients']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['clients']['Insert']>;
+      };
+
+      // 固定経費テンプレート
+      recurring_expenses: {
+        Row: {
+          id: string;
+          owner: string;
+          description: string;
+          amount: number;
+          kamoku: string;
+          division: string;
+          frequency: 'monthly' | 'quarterly' | 'annual';
+          start_date: string;
+          end_date: string | null;
+          payment_day: number | null;
+          client_id: string | null;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['recurring_expenses']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['recurring_expenses']['Insert']>;
+      };
+
       // 取引按分（1取引→複数事業・PJに比率配分）
       transaction_allocations: {
         Row: {
@@ -276,6 +320,8 @@ export type RevenueType = Database['public']['Tables']['revenue_types']['Row'];
 export type RevenueTypeDivision = Database['public']['Tables']['revenue_type_divisions']['Row'];
 export type ContractType = Database['public']['Tables']['contract_types']['Row'];
 export type TransactionAllocation = Database['public']['Tables']['transaction_allocations']['Row'];
+export type Client = Database['public']['Tables']['clients']['Row'];
+export type RecurringExpense = Database['public']['Tables']['recurring_expenses']['Row'];
 
 // 部門定義（定数）— 表示順もこの順
 export const DIVISIONS = {
@@ -329,4 +375,19 @@ export const PROJECT_STATUS = {
   ordered: '受注',
   active: '進行中',
   completed: '完了',
+} as const;
+
+// 取引ステータス定義（PL/CFライフサイクル）
+export const TRANSACTION_STATUS = {
+  forecast: '見込み',
+  accrued: '発生確定',
+  billed: '請求済',
+  settled: '決済完了',
+} as const;
+
+// 固定経費の頻度
+export const RECURRING_FREQUENCY = {
+  monthly: '毎月',
+  quarterly: '四半期',
+  annual: '年次',
 } as const;

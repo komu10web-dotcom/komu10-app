@@ -18,6 +18,8 @@ const TABLES = [
   'revenue_types',
   'revenue_type_divisions',
   'contract_types',
+  'clients',
+  'recurring_expenses',
 ] as const;
 
 // ── 共通: バックアップJSON生成 ──
