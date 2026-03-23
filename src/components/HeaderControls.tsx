@@ -15,7 +15,7 @@ export const OWNER_COLOR_PRESETS: Record<string, { value: string; label: string;
   tomo: [
     { value: '#EAF6F6', label: 'ティール', accent: '#2BA6A6' },
     { value: '#F0EDF8', label: 'ラベンダー', accent: '#7B61C4' },
-    { value: '#ECF4EC', label: 'セージ', accent: '#4A8C4A' },
+    { value: '#FDF0F2', label: '桜', accent: '#C75B7A' },
   ],
   toshiki: [
     { value: '#FBF5E6', label: 'ゴールド', accent: '#D4A03A' },
@@ -73,9 +73,9 @@ export default function HeaderControls() {
     localStorage.setItem('komu10_owner', owner);
   }, [owner]);
 
-  // owner_colorをDBから取得
+  // owner_colorをDBから取得 + 設定ページからの即時反映
   const [ownerColors, setOwnerColors] = useState<Record<string, string>>({});
-  useEffect(() => {
+  const fetchOwnerColors = useCallback(() => {
     if (!supabase) return;
     supabase.from('profiles').select('user_key, owner_color').then(({ data }: { data: any }) => {
       if (data) {
@@ -85,6 +85,12 @@ export default function HeaderControls() {
       }
     });
   }, []);
+  useEffect(() => { fetchOwnerColors(); }, [fetchOwnerColors]);
+  useEffect(() => {
+    const handler = () => fetchOwnerColors();
+    window.addEventListener('ownerColorChanged', handler);
+    return () => window.removeEventListener('ownerColorChanged', handler);
+  }, [fetchOwnerColors]);
 
   // 背景色をbodyに適用（DB値優先、なければデフォルト）
   const isDark = (color: string) => {

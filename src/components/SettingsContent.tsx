@@ -738,7 +738,8 @@ export default function SettingsContent() {
       const res = await fetch('/api/sync', { method: 'POST' });
       const data = await res.json();
       if (data.success) {
-        setSyncResult({ success: true, message: `${data.count}件を同期しました` });
+        const debugMsg = data.debug_sample ? ` [DEBUG: status="${data.debug_sample.status || 'undefined'}"]` : '';
+        setSyncResult({ success: true, message: `${data.count}件を同期しました${debugMsg}` });
         // リフレッシュ
         const { data: projectData } = await supabase
           .from('projects')
@@ -1402,6 +1403,8 @@ export default function SettingsContent() {
                         document.documentElement.classList.remove('dark-owner');
                       }
                       setOwnerColorSaving(false);
+                      // HeaderControlsのドット色を即時更新
+                      window.dispatchEvent(new Event('ownerColorChanged'));
                     }}
                     disabled={ownerColorSaving}
                     className={`flex-1 p-3 rounded-xl border-2 transition-all ${
