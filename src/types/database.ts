@@ -14,6 +14,7 @@ export interface Database {
           theme: string; // 'light' | 'warm' | 'cool'
           gas_api_url: string | null;
           fiscal_start_month: number; // 決算期開始月（1=1月, 4=4月等）デフォルト1
+          owner_color: string | null; // 背景色（個人設定）
           created_at: string;
           updated_at: string;
         };

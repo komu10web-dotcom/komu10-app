@@ -6,10 +6,28 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 export const OWNER_CONFIG = {
-  tomo:    { label: 'トモ',   color: '#81D8D0', bg: '#F2FAFA', dotColor: '#81D8D0' },
-  toshiki: { label: 'トシキ', color: '#D4A03A', bg: '#FEFAF0', dotColor: '#D4A03A' },
+  tomo:    { label: 'トモ',   color: '#81D8D0', bg: '#EAF6F6', dotColor: '#81D8D0' },
+  toshiki: { label: 'トシキ', color: '#D4A03A', bg: '#FBF5E6', dotColor: '#D4A03A' },
   all:     { label: '全体',   color: '#999999', bg: '#F5F5F3', dotColor: '#999999' },
 } as const;
+
+export const OWNER_COLOR_PRESETS: Record<string, { value: string; label: string }[]> = {
+  tomo: [
+    { value: '#EAF6F6', label: 'ティール' },
+    { value: '#F0EDF8', label: 'ラベンダー' },
+    { value: '#ECF4EC', label: 'セージ' },
+  ],
+  toshiki: [
+    { value: '#FBF5E6', label: 'ゴールド' },
+    { value: '#FAEFEA', label: 'テラコッタ' },
+    { value: '#E6EDE6', label: 'ブリティッシュグリーン' },
+  ],
+  all: [
+    { value: '#F5F5F3', label: '白系' },
+    { value: '#E8E6E3', label: 'グレー系' },
+    { value: '#2A2A2A', label: '黒系' },
+  ],
+};
 
 // 表示順: トモ → トシキ → 全体（全体はlocalStorageで非表示可）
 const OWNER_KEYS = ['tomo', 'toshiki', 'all'] as const;
@@ -55,13 +73,44 @@ export default function HeaderControls() {
     localStorage.setItem('komu10_owner', owner);
   }, [owner]);
 
-  // 背景色をbodyに適用
+  // owner_colorをDBから取得
+  const [ownerColors, setOwnerColors] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.from('profiles').select('user_key, owner_color').then(({ data }: { data: any }) => {
+      if (data) {
+        const map: Record<string, string> = {};
+        data.forEach((p: any) => { if (p.owner_color) map[p.user_key] = p.owner_color; });
+        setOwnerColors(map);
+      }
+    });
+  }, []);
+
+  // 背景色をbodyに適用（DB値優先、なければデフォルト）
+  const isDark = (color: string) => {
+    const hex = color.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    return (r * 299 + g * 587 + b * 114) / 1000 < 128;
+  };
+
   useEffect(() => {
     const cfg = OWNER_CONFIG[owner as keyof typeof OWNER_CONFIG] || OWNER_CONFIG.tomo;
-    document.documentElement.style.setProperty('--owner-bg', cfg.bg);
-    document.body.style.backgroundColor = cfg.bg;
-    return () => { document.body.style.backgroundColor = ''; };
-  }, [owner]);
+    const bgColor = ownerColors[owner] || cfg.bg;
+    document.documentElement.style.setProperty('--owner-bg', bgColor);
+    document.body.style.backgroundColor = bgColor;
+    // ダークモード対応
+    if (isDark(bgColor)) {
+      document.documentElement.classList.add('dark-owner');
+    } else {
+      document.documentElement.classList.remove('dark-owner');
+    }
+    return () => {
+      document.body.style.backgroundColor = '';
+      document.documentElement.classList.remove('dark-owner');
+    };
+  }, [owner, ownerColors]);
 
   // ページ名
   const pageName = PAGE_NAMES[pathname] || '';
