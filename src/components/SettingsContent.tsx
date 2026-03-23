@@ -85,6 +85,7 @@ export default function SettingsContent() {
   const ownerLabel = effectiveOwner === 'tomo' ? 'トモ' : 'トシキ';
 
   const [loading, setLoading] = useState(true);
+  const [settingsTab, setSettingsTab] = useState<'common' | 'personal'>('common');
 
   // 按分設定
   const [anbunSettings, setAnbunSettings] = useState<AnbunSetting[]>([]);
@@ -797,19 +798,45 @@ export default function SettingsContent() {
   return (
     <div className="bg-[#F5F5F3] min-h-screen">
       <div className="max-w-3xl mx-auto px-6 py-8">
-        {/* ヘッダー */}
+        {/* ヘッダー + タブ */}
         <div className="mb-8">
           <h1 className="font-['Shippori_Mincho'] text-xl text-[#1a1a1a]">設定</h1>
           <p className="text-[10px] font-light tracking-wider text-[#999] mt-1">
             SETTINGS — {ownerLabel}
           </p>
+          <div className="flex gap-6 mt-5 border-b border-[#e8e6e3]">
+            <button
+              onClick={() => setSettingsTab('common')}
+              className={`pb-2.5 text-xs tracking-wide transition-colors relative ${
+                settingsTab === 'common'
+                  ? 'text-[#1a1a1a] font-medium'
+                  : 'text-[#999] hover:text-[#666]'
+              }`}
+            >
+              共通設定
+              {settingsTab === 'common' && (
+                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#D4A03A]" />
+              )}
+            </button>
+            <button
+              onClick={() => setSettingsTab('personal')}
+              className={`pb-2.5 text-xs tracking-wide transition-colors relative ${
+                settingsTab === 'personal'
+                  ? 'text-[#1a1a1a] font-medium'
+                  : 'text-[#999] hover:text-[#666]'
+              }`}
+            >
+              個人設定
+              <span className="ml-1.5 text-[10px] text-[#bbb]">— {ownerLabel}</span>
+              {settingsTab === 'personal' && (
+                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#D4A03A]" />
+              )}
+            </button>
+          </div>
         </div>
 
         {/* ━━━━━━━ 共通設定 ━━━━━━━ */}
-        <div className="mb-6">
-          <div className="text-[9px] font-medium tracking-[0.2em] text-[#D4A03A] uppercase">共通設定</div>
-          <div className="mt-1 border-t border-[#D4A03A]/20" />
-        </div>
+        {settingsTab === 'common' && (<>
 
         {/* ── プロジェクト管理 ── */}
         <section className="mb-10">
@@ -839,36 +866,49 @@ export default function SettingsContent() {
                 {syncResult.message}
               </div>
             )}
-            {/* PJ一覧 */}
+            {/* PJ一覧（事業別グルーピング） */}
             {projects.length === 0 ? (
               <p className="text-[11px] text-[#999]">プロジェクトが登録されていません</p>
             ) : (
-              <div className="space-y-1.5">
-                {projects.map((pj) => {
-                  const div = DIVISIONS[pj.division as keyof typeof DIVISIONS];
+              <div className="space-y-4">
+                {Object.entries(DIVISIONS).map(([divId, divVal]) => {
+                  const divProjects = projects.filter(pj => pj.division === divId);
                   return (
-                    <div key={pj.id} className="flex items-center justify-between py-2 px-3 bg-[#F5F5F3] rounded-lg">
-                      <div className="flex items-center gap-2 min-w-0">
-                        {div && (
-                          <span className="px-1.5 py-0.5 text-[9px] rounded-full text-white shrink-0" style={{ backgroundColor: div.color }}>
-                            {div.label}
-                          </span>
-                        )}
-                        <div className="min-w-0">
-                          <div className="text-sm text-[#1a1a1a] truncate">{pj.name}</div>
-                          <div className="text-[10px] text-[#999]">
-                            {pj.owner === 'tomo' ? 'トモ' : 'トシキ'}
-                            {pj.client ? ` · ${pj.client}` : ''}
-                            {pj.status === 'completed' ? ' · 完了' : pj.status === 'ordered' ? ' · 受注済' : ' · 進行中'}
-                          </div>
+                    <div key={divId}>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span
+                          className="px-1.5 py-0.5 text-[9px] rounded-full text-white"
+                          style={{ backgroundColor: divVal.color }}
+                        >
+                          {divVal.label}
+                        </span>
+                        <span className="text-[11px] text-[#666]">{divVal.name}</span>
+                        <span className="text-[10px] text-[#bbb]">{divProjects.length}件</span>
+                      </div>
+                      {divProjects.length === 0 ? (
+                        <p className="text-[10px] text-[#ccc] pl-1 mb-2">プロジェクトなし</p>
+                      ) : (
+                        <div className="space-y-1 mb-2">
+                          {divProjects.map((pj) => (
+                            <div key={pj.id} className="flex items-center justify-between py-2 px-3 bg-[#F5F5F3] rounded-lg">
+                              <div className="min-w-0">
+                                <div className="text-sm text-[#1a1a1a] truncate">{pj.name}</div>
+                                <div className="text-[10px] text-[#999]">
+                                  {pj.owner === 'tomo' ? 'トモ' : 'トシキ'}
+                                  {pj.client ? ` · ${pj.client}` : ''}
+                                  {pj.status === 'completed' ? ' · 完了' : pj.status === 'ordered' ? ' · 受注済' : ' · 進行中'}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button onClick={() => { setEditingProject(pj); setProjectModalOpen(true); }}
+                                  className="p-1 hover:bg-black/5 rounded-md"><Pencil className="w-3.5 h-3.5 text-[#999]" /></button>
+                                <button onClick={() => setProjectDeleteTarget(pj.id)}
+                                  className="p-1 hover:bg-[#C23728]/10 rounded-md"><Trash2 className="w-3.5 h-3.5 text-[#999]" /></button>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      </div>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button onClick={() => { setEditingProject(pj); setProjectModalOpen(true); }}
-                          className="p-1 hover:bg-black/5 rounded-md"><Pencil className="w-3.5 h-3.5 text-[#999]" /></button>
-                        <button onClick={() => setProjectDeleteTarget(pj.id)}
-                          className="p-1 hover:bg-[#C23728]/10 rounded-md"><Trash2 className="w-3.5 h-3.5 text-[#999]" /></button>
-                      </div>
+                      )}
                     </div>
                   );
                 })}
@@ -1053,7 +1093,7 @@ export default function SettingsContent() {
             </div>
           </div>
         </section>
-      </div>
+
         {/* ── テーマ ── */}
         <section className="mb-10">
           <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
@@ -1246,12 +1286,10 @@ export default function SettingsContent() {
           </div>
         </section>
 
+        </>)}
 
         {/* ━━━━━━━ 個人設定 ━━━━━━━ */}
-        <div className="mb-6 mt-14">
-          <div className="text-[9px] font-medium tracking-[0.2em] text-[#D4A03A] uppercase">個人設定 — {ownerLabel}</div>
-          <div className="mt-1 border-t border-[#D4A03A]/20" />
-        </div>
+        {settingsTab === 'personal' && (<>
 
         {/* ── 事業用口座 ── */}
         <section className="mb-10">
@@ -1547,6 +1585,9 @@ export default function SettingsContent() {
           </div>
         </section>
 
+        </>)}
+
+      </div>{/* end max-w-3xl */}
 
       {/* ── 固定資産モーダル ── */}
       {assetModalOpen && (
