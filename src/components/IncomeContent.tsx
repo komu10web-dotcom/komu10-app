@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { DIVISIONS, TRANSACTION_STATUS } from '@/types/database';
-import type { Transaction, RevenueType, RevenueTypeDivision, ContractType, Project } from '@/types/database';
+import type { Transaction, RevenueType, RevenueTypeDivision, ContractType, Project, Client } from '@/types/database';
 
 // ステータスバッジの色定義
 const STATUS_STYLES: Record<string, { bg: string; text: string }> = {
@@ -34,6 +34,7 @@ export default function IncomeContent() {
   const [revenueTypeDivisions, setRevenueTypeDivisions] = useState<RevenueTypeDivision[]>([]);
   const [contractTypes, setContractTypes] = useState<ContractType[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
 
   // フィルター
   const [searchText, setSearchText] = useState('');
@@ -53,16 +54,18 @@ export default function IncomeContent() {
   const fetchRevenueTypes = useCallback(async () => {
     if (!supabase) return;
     try {
-      const [rtRes, rtdRes, ctRes, pjRes] = await Promise.all([
+      const [rtRes, rtdRes, ctRes, pjRes, clRes] = await Promise.all([
         supabase.from('revenue_types').select('*').order('sort_order'),
         supabase.from('revenue_type_divisions').select('*'),
         supabase.from('contract_types').select('*').order('sort_order'),
         supabase.from('projects').select('*').order('name'),
+        supabase.from('clients').select('*').order('name'),
       ]);
       if (rtRes.data) setRevenueTypes(rtRes.data as RevenueType[]);
       if (rtdRes.data) setRevenueTypeDivisions(rtdRes.data as RevenueTypeDivision[]);
       if (ctRes.data) setContractTypes(ctRes.data as ContractType[]);
       if (pjRes.data) setProjects(pjRes.data as Project[]);
+      if (clRes.data) setClients(clRes.data as Client[]);
     } catch (err) {
       console.error('Fetch master data error:', err);
     }
@@ -436,6 +439,7 @@ export default function IncomeContent() {
           revenueTypeDivisions={revenueTypeDivisions}
           contractTypes={contractTypes}
           projects={projects}
+          clients={clients}
           onClose={() => { setModalOpen(false); setEditTarget(null); }}
           onSaved={() => { setModalOpen(false); setEditTarget(null); fetchTransactions(); }}
         />
@@ -480,11 +484,12 @@ interface IncomeModalProps {
   revenueTypeDivisions: RevenueTypeDivision[];
   contractTypes: ContractType[];
   projects: Project[];
+  clients: Client[];
   onClose: () => void;
   onSaved: () => void;
 }
 
-function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivisions, contractTypes, projects, onClose, onSaved }: IncomeModalProps) {
+function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivisions, contractTypes, projects, clients, onClose, onSaved }: IncomeModalProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -492,6 +497,7 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
     date: editData?.date || new Date().toISOString().split('T')[0],
     amount: editData?.amount.toString() || '',
     store: editData?.store || '',
+    client_id: editData?.client_id || '',
     division: editData?.division || '',
     project_id: editData?.project_id || '',
     contract_type_id: editData?.contract_type_id || '',
@@ -506,6 +512,11 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
   const handleChange = (field: string, value: string) => {
     setForm((prev) => {
       const next = { ...prev, [field]: value };
+      // 取引先選択時、storeをclient.nameで自動セット（後方互換）
+      if (field === 'client_id') {
+        const selected = clients.find((c) => c.id === value);
+        next.store = selected ? selected.name : '';
+      }
       // 事業変更時、現在の収益タイプがその事業に紐づかなければリセット
       if (field === 'division') {
         if (next.revenue_type) {
@@ -546,6 +557,9 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
   const filteredRT = getFilteredRevenueTypes(form.division);
   const filteredPJ = getFilteredProjects(form.division);
 
+  // owner連動：選択ownerの取引先のみ表示
+  const filteredClients = clients.filter((c) => c.owner === form.owner);
+
   const handleSave = async () => {
     if (!supabase) return;
     if (!form.date || !form.amount) {
@@ -575,6 +589,7 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
         revenue_type: form.revenue_type || null,
         contract_type_id: form.contract_type_id || null,
         project_id: form.project_id || null,
+        client_id: form.client_id || null,
         source: 'manual',
         confirmed: true,
         status: form.status || 'forecast',
@@ -686,13 +701,25 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
           {/* 取引先 */}
           <div>
             <label className="block text-xs text-[#999] mb-1">取引先</label>
-            <input
-              type="text"
-              value={form.store}
-              onChange={(e) => handleChange('store', e.target.value)}
-              placeholder="例: 長崎市DMO"
+            <select
+              value={form.client_id}
+              onChange={(e) => handleChange('client_id', e.target.value)}
               className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
-            />
+            >
+              <option value="">未選択（手入力）</option>
+              {filteredClients.map((cl) => (
+                <option key={cl.id} value={cl.id}>{cl.name}{cl.payment_terms ? ` (${cl.payment_terms})` : ''}</option>
+              ))}
+            </select>
+            {!form.client_id && (
+              <input
+                type="text"
+                value={form.store}
+                onChange={(e) => handleChange('store', e.target.value)}
+                placeholder="例: 長崎市DMO"
+                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 mt-2"
+              />
+            )}
           </div>
 
           {/* 事業 */}
