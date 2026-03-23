@@ -166,7 +166,9 @@ function generateJournalEntries(
 
     if (tx.tx_type === 'expense') {
       // 貸方: 個人立替→事業主借、事業口座支払→普通預金
-      // 現状は全経費が個人立替のため事業主借。将来、経費入力に支払方法選択を追加した時に分岐
+      // 現状は全経費が個人立替のため事業主借
+      // 口座開設後: 開設日以降の経費は貸方「普通預金」に自動切替
+      // （bank_accountsの開設日で判定。経費ごとの支払方法選択は不要）
       const creditAccount = '事業主借';
 
       if (hasDateDiff) {
