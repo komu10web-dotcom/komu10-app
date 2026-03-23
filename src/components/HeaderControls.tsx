@@ -5,11 +5,24 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
-const OWNERS = [
-  { key: 'all', label: '全体' },
-  { key: 'tomo', label: 'トモ' },
-  { key: 'toshiki', label: 'トシキ' },
-] as const;
+export const OWNER_CONFIG = {
+  tomo:    { label: 'トモ',   color: '#81D8D0', bg: '#F2FAFA', dotColor: '#81D8D0' },
+  toshiki: { label: 'トシキ', color: '#D4A03A', bg: '#FEFAF0', dotColor: '#D4A03A' },
+  all:     { label: '全体',   color: '#999999', bg: '#F5F5F3', dotColor: '#999999' },
+} as const;
+
+// 表示順: トモ → トシキ → 全体（全体はlocalStorageで非表示可）
+const OWNER_KEYS = ['tomo', 'toshiki', 'all'] as const;
+
+const PAGE_NAMES: Record<string, string> = {
+  '/': 'ホーム',
+  '/expenses': '経費',
+  '/income': '売上',
+  '/tax-return': '確定申告',
+  '/management': '経営',
+  '/simulation': '案件検討',
+  '/settings': '設定',
+};
 
 type PeriodMode = 'month' | 'fiscal' | 'year' | 'range';
 
@@ -22,7 +35,37 @@ export default function HeaderControls() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const owner = searchParams.get('owner') || 'all';
+  // デフォルトをlocalStorageから復元（初回はtomo）
+  const getDefaultOwner = () => {
+    if (typeof window === 'undefined') return 'tomo';
+    return localStorage.getItem('komu10_owner') || 'tomo';
+  };
+  const owner = searchParams.get('owner') || getDefaultOwner();
+
+  // 「全体」表示トグル（設定ページから変更。デフォルトOFF）
+  const [showAllTab, setShowAllTab] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem('komu10_show_all') === 'true';
+  });
+  const visibleOwners = showAllTab ? OWNER_KEYS : OWNER_KEYS.filter(k => k !== 'all');
+
+  // owner変更時にlocalStorageに保存
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    localStorage.setItem('komu10_owner', owner);
+  }, [owner]);
+
+  // 背景色をbodyに適用
+  useEffect(() => {
+    const cfg = OWNER_CONFIG[owner as keyof typeof OWNER_CONFIG] || OWNER_CONFIG.tomo;
+    document.documentElement.style.setProperty('--owner-bg', cfg.bg);
+    document.body.style.backgroundColor = cfg.bg;
+    return () => { document.body.style.backgroundColor = ''; };
+  }, [owner]);
+
+  // ページ名
+  const pageName = PAGE_NAMES[pathname] || '';
+  const ownerCfg = OWNER_CONFIG[owner as keyof typeof OWNER_CONFIG] || OWNER_CONFIG.tomo;
 
   // 期間パラメータ読み取り
   const modeParam = (searchParams.get('mode') as PeriodMode) || 'month';
@@ -113,21 +156,36 @@ export default function HeaderControls() {
 
   return (
     <div className="flex items-center gap-3 flex-wrap">
+      {/* 担当者コンテキスト表示 */}
+      <div className="flex items-center gap-1.5 mr-1">
+        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: ownerCfg.dotColor }} />
+        <span className="text-xs font-medium text-[#1a1a1a]">
+          {ownerCfg.label}{pageName ? `の${pageName}` : ''}
+        </span>
+      </div>
+
       {/* 担当者フィルター */}
       <div className="flex bg-[#F5F5F3] rounded-lg p-0.5">
-        {OWNERS.map((o) => (
-          <button
-            key={o.key}
-            onClick={() => updateParams({ owner: o.key })}
-            className={`px-3 py-1.5 text-xs rounded-md transition-all duration-200 ${
-              owner === o.key
-                ? 'bg-white text-[#1a1a1a] shadow-sm font-medium'
-                : 'text-[#999] hover:text-[#6b6b6b]'
-            }`}
-          >
-            {o.label}
-          </button>
-        ))}
+        {visibleOwners.map((key) => {
+          const cfg = OWNER_CONFIG[key];
+          const isActive = owner === key;
+          return (
+            <button
+              key={key}
+              onClick={() => updateParams({ owner: key })}
+              className={`px-3 py-1.5 text-xs rounded-md transition-all duration-200 ${
+                isActive
+                  ? 'bg-white shadow-sm font-medium'
+                  : key === 'all'
+                  ? 'text-[#ccc] hover:text-[#999]'
+                  : 'text-[#999] hover:text-[#6b6b6b]'
+              }`}
+              style={isActive ? { color: cfg.dotColor } : undefined}
+            >
+              {cfg.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* 期間バー */}
@@ -288,7 +346,7 @@ export function usePeriodRange() {
   const searchParams = useSearchParams();
   const [fiscalStartMonth, setFiscalStartMonth] = useState(1);
 
-  const owner = searchParams.get('owner') || 'all';
+  const owner = searchParams.get('owner') || (typeof window !== 'undefined' ? localStorage.getItem('komu10_owner') : null) || 'tomo';
   const mode = (searchParams.get('mode') as PeriodMode) || 'month';
   const ym = searchParams.get('ym') || `${currentYear}-${String(currentMonth).padStart(2, '0')}`;
   const fy = searchParams.get('fy') || String(currentYear);

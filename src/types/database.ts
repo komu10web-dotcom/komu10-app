@@ -355,6 +355,15 @@ export const KAMOKU = {
   software: { name: 'ソフトウェア', type: 'expense', anbun: true },
   repair: { name: '修繕費', type: 'expense', anbun: false },
   misc: { name: '雑費', type: 'expense', anbun: false },
+
+  // 内部科目（UIに出さない。仕訳帳で自動生成用）
+  prepaid: { name: '前払費用', type: 'asset', internal: true },
+  advance_received: { name: '前受金', type: 'liability', internal: true },
+  accounts_receivable: { name: '売掛金', type: 'asset', internal: true },
+  accounts_payable: { name: '買掛金', type: 'liability', internal: true },
+  jigyounushi_kari: { name: '事業主借', type: 'equity', internal: true },
+  jigyounushi_kashi: { name: '事業主貸', type: 'equity', internal: true },
+  bank_deposit: { name: '普通預金', type: 'asset', internal: true },
 } as const;
 
 // 収益タイプ定義
