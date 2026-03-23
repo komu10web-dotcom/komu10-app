@@ -140,13 +140,13 @@ export default function ManagementContent() {
       const chartYear = year;
       const prevYear = String(parseInt(chartYear) - 1);
       const prevPrevYear = String(parseInt(chartYear) - 2);
-      let pq1 = supabase.from('transactions').select('date, amount, tx_type')
+      let pq1 = supabase.from('transactions').select('date, amount, tx_type, status')
         .gte('date', `${prevYear}-01-01`).lte('date', `${prevYear}-12-31`);
       if (owner !== 'all') pq1 = pq1.eq('owner', owner);
       const { data: py1 } = await pq1;
       setPrevYearTx((py1 as Transaction[]) || []);
 
-      let pq2 = supabase.from('transactions').select('date, amount, tx_type')
+      let pq2 = supabase.from('transactions').select('date, amount, tx_type, status')
         .gte('date', `${prevPrevYear}-01-01`).lte('date', `${prevPrevYear}-12-31`);
       if (owner !== 'all') pq2 = pq2.eq('owner', owner);
       const { data: py2 } = await pq2;
@@ -154,7 +154,7 @@ export default function ManagementContent() {
 
       // チャート用: 当年全件（期間バーが月や期間の場合でもチャートは年間表示）
       if (startDate !== `${chartYear}-01-01` || endDate !== `${parseInt(chartYear) + 1}-01-01`) {
-        let cyQ = supabase.from('transactions').select('date, amount, tx_type')
+        let cyQ = supabase.from('transactions').select('date, amount, tx_type, status')
           .gte('date', `${chartYear}-01-01`).lte('date', `${chartYear}-12-31`);
         if (owner !== 'all') cyQ = cyQ.eq('owner', owner);
         const { data: cyData } = await cyQ;
@@ -283,26 +283,43 @@ export default function ManagementContent() {
 
   // ========== 集計ロジック ==========
 
-  // KPI
+  // KPI（全件）
   const totalRevenue = filteredTx.filter(t => t.tx_type === 'revenue').reduce((s, t) => s + t.amount, 0);
   const totalExpense = filteredTx.filter(t => t.tx_type === 'expense').reduce((s, t) => s + t.amount, 0);
   const totalProfit = totalRevenue - totalExpense;
   const profitRate = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
 
-  // 月別集計ヘルパー
+  // KPI（実績のみ）
+  const settledRevenue = filteredTx.filter(t => t.tx_type === 'revenue' && (t.status === 'settled' || !t.status)).reduce((s, t) => s + t.amount, 0);
+  const settledExpense = filteredTx.filter(t => t.tx_type === 'expense' && (t.status === 'settled' || !t.status)).reduce((s, t) => s + t.amount, 0);
+  // KPI（見込みのみ）
+  const forecastRevenue = totalRevenue - settledRevenue;
+  const forecastExpense = totalExpense - settledExpense;
+
+  // 月別集計ヘルパー（実績/見込み分離）
+  const isSettled = (t: Transaction) => t.status === 'settled' || !t.status;
   const calcMonthly = (txArr: Transaction[], yr: string) => Array.from({ length: 12 }, (_, i) => {
     const m = i + 1;
     const mStr = String(m).padStart(2, '0');
     const mTx = txArr.filter(t => t.date.startsWith(`${yr}-${mStr}`));
-    const rev = mTx.filter(t => t.tx_type === 'revenue').reduce((s, t) => s + t.amount, 0);
-    const exp = mTx.filter(t => t.tx_type === 'expense').reduce((s, t) => s + t.amount, 0);
-    return { month: m, revenue: rev, expense: exp, profit: rev - exp };
+    const settledTx = mTx.filter(isSettled);
+    const forecastTx = mTx.filter(t => !isSettled(t));
+    const rev = settledTx.filter(t => t.tx_type === 'revenue').reduce((s, t) => s + t.amount, 0);
+    const exp = settledTx.filter(t => t.tx_type === 'expense').reduce((s, t) => s + t.amount, 0);
+    const fcRev = forecastTx.filter(t => t.tx_type === 'revenue').reduce((s, t) => s + t.amount, 0);
+    const fcExp = forecastTx.filter(t => t.tx_type === 'expense').reduce((s, t) => s + t.amount, 0);
+    return {
+      month: m,
+      revenue: rev, expense: exp, profit: rev - exp,
+      fcRevenue: fcRev, fcExpense: fcExp, fcProfit: fcRev - fcExp,
+      totalRevenue: rev + fcRev, totalExpense: exp + fcExp, totalProfit: (rev + fcRev) - (exp + fcExp),
+    };
   });
 
   // 当年
   const monthlyData = calcMonthly(chartYearTx.length > 0 ? chartYearTx : transactions, year);
-  const maxMonthVal = Math.max(...monthlyData.map(m => Math.max(m.revenue, m.expense)), 1);
-  const maxProfit = Math.max(...monthlyData.map(m => Math.abs(m.profit)), 1);
+  const maxMonthVal = Math.max(...monthlyData.map(m => Math.max(m.totalRevenue, m.totalExpense)), 1);
+  const maxProfit = Math.max(...monthlyData.map(m => Math.abs(m.totalProfit)), 1);
 
   // 過去2年
   const prevYear = String(parseInt(year) - 1);
@@ -544,13 +561,18 @@ export default function ManagementContent() {
         {/* ===== KPIサマリー ===== */}
         <div className="grid grid-cols-3 gap-4 mb-6">
           {[
-            { label: '売上', value: totalRevenue, color: '#D4A03A' },
-            { label: '経費', value: totalExpense, color: '#C23728' },
-            { label: '利益', value: totalProfit, color: totalProfit >= 0 ? '#1B4D3E' : '#C23728' },
+            { label: '売上', value: totalRevenue, color: '#D4A03A', forecast: forecastRevenue },
+            { label: '経費', value: totalExpense, color: '#C23728', forecast: forecastExpense },
+            { label: '利益', value: totalProfit, color: totalProfit >= 0 ? '#1B4D3E' : '#C23728', forecast: forecastRevenue - forecastExpense },
           ].map(kpi => (
             <div key={kpi.label} className="bg-white rounded-2xl px-5 py-5" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
               <p className="text-[10px] tracking-wider text-[#999] mb-2">{kpi.label}</p>
               <p className="font-['Saira_Condensed'] text-2xl tabular-nums" style={{ color: kpi.color }}>{yen(kpi.value)}</p>
+              {kpi.forecast !== 0 && (
+                <p className="text-[10px] text-[#999] mt-1 font-['Saira_Condensed'] tabular-nums">
+                  うち見込み {yen(kpi.forecast)}
+                </p>
+              )}
             </div>
           ))}
         </div>
@@ -720,18 +742,50 @@ export default function ManagementContent() {
                             );
 
                             if (!multiYear) {
+                              const totalRevPct = Math.max(((m.revenue + m.fcRevenue) / barMax) * 100, (m.revenue + m.fcRevenue) > 0 ? 2 : 0);
+                              const revPct = m.revenue > 0 ? Math.max((m.revenue / (m.revenue + m.fcRevenue)) * totalRevPct, 2) : 0;
+                              const fcRevPct = totalRevPct - revPct;
+                              const totalExpPct = Math.max(((m.expense + m.fcExpense) / barMax) * 100, (m.expense + m.fcExpense) > 0 ? 2 : 0);
+                              const expPct = m.expense > 0 ? Math.max((m.expense / (m.expense + m.fcExpense)) * totalExpPct, 2) : 0;
+                              const fcExpPct = totalExpPct - expPct;
                               return (
                                 <div key={m.month} className="flex-1 flex gap-0.5 items-end justify-center h-full">
-                                  {!isFuture && (
-                                    <>
-                                      <div className="h-full" style={{ width: '35%' }}>
-                                        {barTip('revenue', '売上', m.revenue, '#D4A03A', 0.8)}
+                                  {/* 売上バー: 実績+見込み積み上げ */}
+                                  <div className="h-full flex flex-col justify-end" style={{ width: '35%' }}
+                                    onMouseEnter={() => setHoveredMonth({ month: m.month, type: 'revenue' })}
+                                    onMouseLeave={() => setHoveredMonth(null)}>
+                                    {m.fcRevenue > 0 && (
+                                      <div className="w-full" style={{ height: `${fcRevPct}%`, background: '#D4A03A', opacity: dimOpacity * 0.3, borderBottom: '1px dashed rgba(212,160,58,0.6)' }} />
+                                    )}
+                                    {!isFuture && m.revenue > 0 && (
+                                      <div className="rounded-b w-full transition-all duration-300" style={{ height: `${revPct}%`, background: '#D4A03A', opacity: dimOpacity * 0.8 }} />
+                                    )}
+                                    {hoveredMonth?.month === m.month && hoveredMonth?.type === 'revenue' && (
+                                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-[#1a1a1a] text-white rounded-lg px-2 py-1 text-[10px] whitespace-nowrap z-10 pointer-events-none"
+                                        style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+                                        <span style={{ color: '#D4A03A' }}>売上</span> {yen(m.revenue)}{m.fcRevenue > 0 ? ` + 見込${yen(m.fcRevenue)}` : ''}
+                                        <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-[#1a1a1a]" />
                                       </div>
-                                      <div className="h-full" style={{ width: '35%' }}>
-                                        {barTip('expense', '経費', m.expense, '#C23728', 0.65)}
+                                    )}
+                                  </div>
+                                  {/* 経費バー: 実績+見込み積み上げ */}
+                                  <div className="h-full flex flex-col justify-end" style={{ width: '35%' }}
+                                    onMouseEnter={() => setHoveredMonth({ month: m.month, type: 'expense' })}
+                                    onMouseLeave={() => setHoveredMonth(null)}>
+                                    {m.fcExpense > 0 && (
+                                      <div className="w-full" style={{ height: `${fcExpPct}%`, background: '#C23728', opacity: dimOpacity * 0.25, borderBottom: '1px dashed rgba(194,55,40,0.5)' }} />
+                                    )}
+                                    {!isFuture && m.expense > 0 && (
+                                      <div className="rounded-b w-full transition-all duration-300" style={{ height: `${expPct}%`, background: '#C23728', opacity: dimOpacity * 0.65 }} />
+                                    )}
+                                    {hoveredMonth?.month === m.month && hoveredMonth?.type === 'expense' && (
+                                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 bg-[#1a1a1a] text-white rounded-lg px-2 py-1 text-[10px] whitespace-nowrap z-10 pointer-events-none"
+                                        style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+                                        <span style={{ color: '#C23728' }}>経費</span> {yen(m.expense)}{m.fcExpense > 0 ? ` + 見込${yen(m.fcExpense)}` : ''}
+                                        <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-[#1a1a1a]" />
                                       </div>
-                                    </>
-                                  )}
+                                    )}
+                                  </div>
                                 </div>
                               );
                             } else {
