@@ -26,6 +26,14 @@ const THEMES = [
   { value: 'cool', label: 'クール', desc: '涼しげな背景', color: '#F0F4F8' },
 ] as const;
 
+const PROJECT_STATUS: Record<string, string> = {
+  planning: '企画',
+  ordered: '受注済',
+  active: '進行中',
+  published: '公開済',
+  completed: '完了',
+};
+
 const QA_ITEMS = [
   {
     q: '撮影旅行の食事は経費になる？',
@@ -896,7 +904,7 @@ export default function SettingsContent() {
                                 <div className="text-[10px] text-[#999]">
                                   {pj.owner === 'tomo' ? 'トモ' : 'トシキ'}
                                   {pj.client ? ` · ${pj.client}` : ''}
-                                  {pj.status === 'completed' ? ' · 完了' : pj.status === 'ordered' ? ' · 受注済' : ' · 進行中'}
+                                  {' · '}{PROJECT_STATUS[pj.status] || pj.status}
                                 </div>
                               </div>
                               <div className="flex items-center gap-1 shrink-0">
@@ -2481,8 +2489,10 @@ function ProjectModal({
               <select value={form.status}
                 onChange={(e) => setForm({ ...form, status: e.target.value })}
                 className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
+                <option value="planning">企画</option>
                 <option value="ordered">受注済</option>
                 <option value="active">進行中</option>
+                <option value="published">公開済</option>
                 <option value="completed">完了</option>
               </select>
             </div>

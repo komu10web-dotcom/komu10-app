@@ -35,7 +35,15 @@ export async function POST() {
           name: pj.name,
           division: pj.division || 'youtube',
           owner: 'tomo',
-          status: pj.status === 'published' || pj.status === 'completed' ? 'completed' : 'active',
+          status: (() => {
+            const s = (pj.status || '').toLowerCase();
+            if (s === '公開' || s === 'published') return 'published';
+            if (s === '企画' || s === 'planning') return 'planning';
+            if (s === '完了' || s === 'completed') return 'completed';
+            if (s === '受注済' || s === 'ordered') return 'ordered';
+            // 動画制作 / active / その他 → 進行中
+            return 'active';
+          })(),
           category: pj.category || null,
           location: pj.location || null,
           shoot_date: pj.shootDate || null,
