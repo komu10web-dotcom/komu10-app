@@ -405,6 +405,7 @@ export const BANK_MATCH_STATUS = {
   matched: '照合済み',
   owner_deposit: '個人入金（事業主借）',
   owner_withdrawal: '個人引出（事業主貸）',
+  internal_transfer: '口座間振替',
   ignored: '無視',
 } as const;
 
