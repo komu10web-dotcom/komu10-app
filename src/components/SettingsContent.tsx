@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { KAMOKU, DIVISIONS } from '@/types/database';
-import type { AnbunSetting, Asset, RevenueType, RevenueTypeDivision, ContractType, BankAccount, Client } from '@/types/database';
+import { KAMOKU, DIVISIONS, RECURRING_FREQUENCY } from '@/types/database';
+import type { AnbunSetting, Asset, RevenueType, RevenueTypeDivision, ContractType, BankAccount, Client, RecurringExpense } from '@/types/database';
 import { Plus, Pencil, Trash2, Save, X, Loader2, ChevronDown, ChevronUp, HelpCircle, Cloud, CheckCircle2 } from 'lucide-react';
 
 // ============================================================
@@ -136,6 +136,12 @@ export default function SettingsContent() {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [clientDeleteTarget, setClientDeleteTarget] = useState<string | null>(null);
 
+  // 固定契約
+  const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>([]);
+  const [recurringModalOpen, setRecurringModalOpen] = useState(false);
+  const [editingRecurring, setEditingRecurring] = useState<RecurringExpense | null>(null);
+  const [recurringDeleteTarget, setRecurringDeleteTarget] = useState<string | null>(null);
+
   // ============================================================
   // データ取得
   // ============================================================
@@ -195,6 +201,13 @@ export default function SettingsContent() {
         .eq('owner', effectiveOwner)
         .order('name');
 
+      // 固定契約
+      const { data: recurringData } = await supabase
+        .from('recurring_expenses')
+        .select('*')
+        .eq('owner', effectiveOwner)
+        .order('created_at');
+
       setAnbunSettings(anbunData || []);
       setAssets(assetData || []);
       if (profileData) {
@@ -206,6 +219,7 @@ export default function SettingsContent() {
       setRevenueTypeDivisions(rtdData || []);
       setBankAccounts(bankData || []);
       setClients(clientData || []);
+      setRecurringExpenses(recurringData || []);
 
       // 按分ドラフト初期化
       const draft: Record<string, { ratio: number; note: string }> = {};
@@ -556,6 +570,124 @@ export default function SettingsContent() {
   };
 
   // ============================================================
+  // 固定契約 CRUD
+  // ============================================================
+  const refreshRecurring = async () => {
+    if (!supabase) return;
+    const { data } = await supabase.from('recurring_expenses').select('*').eq('owner', effectiveOwner).order('created_at');
+    setRecurringExpenses(data || []);
+  };
+
+  // forecast行を自動生成（売上契約: kamoku='sales'、毎月振込の場合）
+  const generateForecastRows = async (rec: {
+    kamoku: string; amount: number; division: string; owner: string;
+    description: string; start_date: string; end_date: string | null;
+    frequency: string; client_id: string | null; payment_day: number | null;
+  }, recurringId: string) => {
+    if (!supabase) return;
+    // 売上の毎月振込のみforecast自動生成
+    if (rec.kamoku !== 'sales' || rec.frequency !== 'monthly') return;
+    if (!rec.start_date) return;
+
+    const start = new Date(rec.start_date + '-01');
+    const endStr = rec.end_date || `${start.getFullYear() + 1}-${String(start.getMonth() + 1).padStart(2, '0')}`;
+    const end = new Date(endStr + '-01');
+
+    const rows: any[] = [];
+    const cursor = new Date(start);
+    while (cursor <= end) {
+      const yyyy = cursor.getFullYear();
+      const mm = String(cursor.getMonth() + 1).padStart(2, '0');
+      const payDay = rec.payment_day || 28;
+      const lastDay = new Date(yyyy, cursor.getMonth() + 1, 0).getDate();
+      const day = Math.min(payDay, lastDay);
+
+      rows.push({
+        tx_type: 'revenue',
+        date: `${yyyy}-${mm}-${String(day).padStart(2, '0')}`,
+        amount: rec.amount,
+        kamoku: 'sales',
+        division: rec.division || 'general',
+        owner: rec.owner,
+        store: null,
+        description: rec.description || null,
+        source: 'recurring',
+        confirmed: false,
+        status: 'forecast',
+        accrual_date: `${yyyy}-${mm}-${String(day).padStart(2, '0')}`,
+        expected_payment_date: null,
+        actual_payment_date: null,
+        client_id: rec.client_id || null,
+        external_id: `recurring:${recurringId}:${yyyy}-${mm}`,
+      });
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+
+    if (rows.length > 0) {
+      // external_idでupsert（重複防止）— 既存があれば更新
+      for (const row of rows) {
+        const { data: existing } = await supabase
+          .from('transactions')
+          .select('id')
+          .eq('external_id', row.external_id)
+          .maybeSingle();
+        if (existing) {
+          await supabase.from('transactions').update(row).eq('id', existing.id);
+        } else {
+          await supabase.from('transactions').insert(row);
+        }
+      }
+    }
+  };
+
+  const saveRecurring = async (data: {
+    description: string; amount: number; kamoku: string; division: string;
+    frequency: 'monthly' | 'quarterly' | 'annual'; start_date: string;
+    end_date: string | null; payment_day: number | null;
+    client_id: string | null; is_active: boolean;
+  }) => {
+    if (!supabase) return;
+    try {
+      const record = { ...data, owner: effectiveOwner };
+      let savedId = editingRecurring?.id || '';
+      if (editingRecurring) {
+        const { error } = await supabase.from('recurring_expenses').update(record).eq('id', editingRecurring.id);
+        if (error) throw error;
+      } else {
+        const { data: inserted, error } = await supabase.from('recurring_expenses').insert(record).select('id').single();
+        if (error) throw error;
+        savedId = inserted.id;
+      }
+      // forecast行の自動生成
+      await generateForecastRows({ ...record }, savedId);
+      setRecurringModalOpen(false);
+      setEditingRecurring(null);
+      await refreshRecurring();
+    } catch (err) { console.error('固定契約保存エラー:', err); }
+  };
+
+  const deleteRecurring = async (id: string) => {
+    if (!supabase) return;
+    try {
+      // 紐づくforecast行も削除（external_idが 'recurring:{id}:' で始まるもの）
+      const { data: linked } = await supabase
+        .from('transactions')
+        .select('id, external_id')
+        .like('external_id', `recurring:${id}:%`);
+      if (linked && linked.length > 0) {
+        // settledは残す、forecast/accrued/billedのみ削除
+        const toDelete = linked.filter((t: any) => true); // 全件（settledチェックはDB側status確認が要るが現時点ではforecastのみのはず）
+        if (toDelete.length > 0) {
+          await supabase.from('transactions').delete().in('id', toDelete.map((t: any) => t.id));
+        }
+      }
+      await supabase.from('recurring_expenses').delete().eq('id', id);
+      setRecurringDeleteTarget(null);
+      await refreshRecurring();
+    } catch (err) { console.error('固定契約削除エラー:', err); }
+  };
+
+  // ============================================================
   // レンダリング
   // ============================================================
   if (loading) {
@@ -653,6 +785,56 @@ export default function SettingsContent() {
               className="flex items-center gap-1.5 text-xs text-[#D4A03A] hover:text-[#b8882e] transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />取引先を追加
+            </button>
+          </div>
+        </section>
+
+        {/* ── 固定契約 ── */}
+        <section className="mb-10">
+          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+            固定契約（売上・経費）
+          </div>
+          <div className="bg-white rounded-xl shadow-sm p-5">
+            {recurringExpenses.length === 0 ? (
+              <p className="text-[11px] text-[#999] mb-3">固定契約が登録されていません</p>
+            ) : (
+              <div className="space-y-2 mb-4">
+                {recurringExpenses.map((re) => {
+                  const isSales = re.kamoku === 'sales';
+                  const divDef = DIVISIONS[re.division as keyof typeof DIVISIONS];
+                  const clientName = clients.find(c => c.id === re.client_id)?.name;
+                  return (
+                    <div key={re.id} className="flex items-center justify-between py-2 px-3 bg-[#F5F5F3] rounded-lg">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${isSales ? 'bg-[#1B4D3E]/10 text-[#1B4D3E]' : 'bg-[#C23728]/10 text-[#C23728]'}`}>
+                            {isSales ? '売上' : '経費'}
+                          </span>
+                          <span className="text-sm text-[#1a1a1a] font-medium truncate">{re.description}</span>
+                        </div>
+                        <div className="text-[11px] text-[#999] mt-0.5">
+                          ¥{re.amount.toLocaleString()} / {RECURRING_FREQUENCY[re.frequency]}
+                          {divDef ? ` · ${divDef.name}` : ''}
+                          {clientName ? ` · ${clientName}` : ''}
+                          {!re.is_active && <span className="ml-1 text-[#C23728]">（停止中）</span>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 ml-2">
+                        <button onClick={() => { setEditingRecurring(re); setRecurringModalOpen(true); }}
+                          className="p-1 hover:bg-black/5 rounded-md"><Pencil className="w-3.5 h-3.5 text-[#999]" /></button>
+                        <button onClick={() => setRecurringDeleteTarget(re.id)}
+                          className="p-1 hover:bg-[#C23728]/10 rounded-md"><Trash2 className="w-3.5 h-3.5 text-[#999]" /></button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <button
+              onClick={() => { setEditingRecurring(null); setRecurringModalOpen(true); }}
+              className="flex items-center gap-1.5 text-xs text-[#D4A03A] hover:text-[#b8882e] transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />固定契約を追加
             </button>
           </div>
         </section>
@@ -1283,6 +1465,36 @@ export default function SettingsContent() {
           </div>
         </div>
       )}
+
+      {/* ── 固定契約モーダル ── */}
+      {recurringModalOpen && (
+        <RecurringModal
+          recurring={editingRecurring}
+          clients={clients}
+          onSave={saveRecurring}
+          onClose={() => { setRecurringModalOpen(false); setEditingRecurring(null); }}
+        />
+      )}
+
+      {/* ── 固定契約削除確認 ── */}
+      {recurringDeleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setRecurringDeleteTarget(null)} />
+          <div className="relative bg-white rounded-2xl p-6 max-w-sm mx-4" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
+            <p className="text-sm text-[#1a1a1a] mb-4">この固定契約を削除しますか？<br /><span className="text-[11px] text-[#999]">紐づく見込み売上も削除されます</span></p>
+            <div className="flex gap-2">
+              <button onClick={() => setRecurringDeleteTarget(null)}
+                className="flex-1 py-2 text-xs text-[#999] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors">
+                キャンセル
+              </button>
+              <button onClick={() => deleteRecurring(recurringDeleteTarget)}
+                className="flex-1 py-2 text-xs text-white bg-[#C23728] rounded-lg hover:bg-[#a82e21] transition-colors">
+                削除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1720,6 +1932,227 @@ function ClientModal({
             className="flex-1 py-2.5 text-xs text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
             {saving && <Loader2 className="w-3 h-3 animate-spin" />}
             {client ? '更新する' : '追加する'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// 固定契約モーダル
+// ============================================================
+// 経費科目（UIに出す分のみ）
+const EXPENSE_KAMOKU_OPTIONS = Object.entries(KAMOKU)
+  .filter(([, v]) => v.type === 'expense')
+  .map(([id, v]) => ({ id, name: v.name }));
+
+const DIVISION_OPTIONS = Object.entries(DIVISIONS).map(([id, v]) => ({
+  id, name: v.name,
+}));
+
+function RecurringModal({
+  recurring,
+  clients,
+  onSave,
+  onClose,
+}: {
+  recurring: RecurringExpense | null;
+  clients: Client[];
+  onSave: (data: {
+    description: string; amount: number; kamoku: string; division: string;
+    frequency: 'monthly' | 'quarterly' | 'annual'; start_date: string;
+    end_date: string | null; payment_day: number | null;
+    client_id: string | null; is_active: boolean;
+  }) => void;
+  onClose: () => void;
+}) {
+  const isSalesInit = recurring ? recurring.kamoku === 'sales' : true;
+  const [isSales, setIsSales] = useState(isSalesInit);
+
+  const [form, setForm] = useState({
+    description: recurring?.description || '',
+    amount: recurring?.amount?.toString() || '',
+    kamoku: recurring?.kamoku || (isSalesInit ? 'sales' : 'rent'),
+    division: recurring?.division || '',
+    frequency: recurring?.frequency || 'monthly' as 'monthly' | 'quarterly' | 'annual',
+    start_date: recurring?.start_date || new Date().toISOString().slice(0, 7),
+    end_date: recurring?.end_date || '',
+    payment_day: recurring?.payment_day?.toString() || '',
+    client_id: recurring?.client_id || '',
+    is_active: recurring?.is_active ?? true,
+  });
+
+  const [saving, setSaving] = useState(false);
+  const canSave = form.description.trim() && form.amount && parseInt(form.amount) > 0;
+
+  const handleTypeToggle = (sales: boolean) => {
+    setIsSales(sales);
+    setForm(prev => ({ ...prev, kamoku: sales ? 'sales' : 'rent' }));
+  };
+
+  const handleSave = () => {
+    if (!canSave) return;
+    setSaving(true);
+    onSave({
+      description: form.description.trim(),
+      amount: parseInt(form.amount.replace(/,/g, '')) || 0,
+      kamoku: isSales ? 'sales' : form.kamoku,
+      division: form.division || 'general',
+      frequency: form.frequency,
+      start_date: form.start_date,
+      end_date: form.end_date || null,
+      payment_day: form.payment_day ? parseInt(form.payment_day) : null,
+      client_id: form.client_id || null,
+      is_active: form.is_active,
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl w-full max-w-md mx-4 max-h-[85vh] overflow-y-auto"
+        style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <h2 className="text-sm font-medium text-[#1a1a1a]">
+            {recurring ? '固定契約を編集' : '固定契約を追加'}
+          </h2>
+          <button onClick={onClose} className="p-1 hover:bg-black/5 rounded-md transition-colors">
+            <X className="w-4 h-4 text-[#999]" />
+          </button>
+        </div>
+
+        <div className="px-5 py-4 space-y-4">
+          {/* 売上/経費切替 */}
+          <div>
+            <label className="block text-xs text-[#999] mb-1">種別</label>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => handleTypeToggle(true)}
+                className={`flex-1 py-2 text-xs rounded-lg transition-colors ${isSales ? 'bg-[#1B4D3E] text-white' : 'bg-[#F5F5F3] text-[#666] hover:bg-[#eee]'}`}>
+                売上
+              </button>
+              <button type="button" onClick={() => handleTypeToggle(false)}
+                className={`flex-1 py-2 text-xs rounded-lg transition-colors ${!isSales ? 'bg-[#C23728] text-white' : 'bg-[#F5F5F3] text-[#666] hover:bg-[#eee]'}`}>
+                経費
+              </button>
+            </div>
+          </div>
+
+          {/* 内容 */}
+          <div>
+            <label className="block text-xs text-[#999] mb-1">内容 <span className="text-[#C23728]">*</span></label>
+            <input type="text" value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              placeholder={isSales ? '例: KKday コンサルティング月額' : '例: Adobe CC'}
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+          </div>
+
+          {/* 金額 */}
+          <div>
+            <label className="block text-xs text-[#999] mb-1">金額（税込） <span className="text-[#C23728]">*</span></label>
+            <input type="text" inputMode="numeric" value={form.amount}
+              onChange={(e) => { const v = e.target.value.replace(/[^\d]/g, ''); setForm({ ...form, amount: v }); }}
+              placeholder="0"
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed'] tabular-nums" />
+          </div>
+
+          {/* 科目（経費のみ） */}
+          {!isSales && (
+            <div>
+              <label className="block text-xs text-[#999] mb-1">科目</label>
+              <select value={form.kamoku}
+                onChange={(e) => setForm({ ...form, kamoku: e.target.value })}
+                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
+                {EXPENSE_KAMOKU_OPTIONS.map(k => (
+                  <option key={k.id} value={k.id}>{k.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* 事業 */}
+          <div>
+            <label className="block text-xs text-[#999] mb-1">事業</label>
+            <select value={form.division}
+              onChange={(e) => setForm({ ...form, division: e.target.value })}
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
+              <option value="">未選択</option>
+              {DIVISION_OPTIONS.map(d => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* 取引先 */}
+          <div>
+            <label className="block text-xs text-[#999] mb-1">取引先</label>
+            <select value={form.client_id}
+              onChange={(e) => setForm({ ...form, client_id: e.target.value })}
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
+              <option value="">未選択</option>
+              {clients.map(cl => (
+                <option key={cl.id} value={cl.id}>{cl.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* 頻度・期間 */}
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-xs text-[#999] mb-1">頻度</label>
+              <select value={form.frequency}
+                onChange={(e) => setForm({ ...form, frequency: e.target.value as any })}
+                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
+                <option value="monthly">毎月</option>
+                <option value="quarterly">四半期</option>
+                <option value="annual">年次</option>
+              </select>
+            </div>
+            <div className="w-20">
+              <label className="block text-xs text-[#999] mb-1">支払日</label>
+              <input type="text" inputMode="numeric" value={form.payment_day}
+                onChange={(e) => { const v = e.target.value.replace(/\D/g, '').slice(0, 2); setForm({ ...form, payment_day: v }); }}
+                placeholder="28"
+                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed'] tabular-nums text-center" />
+              <span className="text-[10px] text-[#999] mt-0.5 block text-center">日</span>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-xs text-[#999] mb-1">開始月</label>
+              <input type="month" value={form.start_date}
+                onChange={(e) => setForm({ ...form, start_date: e.target.value })}
+                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs text-[#999] mb-1">終了月（任意）</label>
+              <input type="month" value={form.end_date}
+                onChange={(e) => setForm({ ...form, end_date: e.target.value })}
+                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+            </div>
+          </div>
+
+          {/* 有効/停止 */}
+          <div className="flex items-center gap-2">
+            <button type="button"
+              onClick={() => setForm(prev => ({ ...prev, is_active: !prev.is_active }))}
+              className={`relative w-10 h-5 rounded-full transition-colors ${form.is_active ? 'bg-[#1B4D3E]' : 'bg-[#ccc]'}`}>
+              <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${form.is_active ? 'left-5' : 'left-0.5'}`} />
+            </button>
+            <span className="text-xs text-[#666]">{form.is_active ? '有効' : '停止中'}</span>
+          </div>
+        </div>
+
+        <div className="px-5 py-4 border-t border-gray-100 flex gap-2">
+          <button onClick={onClose}
+            className="flex-1 py-2.5 text-xs text-[#999] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors">
+            キャンセル
+          </button>
+          <button onClick={handleSave} disabled={!canSave || saving}
+            className="flex-1 py-2.5 text-xs text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
+            {saving && <Loader2 className="w-3 h-3 animate-spin" />}
+            {recurring ? '更新する' : '追加する'}
           </button>
         </div>
       </div>
