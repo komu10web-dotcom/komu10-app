@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { KAMOKU, DIVISIONS, RECURRING_FREQUENCY } from '@/types/database';
-import type { AnbunSetting, Asset, RevenueType, RevenueTypeDivision, ContractType, BankAccount, Client, RecurringExpense } from '@/types/database';
-import { Plus, Pencil, Trash2, Save, X, Loader2, ChevronDown, ChevronUp, HelpCircle, Cloud, CheckCircle2 } from 'lucide-react';
+import type { AnbunSetting, Asset, RevenueType, RevenueTypeDivision, ContractType, BankAccount, Client, RecurringExpense, Project } from '@/types/database';
+import { Plus, Pencil, Trash2, Save, X, Loader2, ChevronDown, ChevronUp, HelpCircle, Cloud, CheckCircle2, RefreshCw, FolderOpen } from 'lucide-react';
 
 // ============================================================
 // 定数
@@ -65,6 +65,15 @@ const QA_ITEMS = [
 // ユーティリティ
 // ============================================================
 const yen = (n: number) => '¥' + Math.floor(n).toLocaleString('ja-JP');
+
+interface ProjectForm {
+  name: string;
+  division: string;
+  owner: string;
+  status: string;
+  client: string;
+  note: string;
+}
 
 // ============================================================
 // メインコンポーネント
@@ -142,6 +151,14 @@ export default function SettingsContent() {
   const [editingRecurring, setEditingRecurring] = useState<RecurringExpense | null>(null);
   const [recurringDeleteTarget, setRecurringDeleteTarget] = useState<string | null>(null);
 
+  // プロジェクト
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [projectModalOpen, setProjectModalOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [projectDeleteTarget, setProjectDeleteTarget] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<{ success: boolean; message: string } | null>(null);
+
   // ============================================================
   // データ取得
   // ============================================================
@@ -208,6 +225,12 @@ export default function SettingsContent() {
         .eq('owner', effectiveOwner)
         .order('created_at');
 
+      // プロジェクト（共通：ownerフィルターなし）
+      const { data: projectData } = await supabase
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: false });
+
       setAnbunSettings(anbunData || []);
       setAssets(assetData || []);
       if (profileData) {
@@ -220,6 +243,7 @@ export default function SettingsContent() {
       setBankAccounts(bankData || []);
       setClients(clientData || []);
       setRecurringExpenses(recurringData || []);
+      setProjects(projectData || []);
 
       // 按分ドラフト初期化
       const draft: Record<string, { ratio: number; note: string }> = {};
@@ -688,6 +712,78 @@ export default function SettingsContent() {
   };
 
   // ============================================================
+  // プロジェクト管理
+  // ============================================================
+  const syncProjects = async () => {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const res = await fetch('/api/sync', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        setSyncResult({ success: true, message: `${data.count}件を同期しました` });
+        // リフレッシュ
+        const { data: projectData } = await supabase
+          .from('projects')
+          .select('*')
+          .order('created_at', { ascending: false });
+        setProjects(projectData || []);
+      } else {
+        setSyncResult({ success: false, message: data.error || '同期に失敗しました' });
+      }
+    } catch (err) {
+      setSyncResult({ success: false, message: '同期に失敗しました' });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const saveProject = async (form: ProjectForm) => {
+    if (!supabase) return;
+    try {
+      if (editingProject) {
+        await supabase.from('projects').update({
+          name: form.name,
+          division: form.division,
+          owner: form.owner,
+          status: form.status,
+          client: form.client || null,
+          note: form.note || null,
+        }).eq('id', editingProject.id);
+      } else {
+        await supabase.from('projects').insert({
+          name: form.name,
+          division: form.division,
+          owner: form.owner,
+          status: form.status,
+          client: form.client || null,
+          note: form.note || null,
+        });
+      }
+      setProjectModalOpen(false);
+      setEditingProject(null);
+      const { data: projectData } = await supabase
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: false });
+      setProjects(projectData || []);
+    } catch (err) { console.error('プロジェクト保存エラー:', err); }
+  };
+
+  const deleteProject = async (id: string) => {
+    if (!supabase) return;
+    try {
+      await supabase.from('projects').delete().eq('id', id);
+      setProjectDeleteTarget(null);
+      const { data: projectData } = await supabase
+        .from('projects')
+        .select('*')
+        .order('created_at', { ascending: false });
+      setProjects(projectData || []);
+    } catch (err) { console.error('プロジェクト削除エラー:', err); }
+  };
+
+  // ============================================================
   // レンダリング
   // ============================================================
   if (loading) {
@@ -707,6 +803,454 @@ export default function SettingsContent() {
           <p className="text-[10px] font-light tracking-wider text-[#999] mt-1">
             SETTINGS — {ownerLabel}
           </p>
+        </div>
+
+        {/* ━━━━━━━ 共通設定 ━━━━━━━ */}
+        <div className="mb-6">
+          <div className="text-[9px] font-medium tracking-[0.2em] text-[#D4A03A] uppercase">共通設定</div>
+          <div className="mt-1 border-t border-[#D4A03A]/20" />
+        </div>
+
+        {/* ── プロジェクト管理 ── */}
+        <section className="mb-10">
+          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+            プロジェクト管理
+          </div>
+          <div className="bg-white rounded-xl shadow-sm p-5">
+            {/* 同期ボタン */}
+            <div className="flex items-center justify-between mb-4">
+              <button
+                onClick={syncProjects}
+                disabled={syncing}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#1a1a1a] bg-[#F5F5F3] rounded-lg hover:bg-[#eee] transition-colors disabled:opacity-40"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+                {syncing ? '同期中...' : 'スプレッドシートから同期'}
+              </button>
+              <button
+                onClick={() => { setEditingProject(null); setProjectModalOpen(true); }}
+                className="flex items-center gap-1.5 text-xs text-[#D4A03A] hover:text-[#b8882e] transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />手動追加
+              </button>
+            </div>
+            {syncResult && (
+              <div className={`text-[11px] mb-3 px-3 py-2 rounded-lg ${syncResult.success ? 'bg-[#1B4D3E]/5 text-[#1B4D3E]' : 'bg-[#C23728]/5 text-[#C23728]'}`}>
+                {syncResult.message}
+              </div>
+            )}
+            {/* PJ一覧 */}
+            {projects.length === 0 ? (
+              <p className="text-[11px] text-[#999]">プロジェクトが登録されていません</p>
+            ) : (
+              <div className="space-y-1.5">
+                {projects.map((pj) => {
+                  const div = DIVISIONS[pj.division as keyof typeof DIVISIONS];
+                  return (
+                    <div key={pj.id} className="flex items-center justify-between py-2 px-3 bg-[#F5F5F3] rounded-lg">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {div && (
+                          <span className="px-1.5 py-0.5 text-[9px] rounded-full text-white shrink-0" style={{ backgroundColor: div.color }}>
+                            {div.label}
+                          </span>
+                        )}
+                        <div className="min-w-0">
+                          <div className="text-sm text-[#1a1a1a] truncate">{pj.name}</div>
+                          <div className="text-[10px] text-[#999]">
+                            {pj.owner === 'tomo' ? 'トモ' : 'トシキ'}
+                            {pj.client ? ` · ${pj.client}` : ''}
+                            {pj.status === 'completed' ? ' · 完了' : pj.status === 'ordered' ? ' · 受注済' : ' · 進行中'}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button onClick={() => { setEditingProject(pj); setProjectModalOpen(true); }}
+                          className="p-1 hover:bg-black/5 rounded-md"><Pencil className="w-3.5 h-3.5 text-[#999]" /></button>
+                        <button onClick={() => setProjectDeleteTarget(pj.id)}
+                          className="p-1 hover:bg-[#C23728]/10 rounded-md"><Trash2 className="w-3.5 h-3.5 text-[#999]" /></button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* ── 契約区分管理 ── */}
+        <section className="mb-10">
+          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+            契約区分
+          </div>
+          <div className="bg-white rounded-xl shadow-sm">
+            {contractTypes.map((ct) => (
+              <div key={ct.id} className="flex items-center gap-2 px-5 py-3 border-b border-[#f0f0f0] last:border-b-0">
+                {ctEditId === ct.id ? (
+                  <>
+                    <input
+                      type="text"
+                      value={ctEditName}
+                      onChange={(e) => setCtEditName(e.target.value)}
+                      className="flex-1 px-2 py-1 text-sm border border-[#D4A03A] rounded-md outline-none"
+                      onKeyDown={(e) => { if (e.key === 'Enter') updateContractType(ct.id); if (e.key === 'Escape') setCtEditId(null); }}
+                      autoFocus
+                    />
+                    <button onClick={() => updateContractType(ct.id)} disabled={ctSaving} className="p-1 hover:bg-black/5 rounded-md">
+                      <Save className="w-3.5 h-3.5 text-[#1B4D3E]" />
+                    </button>
+                    <button onClick={() => setCtEditId(null)} className="p-1 hover:bg-black/5 rounded-md">
+                      <X className="w-3.5 h-3.5 text-[#999]" />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span className="flex-1 text-sm text-[#333]">{ct.name}</span>
+                    <button onClick={() => { setCtEditId(ct.id); setCtEditName(ct.name); }} className="p-1 hover:bg-black/5 rounded-md">
+                      <Pencil className="w-3.5 h-3.5 text-[#999]" />
+                    </button>
+                    <button onClick={() => deleteContractType(ct.id)} className="p-1 hover:bg-[#C23728]/10 rounded-md">
+                      <Trash2 className="w-3.5 h-3.5 text-[#999]" />
+                    </button>
+                  </>
+                )}
+              </div>
+            ))}
+            {/* 新規追加 */}
+            <div className="flex items-center gap-2 px-5 py-3">
+              <input
+                type="text"
+                value={ctNewName}
+                onChange={(e) => setCtNewName(e.target.value)}
+                placeholder="新しい契約区分..."
+                className="flex-1 px-2 py-1 text-sm bg-[#F5F5F3] rounded-md outline-none focus:ring-1 focus:ring-[#D4A03A]/50"
+                onKeyDown={(e) => { if (e.key === 'Enter') addContractType(); }}
+              />
+              <button
+                onClick={addContractType}
+                disabled={!ctNewName.trim() || ctSaving}
+                className="p-1.5 bg-[#1a1a1a] text-white rounded-md disabled:opacity-30"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* ── 収益タイプ管理 ── */}
+        <section className="mb-10">
+          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+            収益タイプ
+          </div>
+          <div className="bg-white rounded-xl shadow-sm">
+            {revenueTypes.map((rt) => {
+              const linkedDivs = revenueTypeDivisions.filter(d => d.revenue_type_id === rt.id).map(d => d.division);
+              const isEditing = rtEditId === rt.id;
+
+              return (
+                <div key={rt.id} className="px-5 py-3 border-b border-[#f0f0f0] last:border-b-0">
+                  {isEditing ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={rtEditName}
+                          onChange={(e) => setRtEditName(e.target.value)}
+                          className="flex-1 px-2 py-1 text-sm border border-[#D4A03A] rounded-md outline-none"
+                          autoFocus
+                        />
+                        <button onClick={() => updateRevenueType(rt.id)} disabled={rtSaving} className="p-1 hover:bg-black/5 rounded-md">
+                          <Save className="w-3.5 h-3.5 text-[#1B4D3E]" />
+                        </button>
+                        <button onClick={() => setRtEditId(null)} className="p-1 hover:bg-black/5 rounded-md">
+                          <X className="w-3.5 h-3.5 text-[#999]" />
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {Object.entries(DIVISIONS).map(([divId, divVal]) => (
+                          <button
+                            key={divId}
+                            onClick={() => toggleDivision(rtEditDivisions, setRtEditDivisions, divId)}
+                            className={`px-2 py-0.5 text-[10px] rounded-full border transition-colors ${
+                              rtEditDivisions.includes(divId)
+                                ? 'text-white border-transparent'
+                                : 'text-[#999] border-[#e0e0e0] bg-white'
+                            }`}
+                            style={rtEditDivisions.includes(divId) ? { backgroundColor: divVal.color } : undefined}
+                          >
+                            {divVal.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1">
+                        <span className="text-sm text-[#333]">{rt.name}</span>
+                        {linkedDivs.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {linkedDivs.map(divId => {
+                              const divVal = DIVISIONS[divId as keyof typeof DIVISIONS];
+                              return divVal ? (
+                                <span
+                                  key={divId}
+                                  className="px-1.5 py-0.5 text-[9px] rounded-full text-white"
+                                  style={{ backgroundColor: divVal.color }}
+                                >
+                                  {divVal.label}
+                                </span>
+                              ) : null;
+                            })}
+                          </div>
+                        )}
+                      </div>
+                      <button onClick={() => startEditRevenueType(rt)} className="p-1 hover:bg-black/5 rounded-md">
+                        <Pencil className="w-3.5 h-3.5 text-[#999]" />
+                      </button>
+                      <button onClick={() => deleteRevenueType(rt.id)} className="p-1 hover:bg-[#C23728]/10 rounded-md">
+                        <Trash2 className="w-3.5 h-3.5 text-[#999]" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {/* 新規追加 */}
+            <div className="px-5 py-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={rtNewName}
+                  onChange={(e) => setRtNewName(e.target.value)}
+                  placeholder="新しい収益タイプ..."
+                  className="flex-1 px-2 py-1 text-sm bg-[#F5F5F3] rounded-md outline-none focus:ring-1 focus:ring-[#D4A03A]/50"
+                />
+                <button
+                  onClick={addRevenueType}
+                  disabled={!rtNewName.trim() || rtSaving}
+                  className="p-1.5 bg-[#1a1a1a] text-white rounded-md disabled:opacity-30"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              {rtNewName.trim() && (
+                <div className="flex flex-wrap gap-1.5">
+                  {Object.entries(DIVISIONS).map(([divId, divVal]) => (
+                    <button
+                      key={divId}
+                      onClick={() => toggleDivision(rtNewDivisions, setRtNewDivisions, divId)}
+                      className={`px-2 py-0.5 text-[10px] rounded-full border transition-colors ${
+                        rtNewDivisions.includes(divId)
+                          ? 'text-white border-transparent'
+                          : 'text-[#999] border-[#e0e0e0] bg-white'
+                      }`}
+                      style={rtNewDivisions.includes(divId) ? { backgroundColor: divVal.color } : undefined}
+                    >
+                      {divVal.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      </div>
+        {/* ── テーマ ── */}
+        <section className="mb-10">
+          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+            テーマ
+          </div>
+          <div className="bg-white rounded-xl shadow-sm p-5">
+            <div className="flex gap-4">
+              {THEMES.map(t => (
+                <button
+                  key={t.value}
+                  onClick={() => saveTheme(t.value)}
+                  disabled={themeSaving}
+                  className={`flex-1 p-4 rounded-xl border-2 transition-all ${
+                    currentTheme === t.value
+                      ? 'border-[#D4A03A] shadow-sm'
+                      : 'border-[#e0e0e0] hover:border-[#ccc]'
+                  }`}
+                >
+                  <div
+                    className="w-full h-8 rounded-lg mb-2"
+                    style={{ backgroundColor: t.color }}
+                  />
+                  <div className="text-sm text-[#333] font-medium">{t.label}</div>
+                  <div className="text-[10px] text-[#999] mt-0.5">{t.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── 決算期 ── */}
+        <section className="mb-10">
+          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">決算期</div>
+          <div className="bg-white rounded-2xl px-5 py-5" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
+            <div className="flex items-center gap-4 mb-3">
+              <div>
+                <label className="text-xs text-[#999] block mb-1">決算期の開始月</label>
+                <select
+                  value={fiscalStartMonth}
+                  onChange={(e) => {
+                    const newMonth = parseInt(e.target.value);
+                    if (newMonth !== 1) {
+                      setFiscalPendingMonth(newMonth);
+                      setFiscalConfirmOpen(true);
+                    } else {
+                      saveFiscalMonth(1);
+                    }
+                  }}
+                  className="px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none"
+                >
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                    <option key={m} value={m}>{m}月</option>
+                  ))}
+                </select>
+              </div>
+              <div className="text-xs text-[#666] pt-4">
+                {fiscalStartMonth === 1
+                  ? '1月〜12月（暦年・個人事業主の標準）'
+                  : `${fiscalStartMonth}月〜${fiscalStartMonth === 1 ? 12 : fiscalStartMonth - 1 + 12 > 12 ? fiscalStartMonth - 1 : fiscalStartMonth + 11}月`
+                }
+              </div>
+            </div>
+            <p className="text-[10px] text-[#999]">個人事業主は暦年（1月〜12月）が法定です。法人化した場合のみ変更してください。</p>
+          </div>
+        </section>
+
+        {/* 決算期変更確認ダイアログ */}
+        {fiscalConfirmOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/30" onClick={() => setFiscalConfirmOpen(false)} />
+            <div className="relative bg-white rounded-2xl p-6 max-w-sm mx-4" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
+              <div className="mb-4">
+                <p className="text-sm font-medium text-[#1a1a1a] mb-2">決算期を変更しますか？</p>
+                <div className="bg-[#C23728]/5 rounded-lg px-3 py-2 mb-3">
+                  <p className="text-xs text-[#C23728]">個人事業主は暦年（1月〜12月）が税法で定められています。変更不可です。</p>
+                </div>
+                <p className="text-xs text-[#666]">法人（合同会社等）として届出済みの場合のみ、決算期を変更してください。</p>
+              </div>
+              <p className="text-xs text-[#999] mb-4">開始月を <strong>{fiscalPendingMonth}月</strong> に変更します。本当に変更しますか？</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setFiscalConfirmOpen(false)}
+                  className="flex-1 py-2 rounded-lg text-xs text-[#999] bg-[#F5F5F3] hover:bg-gray-200 transition-colors"
+                >
+                  キャンセル
+                </button>
+                <button
+                  onClick={() => {
+                    saveFiscalMonth(fiscalPendingMonth);
+                    setFiscalConfirmOpen(false);
+                  }}
+                  disabled={fiscalSaving}
+                  className="flex-1 py-2 rounded-lg text-xs text-white bg-[#C23728] hover:bg-[#a02020] transition-colors disabled:opacity-40"
+                >
+                  {fiscalSaving ? '保存中...' : '変更する'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── データバックアップ ── */}
+        <section className="mb-10">
+          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">データバックアップ</div>
+          <div className="bg-white rounded-2xl px-5 py-5" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
+            <p className="text-xs text-[#666] mb-3">
+              全テーブルのデータをJSON形式で保存します。Google Driveへの保存、またはローカルへのダウンロードが選べます。
+            </p>
+            <div className="flex items-center gap-3 flex-wrap">
+              <button
+                onClick={async () => {
+                  setDriveBackupStatus('loading');
+                  try {
+                    const res = await fetch('/api/backup', { method: 'POST' });
+                    const data = await res.json();
+                    if (data.success) {
+                      setDriveBackupStatus('success');
+                      setDriveBackupFileName(data.fileName);
+                      setTimeout(() => setDriveBackupStatus('idle'), 5000);
+                    } else {
+                      setDriveBackupStatus('error');
+                      setDriveBackupError(data.error || '保存に失敗しました');
+                      setTimeout(() => setDriveBackupStatus('idle'), 5000);
+                    }
+                  } catch {
+                    setDriveBackupStatus('error');
+                    setDriveBackupError('通信エラー');
+                    setTimeout(() => setDriveBackupStatus('idle'), 5000);
+                  }
+                }}
+                disabled={driveBackupStatus === 'loading'}
+                className="flex items-center gap-1.5 px-4 py-2 bg-[#1a1a1a] text-white rounded-lg text-xs font-medium hover:bg-[#333] transition-colors disabled:opacity-50"
+              >
+                {driveBackupStatus === 'loading' ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : driveBackupStatus === 'success' ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                ) : (
+                  <Cloud className="w-3.5 h-3.5" />
+                )}
+                {driveBackupStatus === 'loading' ? 'Driveに保存中...' : driveBackupStatus === 'success' ? '保存完了' : 'Google Driveに保存'}
+              </button>
+              <a
+                href="/api/backup"
+                download
+                className="flex items-center gap-1.5 px-4 py-2 border border-[#ddd] text-[#333] rounded-lg text-xs font-medium hover:bg-[#f5f5f5] transition-colors"
+              >
+                <Save className="w-3.5 h-3.5" />
+                ローカルにダウンロード
+              </a>
+            </div>
+            {driveBackupStatus === 'success' && driveBackupFileName && (
+              <p className="text-[10px] text-emerald-600 mt-2">✓ {driveBackupFileName} を 00_会社/09_アプリ/backups/ に保存しました</p>
+            )}
+            {driveBackupStatus === 'error' && driveBackupError && (
+              <p className="text-[10px] text-red-500 mt-2">{driveBackupError}</p>
+            )}
+          </div>
+        </section>
+
+        {/* ── Q&A ── */}
+        <section className="mb-10">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="text-[10px] font-medium tracking-widest text-[#999]">
+              Q&A
+            </div>
+            <HelpCircle className="w-3 h-3 text-[#ccc]" />
+          </div>
+          <div className="bg-white rounded-xl shadow-sm divide-y divide-[#f0f0f0]">
+            {QA_ITEMS.map((item, i) => (
+              <div key={i}>
+                <button
+                  onClick={() => setOpenQA(openQA === i ? null : i)}
+                  className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-[#fafafa] transition-colors"
+                >
+                  <span className="text-sm text-[#333]">{item.q}</span>
+                  {openQA === i ? (
+                    <ChevronUp className="w-4 h-4 text-[#999] shrink-0" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 text-[#999] shrink-0" />
+                  )}
+                </button>
+                {openQA === i && (
+                  <div className="px-5 pb-4">
+                    <p className="text-xs text-[#666] leading-relaxed">{item.a}</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+
+
+        {/* ━━━━━━━ 個人設定 ━━━━━━━ */}
+        <div className="mb-6 mt-14">
+          <div className="text-[9px] font-medium tracking-[0.2em] text-[#D4A03A] uppercase">個人設定 — {ownerLabel}</div>
+          <div className="mt-1 border-t border-[#D4A03A]/20" />
         </div>
 
         {/* ── 事業用口座 ── */}
@@ -1003,375 +1547,6 @@ export default function SettingsContent() {
           </div>
         </section>
 
-        {/* ── テーマ ── */}
-        <section className="mb-10">
-          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
-            テーマ
-          </div>
-          <div className="bg-white rounded-xl shadow-sm p-5">
-            <div className="flex gap-4">
-              {THEMES.map(t => (
-                <button
-                  key={t.value}
-                  onClick={() => saveTheme(t.value)}
-                  disabled={themeSaving}
-                  className={`flex-1 p-4 rounded-xl border-2 transition-all ${
-                    currentTheme === t.value
-                      ? 'border-[#D4A03A] shadow-sm'
-                      : 'border-[#e0e0e0] hover:border-[#ccc]'
-                  }`}
-                >
-                  <div
-                    className="w-full h-8 rounded-lg mb-2"
-                    style={{ backgroundColor: t.color }}
-                  />
-                  <div className="text-sm text-[#333] font-medium">{t.label}</div>
-                  <div className="text-[10px] text-[#999] mt-0.5">{t.desc}</div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ── 決算期 ── */}
-        <section className="mb-10">
-          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">決算期</div>
-          <div className="bg-white rounded-2xl px-5 py-5" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
-            <div className="flex items-center gap-4 mb-3">
-              <div>
-                <label className="text-xs text-[#999] block mb-1">決算期の開始月</label>
-                <select
-                  value={fiscalStartMonth}
-                  onChange={(e) => {
-                    const newMonth = parseInt(e.target.value);
-                    if (newMonth !== 1) {
-                      setFiscalPendingMonth(newMonth);
-                      setFiscalConfirmOpen(true);
-                    } else {
-                      saveFiscalMonth(1);
-                    }
-                  }}
-                  className="px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none"
-                >
-                  {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-                    <option key={m} value={m}>{m}月</option>
-                  ))}
-                </select>
-              </div>
-              <div className="text-xs text-[#666] pt-4">
-                {fiscalStartMonth === 1
-                  ? '1月〜12月（暦年・個人事業主の標準）'
-                  : `${fiscalStartMonth}月〜${fiscalStartMonth === 1 ? 12 : fiscalStartMonth - 1 + 12 > 12 ? fiscalStartMonth - 1 : fiscalStartMonth + 11}月`
-                }
-              </div>
-            </div>
-            <p className="text-[10px] text-[#999]">個人事業主は暦年（1月〜12月）が法定です。法人化した場合のみ変更してください。</p>
-          </div>
-        </section>
-
-        {/* 決算期変更確認ダイアログ */}
-        {fiscalConfirmOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center">
-            <div className="absolute inset-0 bg-black/30" onClick={() => setFiscalConfirmOpen(false)} />
-            <div className="relative bg-white rounded-2xl p-6 max-w-sm mx-4" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
-              <div className="mb-4">
-                <p className="text-sm font-medium text-[#1a1a1a] mb-2">決算期を変更しますか？</p>
-                <div className="bg-[#C23728]/5 rounded-lg px-3 py-2 mb-3">
-                  <p className="text-xs text-[#C23728]">個人事業主は暦年（1月〜12月）が税法で定められています。変更不可です。</p>
-                </div>
-                <p className="text-xs text-[#666]">法人（合同会社等）として届出済みの場合のみ、決算期を変更してください。</p>
-              </div>
-              <p className="text-xs text-[#999] mb-4">開始月を <strong>{fiscalPendingMonth}月</strong> に変更します。本当に変更しますか？</p>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setFiscalConfirmOpen(false)}
-                  className="flex-1 py-2 rounded-lg text-xs text-[#999] bg-[#F5F5F3] hover:bg-gray-200 transition-colors"
-                >
-                  キャンセル
-                </button>
-                <button
-                  onClick={() => {
-                    saveFiscalMonth(fiscalPendingMonth);
-                    setFiscalConfirmOpen(false);
-                  }}
-                  disabled={fiscalSaving}
-                  className="flex-1 py-2 rounded-lg text-xs text-white bg-[#C23728] hover:bg-[#a02020] transition-colors disabled:opacity-40"
-                >
-                  {fiscalSaving ? '保存中...' : '変更する'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── データバックアップ ── */}
-        <section className="mb-10">
-          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">データバックアップ</div>
-          <div className="bg-white rounded-2xl px-5 py-5" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
-            <p className="text-xs text-[#666] mb-3">
-              全テーブルのデータをJSON形式で保存します。Google Driveへの保存、またはローカルへのダウンロードが選べます。
-            </p>
-            <div className="flex items-center gap-3 flex-wrap">
-              <button
-                onClick={async () => {
-                  setDriveBackupStatus('loading');
-                  try {
-                    const res = await fetch('/api/backup', { method: 'POST' });
-                    const data = await res.json();
-                    if (data.success) {
-                      setDriveBackupStatus('success');
-                      setDriveBackupFileName(data.fileName);
-                      setTimeout(() => setDriveBackupStatus('idle'), 5000);
-                    } else {
-                      setDriveBackupStatus('error');
-                      setDriveBackupError(data.error || '保存に失敗しました');
-                      setTimeout(() => setDriveBackupStatus('idle'), 5000);
-                    }
-                  } catch {
-                    setDriveBackupStatus('error');
-                    setDriveBackupError('通信エラー');
-                    setTimeout(() => setDriveBackupStatus('idle'), 5000);
-                  }
-                }}
-                disabled={driveBackupStatus === 'loading'}
-                className="flex items-center gap-1.5 px-4 py-2 bg-[#1a1a1a] text-white rounded-lg text-xs font-medium hover:bg-[#333] transition-colors disabled:opacity-50"
-              >
-                {driveBackupStatus === 'loading' ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                ) : driveBackupStatus === 'success' ? (
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                ) : (
-                  <Cloud className="w-3.5 h-3.5" />
-                )}
-                {driveBackupStatus === 'loading' ? 'Driveに保存中...' : driveBackupStatus === 'success' ? '保存完了' : 'Google Driveに保存'}
-              </button>
-              <a
-                href="/api/backup"
-                download
-                className="flex items-center gap-1.5 px-4 py-2 border border-[#ddd] text-[#333] rounded-lg text-xs font-medium hover:bg-[#f5f5f5] transition-colors"
-              >
-                <Save className="w-3.5 h-3.5" />
-                ローカルにダウンロード
-              </a>
-            </div>
-            {driveBackupStatus === 'success' && driveBackupFileName && (
-              <p className="text-[10px] text-emerald-600 mt-2">✓ {driveBackupFileName} を 00_会社/09_アプリ/backups/ に保存しました</p>
-            )}
-            {driveBackupStatus === 'error' && driveBackupError && (
-              <p className="text-[10px] text-red-500 mt-2">{driveBackupError}</p>
-            )}
-          </div>
-        </section>
-
-        {/* ── Q&A ── */}
-        <section className="mb-10">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="text-[10px] font-medium tracking-widest text-[#999]">
-              Q&A
-            </div>
-            <HelpCircle className="w-3 h-3 text-[#ccc]" />
-          </div>
-          <div className="bg-white rounded-xl shadow-sm divide-y divide-[#f0f0f0]">
-            {QA_ITEMS.map((item, i) => (
-              <div key={i}>
-                <button
-                  onClick={() => setOpenQA(openQA === i ? null : i)}
-                  className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-[#fafafa] transition-colors"
-                >
-                  <span className="text-sm text-[#333]">{item.q}</span>
-                  {openQA === i ? (
-                    <ChevronUp className="w-4 h-4 text-[#999] shrink-0" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 text-[#999] shrink-0" />
-                  )}
-                </button>
-                {openQA === i && (
-                  <div className="px-5 pb-4">
-                    <p className="text-xs text-[#666] leading-relaxed">{item.a}</p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* ── 契約区分管理 ── */}
-        <section className="mb-10">
-          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
-            契約区分
-          </div>
-          <div className="bg-white rounded-xl shadow-sm">
-            {contractTypes.map((ct) => (
-              <div key={ct.id} className="flex items-center gap-2 px-5 py-3 border-b border-[#f0f0f0] last:border-b-0">
-                {ctEditId === ct.id ? (
-                  <>
-                    <input
-                      type="text"
-                      value={ctEditName}
-                      onChange={(e) => setCtEditName(e.target.value)}
-                      className="flex-1 px-2 py-1 text-sm border border-[#D4A03A] rounded-md outline-none"
-                      onKeyDown={(e) => { if (e.key === 'Enter') updateContractType(ct.id); if (e.key === 'Escape') setCtEditId(null); }}
-                      autoFocus
-                    />
-                    <button onClick={() => updateContractType(ct.id)} disabled={ctSaving} className="p-1 hover:bg-black/5 rounded-md">
-                      <Save className="w-3.5 h-3.5 text-[#1B4D3E]" />
-                    </button>
-                    <button onClick={() => setCtEditId(null)} className="p-1 hover:bg-black/5 rounded-md">
-                      <X className="w-3.5 h-3.5 text-[#999]" />
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <span className="flex-1 text-sm text-[#333]">{ct.name}</span>
-                    <button onClick={() => { setCtEditId(ct.id); setCtEditName(ct.name); }} className="p-1 hover:bg-black/5 rounded-md">
-                      <Pencil className="w-3.5 h-3.5 text-[#999]" />
-                    </button>
-                    <button onClick={() => deleteContractType(ct.id)} className="p-1 hover:bg-[#C23728]/10 rounded-md">
-                      <Trash2 className="w-3.5 h-3.5 text-[#999]" />
-                    </button>
-                  </>
-                )}
-              </div>
-            ))}
-            {/* 新規追加 */}
-            <div className="flex items-center gap-2 px-5 py-3">
-              <input
-                type="text"
-                value={ctNewName}
-                onChange={(e) => setCtNewName(e.target.value)}
-                placeholder="新しい契約区分..."
-                className="flex-1 px-2 py-1 text-sm bg-[#F5F5F3] rounded-md outline-none focus:ring-1 focus:ring-[#D4A03A]/50"
-                onKeyDown={(e) => { if (e.key === 'Enter') addContractType(); }}
-              />
-              <button
-                onClick={addContractType}
-                disabled={!ctNewName.trim() || ctSaving}
-                className="p-1.5 bg-[#1a1a1a] text-white rounded-md disabled:opacity-30"
-              >
-                <Plus className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-        </section>
-
-        {/* ── 収益タイプ管理 ── */}
-        <section className="mb-10">
-          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
-            収益タイプ
-          </div>
-          <div className="bg-white rounded-xl shadow-sm">
-            {revenueTypes.map((rt) => {
-              const linkedDivs = revenueTypeDivisions.filter(d => d.revenue_type_id === rt.id).map(d => d.division);
-              const isEditing = rtEditId === rt.id;
-
-              return (
-                <div key={rt.id} className="px-5 py-3 border-b border-[#f0f0f0] last:border-b-0">
-                  {isEditing ? (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={rtEditName}
-                          onChange={(e) => setRtEditName(e.target.value)}
-                          className="flex-1 px-2 py-1 text-sm border border-[#D4A03A] rounded-md outline-none"
-                          autoFocus
-                        />
-                        <button onClick={() => updateRevenueType(rt.id)} disabled={rtSaving} className="p-1 hover:bg-black/5 rounded-md">
-                          <Save className="w-3.5 h-3.5 text-[#1B4D3E]" />
-                        </button>
-                        <button onClick={() => setRtEditId(null)} className="p-1 hover:bg-black/5 rounded-md">
-                          <X className="w-3.5 h-3.5 text-[#999]" />
-                        </button>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {Object.entries(DIVISIONS).map(([divId, divVal]) => (
-                          <button
-                            key={divId}
-                            onClick={() => toggleDivision(rtEditDivisions, setRtEditDivisions, divId)}
-                            className={`px-2 py-0.5 text-[10px] rounded-full border transition-colors ${
-                              rtEditDivisions.includes(divId)
-                                ? 'text-white border-transparent'
-                                : 'text-[#999] border-[#e0e0e0] bg-white'
-                            }`}
-                            style={rtEditDivisions.includes(divId) ? { backgroundColor: divVal.color } : undefined}
-                          >
-                            {divVal.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1">
-                        <span className="text-sm text-[#333]">{rt.name}</span>
-                        {linkedDivs.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {linkedDivs.map(divId => {
-                              const divVal = DIVISIONS[divId as keyof typeof DIVISIONS];
-                              return divVal ? (
-                                <span
-                                  key={divId}
-                                  className="px-1.5 py-0.5 text-[9px] rounded-full text-white"
-                                  style={{ backgroundColor: divVal.color }}
-                                >
-                                  {divVal.label}
-                                </span>
-                              ) : null;
-                            })}
-                          </div>
-                        )}
-                      </div>
-                      <button onClick={() => startEditRevenueType(rt)} className="p-1 hover:bg-black/5 rounded-md">
-                        <Pencil className="w-3.5 h-3.5 text-[#999]" />
-                      </button>
-                      <button onClick={() => deleteRevenueType(rt.id)} className="p-1 hover:bg-[#C23728]/10 rounded-md">
-                        <Trash2 className="w-3.5 h-3.5 text-[#999]" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-            {/* 新規追加 */}
-            <div className="px-5 py-3 space-y-2">
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={rtNewName}
-                  onChange={(e) => setRtNewName(e.target.value)}
-                  placeholder="新しい収益タイプ..."
-                  className="flex-1 px-2 py-1 text-sm bg-[#F5F5F3] rounded-md outline-none focus:ring-1 focus:ring-[#D4A03A]/50"
-                />
-                <button
-                  onClick={addRevenueType}
-                  disabled={!rtNewName.trim() || rtSaving}
-                  className="p-1.5 bg-[#1a1a1a] text-white rounded-md disabled:opacity-30"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                </button>
-              </div>
-              {rtNewName.trim() && (
-                <div className="flex flex-wrap gap-1.5">
-                  {Object.entries(DIVISIONS).map(([divId, divVal]) => (
-                    <button
-                      key={divId}
-                      onClick={() => toggleDivision(rtNewDivisions, setRtNewDivisions, divId)}
-                      className={`px-2 py-0.5 text-[10px] rounded-full border transition-colors ${
-                        rtNewDivisions.includes(divId)
-                          ? 'text-white border-transparent'
-                          : 'text-[#999] border-[#e0e0e0] bg-white'
-                      }`}
-                      style={rtNewDivisions.includes(divId) ? { backgroundColor: divVal.color } : undefined}
-                    >
-                      {divVal.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-      </div>
 
       {/* ── 固定資産モーダル ── */}
       {assetModalOpen && (
@@ -1488,6 +1663,35 @@ export default function SettingsContent() {
                 キャンセル
               </button>
               <button onClick={() => deleteRecurring(recurringDeleteTarget)}
+                className="flex-1 py-2 text-xs text-white bg-[#C23728] rounded-lg hover:bg-[#a82e21] transition-colors">
+                削除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── プロジェクトモーダル ── */}
+      {projectModalOpen && (
+        <ProjectModal
+          project={editingProject}
+          onSave={saveProject}
+          onClose={() => { setProjectModalOpen(false); setEditingProject(null); }}
+        />
+      )}
+
+      {/* ── プロジェクト削除確認 ── */}
+      {projectDeleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setProjectDeleteTarget(null)} />
+          <div className="relative bg-white rounded-2xl p-6 max-w-sm mx-4" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
+            <p className="text-sm text-[#1a1a1a] mb-4">このプロジェクトを削除しますか？</p>
+            <div className="flex gap-2">
+              <button onClick={() => setProjectDeleteTarget(null)}
+                className="flex-1 py-2 text-xs text-[#999] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors">
+                キャンセル
+              </button>
+              <button onClick={() => deleteProject(projectDeleteTarget)}
                 className="flex-1 py-2 text-xs text-white bg-[#C23728] rounded-lg hover:bg-[#a82e21] transition-colors">
                 削除
               </button>
@@ -2153,6 +2357,120 @@ function RecurringModal({
             className="flex-1 py-2.5 text-xs text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
             {saving && <Loader2 className="w-3 h-3 animate-spin" />}
             {recurring ? '更新する' : '追加する'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// プロジェクトモーダル
+// ============================================================
+function ProjectModal({
+  project,
+  onSave,
+  onClose,
+}: {
+  project: Project | null;
+  onSave: (form: ProjectForm) => void;
+  onClose: () => void;
+}) {
+  const [form, setForm] = useState<ProjectForm>(() => ({
+    name: project?.name || '',
+    division: project?.division || 'youtube',
+    owner: project?.owner || 'tomo',
+    status: project?.status || 'active',
+    client: project?.client || '',
+    note: project?.note || '',
+  }));
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!form.name.trim()) return;
+    setSaving(true);
+    await onSave(form);
+    setSaving(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl w-full max-w-md mx-4 overflow-hidden" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
+        <div className="px-5 py-4 border-b border-gray-100">
+          <h2 className="text-sm font-medium text-[#1a1a1a]">
+            {project ? 'プロジェクト編集' : 'プロジェクト追加'}
+          </h2>
+        </div>
+
+        <div className="px-5 py-4 space-y-4">
+          <div>
+            <label className="block text-xs text-[#999] mb-1">プロジェクト名 <span className="text-[#C23728]">*</span></label>
+            <input type="text" value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              placeholder="例: KKday 沖縄プロモーション"
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+          </div>
+
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-xs text-[#999] mb-1">事業部門</label>
+              <select value={form.division}
+                onChange={(e) => setForm({ ...form, division: e.target.value })}
+                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
+                {Object.entries(DIVISIONS).map(([key, val]) => (
+                  <option key={key} value={key}>{val.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs text-[#999] mb-1">担当者</label>
+              <select value={form.owner}
+                onChange={(e) => setForm({ ...form, owner: e.target.value })}
+                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
+                <option value="tomo">トモ</option>
+                <option value="toshiki">トシキ</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-xs text-[#999] mb-1">ステータス</label>
+              <select value={form.status}
+                onChange={(e) => setForm({ ...form, status: e.target.value })}
+                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
+                <option value="ordered">受注済</option>
+                <option value="active">進行中</option>
+                <option value="completed">完了</option>
+              </select>
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs text-[#999] mb-1">クライアント（任意）</label>
+              <input type="text" value={form.client}
+                onChange={(e) => setForm({ ...form, client: e.target.value })}
+                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs text-[#999] mb-1">メモ（任意）</label>
+            <textarea value={form.note}
+              onChange={(e) => setForm({ ...form, note: e.target.value })}
+              rows={2}
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 resize-none" />
+          </div>
+        </div>
+
+        <div className="px-5 py-4 border-t border-gray-100 flex gap-2">
+          <button onClick={onClose}
+            className="flex-1 py-2.5 text-xs text-[#999] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors">
+            キャンセル
+          </button>
+          <button onClick={handleSave} disabled={!form.name.trim() || saving}
+            className="flex-1 py-2.5 text-xs text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
+            {saving && <Loader2 className="w-3 h-3 animate-spin" />}
+            {project ? '更新する' : '追加する'}
           </button>
         </div>
       </div>

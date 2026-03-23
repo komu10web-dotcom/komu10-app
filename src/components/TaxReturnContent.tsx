@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { KAMOKU } from '@/types/database';
 import type { Transaction, Asset, AnbunSetting } from '@/types/database';
 import { Copy, Check, Download, Loader2, AlertTriangle } from 'lucide-react';
+import { usePeriodRange } from './HeaderControls';
 
 // ============================================================
 // 型定義
@@ -280,9 +280,8 @@ function downloadCSV(entries: JournalEntry[], year: number, ownerLabel: string) 
 // メインコンポーネント
 // ============================================================
 export default function TaxReturnContent() {
-  const searchParams = useSearchParams();
-  const owner = searchParams.get('owner') || 'tomo'; // 確定申告は個人別。デフォルトtomo
-  const year = parseInt(searchParams.get('year') || new Date().getFullYear().toString());
+  const { owner, year: yearStr } = usePeriodRange();
+  const year = parseInt(yearStr);
 
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -555,7 +554,7 @@ export default function TaxReturnContent() {
                 仕訳帳
               </div>
               <p className="text-[11px] text-[#999] mt-1">
-                複式簿記の帳簿です。CSV出力して税理士に提出できます。
+                複式簿記の帳簿です。CSV出力してE-TAXへの転記確認に使えます。
               </p>
             </div>
             {journalEntries.length > 0 && (
