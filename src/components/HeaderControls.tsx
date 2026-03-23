@@ -11,21 +11,21 @@ export const OWNER_CONFIG = {
   all:     { label: '全体',   color: '#999999', bg: '#F5F5F3', dotColor: '#999999' },
 } as const;
 
-export const OWNER_COLOR_PRESETS: Record<string, { value: string; label: string }[]> = {
+export const OWNER_COLOR_PRESETS: Record<string, { value: string; label: string; accent: string }[]> = {
   tomo: [
-    { value: '#EAF6F6', label: 'ティール' },
-    { value: '#F0EDF8', label: 'ラベンダー' },
-    { value: '#ECF4EC', label: 'セージ' },
+    { value: '#EAF6F6', label: 'ティール', accent: '#2BA6A6' },
+    { value: '#F0EDF8', label: 'ラベンダー', accent: '#7B61C4' },
+    { value: '#ECF4EC', label: 'セージ', accent: '#4A8C4A' },
   ],
   toshiki: [
-    { value: '#FBF5E6', label: 'ゴールド' },
-    { value: '#FAEFEA', label: 'テラコッタ' },
-    { value: '#E6EDE6', label: 'ブリティッシュグリーン' },
+    { value: '#FBF5E6', label: 'ゴールド', accent: '#D4A03A' },
+    { value: '#FAEFEA', label: 'テラコッタ', accent: '#C2705A' },
+    { value: '#E6EDE6', label: 'ブリティッシュグリーン', accent: '#4A6B4A' },
   ],
   all: [
-    { value: '#F5F5F3', label: '白系' },
-    { value: '#E8E6E3', label: 'グレー系' },
-    { value: '#2A2A2A', label: '黒系' },
+    { value: '#F5F5F3', label: '白系', accent: '#999999' },
+    { value: '#E8E6E3', label: 'グレー系', accent: '#777777' },
+    { value: '#2A2A2A', label: '黒系', accent: '#CCCCCC' },
   ],
 };
 
@@ -115,6 +115,15 @@ export default function HeaderControls() {
   // ページ名
   const pageName = PAGE_NAMES[pathname] || '';
   const ownerCfg = OWNER_CONFIG[owner as keyof typeof OWNER_CONFIG] || OWNER_CONFIG.tomo;
+
+  // ドットのアクセント色（DBのowner_colorに対応する原色）
+  const ownerAccent = (() => {
+    const bgColor = ownerColors[owner];
+    if (!bgColor) return ownerCfg.dotColor;
+    const presets = OWNER_COLOR_PRESETS[owner] || [];
+    const match = presets.find(p => p.value === bgColor);
+    return match?.accent || ownerCfg.dotColor;
+  })();
 
   // 期間パラメータ読み取り
   const modeParam = (searchParams.get('mode') as PeriodMode) || 'month';
@@ -207,7 +216,7 @@ export default function HeaderControls() {
     <div className="flex items-center gap-3 flex-wrap">
       {/* 担当者コンテキスト表示 */}
       <div className="flex items-center gap-1.5 mr-1">
-        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: ownerCfg.dotColor }} />
+        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: ownerAccent }} />
         <span className="text-xs font-medium text-[#1a1a1a]">
           {ownerCfg.label}{pageName ? `の${pageName}` : ''}
         </span>
@@ -218,6 +227,13 @@ export default function HeaderControls() {
         {visibleOwners.map((key) => {
           const cfg = OWNER_CONFIG[key];
           const isActive = owner === key;
+          const btnAccent = (() => {
+            const bgColor = ownerColors[key];
+            if (!bgColor) return cfg.dotColor;
+            const presets = OWNER_COLOR_PRESETS[key] || [];
+            const match = presets.find(p => p.value === bgColor);
+            return match?.accent || cfg.dotColor;
+          })();
           return (
             <button
               key={key}
@@ -229,7 +245,7 @@ export default function HeaderControls() {
                   ? 'text-[#ccc] hover:text-[#999]'
                   : 'text-[#999] hover:text-[#6b6b6b]'
               }`}
-              style={isActive ? { color: cfg.dotColor } : undefined}
+              style={isActive ? { color: btnAccent } : undefined}
             >
               {cfg.label}
             </button>
