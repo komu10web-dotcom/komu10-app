@@ -154,33 +154,84 @@ function generateJournalEntries(
 ): JournalEntry[] {
   const entries: JournalEntry[] = [];
 
-  // 取引ごとに仕訳を生成
-  for (const tx of transactions) {
+  // 確定申告仕訳帳はsettledのみ対象（forecast/accrued/billedは除外）
+  const settled = transactions.filter(tx => tx.status === 'settled' || !tx.status);
+
+  for (const tx of settled) {
     const k = KAMOKU[tx.kamoku as keyof typeof KAMOKU];
     if (!k) continue;
 
+    const desc = [tx.store, tx.description].filter(Boolean).join(' ');
+    const hasDateDiff = tx.actual_payment_date && tx.date !== tx.actual_payment_date;
+
     if (tx.tx_type === 'expense') {
-      // 按分対象科目の場合、按分後の金額を使う必要がある
-      // → ただし仕訳帳では個別取引の按分は行わない（科目別合計で按分する）
-      // → 仕訳帳では按分前の金額で記帳し、按分は決算整理で行うのが正しい
-      entries.push({
-        date: tx.date,
-        debitAccount: k.name,
-        debitAmount: tx.amount,
-        creditAccount: '事業主借',
-        creditAmount: tx.amount,
-        description: [tx.store, tx.description].filter(Boolean).join(' '),
-      });
+      // 貸方: 現状は全経費「事業主借」（事業口座未開設）
+      const creditAccount = '事業主借';
+
+      if (hasDateDiff) {
+        // 前払い: 支払日と利用日が異なる
+        // 1) 支払時: 前払費用 / 事業主借 ← actual_payment_date
+        entries.push({
+          date: tx.actual_payment_date!,
+          debitAccount: '前払費用',
+          debitAmount: tx.amount,
+          creditAccount,
+          creditAmount: tx.amount,
+          description: `[前払] ${desc}`,
+        });
+        // 2) 費用計上: 科目 / 前払費用 ← date（利用日）
+        entries.push({
+          date: tx.date,
+          debitAccount: k.name,
+          debitAmount: tx.amount,
+          creditAccount: '前払費用',
+          creditAmount: tx.amount,
+          description: desc,
+        });
+      } else {
+        // 即時: 科目 / 事業主借
+        entries.push({
+          date: tx.date,
+          debitAccount: k.name,
+          debitAmount: tx.amount,
+          creditAccount,
+          creditAmount: tx.amount,
+          description: desc,
+        });
+      }
     } else {
       // 売上
-      entries.push({
-        date: tx.date,
-        debitAccount: '普通預金',
-        debitAmount: tx.amount,
-        creditAccount: '売上高',
-        creditAmount: tx.amount,
-        description: [tx.store, tx.description].filter(Boolean).join(' '),
-      });
+      if (hasDateDiff) {
+        // PL計上と入金が異なる
+        // 1) PL計上: 売掛金 / 売上高 ← date（納品日）
+        entries.push({
+          date: tx.date,
+          debitAccount: '売掛金',
+          debitAmount: tx.amount,
+          creditAccount: '売上高',
+          creditAmount: tx.amount,
+          description: desc,
+        });
+        // 2) 入金: 普通預金 / 売掛金 ← actual_payment_date
+        entries.push({
+          date: tx.actual_payment_date!,
+          debitAccount: '普通預金',
+          debitAmount: tx.amount,
+          creditAccount: '売掛金',
+          creditAmount: tx.amount,
+          description: `[入金] ${desc}`,
+        });
+      } else {
+        // 即時入金: 普通預金 / 売上高
+        entries.push({
+          date: tx.date,
+          debitAccount: '普通預金',
+          debitAmount: tx.amount,
+          creditAccount: '売上高',
+          creditAmount: tx.amount,
+          description: desc,
+        });
+      }
     }
   }
 
@@ -285,14 +336,17 @@ export default function TaxReturnContent() {
   const effectiveOwner = owner === 'all' ? 'tomo' : owner;
   const ownerLabel = effectiveOwner === 'tomo' ? 'トモ' : 'トシキ';
 
+  // 確定申告はsettled（または旧データのstatus未設定）のみ集計
+  const settledTx = transactions.filter(tx => tx.status === 'settled' || !tx.status);
+
   // 売上合計
-  const revenueTotal = transactions
+  const revenueTotal = settledTx
     .filter(tx => tx.tx_type === 'revenue')
     .reduce((sum, tx) => sum + tx.amount, 0);
 
   // 科目別経費集計
   const expenseByKamoku: Record<string, number> = {};
-  for (const tx of transactions) {
+  for (const tx of settledTx) {
     if (tx.tx_type !== 'expense') continue;
     expenseByKamoku[tx.kamoku] = (expenseByKamoku[tx.kamoku] || 0) + tx.amount;
   }
