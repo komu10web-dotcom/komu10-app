@@ -94,6 +94,10 @@ export default function SettingsContent() {
 
   const [loading, setLoading] = useState(true);
   const [settingsTab, setSettingsTab] = useState<'common' | 'personal'>('common');
+  const [pjOpenDivisions, setPjOpenDivisions] = useState<string[]>([]);
+  const [pjVisibleCount, setPjVisibleCount] = useState<Record<string, number>>({});
+  const [pjStatusFilter, setPjStatusFilter] = useState<string>('all');
+  const PJ_PAGE_SIZE = 5;
 
   // 按分設定
   const [anbunSettings, setAnbunSettings] = useState<AnbunSetting[]>([]);
@@ -874,47 +878,106 @@ export default function SettingsContent() {
                 {syncResult.message}
               </div>
             )}
-            {/* PJ一覧（事業別グルーピング） */}
+            {/* PJステータスフィルター */}
+            <div className="flex flex-wrap gap-1.5 mb-4">
+              {[{ key: 'all', label: '全件' }, ...Object.entries(PROJECT_STATUS).map(([k, v]) => ({ key: k, label: v }))].map(f => (
+                <button
+                  key={f.key}
+                  onClick={() => setPjStatusFilter(f.key)}
+                  className={`px-2.5 py-1 text-[10px] rounded-full border transition-colors ${
+                    pjStatusFilter === f.key
+                      ? 'bg-[#1a1a1a] text-white border-[#1a1a1a]'
+                      : 'text-[#999] border-[#e0e0e0] hover:border-[#bbb]'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+            {/* PJ一覧（事業別アコーディオン） */}
             {projects.length === 0 ? (
               <p className="text-[11px] text-[#999]">プロジェクトが登録されていません</p>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-1">
                 {Object.entries(DIVISIONS).map(([divId, divVal]) => {
-                  const divProjects = projects.filter(pj => pj.division === divId);
+                  const allDivProjects = projects.filter(pj => pj.division === divId);
+                  const filteredProjects = pjStatusFilter === 'all'
+                    ? allDivProjects
+                    : allDivProjects.filter(pj => pj.status === pjStatusFilter);
+                  const isOpen = pjOpenDivisions.includes(divId);
+                  const visibleCount = pjVisibleCount[divId] || PJ_PAGE_SIZE;
+                  const visibleProjects = filteredProjects.slice(0, visibleCount);
+                  const hasMore = filteredProjects.length > visibleCount;
+
                   return (
-                    <div key={divId}>
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <span
-                          className="px-1.5 py-0.5 text-[9px] rounded-full text-white"
-                          style={{ backgroundColor: divVal.color }}
-                        >
-                          {divVal.label}
-                        </span>
-                        <span className="text-[11px] text-[#666]">{divVal.name}</span>
-                        <span className="text-[10px] text-[#bbb]">{divProjects.length}件</span>
-                      </div>
-                      {divProjects.length === 0 ? (
-                        <p className="text-[10px] text-[#ccc] pl-1 mb-2">プロジェクトなし</p>
-                      ) : (
-                        <div className="space-y-1 mb-2">
-                          {divProjects.map((pj) => (
-                            <div key={pj.id} className="flex items-center justify-between py-2 px-3 bg-[#F5F5F3] rounded-lg">
-                              <div className="min-w-0">
-                                <div className="text-sm text-[#1a1a1a] truncate">{pj.name}</div>
-                                <div className="text-[10px] text-[#999]">
-                                  {pj.owner === 'tomo' ? 'トモ' : 'トシキ'}
-                                  {pj.client ? ` · ${pj.client}` : ''}
-                                  {' · '}{PROJECT_STATUS[pj.status] || pj.status}
-                                </div>
+                    <div key={divId} className="border border-[#f0f0f0] rounded-lg overflow-hidden">
+                      <button
+                        onClick={() => {
+                          setPjOpenDivisions(prev =>
+                            prev.includes(divId) ? prev.filter(d => d !== divId) : [...prev, divId]
+                          );
+                          if (!pjVisibleCount[divId]) {
+                            setPjVisibleCount(prev => ({ ...prev, [divId]: PJ_PAGE_SIZE }));
+                          }
+                        }}
+                        className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-[#fafafa] transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="px-1.5 py-0.5 text-[9px] rounded-full text-white"
+                            style={{ backgroundColor: divVal.color }}
+                          >
+                            {divVal.label}
+                          </span>
+                          <span className="text-[11px] text-[#666]">{divVal.name}</span>
+                          <span className="text-[10px] text-[#bbb]">
+                            {filteredProjects.length}{pjStatusFilter !== 'all' ? `/${allDivProjects.length}` : ''}件
+                          </span>
+                        </div>
+                        {isOpen ? (
+                          <ChevronUp className="w-3.5 h-3.5 text-[#ccc]" />
+                        ) : (
+                          <ChevronDown className="w-3.5 h-3.5 text-[#ccc]" />
+                        )}
+                      </button>
+                      {isOpen && (
+                        <div className="border-t border-[#f0f0f0]">
+                          {filteredProjects.length === 0 ? (
+                            <p className="text-[10px] text-[#ccc] px-3 py-3">
+                              {pjStatusFilter !== 'all' ? `${PROJECT_STATUS[pjStatusFilter]}のプロジェクトなし` : 'プロジェクトなし'}
+                            </p>
+                          ) : (
+                            <>
+                              <div className="divide-y divide-[#f5f5f3]">
+                                {visibleProjects.map((pj) => (
+                                  <div key={pj.id} className="flex items-center justify-between py-2 px-3">
+                                    <div className="min-w-0">
+                                      <div className="text-sm text-[#1a1a1a] truncate">{pj.name}</div>
+                                      <div className="text-[10px] text-[#999]">
+                                        {pj.owner === 'tomo' ? 'トモ' : 'トシキ'}
+                                        {pj.client ? ` · ${pj.client}` : ''}
+                                        {' · '}{PROJECT_STATUS[pj.status] || pj.status}
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      <button onClick={() => { setEditingProject(pj); setProjectModalOpen(true); }}
+                                        className="p-1 hover:bg-black/5 rounded-md"><Pencil className="w-3.5 h-3.5 text-[#999]" /></button>
+                                      <button onClick={() => setProjectDeleteTarget(pj.id)}
+                                        className="p-1 hover:bg-[#C23728]/10 rounded-md"><Trash2 className="w-3.5 h-3.5 text-[#999]" /></button>
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
-                              <div className="flex items-center gap-1 shrink-0">
-                                <button onClick={() => { setEditingProject(pj); setProjectModalOpen(true); }}
-                                  className="p-1 hover:bg-black/5 rounded-md"><Pencil className="w-3.5 h-3.5 text-[#999]" /></button>
-                                <button onClick={() => setProjectDeleteTarget(pj.id)}
-                                  className="p-1 hover:bg-[#C23728]/10 rounded-md"><Trash2 className="w-3.5 h-3.5 text-[#999]" /></button>
-                              </div>
-                            </div>
-                          ))}
+                              {hasMore && (
+                                <button
+                                  onClick={() => setPjVisibleCount(prev => ({ ...prev, [divId]: visibleCount + PJ_PAGE_SIZE }))}
+                                  className="w-full py-2 text-[10px] text-[#D4A03A] hover:text-[#b8882e] hover:bg-[#fafafa] transition-colors border-t border-[#f0f0f0]"
+                                >
+                                  さらに{Math.min(PJ_PAGE_SIZE, filteredProjects.length - visibleCount)}件表示
+                                </button>
+                              )}
+                            </>
+                          )}
                         </div>
                       )}
                     </div>
