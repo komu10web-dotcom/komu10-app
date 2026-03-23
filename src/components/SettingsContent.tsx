@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { KAMOKU, DIVISIONS } from '@/types/database';
-import type { AnbunSetting, Asset, RevenueType, RevenueTypeDivision, ContractType, BankAccount } from '@/types/database';
+import type { AnbunSetting, Asset, RevenueType, RevenueTypeDivision, ContractType, BankAccount, Client } from '@/types/database';
 import { Plus, Pencil, Trash2, Save, X, Loader2, ChevronDown, ChevronUp, HelpCircle, Cloud, CheckCircle2 } from 'lucide-react';
 
 // ============================================================
@@ -130,6 +130,12 @@ export default function SettingsContent() {
   const [editingBank, setEditingBank] = useState<BankAccount | null>(null);
   const [bankDeleteTarget, setBankDeleteTarget] = useState<string | null>(null);
 
+  // 取引先
+  const [clients, setClients] = useState<Client[]>([]);
+  const [clientModalOpen, setClientModalOpen] = useState(false);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [clientDeleteTarget, setClientDeleteTarget] = useState<string | null>(null);
+
   // ============================================================
   // データ取得
   // ============================================================
@@ -182,6 +188,13 @@ export default function SettingsContent() {
         .eq('owner', effectiveOwner)
         .order('created_at');
 
+      // 取引先
+      const { data: clientData } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('owner', effectiveOwner)
+        .order('name');
+
       setAnbunSettings(anbunData || []);
       setAssets(assetData || []);
       if (profileData) {
@@ -192,6 +205,7 @@ export default function SettingsContent() {
       setRevenueTypes(rtData || []);
       setRevenueTypeDivisions(rtdData || []);
       setBankAccounts(bankData || []);
+      setClients(clientData || []);
 
       // 按分ドラフト初期化
       const draft: Record<string, { ratio: number; note: string }> = {};
@@ -504,6 +518,44 @@ export default function SettingsContent() {
   };
 
   // ============================================================
+  // 取引先 CRUD
+  // ============================================================
+  const refreshClients = async () => {
+    if (!supabase) return;
+    const { data } = await supabase.from('clients').select('*').eq('owner', effectiveOwner).order('name');
+    setClients(data || []);
+  };
+
+  const saveClient = async (data: {
+    name: string; payment_terms: string; payment_terms_days: number | null;
+    default_contact: string; notes: string;
+  }) => {
+    if (!supabase) return;
+    try {
+      const record = { ...data, owner: effectiveOwner };
+      if (editingClient) {
+        const { error } = await supabase.from('clients').update(record).eq('id', editingClient.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('clients').insert(record);
+        if (error) throw error;
+      }
+      setClientModalOpen(false);
+      setEditingClient(null);
+      await refreshClients();
+    } catch (err) { console.error('取引先保存エラー:', err); }
+  };
+
+  const deleteClient = async (id: string) => {
+    if (!supabase) return;
+    try {
+      await supabase.from('clients').delete().eq('id', id);
+      setClientDeleteTarget(null);
+      await refreshClients();
+    } catch (err) { console.error('取引先削除エラー:', err); }
+  };
+
+  // ============================================================
   // レンダリング
   // ============================================================
   if (loading) {
@@ -563,6 +615,44 @@ export default function SettingsContent() {
               className="flex items-center gap-1.5 text-xs text-[#D4A03A] hover:text-[#b8882e] transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />口座を追加
+            </button>
+          </div>
+        </section>
+
+        {/* ── 取引先管理 ── */}
+        <section className="mb-10">
+          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+            取引先
+          </div>
+          <div className="bg-white rounded-xl shadow-sm p-5">
+            {clients.length === 0 ? (
+              <p className="text-[11px] text-[#999] mb-3">取引先が登録されていません</p>
+            ) : (
+              <div className="space-y-2 mb-4">
+                {clients.map((cl) => (
+                  <div key={cl.id} className="flex items-center justify-between py-2 px-3 bg-[#F5F5F3] rounded-lg">
+                    <div>
+                      <div className="text-sm text-[#1a1a1a] font-medium">{cl.name}</div>
+                      <div className="text-[11px] text-[#999]">
+                        {cl.payment_terms || '支払いサイト未設定'}
+                        {cl.default_contact ? ` / ${cl.default_contact}` : ''}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => { setEditingClient(cl); setClientModalOpen(true); }}
+                        className="p-1 hover:bg-black/5 rounded-md"><Pencil className="w-3.5 h-3.5 text-[#999]" /></button>
+                      <button onClick={() => setClientDeleteTarget(cl.id)}
+                        className="p-1 hover:bg-[#C23728]/10 rounded-md"><Trash2 className="w-3.5 h-3.5 text-[#999]" /></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button
+              onClick={() => { setEditingClient(null); setClientModalOpen(true); }}
+              className="flex items-center gap-1.5 text-xs text-[#D4A03A] hover:text-[#b8882e] transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />取引先を追加
             </button>
           </div>
         </section>
@@ -1164,6 +1254,35 @@ export default function SettingsContent() {
           </div>
         </div>
       )}
+
+      {/* ── 取引先モーダル ── */}
+      {clientModalOpen && (
+        <ClientModal
+          client={editingClient}
+          onSave={saveClient}
+          onClose={() => { setClientModalOpen(false); setEditingClient(null); }}
+        />
+      )}
+
+      {/* ── 取引先削除確認 ── */}
+      {clientDeleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setClientDeleteTarget(null)} />
+          <div className="relative bg-white rounded-2xl p-6 max-w-sm mx-4" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
+            <p className="text-sm text-[#1a1a1a] mb-4">この取引先を削除しますか？</p>
+            <div className="flex gap-2">
+              <button onClick={() => setClientDeleteTarget(null)}
+                className="flex-1 py-2 text-xs text-[#999] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors">
+                キャンセル
+              </button>
+              <button onClick={() => deleteClient(clientDeleteTarget)}
+                className="flex-1 py-2 text-xs text-white bg-[#C23728] rounded-lg hover:bg-[#a82e21] transition-colors">
+                削除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1459,6 +1578,148 @@ function BankModal({
             className="flex-1 py-2.5 text-xs text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
             {saving && <Loader2 className="w-3 h-3 animate-spin" />}
             {bank ? '更新する' : '追加する'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// 取引先モーダル
+// ============================================================
+const PAYMENT_TERMS_PRESETS = [
+  { label: '月末締翌月末', terms: '月末締翌月末', days: 30 },
+  { label: '月末締翌々月末', terms: '月末締翌々月末', days: 60 },
+  { label: '即日', terms: '即日', days: 0 },
+] as const;
+
+function ClientModal({
+  client,
+  onSave,
+  onClose,
+}: {
+  client: Client | null;
+  onSave: (data: { name: string; payment_terms: string; payment_terms_days: number | null; default_contact: string; notes: string }) => void;
+  onClose: () => void;
+}) {
+  const [form, setForm] = useState({
+    name: client?.name || '',
+    payment_terms: client?.payment_terms || '',
+    payment_terms_days: client?.payment_terms_days?.toString() || '',
+    default_contact: client?.default_contact || '',
+    notes: client?.notes || '',
+  });
+
+  const [saving, setSaving] = useState(false);
+  const canSave = form.name.trim().length > 0;
+
+  const applyPreset = (preset: typeof PAYMENT_TERMS_PRESETS[number]) => {
+    setForm(prev => ({
+      ...prev,
+      payment_terms: preset.terms,
+      payment_terms_days: preset.days.toString(),
+    }));
+  };
+
+  const handleSave = () => {
+    if (!canSave) return;
+    setSaving(true);
+    onSave({
+      name: form.name.trim(),
+      payment_terms: form.payment_terms.trim() || null as any,
+      payment_terms_days: form.payment_terms_days ? parseInt(form.payment_terms_days) : null,
+      default_contact: form.default_contact.trim() || null as any,
+      notes: form.notes.trim() || null as any,
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl w-full max-w-md mx-4 max-h-[85vh] overflow-y-auto"
+        style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <h2 className="text-sm font-medium text-[#1a1a1a]">
+            {client ? '取引先を編集' : '取引先を追加'}
+          </h2>
+          <button onClick={onClose} className="p-1 hover:bg-black/5 rounded-md transition-colors">
+            <X className="w-4 h-4 text-[#999]" />
+          </button>
+        </div>
+
+        <div className="px-5 py-4 space-y-4">
+          {/* 取引先名 */}
+          <div>
+            <label className="block text-xs text-[#999] mb-1">取引先名 <span className="text-[#C23728]">*</span></label>
+            <input type="text" value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              placeholder="例: 長崎市DMO"
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+          </div>
+
+          {/* 支払いサイト */}
+          <div>
+            <label className="block text-xs text-[#999] mb-1">支払いサイト</label>
+            <div className="flex gap-1.5 mb-2">
+              {PAYMENT_TERMS_PRESETS.map((p) => (
+                <button key={p.label} type="button"
+                  onClick={() => applyPreset(p)}
+                  className={`px-2.5 py-1 text-[11px] rounded-md transition-colors ${
+                    form.payment_terms === p.terms
+                      ? 'bg-[#1a1a1a] text-white'
+                      : 'bg-[#F5F5F3] text-[#666] hover:bg-[#eee]'
+                  }`}>
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <input type="text" value={form.payment_terms}
+                  onChange={(e) => setForm({ ...form, payment_terms: e.target.value })}
+                  placeholder="表示名（月末締翌月末 等）"
+                  className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+              </div>
+              <div className="w-20">
+                <input type="text" inputMode="numeric" value={form.payment_terms_days}
+                  onChange={(e) => { const v = e.target.value.replace(/\D/g, ''); setForm({ ...form, payment_terms_days: v }); }}
+                  placeholder="日数"
+                  className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed'] tabular-nums text-center" />
+                <span className="text-[10px] text-[#999] mt-0.5 block text-center">日</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 担当者連絡先 */}
+          <div>
+            <label className="block text-xs text-[#999] mb-1">担当者・連絡先（任意）</label>
+            <input type="text" value={form.default_contact}
+              onChange={(e) => setForm({ ...form, default_contact: e.target.value })}
+              placeholder="例: 田中太郎 tanaka@example.com"
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+          </div>
+
+          {/* メモ */}
+          <div>
+            <label className="block text-xs text-[#999] mb-1">メモ（任意）</label>
+            <textarea value={form.notes}
+              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              placeholder="契約条件や備考など"
+              rows={2}
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 resize-none" />
+          </div>
+        </div>
+
+        <div className="px-5 py-4 border-t border-gray-100 flex gap-2">
+          <button onClick={onClose}
+            className="flex-1 py-2.5 text-xs text-[#999] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors">
+            キャンセル
+          </button>
+          <button onClick={handleSave} disabled={!canSave || saving}
+            className="flex-1 py-2.5 text-xs text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
+            {saving && <Loader2 className="w-3 h-3 animate-spin" />}
+            {client ? '更新する' : '追加する'}
           </button>
         </div>
       </div>
