@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { KAMOKU, DIVISIONS } from '@/types/database';
-import type { AnbunSetting, Asset, RevenueType, RevenueTypeDivision, ContractType } from '@/types/database';
+import type { AnbunSetting, Asset, RevenueType, RevenueTypeDivision, ContractType, BankAccount } from '@/types/database';
 import { Plus, Pencil, Trash2, Save, X, Loader2, ChevronDown, ChevronUp, HelpCircle, Cloud, CheckCircle2 } from 'lucide-react';
 
 // ============================================================
@@ -124,6 +124,12 @@ export default function SettingsContent() {
   const [driveBackupFileName, setDriveBackupFileName] = useState('');
   const [driveBackupError, setDriveBackupError] = useState('');
 
+  // 口座
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+  const [bankModalOpen, setBankModalOpen] = useState(false);
+  const [editingBank, setEditingBank] = useState<BankAccount | null>(null);
+  const [bankDeleteTarget, setBankDeleteTarget] = useState<string | null>(null);
+
   // ============================================================
   // データ取得
   // ============================================================
@@ -169,6 +175,13 @@ export default function SettingsContent() {
         .from('revenue_type_divisions')
         .select('*');
 
+      // 口座
+      const { data: bankData } = await supabase
+        .from('bank_accounts')
+        .select('*')
+        .eq('owner', effectiveOwner)
+        .order('created_at');
+
       setAnbunSettings(anbunData || []);
       setAssets(assetData || []);
       if (profileData) {
@@ -178,6 +191,7 @@ export default function SettingsContent() {
       setContractTypes(ctData || []);
       setRevenueTypes(rtData || []);
       setRevenueTypeDivisions(rtdData || []);
+      setBankAccounts(bankData || []);
 
       // 按分ドラフト初期化
       const draft: Record<string, { ratio: number; note: string }> = {};
@@ -456,6 +470,40 @@ export default function SettingsContent() {
   };
 
   // ============================================================
+  // 口座 CRUD
+  // ============================================================
+  const saveBank = async (data: {
+    name: string; bank_name: string; branch_name: string;
+    account_type: string; account_number_last4: string; balance: number;
+  }) => {
+    if (!supabase) return;
+    try {
+      const record = { ...data, owner: effectiveOwner };
+      if (editingBank) {
+        const { error } = await supabase.from('bank_accounts').update(record).eq('id', editingBank.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('bank_accounts').insert(record);
+        if (error) throw error;
+      }
+      setBankModalOpen(false);
+      setEditingBank(null);
+      const { data: refreshed } = await supabase.from('bank_accounts').select('*').eq('owner', effectiveOwner).order('created_at');
+      setBankAccounts(refreshed || []);
+    } catch (err) { console.error('口座保存エラー:', err); }
+  };
+
+  const deleteBank = async (id: string) => {
+    if (!supabase) return;
+    try {
+      await supabase.from('bank_accounts').delete().eq('id', id);
+      setBankDeleteTarget(null);
+      const { data: refreshed } = await supabase.from('bank_accounts').select('*').eq('owner', effectiveOwner).order('created_at');
+      setBankAccounts(refreshed || []);
+    } catch (err) { console.error('口座削除エラー:', err); }
+  };
+
+  // ============================================================
   // レンダリング
   // ============================================================
   if (loading) {
@@ -476,6 +524,48 @@ export default function SettingsContent() {
             SETTINGS — {ownerLabel}
           </p>
         </div>
+
+        {/* ── 事業用口座 ── */}
+        <section className="mb-10">
+          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+            事業用口座
+          </div>
+          <div className="bg-white rounded-xl shadow-sm p-5">
+            {bankAccounts.length === 0 ? (
+              <p className="text-[11px] text-[#999] mb-3">口座が登録されていません</p>
+            ) : (
+              <div className="space-y-2 mb-4">
+                {bankAccounts.map((ba) => (
+                  <div key={ba.id} className="flex items-center justify-between py-2 px-3 bg-[#F5F5F3] rounded-lg">
+                    <div>
+                      <div className="text-sm text-[#1a1a1a] font-medium">{ba.name}</div>
+                      <div className="text-[11px] text-[#999]">
+                        {ba.bank_name}{ba.branch_name ? ` ${ba.branch_name}` : ''} / {ba.account_type === 'checking' ? '当座' : '普通'}{ba.account_number_last4 ? ` ****${ba.account_number_last4}` : ''}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-['Saira_Condensed'] tabular-nums text-sm text-[#1a1a1a]">
+                        ¥{ba.balance.toLocaleString()}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => { setEditingBank(ba); setBankModalOpen(true); }}
+                          className="p-1 hover:bg-black/5 rounded-md"><Pencil className="w-3.5 h-3.5 text-[#999]" /></button>
+                        <button onClick={() => setBankDeleteTarget(ba.id)}
+                          className="p-1 hover:bg-[#C23728]/10 rounded-md"><Trash2 className="w-3.5 h-3.5 text-[#999]" /></button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button
+              onClick={() => { setEditingBank(null); setBankModalOpen(true); }}
+              className="flex items-center gap-1.5 text-xs text-[#D4A03A] hover:text-[#b8882e] transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />口座を追加
+            </button>
+          </div>
+        </section>
 
         {/* ── 按分設定 ── */}
         <section className="mb-10">
@@ -1045,6 +1135,35 @@ export default function SettingsContent() {
           </div>
         </div>
       )}
+
+      {/* ── 口座モーダル ── */}
+      {bankModalOpen && (
+        <BankModal
+          bank={editingBank}
+          onSave={saveBank}
+          onClose={() => { setBankModalOpen(false); setEditingBank(null); }}
+        />
+      )}
+
+      {/* ── 口座削除確認 ── */}
+      {bankDeleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setBankDeleteTarget(null)} />
+          <div className="relative bg-white rounded-2xl p-6 max-w-sm mx-4" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
+            <p className="text-sm text-[#1a1a1a] mb-4">この口座を削除しますか？</p>
+            <div className="flex gap-2">
+              <button onClick={() => setBankDeleteTarget(null)}
+                className="flex-1 py-2 text-xs text-[#999] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors">
+                キャンセル
+              </button>
+              <button onClick={() => deleteBank(bankDeleteTarget)}
+                className="flex-1 py-2 text-xs text-white bg-[#C23728] rounded-lg hover:bg-[#a82e21] transition-colors">
+                削除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1222,6 +1341,124 @@ function AssetModal({
             className="px-4 py-2 text-xs text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] disabled:opacity-30 transition-colors"
           >
             {asset ? '更新' : '追加'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// 口座モーダル
+// ============================================================
+function BankModal({
+  bank,
+  onSave,
+  onClose,
+}: {
+  bank: BankAccount | null;
+  onSave: (data: { name: string; bank_name: string; branch_name: string; account_type: string; account_number_last4: string; balance: number }) => void;
+  onClose: () => void;
+}) {
+  const [form, setForm] = useState({
+    name: bank?.name || '',
+    bank_name: bank?.bank_name || '',
+    branch_name: bank?.branch_name || '',
+    account_type: bank?.account_type || 'savings',
+    account_number_last4: bank?.account_number_last4 || '',
+    balance: bank?.balance?.toString() || '0',
+  });
+
+  const [saving, setSaving] = useState(false);
+  const canSave = form.name.trim() && form.bank_name.trim();
+
+  const handleSave = () => {
+    if (!canSave) return;
+    setSaving(true);
+    onSave({
+      name: form.name.trim(),
+      bank_name: form.bank_name.trim(),
+      branch_name: form.branch_name.trim(),
+      account_type: form.account_type,
+      account_number_last4: form.account_number_last4.trim(),
+      balance: parseInt(form.balance.replace(/,/g, '')) || 0,
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
+      <div className="relative bg-white rounded-2xl w-full max-w-md mx-4 max-h-[85vh] overflow-y-auto"
+        style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <h2 className="text-sm font-medium text-[#1a1a1a]">
+            {bank ? '口座を編集' : '口座を追加'}
+          </h2>
+          <button onClick={onClose} className="p-1 hover:bg-black/5 rounded-md transition-colors">
+            <X className="w-4 h-4 text-[#999]" />
+          </button>
+        </div>
+
+        <div className="px-5 py-4 space-y-4">
+          <div>
+            <label className="block text-xs text-[#999] mb-1">口座名（通称）</label>
+            <input type="text" value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              placeholder="例: 住信SBI メイン"
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+          </div>
+          <div>
+            <label className="block text-xs text-[#999] mb-1">銀行名</label>
+            <input type="text" value={form.bank_name}
+              onChange={(e) => setForm({ ...form, bank_name: e.target.value })}
+              placeholder="例: 住信SBIネット銀行"
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+          </div>
+          <div>
+            <label className="block text-xs text-[#999] mb-1">支店名（任意）</label>
+            <input type="text" value={form.branch_name}
+              onChange={(e) => setForm({ ...form, branch_name: e.target.value })}
+              placeholder="例: 法人第一支店"
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+          </div>
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-xs text-[#999] mb-1">口座種別</label>
+              <select value={form.account_type}
+                onChange={(e) => setForm({ ...form, account_type: e.target.value })}
+                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
+                <option value="savings">普通</option>
+                <option value="checking">当座</option>
+              </select>
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs text-[#999] mb-1">口座番号（下4桁）</label>
+              <input type="text" value={form.account_number_last4}
+                onChange={(e) => { const v = e.target.value.replace(/\D/g, '').slice(0, 4); setForm({ ...form, account_number_last4: v }); }}
+                placeholder="1234"
+                maxLength={4}
+                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed'] tabular-nums" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-[#999] mb-1">現在残高（円）</label>
+            <input type="text" inputMode="numeric"
+              value={form.balance ? Number(form.balance.replace(/,/g, '')).toLocaleString() : ''}
+              onChange={(e) => { const v = e.target.value.replace(/,/g, ''); if (/^\d*$/.test(v)) setForm({ ...form, balance: v }); }}
+              placeholder="0"
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed'] tabular-nums" />
+          </div>
+        </div>
+
+        <div className="px-5 py-4 border-t border-gray-100 flex gap-2">
+          <button onClick={onClose}
+            className="flex-1 py-2.5 text-xs text-[#999] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors">
+            キャンセル
+          </button>
+          <button onClick={handleSave} disabled={!canSave || saving}
+            className="flex-1 py-2.5 text-xs text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
+            {saving && <Loader2 className="w-3 h-3 animate-spin" />}
+            {bank ? '更新する' : '追加する'}
           </button>
         </div>
       </div>
