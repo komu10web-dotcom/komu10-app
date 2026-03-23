@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, Loader2, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { KAMOKU, DIVISIONS } from '@/types/database';
+import { KAMOKU, DIVISIONS, TRANSACTION_STATUS } from '@/types/database';
 import type { Transaction, Project } from '@/types/database';
 import TransportFields, { EMPTY_TRANSPORT } from '@/components/TransportFields';
 import type { TransportData } from '@/components/TransportFields';
@@ -56,6 +56,8 @@ export default function TransactionModal({
     kamoku: 'misc',
     owner: defaultOwner === 'all' ? 'tomo' : defaultOwner,
     description: '',
+    status: 'settled',
+    actual_payment_date: '',
   });
 
   useEffect(() => {
@@ -67,6 +69,8 @@ export default function TransactionModal({
         kamoku: editData.kamoku,
         owner: editData.owner,
         description: editData.description || '',
+        status: editData.status || 'settled',
+        actual_payment_date: editData.actual_payment_date || '',
       });
       if (editData.kamoku === 'travel') {
         loadTransportDetails(editData.id).then((td) => {
@@ -98,6 +102,8 @@ export default function TransactionModal({
         kamoku: 'misc',
         owner: defaultOwner === 'all' ? 'tomo' : defaultOwner,
         description: '',
+        status: 'settled',
+        actual_payment_date: '',
       });
       setTransportData({ ...EMPTY_TRANSPORT });
       setEntertainmentData({ ...EMPTY_ENTERTAINMENT });
@@ -172,6 +178,9 @@ export default function TransactionModal({
       description: finalDescription,
       source: 'manual' as const,
       confirmed: true,
+      status: form.status || 'settled',
+      accrual_date: form.date,
+      actual_payment_date: form.actual_payment_date || form.date,
     };
 
     try {
@@ -288,6 +297,31 @@ export default function TransactionModal({
             <label className="text-xs text-[#999] block mb-1">内容・摘要</label>
             <input type="text" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
               className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50" placeholder="任意" />
+          </div>
+
+          {/* ===== ステータス・支払日 ===== */}
+          <div className="pt-3 border-t border-gray-100 space-y-3">
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="text-xs text-[#999] block mb-1">ステータス</label>
+                <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}
+                  className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
+                  <option value="settled">{TRANSACTION_STATUS.settled}</option>
+                  <option value="forecast">{TRANSACTION_STATUS.forecast}</option>
+                  <option value="accrued">{TRANSACTION_STATUS.accrued}</option>
+                </select>
+              </div>
+              {form.status !== 'settled' && (
+                <div className="flex-1">
+                  <label className="text-xs text-[#999] block mb-1">支払予定日</label>
+                  <input type="date" value={form.actual_payment_date} onChange={(e) => setForm({ ...form, actual_payment_date: e.target.value })}
+                    className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+                </div>
+              )}
+            </div>
+            {form.status === 'settled' && (
+              <p className="text-[10px] text-[#999]">利用日と同日に支払済みとして記録されます</p>
+            )}
           </div>
 
           {/* ===== 事業・PJ割り当て（複数行按分） ===== */}

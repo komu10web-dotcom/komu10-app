@@ -2,7 +2,15 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import { KAMOKU } from '@/types/database';
+import { KAMOKU, TRANSACTION_STATUS } from '@/types/database';
+
+// ステータスバッジの色定義
+const STATUS_STYLES: Record<string, { bg: string; text: string }> = {
+  forecast: { bg: 'bg-[#F5F5F3]', text: 'text-[#999]' },
+  accrued:  { bg: 'bg-[#81D8D0]/10', text: 'text-[#1B4D3E]' },
+  billed:   { bg: 'bg-[#D4A03A]/10', text: 'text-[#D4A03A]' },
+  settled:  { bg: 'bg-[#1B4D3E]/10', text: 'text-[#1B4D3E]' },
+};
 import type { Transaction, Project } from '@/types/database';
 import { Plus, Upload, Pencil, Trash2, Search, Loader2 } from 'lucide-react';
 import TransactionModal from './TransactionModal';
@@ -190,6 +198,7 @@ export default function ExpensesContent() {
                 <thead>
                   <tr className="border-b border-gray-100">
                     <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">日付</th>
+                    <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">ステータス</th>
                     <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">取引先</th>
                     <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">科目</th>
                     <th className="text-right px-4 py-3 text-xs text-[#999] font-normal">金額</th>
@@ -199,10 +208,18 @@ export default function ExpensesContent() {
                 <tbody>
                   {filtered.map((tx) => {
                     const kamokuName = KAMOKU[tx.kamoku as keyof typeof KAMOKU]?.name || tx.kamoku;
+                    const effStatus = tx.status || 'settled';
+                    const statusStyle = STATUS_STYLES[effStatus] || STATUS_STYLES.settled;
+                    const statusLabel = TRANSACTION_STATUS[effStatus as keyof typeof TRANSACTION_STATUS] || TRANSACTION_STATUS.settled;
                     return (
                       <tr key={tx.id} className="border-b border-gray-50 hover:bg-[#F5F5F3]/50 transition-colors">
                         <td className="px-4 py-3 font-['Saira_Condensed'] text-xs text-[#999] tabular-nums">
                           {formatDate(tx.date)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium ${statusStyle.bg} ${statusStyle.text}`}>
+                            {statusLabel}
+                          </span>
                         </td>
                         <td className="px-4 py-3">
                           <div className="text-[#1a1a1a]">{tx.store || '—'}</div>
