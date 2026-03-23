@@ -165,7 +165,8 @@ function generateJournalEntries(
     const hasDateDiff = tx.actual_payment_date && tx.date !== tx.actual_payment_date;
 
     if (tx.tx_type === 'expense') {
-      // 貸方: 現状は全経費「事業主借」（事業口座未開設）
+      // 貸方: 個人立替→事業主借、事業口座支払→普通預金
+      // 現状は全経費が個人立替のため事業主借。将来、経費入力に支払方法選択を追加した時に分岐
       const creditAccount = '事業主借';
 
       if (hasDateDiff) {
