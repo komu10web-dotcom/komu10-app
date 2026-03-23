@@ -415,14 +415,14 @@ export default function TaxReturnContent() {
   // ============================================================
   if (loading) {
     return (
-      <div className="bg-[#F5F5F3] min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-5 h-5 text-[#D4A03A] animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="bg-[#F5F5F3] min-h-screen">
+    <div className="min-h-screen">
       <div className="max-w-3xl mx-auto px-6 py-8">
         {/* ヘッダー */}
         <div className="mb-8">

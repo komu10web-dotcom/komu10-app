@@ -220,7 +220,7 @@ export default function HomeContent() {
   };
 
   return (
-    <div className="bg-[#F5F5F3] min-h-screen">
+    <div className="min-h-screen">
       <div className="max-w-lg mx-auto px-4 py-8 space-y-6">
 
         {/* ── サマリー ── */}
