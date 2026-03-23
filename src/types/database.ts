@@ -398,3 +398,19 @@ export const RECURRING_FREQUENCY = {
   quarterly: '四半期',
   annual: '年次',
 } as const;
+
+// 口座明細の照合ステータス
+export const BANK_MATCH_STATUS = {
+  unmatched: '未照合',
+  matched: '照合済み',
+  owner_deposit: '個人入金（事業主借）',
+  owner_withdrawal: '個人引出（事業主貸）',
+  ignored: '無視',
+} as const;
+
+// 資金移動パターンと仕訳ルール（Phase 4で使用）
+// ① 個人→事業口座（資金注入）: 普通預金 / 事業主借 → match_status = owner_deposit
+// ② クライアント→事業口座（売上入金）: 普通預金 / 売掛金 → match_status = matched
+// ③ 事業口座→経費支払（デビット）: 科目 / 普通預金 → match_status = matched
+// ④ 事業口座→個人口座（生活費引出）: 事業主貸 / 普通預金 → match_status = owner_withdrawal
+// 口座開設日以降の経費は貸方「普通預金」、それ以前は「事業主借」（仕訳帳で自動判定）
