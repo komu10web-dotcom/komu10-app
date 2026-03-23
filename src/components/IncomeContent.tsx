@@ -2,8 +2,16 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import { DIVISIONS } from '@/types/database';
+import { DIVISIONS, TRANSACTION_STATUS } from '@/types/database';
 import type { Transaction, RevenueType, RevenueTypeDivision, ContractType, Project } from '@/types/database';
+
+// ステータスバッジの色定義
+const STATUS_STYLES: Record<string, { bg: string; text: string }> = {
+  forecast: { bg: 'bg-[#F5F5F3]', text: 'text-[#999]' },
+  accrued:  { bg: 'bg-[#81D8D0]/10', text: 'text-[#1B4D3E]' },
+  billed:   { bg: 'bg-[#D4A03A]/10', text: 'text-[#D4A03A]' },
+  settled:  { bg: 'bg-[#1B4D3E]/10', text: 'text-[#1B4D3E]' },
+};
 import { Plus, Upload, Pencil, Trash2, Search, Loader2, X } from 'lucide-react';
 import { usePeriodRange } from './HeaderControls';
 
@@ -114,6 +122,13 @@ export default function IncomeContent() {
     const pj = projects.find((p) => p.id === projectId);
     return pj ? pj.name : projectId;
   };
+
+  // ── ステータス名引き当て ──
+  const getStatusLabel = (status: string | null): string => {
+    if (!status) return TRANSACTION_STATUS.settled;
+    return TRANSACTION_STATUS[status as keyof typeof TRANSACTION_STATUS] || TRANSACTION_STATUS.settled;
+  };
+  const getEffectiveStatus = (status: string | null): string => status || 'settled';
 
   // ── フィルター適用 ──
   const filtered = transactions.filter((tx) => {
@@ -298,6 +313,7 @@ export default function IncomeContent() {
                 <thead>
                   <tr className="border-b border-gray-100">
                     <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">日付</th>
+                    <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">ステータス</th>
                     <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">取引先</th>
                     <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">事業</th>
                     <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">契約区分</th>
@@ -313,10 +329,17 @@ export default function IncomeContent() {
                     const ctName = getContractTypeName(tx.contract_type_id);
                     const pjName = getProjectName(tx.project_id);
                     const div = DIVISIONS[tx.division as keyof typeof DIVISIONS];
+                    const effStatus = getEffectiveStatus(tx.status);
+                    const statusStyle = STATUS_STYLES[effStatus] || STATUS_STYLES.settled;
                     return (
                       <tr key={tx.id} className="border-b border-gray-50 hover:bg-[#F5F5F3]/50 transition-colors">
                         <td className="px-4 py-3 font-['Saira_Condensed'] text-xs text-[#999] tabular-nums">
                           {formatDate(tx.date)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium ${statusStyle.bg} ${statusStyle.text}`}>
+                            {getStatusLabel(tx.status)}
+                          </span>
                         </td>
                         <td className="px-4 py-3">
                           <div className="text-[#1a1a1a]">{tx.store || '—'}</div>
@@ -370,14 +393,37 @@ export default function IncomeContent() {
           )}
 
           {/* ── フッター集計 ── */}
-          {!loading && filtered.length > 0 && (
-            <div className="flex items-center justify-end px-4 py-3 border-t border-gray-100 bg-[#F5F5F3]/50">
-              <div className="text-xs">
-                <span className="text-[#999]">合計: </span>
-                <span className="font-['Saira_Condensed'] text-[#1B4D3E] tabular-nums">{formatAmount(revenueSum)}</span>
+          {!loading && filtered.length > 0 && (() => {
+            const forecastSum = filtered.filter(t => getEffectiveStatus(t.status) === 'forecast').reduce((s, t) => s + t.amount, 0);
+            const settledSum = filtered.filter(t => getEffectiveStatus(t.status) === 'settled').reduce((s, t) => s + t.amount, 0);
+            const otherSum = revenueSum - forecastSum - settledSum;
+            return (
+              <div className="flex items-center justify-end gap-4 px-4 py-3 border-t border-gray-100 bg-[#F5F5F3]/50">
+                {forecastSum > 0 && (
+                  <div className="text-xs">
+                    <span className="text-[#999]">見込み: </span>
+                    <span className="font-['Saira_Condensed'] text-[#999] tabular-nums">{formatAmount(forecastSum)}</span>
+                  </div>
+                )}
+                {otherSum > 0 && (
+                  <div className="text-xs">
+                    <span className="text-[#999]">確定未入金: </span>
+                    <span className="font-['Saira_Condensed'] text-[#D4A03A] tabular-nums">{formatAmount(otherSum)}</span>
+                  </div>
+                )}
+                {settledSum > 0 && (
+                  <div className="text-xs">
+                    <span className="text-[#999]">入金済: </span>
+                    <span className="font-['Saira_Condensed'] text-[#1B4D3E] tabular-nums">{formatAmount(settledSum)}</span>
+                  </div>
+                )}
+                <div className="text-xs">
+                  <span className="text-[#999]">合計: </span>
+                  <span className="font-['Saira_Condensed'] text-[#1B4D3E] tabular-nums font-medium">{formatAmount(revenueSum)}</span>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       </div>
 
@@ -452,6 +498,9 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
     revenue_type: editData?.revenue_type || '',
     owner: editData?.owner || defaultOwner,
     description: editData?.description || '',
+    status: editData?.status || 'forecast',
+    expected_payment_date: editData?.expected_payment_date || '',
+    actual_payment_date: editData?.actual_payment_date || '',
   });
 
   const handleChange = (field: string, value: string) => {
@@ -528,6 +577,10 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
         project_id: form.project_id || null,
         source: 'manual',
         confirmed: true,
+        status: form.status || 'forecast',
+        accrual_date: form.date,
+        expected_payment_date: form.expected_payment_date || null,
+        actual_payment_date: form.actual_payment_date || null,
       };
 
       if (editData) {
@@ -569,9 +622,23 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
 
         {/* フォーム */}
         <div className="px-5 py-4 space-y-4">
-          {/* 日付 */}
+          {/* ステータス */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">日付</label>
+            <label className="block text-xs text-[#999] mb-1">ステータス</label>
+            <select
+              value={form.status}
+              onChange={(e) => handleChange('status', e.target.value)}
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+            >
+              {Object.entries(TRANSACTION_STATUS).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* 計上日（PL） */}
+          <div>
+            <label className="block text-xs text-[#999] mb-1">計上日（納品日・役務提供日）</label>
             <input
               type="date"
               value={form.date}
@@ -579,6 +646,30 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
               className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
             />
           </div>
+
+          {/* 入金予定日 */}
+          <div>
+            <label className="block text-xs text-[#999] mb-1">入金予定日（任意）</label>
+            <input
+              type="date"
+              value={form.expected_payment_date}
+              onChange={(e) => handleChange('expected_payment_date', e.target.value)}
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+            />
+          </div>
+
+          {/* 入金日（settledの場合のみ表示） */}
+          {form.status === 'settled' && (
+            <div>
+              <label className="block text-xs text-[#999] mb-1">入金日</label>
+              <input
+                type="date"
+                value={form.actual_payment_date}
+                onChange={(e) => handleChange('actual_payment_date', e.target.value)}
+                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+              />
+            </div>
+          )}
 
           {/* 金額 */}
           <div>
