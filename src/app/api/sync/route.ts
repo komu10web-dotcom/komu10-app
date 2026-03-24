@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxTJC1o9bj--xU_cae3bGpz62-QzqjpfPuBOVAxXF7Y0nk2BLXAYmrPqma5i25JQ9to/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwiGFVxofGPnaPJnox_K7GeW01elk9ZGPoN0dWC9bi9hqoKdEmXbGtxQZjDRWw94oah/exec';
 
 export async function POST() {
   try {

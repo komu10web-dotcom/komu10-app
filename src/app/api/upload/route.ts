@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxTJC1o9bj--xU_cae3bGpz62-QzqjpfPuBOVAxXF7Y0nk2BLXAYmrPqma5i25JQ9to/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwiGFVxofGPnaPJnox_K7GeW01elk9ZGPoN0dWC9bi9hqoKdEmXbGtxQZjDRWw94oah/exec';
 const PARENT_FOLDER_ID = '1Rcd2MWZLMA7bDax4MLh4ZjxokIU_NV2W';
 
 export async function POST(request: NextRequest) {
