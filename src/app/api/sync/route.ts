@@ -63,8 +63,6 @@ export async function POST() {
       count: savedCount,
       total: gasData.projects.length,
       errors: errors.length > 0 ? errors : undefined,
-      // デバッグ: GASが返すデータの最初の1件を表示
-      debug_sample: gasData.projects[0] || null,
     });
   } catch (err) {
     console.error('Sync error:', err);

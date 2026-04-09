@@ -738,8 +738,7 @@ export default function SettingsContent() {
       const res = await fetch('/api/sync', { method: 'POST' });
       const data = await res.json();
       if (data.success) {
-        const debugMsg = data.debug_sample ? ` [DEBUG: status="${data.debug_sample.status || 'undefined'}"]` : '';
-        setSyncResult({ success: true, message: `${data.count}件を同期しました${debugMsg}` });
+        setSyncResult({ success: true, message: `${data.count}件を同期しました` });
         // リフレッシュ
         const { data: projectData } = await supabase
           .from('projects')
