@@ -35,7 +35,9 @@ export default function RootLayout({
             </div>
             
             {/* 下段: ナビゲーション */}
-            <Navigation />
+            <Suspense fallback={<div className="h-10" />}>
+              <Navigation />
+            </Suspense>
           </header>
           
           {/* メインコンテンツ */}

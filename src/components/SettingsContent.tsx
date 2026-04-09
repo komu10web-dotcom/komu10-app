@@ -89,7 +89,7 @@ interface ProjectForm {
 // ============================================================
 export default function SettingsContent() {
   const searchParams = useSearchParams();
-  const owner = searchParams.get('owner') || 'tomo';
+  const owner = searchParams.get('owner') || (typeof window !== 'undefined' ? localStorage.getItem('komu10_owner') : null) || 'tomo';
   const effectiveOwner = owner === 'all' ? 'tomo' : owner;
   const ownerLabel = effectiveOwner === 'tomo' ? 'トモ' : 'トシキ';
 

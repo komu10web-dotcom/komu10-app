@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 const navItems = [
   { href: '/', label: 'ホーム' },
@@ -15,6 +15,13 @@ const navItems = [
 
 export default function Navigation() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // 現在のURLパラメータを保持してページ遷移
+  const buildHref = (path: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    return params.toString() ? `${path}?${params.toString()}` : path;
+  };
 
   return (
     <nav className="border-t border-gray-100">
@@ -26,7 +33,7 @@ export default function Navigation() {
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={buildHref(item.href)}
               className={`
                 relative py-3 font-['Shippori_Mincho'] text-[13px] transition-colors
                 ${isActive 
