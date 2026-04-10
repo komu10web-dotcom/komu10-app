@@ -45,6 +45,8 @@ export default function TransactionModal({
 }: TransactionModalProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dupWarning, setDupWarning] = useState<string | null>(null);
+  const [dupConfirmed, setDupConfirmed] = useState(false);
   const [transportData, setTransportData] = useState<TransportData>({ ...EMPTY_TRANSPORT });
   const [entertainmentData, setEntertainmentData] = useState<EntertainmentData>({ ...EMPTY_ENTERTAINMENT });
   const [allocRows, setAllocRows] = useState<AllocRow[]>([]);
@@ -113,6 +115,8 @@ export default function TransactionModal({
       setAllocRows([]);
     }
     setError(null);
+    setDupWarning(null);
+    setDupConfirmed(false);
   }, [editData, isOpen, defaultOwner]);
 
   // 按分行操作
@@ -164,6 +168,23 @@ export default function TransactionModal({
       }
     }
     if (!supabase) return;
+
+    // 重複チェック（編集時はスキップ、確認済みもスキップ）
+    if (!editData && !dupConfirmed) {
+      const txAmount = parseInt(form.amount.replace(/,/g, '')) || 0;
+      let dupQ = supabase.from('transactions').select('id, date, amount, store')
+        .eq('date', form.date)
+        .eq('amount', txAmount)
+        .eq('tx_type', 'expense')
+        .eq('owner', form.owner);
+      if (form.store) dupQ = dupQ.eq('store', form.store);
+      const { data: dups } = await dupQ;
+      if (dups && dups.length > 0) {
+        const storeLabel = form.store || '（取引先未入力）';
+        setDupWarning(`${form.date} / ${storeLabel} / ¥${txAmount.toLocaleString()} と同じ経費が既に${dups.length}件あります。本当に登録しますか？`);
+        return;
+      }
+    }
 
     setSaving(true);
     setError(null);
@@ -443,6 +464,23 @@ export default function TransactionModal({
           </div>
 
           {error && <p className="text-xs text-[#C23728]">{error}</p>}
+
+          {dupWarning && (
+            <div className="px-4 py-3 bg-[#D4A03A]/10 rounded-xl">
+              <p className="text-xs text-[#D4A03A] font-medium mb-2">⚠ 類似の経費があります</p>
+              <p className="text-[11px] text-[#1a1a1a] mb-3">{dupWarning}</p>
+              <div className="flex gap-2">
+                <button onClick={() => { setDupConfirmed(true); setDupWarning(null); handleSave(); }}
+                  className="flex-1 py-2 bg-[#D4A03A] text-white rounded-lg text-xs font-medium hover:bg-[#b8882e] transition-colors">
+                  それでも登録する
+                </button>
+                <button onClick={() => { setDupWarning(null); }}
+                  className="flex-1 py-2 bg-[#F5F5F3] text-[#999] rounded-lg text-xs font-medium hover:bg-gray-200 transition-colors">
+                  キャンセル
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="px-5 pb-5">

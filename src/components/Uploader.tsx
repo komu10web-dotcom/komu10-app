@@ -22,6 +22,8 @@ export function Uploader({ onUploadComplete, defaultOwner = 'tomo' }: UploaderPr
   const [state, setState] = useState<UploadState>('idle');
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dupWarning, setDupWarning] = useState<string | null>(null);
+  const [dupConfirmed, setDupConfirmed] = useState(false);
   const [driveUrl, setDriveUrl] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
 
@@ -150,6 +152,23 @@ export function Uploader({ onUploadComplete, defaultOwner = 'tomo' }: UploaderPr
       return;
     }
 
+    // 重複チェック
+    if (!dupConfirmed) {
+      const txAmount = parseInt(formData.amount) || 0;
+      let dupQ = supabase.from('transactions').select('id, date, amount, store')
+        .eq('date', formData.date)
+        .eq('amount', txAmount)
+        .eq('tx_type', 'expense')
+        .eq('owner', formData.owner);
+      if (formData.store) dupQ = dupQ.eq('store', formData.store);
+      const { data: dups } = await dupQ;
+      if (dups && dups.length > 0) {
+        const storeLabel = formData.store || '（取引先未入力）';
+        setDupWarning(`${formData.date} / ${storeLabel} / ¥${txAmount.toLocaleString()} と同じ経費が既に${dups.length}件あります。本当に登録しますか？`);
+        return;
+      }
+    }
+
     setState('saving');
 
     let finalDescription = formData.description || null;
@@ -213,6 +232,8 @@ export function Uploader({ onUploadComplete, defaultOwner = 'tomo' }: UploaderPr
   const resetForm = () => {
     setState('idle');
     setError(null);
+    setDupWarning(null);
+    setDupConfirmed(false);
     setDriveUrl(null);
     setFileName(null);
     setFormData({
@@ -383,6 +404,23 @@ export function Uploader({ onUploadComplete, defaultOwner = 'tomo' }: UploaderPr
             />
           </div>
         </div>
+
+        {dupWarning && (
+          <div className="mt-3 px-4 py-3 bg-[#D4A03A]/10 rounded-xl">
+            <p className="text-xs text-[#D4A03A] font-medium mb-2">⚠ 類似の経費があります</p>
+            <p className="text-[11px] text-[#1a1a1a] mb-3">{dupWarning}</p>
+            <div className="flex gap-2">
+              <button onClick={() => { setDupConfirmed(true); setDupWarning(null); handleSave(); }}
+                className="flex-1 py-2 bg-[#D4A03A] text-white rounded-lg text-xs font-medium hover:bg-[#b8882e] transition-colors">
+                それでも登録する
+              </button>
+              <button onClick={() => { setDupWarning(null); }}
+                className="flex-1 py-2 bg-[#F5F5F3] text-[#999] rounded-lg text-xs font-medium hover:bg-gray-200 transition-colors">
+                キャンセル
+              </button>
+            </div>
+          </div>
+        )}
 
         <button
           onClick={handleSave}
