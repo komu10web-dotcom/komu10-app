@@ -119,8 +119,7 @@ export default function ManagementContent() {
       setTransactions(txList);
 
       // プロジェクト
-      let pjQ = supabase.from('projects').select('*').order('created_at', { ascending: false });
-      if (owner !== 'all') pjQ = pjQ.eq('owner', owner);
+      const pjQ = supabase.from('projects').select('*').order('created_at', { ascending: false });
       const { data: pjData } = await pjQ;
       setProjects((pjData as Project[]) || []);
 
