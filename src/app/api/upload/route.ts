@@ -5,7 +5,7 @@ const PARENT_FOLDER_ID = '1Rcd2MWZLMA7bDax4MLh4ZjxokIU_NV2W';
 
 export async function POST(request: NextRequest) {
   try {
-    const { image, filename, date, mimeType } = await request.json();
+    const { image, filename, date, mimeType, owner } = await request.json();
     if (!image || !filename) {
       return NextResponse.json({ success: false, error: '画像データとファイル名が必要です' }, { status: 400 });
     }
@@ -22,10 +22,12 @@ export async function POST(request: NextRequest) {
     }
     const token = tokenData.token;
 
-    // 2. 年月フォルダを取得or作成
+    // 2. ownerフォルダ → 年月フォルダを取得or作成
+    const ownerFolder = owner === 'toshiki' ? 'toshiki' : 'tomo';
+    const ownerFolderId = await getOrCreateFolder(token, PARENT_FOLDER_ID, ownerFolder);
     const dateStr = date || new Date().toISOString().split('T')[0];
     const yearMonth = dateStr.substring(0, 7);
-    const folderId = await getOrCreateFolder(token, PARENT_FOLDER_ID, yearMonth);
+    const folderId = await getOrCreateFolder(token, ownerFolderId, yearMonth);
 
     // 3. Drive APIでファイルアップロード
     const safeName = filename.replace(/[\/\\:*?"<>|]/g, '').replace(/\s+/g, '_').substring(0, 50);
@@ -60,7 +62,7 @@ export async function POST(request: NextRequest) {
       success: true,
       url: `https://drive.google.com/file/d/${uploadData.id}/view`,
       fileId: uploadData.id,
-      folder: yearMonth,
+      folder: `${ownerFolder}/${yearMonth}`,
       fileName: safeName,
     });
 

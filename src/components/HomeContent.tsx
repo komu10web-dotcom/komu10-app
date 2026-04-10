@@ -293,7 +293,7 @@ export default function HomeContent() {
           </div>
 
           {inputMode === 'camera' && (
-            <Uploader onUploadComplete={fetchData} />
+            <Uploader onUploadComplete={fetchData} defaultOwner={owner === 'all' ? 'tomo' : owner} />
           )}
 
           {inputMode === 'manual' && (

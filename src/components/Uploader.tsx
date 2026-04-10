@@ -13,11 +13,12 @@ import { entertainmentToDescription } from '@/lib/entertainmentUtils';
 
 interface UploaderProps {
   onUploadComplete?: () => void;
+  defaultOwner?: string;
 }
 
 type UploadState = 'idle' | 'uploading' | 'reading' | 'review' | 'saving' | 'success' | 'error';
 
-export function Uploader({ onUploadComplete }: UploaderProps) {
+export function Uploader({ onUploadComplete, defaultOwner = 'tomo' }: UploaderProps) {
   const [state, setState] = useState<UploadState>('idle');
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +30,7 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
     amount: '',
     store: '',
     kamoku: 'misc',
-    owner: 'tomo',
+    owner: defaultOwner,
     description: '',
     item_name: '',
   });
@@ -94,6 +95,7 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
           filename: file.name,
           date: extractedDate,
           mimeType: file.type,
+          owner: defaultOwner,
         }),
       });
 
@@ -110,7 +112,7 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
         amount: extracted.amount?.toString() || '',
         store: extracted.vendor || '',
         kamoku: aiKamoku,
-        owner: 'tomo',
+        owner: defaultOwner,
         description: '',
         item_name: extracted.item_name || '',
         });
@@ -218,7 +220,7 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
       amount: '',
       store: '',
       kamoku: 'misc',
-      owner: 'tomo',
+      owner: defaultOwner,
       description: '',
       item_name: '',
     });
