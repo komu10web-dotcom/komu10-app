@@ -1090,6 +1090,7 @@ export default function ManagementContent() {
                               stroke="#D4A03A" strokeWidth="1" vectorEffect="non-scaling-stroke"
                               strokeDasharray="4,4" opacity="0.5" />
                           )}
+                          {/* 実績利益ライン（実線） */}
                           <polyline fill="none" stroke="#1B4D3E" strokeWidth="2" vectorEffect="non-scaling-stroke"
                             strokeLinejoin="round" strokeLinecap="round"
                             points={monthlyData.map((m, i) => {
@@ -1097,6 +1098,16 @@ export default function ManagementContent() {
                               const y = 500 - (m.profit / profitTickMax) * 450;
                               return `${x},${Math.max(20, Math.min(980, y))}`;
                             }).join(' ')} />
+                          {/* 見込み含む利益ライン（破線・multiYear時は非表示） */}
+                          {!multiYear && monthlyData.some(m => m.fcRevenue > 0 || m.fcExpense > 0) && (
+                            <polyline fill="none" stroke="#1B4D3E" strokeWidth="1.5" vectorEffect="non-scaling-stroke"
+                              strokeLinejoin="round" strokeLinecap="round" strokeDasharray="6,4" opacity="0.35"
+                              points={monthlyData.map((m, i) => {
+                                const x = (i * 100) + 50;
+                                const y = 500 - (m.totalProfit / profitTickMax) * 450;
+                                return `${x},${Math.max(20, Math.min(980, y))}`;
+                              }).join(' ')} />
+                          )}
                           {multiYear && (
                             <>
                               <polyline fill="none" stroke="#D4A03A" strokeWidth="1.5" vectorEffect="non-scaling-stroke"
@@ -1144,6 +1155,9 @@ export default function ManagementContent() {
                                   <div className="font-medium mb-0.5">{m.month}月</div>
                                   <div className={m.profit >= 0 ? 'text-[#5DCAA5]' : 'text-[#F09595]'}>利益 {yen(m.profit)}</div>
                                   <div className="text-white/60">売上{yen(m.revenue)} 経費{yen(m.expense)}</div>
+                                  {(m.fcRevenue > 0 || m.fcExpense > 0) && (
+                                    <div className="text-white/40">見込含 {yen(m.totalProfit)}</div>
+                                  )}
                                   {multiYear && pm && (
                                     <div className="border-t border-white/20 mt-1 pt-1 text-[#D4A03A] opacity-70">{prevYear}年 利益{yen(pm.profit)}</div>
                                   )}
@@ -1349,8 +1363,8 @@ export default function ManagementContent() {
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
                         {pl && <span className="font-['Saira_Condensed'] text-xs tabular-nums" style={{ color: pjProfit >= 0 ? '#1B4D3E' : '#C23728' }}>{yen(pjProfit)}</span>}
-                        <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${pj.status === 'completed' ? 'bg-[#1B4D3E]/10 text-[#1B4D3E]' : pj.status === 'active' ? 'bg-[#D4A03A]/10 text-[#D4A03A]' : 'bg-gray-100 text-[#999]'}`}>
-                          {pj.status === 'completed' ? '完了' : pj.status === 'active' ? '進行中' : pj.status === 'ordered' ? '受注' : pj.status}
+                        <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${pj.status === 'completed' ? 'bg-[#1B4D3E]/10 text-[#1B4D3E]' : pj.status === 'active' ? 'bg-[#D4A03A]/10 text-[#D4A03A]' : pj.status === 'published' ? 'bg-[#1B4D3E]/10 text-[#1B4D3E]' : 'bg-gray-100 text-[#999]'}`}>
+                          {pj.status === 'completed' ? '完了' : pj.status === 'active' ? '進行中' : pj.status === 'ordered' ? '受注済' : pj.status === 'published' ? '公開済' : pj.status === 'planning' ? '企画' : pj.status}
                         </span>
                       </div>
                     </div>
