@@ -283,7 +283,18 @@ export default function TransactionModal({
           <div>
             <label className="text-xs text-[#999] block mb-1">取引先</label>
             <input type="text" value={form.store} onChange={(e) => setForm({ ...form, store: e.target.value })}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50" placeholder="日本航空" />
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+              placeholder={
+                form.kamoku === 'travel' ? 'JAL / JR東日本等' :
+                form.kamoku === 'entertainment' ? '店名（レストラン等）' :
+                form.kamoku === 'equipment' ? 'ヨドバシカメラ / Amazon等' :
+                form.kamoku === 'outsource' ? '委託先名' :
+                form.kamoku === 'rent' ? '不動産会社 / 家主名' :
+                form.kamoku === 'communication' ? 'NTTドコモ / UQ等' :
+                form.kamoku === 'subscription' ? 'Adobe / Google等' :
+                form.kamoku === 'tax' ? '税務署 / 市区町村' :
+                '取引先名'
+              } />
           </div>
           <div>
             <label className="text-xs text-[#999] block mb-1">勘定科目</label>
@@ -325,7 +336,24 @@ export default function TransactionModal({
           <div>
             <label className="text-xs text-[#999] block mb-1">内容・摘要</label>
             <input type="text" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50" placeholder="任意" />
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+              placeholder={
+                form.kamoku === 'travel' ? '撮影移動 / ロケハン等' :
+                form.kamoku === 'entertainment' ? '打合せ後の会食等' :
+                form.kamoku === 'equipment' ? '動画編集用に購入 等' :
+                form.kamoku === 'outsource' ? '動画編集委託 / ナレーション収録等' :
+                form.kamoku === 'rent' ? '自宅事務所 家賃 / 撮影スタジオ等' :
+                form.kamoku === 'communication' ? '携帯料金 / Wi-Fi等' :
+                form.kamoku === 'subscription' ? 'Adobe CC / Canva Pro等' :
+                form.kamoku === 'software' ? 'Final Cut Pro / DaVinci Resolve等' :
+                form.kamoku === 'advertising' ? 'YouTube広告 / SNS広告出稿等' :
+                form.kamoku === 'tax' ? '個人事業税 / 印紙代等' :
+                form.kamoku === 'insurance' ? '賠償責任保険 / 機材保険等' :
+                form.kamoku === 'vehicle' ? 'ガソリン代 / 駐車場代等' :
+                form.kamoku === 'utility' ? '電気代（按分）等' :
+                form.kamoku === 'repair' ? 'カメラ修理 / PC修理等' :
+                '任意'
+              } />
           </div>
 
           {/* ===== ステータス・支払日 ===== */}

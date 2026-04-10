@@ -62,7 +62,9 @@ export async function POST(request: NextRequest) {
 - amount: 合計金額（数値のみ、円記号不要）
 - tax: 消費税額（あれば）
 - items: 品目リスト（あれば）[{name, quantity, price}]
+- item_name: 主要な品名（1つ。最も高額な品目、または主たる購入品の名前。例: "MacBook Pro 14インチ", "SDカード 128GB", "三脚 Manfrotto MT055"）。交通費や飲食の場合はnull。
 - payment_method: 支払方法（現金、クレジットカード等）
+- kamoku_hint: 以下から最も適切な勘定科目を1つ選択。travel（交通・宿泊）, equipment（物品購入）, communication（通信費）, entertainment（飲食・接待）, subscription（月額サービス）, supplies（文房具等）, rent（家賃）, misc（不明）
 
 回答はJSONのみ、説明不要。読み取れない項目はnullとしてください。`,
             },

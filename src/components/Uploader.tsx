@@ -103,14 +103,15 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
       }
 
       // フォームに初期値をセット
+      const aiKamoku = extracted.kamoku_hint || guessKamokuId(extracted.vendor);
       setFormData({
         date: extracted.date || new Date().toISOString().split('T')[0],
         amount: extracted.amount?.toString() || '',
         store: extracted.vendor || '',
-        kamoku: guessKamokuId(extracted.vendor),
+        kamoku: aiKamoku,
         owner: 'tomo',
         description: '',
-        item_name: '',
+        item_name: extracted.item_name || '',
         });
       setState('review');
 
