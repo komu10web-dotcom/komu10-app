@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { DIVISIONS, KAMOKU } from '@/types/database';
-import type { Transaction, Project, TransactionAllocation } from '@/types/database';
+import type { Transaction, Project, TransactionAllocation, BankAccount } from '@/types/database';
 import { RefreshCw, CheckCircle2, AlertCircle, Loader2, ChevronDown, ChevronUp, Plus, Trash2, Save } from 'lucide-react';
 import { usePeriodRange } from './HeaderControls';
 
@@ -100,6 +100,10 @@ export default function ManagementContent() {
   const [divFilter, setDivFilter] = useState('all');
   const [showAllPJ, setShowAllPJ] = useState(false);
 
+  // PL/CF切替
+  const [viewMode, setViewMode] = useState<'pl' | 'cf'>('pl');
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+
   // 同期
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -161,6 +165,12 @@ export default function ManagementContent() {
       } else {
         setChartYearTx(txList);
       }
+
+      // 口座残高（CFビュー用）
+      let bankQ = supabase.from('bank_accounts').select('*').order('created_at');
+      if (owner !== 'all') bankQ = bankQ.eq('owner', owner);
+      const { data: bankData } = await bankQ;
+      setBankAccounts((bankData as BankAccount[]) || []);
     } catch (err) {
       console.error('Fetch error:', err);
     } finally {
@@ -346,6 +356,43 @@ export default function ManagementContent() {
     const toY = endDate.split('-')[0];
     return fromY === toY ? `${fromY}年${fromM}月〜${toM}月 月別推移` : `${fromY}年${fromM}月〜${toY}年${toM}月 月別推移`;
   })();
+
+  // ========== CF（キャッシュフロー）集計 ==========
+
+  // actual_payment_dateベースの月別集計
+  const calcCFMonthly = (txArr: Transaction[], yr: string) => Array.from({ length: 12 }, (_, i) => {
+    const m = i + 1;
+    const mStr = String(m).padStart(2, '0');
+    const prefix = `${yr}-${mStr}`;
+    const mTx = txArr.filter(t => {
+      const payDate = t.actual_payment_date || t.date;
+      return payDate.startsWith(prefix);
+    });
+    const inflow = mTx.filter(t => t.tx_type === 'revenue').reduce((s, t) => s + t.amount, 0);
+    const outflow = mTx.filter(t => t.tx_type === 'expense').reduce((s, t) => s + t.amount, 0);
+    return { month: m, inflow, outflow, net: inflow - outflow };
+  });
+
+  const cfMonthly = calcCFMonthly(chartYearTx.length > 0 ? chartYearTx : transactions, year);
+
+  // CF KPI
+  const cfTotalInflow = cfMonthly.reduce((s, m) => s + m.inflow, 0);
+  const cfTotalOutflow = cfMonthly.reduce((s, m) => s + m.outflow, 0);
+  const cfNet = cfTotalInflow - cfTotalOutflow;
+
+  // 口座合計残高
+  const totalBankBalance = bankAccounts.reduce((s, ba) => s + ba.balance, 0);
+
+  // ランウェイ: 過去実績のある月の平均出金額で計算
+  const monthsWithOutflow = cfMonthly.filter(m => m.month <= currentMonth && m.outflow > 0);
+  const avgMonthlyOutflow = monthsWithOutflow.length > 0
+    ? monthsWithOutflow.reduce((s, m) => s + m.outflow, 0) / monthsWithOutflow.length
+    : 0;
+  const runwayMonths = avgMonthlyOutflow > 0 ? totalBankBalance / avgMonthlyOutflow : null;
+  const runwayLevel: 'danger' | 'healthy' | 'safe' = runwayMonths === null ? 'safe'
+    : runwayMonths < 3 ? 'danger' : runwayMonths < 6 ? 'healthy' : 'safe';
+  const runwayColor = { danger: '#C23728', healthy: '#D4A03A', safe: '#1B4D3E' }[runwayLevel];
+  const runwayLabel = { danger: '危険', healthy: '健全', safe: '余裕' }[runwayLevel];
 
   // 部門別損益（allocationsベース）— generalは除外
   const activeDivisions = Object.entries(DIVISIONS).filter(([id]) => id !== 'general');
@@ -555,9 +602,159 @@ export default function ManagementContent() {
             <h1 className="font-['Shippori_Mincho'] text-xl text-[#1a1a1a]">経営</h1>
             <p className="text-[10px] font-light tracking-wider text-[#999] mt-1">MANAGEMENT</p>
           </div>
+          <div className="flex items-center gap-1 bg-[#F5F5F3] rounded-lg p-0.5">
+            <button
+              onClick={() => setViewMode('pl')}
+              className={`px-3 py-1 rounded-md text-[10px] font-medium transition-colors ${viewMode === 'pl' ? 'bg-white text-[#1a1a1a] shadow-sm' : 'text-[#999] hover:text-[#666]'}`}
+            >PL</button>
+            <button
+              onClick={() => setViewMode('cf')}
+              className={`px-3 py-1 rounded-md text-[10px] font-medium transition-colors ${viewMode === 'cf' ? 'bg-white text-[#1a1a1a] shadow-sm' : 'text-[#999] hover:text-[#666]'}`}
+            >CF</button>
+          </div>
         </div>
 
-        {/* ===== KPIサマリー ===== */}
+        {/* ===== CFビュー ===== */}
+        {viewMode === 'cf' ? (
+          <>
+            {/* CF KPIサマリー */}
+            <div className="grid grid-cols-3 gap-4 mb-6">
+              {[
+                { label: '入金', value: cfTotalInflow, color: '#D4A03A' },
+                { label: '出金', value: cfTotalOutflow, color: '#C23728' },
+                { label: '差引', value: cfNet, color: cfNet >= 0 ? '#1B4D3E' : '#C23728' },
+              ].map(kpi => (
+                <div key={kpi.label} className="bg-white rounded-2xl px-5 py-5" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
+                  <p className="text-[10px] tracking-wider text-[#999] mb-2">{kpi.label}</p>
+                  <p className="font-['Saira_Condensed'] text-2xl tabular-nums" style={{ color: kpi.color }}>{yen(kpi.value)}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* 口座残高 + ランウェイ */}
+            <div className="grid grid-cols-2 gap-4 mb-8">
+              {/* 口座残高 */}
+              <div className="bg-white rounded-2xl px-5 py-5" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
+                <p className="text-[10px] tracking-wider text-[#999] mb-3">口座残高</p>
+                {bankAccounts.length === 0 ? (
+                  <p className="text-xs text-[#ccc]">口座未登録（設定で追加）</p>
+                ) : (
+                  <>
+                    {bankAccounts.map(ba => (
+                      <div key={ba.id} className="flex items-center justify-between mb-1.5">
+                        <span className="text-[11px] text-[#999]">{ba.name}</span>
+                        <span className="font-['Saira_Condensed'] text-sm tabular-nums text-[#1a1a1a]">{yen(ba.balance)}</span>
+                      </div>
+                    ))}
+                    <div className="pt-2 mt-1 border-t border-gray-100 flex items-center justify-between">
+                      <span className="text-[11px] text-[#999] font-medium">合計</span>
+                      <span className="font-['Saira_Condensed'] text-lg tabular-nums text-[#1a1a1a] font-medium">{yen(totalBankBalance)}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* ランウェイ */}
+              <div className="bg-white rounded-2xl px-5 py-5" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
+                <p className="text-[10px] tracking-wider text-[#999] mb-3">ランウェイ</p>
+                {bankAccounts.length === 0 || runwayMonths === null ? (
+                  <p className="text-xs text-[#ccc]">データ不足</p>
+                ) : (
+                  <>
+                    <div className="flex items-baseline gap-2 mb-2">
+                      <span className="font-['Saira_Condensed'] text-3xl tabular-nums font-medium" style={{ color: runwayColor }}>
+                        {runwayMonths.toFixed(1)}
+                      </span>
+                      <span className="text-xs text-[#999]">ヶ月</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-medium" style={{ background: `${runwayColor}15`, color: runwayColor }}>
+                        {runwayLabel}
+                      </span>
+                      <span className="text-[10px] text-[#999]">
+                        月平均出金 {yen(Math.round(avgMonthlyOutflow))}
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* CF月別チャート */}
+            <div className="bg-white rounded-2xl px-5 py-5 mb-8" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
+              <p className="text-[10px] tracking-wider text-[#999] mb-5">
+                {year}年 月別入出金（支払日ベース）
+              </p>
+              {(() => {
+                const cfVals = cfMonthly.map(m => Math.max(m.inflow, m.outflow));
+                const cfTicks = calcAxisTicks(Math.max(...cfVals, 1));
+                const cfMax = cfTicks[cfTicks.length - 1] || 1;
+                return (
+                  <div style={{ height: 220 }}>
+                    <div className="flex h-full">
+                      {/* 縦軸 */}
+                      <div className="flex flex-col justify-between pr-2 pb-5 shrink-0" style={{ width: 56 }}>
+                        {[...cfTicks].reverse().map((t, i) => (
+                          <span key={i} className="text-[8px] font-['Saira_Condensed'] tabular-nums text-[#999] text-right">{yenShort(t)}</span>
+                        ))}
+                      </div>
+                      {/* グラフ領域 */}
+                      <div className="flex-1 flex flex-col">
+                        <div className="flex-1 relative">
+                          {cfTicks.map((t, i) => (
+                            <div key={i} className="absolute left-0 right-0 border-t border-gray-100"
+                              style={{ bottom: `${(t / cfMax) * 100}%` }} />
+                          ))}
+                          {selectedMonth !== null && (
+                            <div className="absolute top-0 bottom-0 border-l border-dashed border-[#D4A03A] opacity-40 pointer-events-none"
+                              style={{ left: `${((selectedMonth - 1) / 12) * 100 + (100 / 24)}%` }} />
+                          )}
+                          <div className="absolute inset-0 flex items-end gap-1">
+                            {cfMonthly.map((m, idx) => {
+                              const isHighlighted = selectedMonth === null || m.month === selectedMonth;
+                              const isFuture = parseInt(year) === currentYear && m.month > currentMonth;
+                              const dimOpacity = isHighlighted ? 1 : 0.25;
+                              return (
+                                <div key={idx} className="flex-1 flex items-end gap-[2px] relative" style={{ opacity: isFuture ? 0.3 : dimOpacity }}>
+                                  <div className="flex-1 rounded-t transition-all duration-300"
+                                    style={{ height: `${Math.max((m.inflow / cfMax) * 100, m.inflow > 0 ? 2 : 0)}%`, background: '#D4A03A' }} />
+                                  <div className="flex-1 rounded-t transition-all duration-300"
+                                    style={{ height: `${Math.max((m.outflow / cfMax) * 100, m.outflow > 0 ? 2 : 0)}%`, background: '#C23728' }} />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                        {/* 横軸ラベル */}
+                        <div className="flex pt-1.5">
+                          {cfMonthly.map((m) => (
+                            <div key={m.month} className="flex-1 text-center">
+                              <span className="text-[8px] font-['Saira_Condensed'] tabular-nums text-[#999]">{m.month}月</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+              {/* 凡例 */}
+              <div className="flex items-center justify-center gap-4 mt-3">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-sm" style={{ background: '#D4A03A' }} />
+                  <span className="text-[9px] text-[#999]">入金</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-sm" style={{ background: '#C23728' }} />
+                  <span className="text-[9px] text-[#999]">出金</span>
+                </div>
+              </div>
+            </div>
+          </>
+        ) : (
+        <>
+
+        {/* ===== KPIサマリー（PLモード） ===== */}
         <div className="grid grid-cols-3 gap-4 mb-6">
           {[
             { label: '売上', value: totalRevenue, color: '#D4A03A', forecast: forecastRevenue },
@@ -1163,6 +1360,8 @@ export default function ManagementContent() {
             </div>
           )}
         </div>
+        </>
+        )}
       </div>
 
     </div>

@@ -315,6 +315,15 @@ export type AnbunSetting = Database['public']['Tables']['anbun_settings']['Row']
 export type TransportDetail = Database['public']['Tables']['transport_details']['Row'];
 export type BankAccount = Database['public']['Tables']['bank_accounts']['Row'];
 export type BankTransaction = Database['public']['Tables']['bank_transactions']['Row'];
+
+// bank_balances（月次残高スナップショット）
+export type BankBalance = {
+  id: string;
+  account_id: string;
+  month: string;
+  balance: number;
+  recorded_at: string;
+};
 export type Invoice = Database['public']['Tables']['invoices']['Row'];
 export type InvoiceItem = Database['public']['Tables']['invoice_items']['Row'];
 export type RevenueType = Database['public']['Tables']['revenue_types']['Row'];
