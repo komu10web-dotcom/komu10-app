@@ -162,6 +162,9 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
           memo: driveUrl || null,
           source: 'receipt_ai',
           confirmed: true,
+          status: 'settled',
+          accrual_date: formData.date,
+          actual_payment_date: formData.date,
         } as any)
         .select('id')
         .single();
