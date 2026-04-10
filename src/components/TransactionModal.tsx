@@ -58,6 +58,7 @@ export default function TransactionModal({
     description: '',
     status: 'settled',
     actual_payment_date: '',
+    item_name: '',
   });
 
   useEffect(() => {
@@ -68,9 +69,10 @@ export default function TransactionModal({
         store: editData.store || '',
         kamoku: editData.kamoku,
         owner: editData.owner,
-        description: editData.description || '',
+        description: editData.description?.replace(/^【品名】[^\n]*\n?/, '') || '',
         status: editData.status || 'settled',
         actual_payment_date: editData.actual_payment_date || '',
+        item_name: editData.description?.match(/^【品名】(.+?)(\n|$)/)?.[1] || '',
       });
       if (editData.kamoku === 'travel') {
         loadTransportDetails(editData.id).then((td) => {
@@ -104,6 +106,7 @@ export default function TransactionModal({
         description: '',
         status: 'settled',
         actual_payment_date: '',
+        item_name: '',
       });
       setTransportData({ ...EMPTY_TRANSPORT });
       setEntertainmentData({ ...EMPTY_ENTERTAINMENT });
@@ -145,6 +148,10 @@ export default function TransactionModal({
       setError('接待交際費の相手先名は必須です');
       return;
     }
+    if (form.kamoku === 'equipment' && !form.item_name.trim()) {
+      setError('消耗品費の品名は必須です');
+      return;
+    }
     // 按分バリデーション
     if (hasAllocRows) {
       if (totalPercent !== 100) {
@@ -164,6 +171,10 @@ export default function TransactionModal({
     let finalDescription = form.description || null;
     if (form.kamoku === 'entertainment') {
       finalDescription = entertainmentToDescription(entertainmentData, form.description);
+    }
+    if (form.kamoku === 'equipment' && form.item_name.trim()) {
+      const desc = form.description ? `\n${form.description}` : '';
+      finalDescription = `【品名】${form.item_name.trim()}${desc}`;
     }
 
     const txAmount = parseInt(form.amount.replace(/,/g, '')) || 0;
@@ -284,6 +295,24 @@ export default function TransactionModal({
 
           {form.kamoku === 'travel' && <TransportFields data={transportData} onChange={setTransportData} />}
           {form.kamoku === 'entertainment' && <EntertainmentFields data={entertainmentData} onChange={setEntertainmentData} />}
+
+          {form.kamoku === 'equipment' && (
+            <div className="border border-[#D4A03A]/30 rounded-xl p-4 space-y-3 bg-[#D4A03A]/5">
+              <p className="text-xs font-medium text-[#D4A03A]">消耗品費詳細</p>
+              <div>
+                <label className="text-xs text-[#999] block mb-1">品名（必須）</label>
+                <input type="text" value={form.item_name}
+                  onChange={(e) => setForm({ ...form, item_name: e.target.value })}
+                  className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+                  placeholder="MacBook Pro 14インチ / SDカード 128GB 等" />
+              </div>
+              {(parseInt(form.amount.replace(/,/g, '')) || 0) >= 100000 && (
+                <p className="text-[10px] text-[#C23728] flex items-center gap-1">
+                  ※ 10万円以上は固定資産として登録が必要な場合があります
+                </p>
+              )}
+            </div>
+          )}
 
           <div>
             <label className="text-xs text-[#999] block mb-1">担当者</label>
