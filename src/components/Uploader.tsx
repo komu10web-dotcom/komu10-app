@@ -103,7 +103,8 @@ export function Uploader({ onUploadComplete }: UploaderProps) {
       }
 
       // フォームに初期値をセット
-      const aiKamoku = extracted.kamoku_hint || guessKamokuId(extracted.vendor);
+      const validKamoku = extracted.kamoku_hint && (extracted.kamoku_hint in KAMOKU) ? extracted.kamoku_hint : null;
+      const aiKamoku = validKamoku || guessKamokuId(extracted.vendor);
       setFormData({
         date: extracted.date || new Date().toISOString().split('T')[0],
         amount: extracted.amount?.toString() || '',
