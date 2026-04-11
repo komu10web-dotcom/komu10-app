@@ -91,6 +91,27 @@ const QA_ITEMS = [
 // ============================================================
 const yen = (n: number) => '¥' + Math.floor(n).toLocaleString('ja-JP');
 
+// クライアントサイド画像リサイズ（長辺maxPx）
+function resizeImage(file: File, maxPx: number): Promise<File> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const { width, height } = img;
+      if (width <= maxPx && height <= maxPx) { resolve(file); return; }
+      const scale = maxPx / Math.max(width, height);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(width * scale);
+      canvas.height = Math.round(height * scale);
+      const ctx = canvas.getContext('2d');
+      ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob) => {
+        resolve(new File([blob!], file.name, { type: 'image/jpeg' }));
+      }, 'image/jpeg', 0.85);
+    };
+    img.src = URL.createObjectURL(file);
+  });
+}
+
 interface ProjectForm {
   name: string;
   division: string;
@@ -2903,6 +2924,48 @@ function EquipmentEditModal({
     status: item.status || 'active',
   });
   const [saving, setSaving] = useState(false);
+  const [photos, setPhotos] = useState<string[]>(item.photos || []);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoError, setPhotoError] = useState('');
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoError('');
+    setPhotoUploading(true);
+    try {
+      const resized = await resizeImage(file, 2000);
+      const fd = new FormData();
+      fd.append('file', resized, file.name);
+      fd.append('equipment_id', item.id);
+      const res = await fetch('/api/equipment-photos', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.success) {
+        setPhotos(data.photos);
+      } else {
+        setPhotoError(data.error || 'アップロード失敗');
+      }
+    } catch {
+      setPhotoError('アップロードに失敗しました');
+    } finally {
+      setPhotoUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleDeletePhoto = async (url: string) => {
+    try {
+      const res = await fetch('/api/equipment-photos', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ equipmentId: item.id, photoUrl: url }),
+      });
+      const data = await res.json();
+      if (data.success) setPhotos(data.photos);
+    } catch (err) {
+      console.error('Photo delete error:', err);
+    }
+  };
 
   const handleSave = () => {
     setSaving(true);
@@ -2997,6 +3060,35 @@ function EquipmentEditModal({
               onChange={(e) => setForm({ ...form, note: e.target.value })}
               className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
               placeholder="任意" />
+          </div>
+
+          {/* 写真 */}
+          <div>
+            <label className="block text-xs text-[#999] mb-1">写真（最大5枚）</label>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {(photos).map((url, i) => (
+                <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden bg-[#F5F5F3] group">
+                  <img src={url} alt="" className="w-full h-full object-cover" />
+                  <button
+                    onClick={() => handleDeletePhoto(url)}
+                    className="absolute top-0.5 right-0.5 w-5 h-5 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="w-3 h-3 text-white" />
+                  </button>
+                </div>
+              ))}
+              {photos.length < 5 && (
+                <label className="w-16 h-16 rounded-lg border-2 border-dashed border-[#D4A03A]/30 flex items-center justify-center cursor-pointer hover:border-[#D4A03A]/60 transition-colors">
+                  {photoUploading ? (
+                    <Loader2 className="w-4 h-4 text-[#D4A03A] animate-spin" />
+                  ) : (
+                    <Camera className="w-4 h-4 text-[#D4A03A]" />
+                  )}
+                  <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} disabled={photoUploading} />
+                </label>
+              )}
+            </div>
+            {photoError && <p className="text-[10px] text-[#C23728]">{photoError}</p>}
           </div>
         </div>
 
