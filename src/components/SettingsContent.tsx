@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { KAMOKU, DIVISIONS, RECURRING_FREQUENCY } from '@/types/database';
-import type { AnbunSetting, Asset, RevenueType, RevenueTypeDivision, ContractType, BankAccount, Client, RecurringExpense, Project, EquipmentItem } from '@/types/database';
+import type { AnbunSetting, Asset, RevenueType, RevenueTypeDivision, ContractType, BankAccount, Client, RecurringExpense, Project, EquipmentItem, SyncSource } from '@/types/database';
 import { Plus, Pencil, Trash2, Save, X, Loader2, ChevronDown, ChevronUp, HelpCircle, Cloud, CheckCircle2, RefreshCw, FolderOpen, Camera } from 'lucide-react';
 import { OWNER_COLOR_PRESETS } from './HeaderControls';
 
@@ -220,6 +220,9 @@ export default function SettingsContent() {
   const [eqEditModal, setEqEditModal] = useState<EquipmentItem | null>(null);
   const [eqEditModalOpen, setEqEditModalOpen] = useState(false);
 
+  // 同期ソース
+  const [syncSources, setSyncSources] = useState<SyncSource[]>([]);
+
   // ============================================================
   // データ取得
   // ============================================================
@@ -299,6 +302,12 @@ export default function SettingsContent() {
         .eq('owner', effectiveOwner)
         .order('created_at', { ascending: false });
 
+      // 同期ソース
+      const { data: ssData } = await supabase
+        .from('sync_sources')
+        .select('*')
+        .order('created_at');
+
       setAnbunSettings(anbunData || []);
       setAssets(assetData || []);
       if (profileData) {
@@ -314,6 +323,7 @@ export default function SettingsContent() {
       setRecurringExpenses(recurringData || []);
       setProjects(projectData || []);
       setEquipmentItems(eqData || []);
+      setSyncSources(ssData || []);
 
       // 按分ドラフト初期化
       const draft: Record<string, { ratio: number; note: string }> = {};
@@ -938,6 +948,30 @@ export default function SettingsContent() {
             プロジェクト管理
           </div>
           <div className="bg-white rounded-xl shadow-sm p-5">
+            {/* 接続済みソース */}
+            {syncSources.length > 0 && (
+              <div className="mb-4">
+                <p className="text-[10px] text-[#999] mb-2">接続済みソース</p>
+                <div className="space-y-1.5">
+                  {syncSources.map(ss => (
+                    <div key={ss.id} className="flex items-center justify-between py-1.5 px-3 bg-[#F5F5F3] rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <FolderOpen className="w-3.5 h-3.5 text-[#D4A03A]" />
+                        <span className="text-xs text-[#1a1a1a]">{ss.name}</span>
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${ss.is_active ? 'bg-[#1B4D3E]/10 text-[#1B4D3E]' : 'bg-[#999]/10 text-[#999]'}`}>
+                          {ss.is_active ? '有効' : '無効'}
+                        </span>
+                      </div>
+                      {ss.last_synced_at && (
+                        <span className="text-[9px] text-[#999]">
+                          最終: {new Date(ss.last_synced_at).toLocaleDateString('ja-JP')}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             {/* 同期ボタン */}
             <div className="flex items-center justify-between mb-4">
               <button

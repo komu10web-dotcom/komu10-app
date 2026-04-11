@@ -356,6 +356,22 @@ export type Client = Database['public']['Tables']['clients']['Row'];
 export type RecurringExpense = Database['public']['Tables']['recurring_expenses']['Row'];
 export type EquipmentItem = Database['public']['Tables']['equipment_items']['Row'];
 
+// sync_sources（DBテーブルだがDatabaseインターフェース外で定義）
+export type SyncSource = {
+  id: string;
+  name: string;
+  source_type: string;
+  sheet_id: string | null;
+  sheet_tab: string | null;
+  gas_url: string | null;
+  target_table: string;
+  column_mapping: Record<string, string>;
+  last_synced_at: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 // 部門定義（定数）— 表示順もこの順
 export const DIVISIONS = {
   youtube: { name: 'YouTube', label: 'YT', color: '#C23728', prefix: 'YT' },

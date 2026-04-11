@@ -58,6 +58,13 @@ export async function POST() {
       }
     }
 
+    // sync_sources の last_synced_at を更新
+    await supabase
+      .from('sync_sources')
+      .update({ last_synced_at: new Date().toISOString() })
+      .eq('target_table', 'projects')
+      .eq('is_active', true);
+
     return NextResponse.json({
       success: true,
       count: savedCount,
