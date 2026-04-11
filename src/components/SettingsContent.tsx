@@ -1375,7 +1375,7 @@ export default function SettingsContent() {
             <p className="text-[11px] text-[#999] mb-3">
               {ownerLabel}のページ背景色を選択します。担当者切替で自動的に反映されます。
             </p>
-            <div className="flex gap-3">
+            <div className="flex gap-3 mb-4">
               {(OWNER_COLOR_PRESETS[effectiveOwner] || []).map((preset) => {
                 const isSelected = ownerColor === preset.value;
                 const isDark = (() => {
@@ -1393,7 +1393,6 @@ export default function SettingsContent() {
                       setOwnerColorSaving(true);
                       setOwnerColor(preset.value);
                       await supabase.from('profiles').update({ owner_color: preset.value }).eq('user_key', effectiveOwner);
-                      // 即座に背景色を反映
                       document.documentElement.style.setProperty('--owner-bg', preset.value);
                       document.body.style.backgroundColor = preset.value;
                       if (isDark) {
@@ -1402,7 +1401,6 @@ export default function SettingsContent() {
                         document.documentElement.classList.remove('dark-owner');
                       }
                       setOwnerColorSaving(false);
-                      // HeaderControlsのドット色を即時更新
                       window.dispatchEvent(new Event('ownerColorChanged'));
                     }}
                     disabled={ownerColorSaving}
@@ -1420,6 +1418,68 @@ export default function SettingsContent() {
                   </button>
                 );
               })}
+            </div>
+
+            {/* カスタムカラー */}
+            <div className="pt-3 border-t border-gray-100">
+              <p className="text-[10px] text-[#999] mb-2">カスタムカラー</p>
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  value={ownerColor || '#F5F5F3'}
+                  onChange={(e) => setOwnerColor(e.target.value)}
+                  className="w-10 h-10 rounded-lg border border-black/10 cursor-pointer p-0.5"
+                />
+                <input
+                  type="text"
+                  value={ownerColor || ''}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (/^#[0-9A-Fa-f]{0,6}$/.test(v) || v === '') setOwnerColor(v);
+                  }}
+                  className="w-28 px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm font-['Saira_Condensed'] tabular-nums border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+                  placeholder="#F5F5F3"
+                />
+                <button
+                  onClick={async () => {
+                    if (!supabase || !ownerColor || !/^#[0-9A-Fa-f]{6}$/.test(ownerColor)) return;
+                    setOwnerColorSaving(true);
+                    await supabase.from('profiles').update({ owner_color: ownerColor }).eq('user_key', effectiveOwner);
+                    document.documentElement.style.setProperty('--owner-bg', ownerColor);
+                    document.body.style.backgroundColor = ownerColor;
+                    const hex = ownerColor.replace('#', '');
+                    const r = parseInt(hex.substring(0, 2), 16);
+                    const g = parseInt(hex.substring(2, 4), 16);
+                    const b = parseInt(hex.substring(4, 6), 16);
+                    if ((r * 299 + g * 587 + b * 114) / 1000 < 128) {
+                      document.documentElement.classList.add('dark-owner');
+                    } else {
+                      document.documentElement.classList.remove('dark-owner');
+                    }
+                    setOwnerColorSaving(false);
+                    window.dispatchEvent(new Event('ownerColorChanged'));
+                  }}
+                  disabled={ownerColorSaving || !ownerColor || !/^#[0-9A-Fa-f]{6}$/.test(ownerColor)}
+                  className="px-3 py-2 bg-[#1a1a1a] text-white rounded-lg text-[10px] font-medium hover:bg-[#333] disabled:opacity-40 transition-colors"
+                >
+                  適用
+                </button>
+                {/* 初期色に戻す */}
+                {ownerColor && !(OWNER_COLOR_PRESETS[effectiveOwner] || []).some(p => p.value === ownerColor) && (
+                  <button
+                    onClick={() => {
+                      const presets = OWNER_COLOR_PRESETS[effectiveOwner] || [];
+                      if (presets.length > 0) {
+                        const firstPreset = presets[0];
+                        setOwnerColor(firstPreset.value);
+                      }
+                    }}
+                    className="text-[10px] text-[#999] hover:text-[#666] underline"
+                  >
+                    初期色に戻す
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </section>
