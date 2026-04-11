@@ -61,6 +61,11 @@ export default function TransactionModal({
     status: 'settled',
     actual_payment_date: '',
     item_name: '',
+    eq_category: '',
+    eq_maker: '',
+    eq_serial: '',
+    eq_business_ratio: '100',
+    eq_warranty_date: '',
   });
 
   useEffect(() => {
@@ -75,7 +80,27 @@ export default function TransactionModal({
         status: editData.status || 'settled',
         actual_payment_date: editData.actual_payment_date || '',
         item_name: editData.description?.match(/^【品名】(.+?)(\n|$)/)?.[1] || '',
+        eq_category: '',
+        eq_maker: '',
+        eq_serial: '',
+        eq_business_ratio: '100',
+        eq_warranty_date: '',
       });
+      // 既存equipment_item読み込み
+      if (editData.kamoku === 'equipment' && supabase) {
+        supabase.from('equipment_items').select('*').eq('transaction_id', editData.id).single().then(({ data: eqData }: { data: any }) => {
+          if (eqData) {
+            setForm(prev => ({
+              ...prev,
+              eq_category: eqData.category || '',
+              eq_maker: eqData.maker || '',
+              eq_serial: eqData.serial || '',
+              eq_business_ratio: (eqData.business_ratio ?? 100).toString(),
+              eq_warranty_date: eqData.warranty_date || '',
+            }));
+          }
+        });
+      }
       if (editData.kamoku === 'travel') {
         loadTransportDetails(editData.id).then((td) => {
           setTransportData(td || { ...EMPTY_TRANSPORT });
@@ -109,6 +134,11 @@ export default function TransactionModal({
         status: 'settled',
         actual_payment_date: '',
         item_name: '',
+        eq_category: '',
+        eq_maker: '',
+        eq_serial: '',
+        eq_business_ratio: '100',
+        eq_warranty_date: '',
       });
       setTransportData({ ...EMPTY_TRANSPORT });
       setEntertainmentData({ ...EMPTY_ENTERTAINMENT });
@@ -259,6 +289,33 @@ export default function TransactionModal({
         if (allocErr) throw allocErr;
       }
 
+      // equipment_items保存（1万円以上のequipment）
+      if (form.kamoku === 'equipment' && txAmount >= 10000) {
+        const eqPayload = {
+          transaction_id: txId,
+          name: form.item_name.trim(),
+          category: form.eq_category || null,
+          maker: form.eq_maker.trim() || null,
+          serial: form.eq_serial.trim() || null,
+          business_ratio: parseInt(form.eq_business_ratio) || 100,
+          warranty_date: form.eq_warranty_date || null,
+          owner: form.owner,
+          status: 'active',
+          photos: [],
+        };
+        // 既存があればupdate、なければinsert
+        const { data: existingEq } = await supabase.from('equipment_items').select('id').eq('transaction_id', txId).single();
+        if (existingEq) {
+          await supabase.from('equipment_items').update(eqPayload).eq('id', (existingEq as any).id);
+        } else {
+          await supabase.from('equipment_items').insert(eqPayload);
+        }
+      }
+      // equipment以外に科目変更 or 1万円未満に変更 → 既存equipment_itemを削除
+      if ((form.kamoku !== 'equipment' || txAmount < 10000) && editData) {
+        await supabase.from('equipment_items').delete().eq('transaction_id', txId);
+      }
+
       onSaved();
       onClose();
     } catch (err) {
@@ -338,6 +395,57 @@ export default function TransactionModal({
                   className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
                   placeholder="MacBook Pro 14インチ / SDカード 128GB 等" />
               </div>
+              {(parseInt(form.amount.replace(/,/g, '')) || 0) >= 10000 && (
+                <>
+                  <div className="flex gap-3">
+                    <div className="flex-1">
+                      <label className="text-xs text-[#999] block mb-1">カテゴリ</label>
+                      <select value={form.eq_category} onChange={(e) => setForm({ ...form, eq_category: e.target.value })}
+                        className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
+                        <option value="">選択</option>
+                        <option value="pc">PC</option>
+                        <option value="camera">カメラ</option>
+                        <option value="lens">レンズ</option>
+                        <option value="audio">音響</option>
+                        <option value="monitor">モニター</option>
+                        <option value="furniture">家具</option>
+                        <option value="other">その他</option>
+                      </select>
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-xs text-[#999] block mb-1">事業利用割合</label>
+                      <div className="flex items-center gap-1">
+                        <input type="number" min={0} max={100} value={form.eq_business_ratio}
+                          onChange={(e) => setForm({ ...form, eq_business_ratio: e.target.value })}
+                          className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed'] tabular-nums" />
+                        <span className="text-xs text-[#999] shrink-0">%</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs text-[#999] block mb-1">メーカー・型番</label>
+                    <input type="text" value={form.eq_maker}
+                      onChange={(e) => setForm({ ...form, eq_maker: e.target.value })}
+                      className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+                      placeholder="Apple / SONY α7IV 等" />
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="flex-1">
+                      <label className="text-xs text-[#999] block mb-1">シリアル番号</label>
+                      <input type="text" value={form.eq_serial}
+                        onChange={(e) => setForm({ ...form, eq_serial: e.target.value })}
+                        className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+                        placeholder="任意" />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-xs text-[#999] block mb-1">保証期限</label>
+                      <input type="date" value={form.eq_warranty_date}
+                        onChange={(e) => setForm({ ...form, eq_warranty_date: e.target.value })}
+                        className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+                    </div>
+                  </div>
+                </>
+              )}
               {(parseInt(form.amount.replace(/,/g, '')) || 0) >= 100000 && (
                 <p className="text-[10px] text-[#C23728] flex items-center gap-1">
                   ※ 10万円以上は固定資産として登録が必要な場合があります

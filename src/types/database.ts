@@ -288,6 +288,28 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['recurring_expenses']['Insert']>;
       };
 
+      // 備品台帳
+      equipment_items: {
+        Row: {
+          id: string;
+          transaction_id: string | null;
+          name: string;
+          category: string | null;
+          maker: string | null;
+          serial: string | null;
+          business_ratio: number;
+          warranty_date: string | null;
+          photos: string[];
+          note: string | null;
+          status: string; // 'active' | 'disposed' | 'transferred'
+          owner: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['equipment_items']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['equipment_items']['Insert']>;
+      };
+
       // 取引按分（1取引→複数事業・PJに比率配分）
       transaction_allocations: {
         Row: {
@@ -332,6 +354,7 @@ export type ContractType = Database['public']['Tables']['contract_types']['Row']
 export type TransactionAllocation = Database['public']['Tables']['transaction_allocations']['Row'];
 export type Client = Database['public']['Tables']['clients']['Row'];
 export type RecurringExpense = Database['public']['Tables']['recurring_expenses']['Row'];
+export type EquipmentItem = Database['public']['Tables']['equipment_items']['Row'];
 
 // 部門定義（定数）— 表示順もこの順
 export const DIVISIONS = {
