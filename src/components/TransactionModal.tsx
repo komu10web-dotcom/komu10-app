@@ -446,11 +446,20 @@ export default function TransactionModal({
                   </div>
                 </>
               )}
-              {(parseInt(form.amount.replace(/,/g, '')) || 0) >= 100000 && (
-                <p className="text-[10px] text-[#C23728] flex items-center gap-1">
-                  ※ 10万円以上は固定資産として登録が必要な場合があります
-                </p>
-              )}
+              {(() => {
+                const amt = parseInt(form.amount.replace(/,/g, '')) || 0;
+                if (amt >= 400000) return (
+                  <p className="text-[10px] text-[#C23728] flex items-center gap-1">
+                    ※ 40万円以上 → 固定資産（耐用年数で減価償却）
+                  </p>
+                );
+                if (amt >= 100000) return (
+                  <p className="text-[10px] text-[#D4A03A] flex items-center gap-1">
+                    ※ 10〜40万円未満 → 少額減価償却資産の特例で即時償却可（年間300万円枠）
+                  </p>
+                );
+                return null;
+              })()}
             </div>
           )}
 

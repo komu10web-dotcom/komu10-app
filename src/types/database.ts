@@ -356,6 +356,20 @@ export type Client = Database['public']['Tables']['clients']['Row'];
 export type RecurringExpense = Database['public']['Tables']['recurring_expenses']['Row'];
 export type EquipmentItem = Database['public']['Tables']['equipment_items']['Row'];
 
+// audit_log（訂正・削除履歴 — 優良な電子帳簿保存 要件❶）
+export type AuditLog = {
+  id: string;
+  table_name: string;
+  record_id: string;
+  operation: 'UPDATE' | 'DELETE';
+  old_data: Record<string, unknown>;
+  new_data: Record<string, unknown> | null;
+  changed_fields: string[] | null;
+  changed_by: string | null;
+  changed_at: string;
+  is_late_entry: boolean;
+};
+
 // sync_sources（DBテーブルだがDatabaseインターフェース外で定義）
 export type SyncSource = {
   id: string;
