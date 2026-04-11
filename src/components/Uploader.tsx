@@ -35,6 +35,11 @@ export function Uploader({ onUploadComplete, defaultOwner = 'tomo' }: UploaderPr
     owner: defaultOwner,
     description: '',
     item_name: '',
+    eq_category: '',
+    eq_maker: '',
+    eq_serial: '',
+    eq_business_ratio: '100',
+    eq_warranty_date: '',
   });
   const [transportData, setTransportData] = useState<TransportData>({ ...EMPTY_TRANSPORT });
   const [entertainmentData, setEntertainmentData] = useState<EntertainmentData>({ ...EMPTY_ENTERTAINMENT });
@@ -117,6 +122,11 @@ export function Uploader({ onUploadComplete, defaultOwner = 'tomo' }: UploaderPr
         owner: defaultOwner,
         description: '',
         item_name: extracted.item_name || '',
+        eq_category: '',
+        eq_maker: '',
+        eq_serial: '',
+        eq_business_ratio: '100',
+        eq_warranty_date: '',
         });
       setState('review');
 
@@ -209,6 +219,23 @@ export function Uploader({ onUploadComplete, defaultOwner = 'tomo' }: UploaderPr
         await saveTransportDetails((inserted as any).id, transportData);
       }
 
+      // 備品台帳（1万円以上のequipment）
+      const txAmount = parseInt(formData.amount) || 0;
+      if (formData.kamoku === 'equipment' && txAmount >= 10000 && inserted) {
+        await supabase.from('equipment_items').insert({
+          transaction_id: (inserted as any).id,
+          name: formData.item_name.trim(),
+          category: formData.eq_category || null,
+          maker: formData.eq_maker.trim() || null,
+          serial: formData.eq_serial.trim() || null,
+          business_ratio: parseInt(formData.eq_business_ratio) || 100,
+          warranty_date: formData.eq_warranty_date || null,
+          owner: formData.owner,
+          status: 'active',
+          photos: [],
+        });
+      }
+
       setState('success');
 
       if ('vibrate' in navigator) {
@@ -244,6 +271,11 @@ export function Uploader({ onUploadComplete, defaultOwner = 'tomo' }: UploaderPr
       owner: defaultOwner,
       description: '',
       item_name: '',
+      eq_category: '',
+      eq_maker: '',
+      eq_serial: '',
+      eq_business_ratio: '100',
+      eq_warranty_date: '',
     });
     setTransportData({ ...EMPTY_TRANSPORT });
     setEntertainmentData({ ...EMPTY_ENTERTAINMENT });
@@ -373,6 +405,57 @@ export function Uploader({ onUploadComplete, defaultOwner = 'tomo' }: UploaderPr
                   className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
                   placeholder="MacBook Pro 14インチ / SDカード 128GB 等" />
               </div>
+              {(parseInt(formData.amount) || 0) >= 10000 && (
+                <>
+                  <div className="flex gap-3">
+                    <div className="flex-1">
+                      <label className="text-xs text-[#999] block mb-1">カテゴリ</label>
+                      <select value={formData.eq_category} onChange={(e) => setFormData({ ...formData, eq_category: e.target.value })}
+                        className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
+                        <option value="">選択</option>
+                        <option value="pc">PC</option>
+                        <option value="camera">カメラ</option>
+                        <option value="lens">レンズ</option>
+                        <option value="audio">音響</option>
+                        <option value="monitor">モニター</option>
+                        <option value="furniture">家具</option>
+                        <option value="other">その他</option>
+                      </select>
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-xs text-[#999] block mb-1">事業利用割合</label>
+                      <div className="flex items-center gap-1">
+                        <input type="number" min={0} max={100} value={formData.eq_business_ratio}
+                          onChange={(e) => setFormData({ ...formData, eq_business_ratio: e.target.value })}
+                          className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed'] tabular-nums" />
+                        <span className="text-xs text-[#999] shrink-0">%</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs text-[#999] block mb-1">メーカー・型番</label>
+                    <input type="text" value={formData.eq_maker}
+                      onChange={(e) => setFormData({ ...formData, eq_maker: e.target.value })}
+                      className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+                      placeholder="Apple / SONY α7IV 等" />
+                  </div>
+                  <div className="flex gap-3">
+                    <div className="flex-1">
+                      <label className="text-xs text-[#999] block mb-1">シリアル番号</label>
+                      <input type="text" value={formData.eq_serial}
+                        onChange={(e) => setFormData({ ...formData, eq_serial: e.target.value })}
+                        className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+                        placeholder="任意" />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-xs text-[#999] block mb-1">保証期限</label>
+                      <input type="date" value={formData.eq_warranty_date}
+                        onChange={(e) => setFormData({ ...formData, eq_warranty_date: e.target.value })}
+                        className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+                    </div>
+                  </div>
+                </>
+              )}
               {(parseInt(formData.amount) || 0) >= 100000 && (
                 <p className="text-[10px] text-[#C23728]">
                   ※ 10万円以上は固定資産として登録が必要な場合があります
