@@ -2222,6 +2222,11 @@ export default function SettingsContent() {
 
         </>)}
 
+        {/* バージョン */}
+        <div className="text-center py-8">
+          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.4.0</span>
+        </div>
+
       </div>{/* end max-w-3xl */}
 
       {/* ── 固定資産モーダル ── */}
