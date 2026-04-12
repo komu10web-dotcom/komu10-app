@@ -2222,6 +2222,90 @@ export default function SettingsContent() {
 
         </>)}
 
+        {/* リリースノート */}
+        <section className="mb-6 mt-4">
+          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+            リリースノート
+          </div>
+          <div className="space-y-3">
+            {/* v0.4.0 */}
+            <div className="bg-white rounded-xl shadow-sm p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.4.0</span>
+                <span className="text-[9px] text-[#999]">2026.04.12</span>
+                <span className="text-[8px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full font-medium">LATEST</span>
+              </div>
+              <ul className="space-y-1">
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>経費テンプレート（交通費ルート＋汎用パターン）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>経営ページ「資金」タブ（口座残高・資金移動・手数料管理）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>支払方法（個人/口座）+ 仕訳自動分岐</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>セマンティックバージョニング導入</li>
+              </ul>
+            </div>
+
+            {/* v0.3.x 折りたたみ */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.3.x</span>
+                  <span className="text-[9px] text-[#999]">2026.03 – 04</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
+                <ul className="space-y-1">
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>令和8年度税制改正対応（少額減価償却40万円）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>備品台帳（写真D&D・リサイズ・Supabase Storage）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>同期ソース管理</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>オーナー背景色カスタマイズ（HEX入力・プリセット）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>重複経費チェック（日付×金額×取引先）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>Driveフォルダ自動振り分け（オーナー別→年月）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>AI抽出プロンプト強化（item_name / kamoku_hint）</li>
+                </ul>
+              </div>
+            </details>
+
+            {/* v0.2.x 折りたたみ */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.2.x</span>
+                  <span className="text-[9px] text-[#999]">2026.02 – 03</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
+                <ul className="space-y-1">
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>CFビュー（キャッシュフロー / ランウェイ計算）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>PL/CF トグル経営ダッシュボード</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>利益予測線（forecast分離表示）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>プロジェクト5段階ステータス管理</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>設定ページ「共通設定」「個人設定」タブ分割</li>
+                </ul>
+              </div>
+            </details>
+
+            {/* v0.1.x 折りたたみ */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.1.x</span>
+                  <span className="text-[9px] text-[#999]">2026.01 – 02</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
+                <ul className="space-y-1">
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>経費・売上管理（CRUD）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>領収書AI読み取り + Google Drive保存</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>クレカCSVインポート</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>複式簿記自動生成（確定申告ページ）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>PJ別損益 / 按分設定</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>YouTube管理スプレッドシート連携</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>AIヘルプ・Q&A</li>
+                </ul>
+              </div>
+            </details>
+          </div>
+        </section>
+
         {/* バージョン */}
         <div className="text-center py-8">
           <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.4.0</span>
