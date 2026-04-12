@@ -71,7 +71,7 @@ export default function TransactionModal({
     eq_warranty_date: '',
   });
 
-  // テンプレート取得（モーダルopen時）
+  // テンプレート取得（モーダルopen時 — transport + general 両方）
   useEffect(() => {
     if (!isOpen || !supabase) return;
     const owner = defaultOwner === 'all' ? 'tomo' : defaultOwner;
@@ -79,9 +79,7 @@ export default function TransactionModal({
       .from('expense_templates')
       .select('*')
       .eq('owner', owner)
-      .eq('template_type', 'transport')
       .order('use_count', { ascending: false })
-      .limit(5)
       .then(({ data }: { data: any }) => {
         if (data) setTemplates(data as ExpenseTemplate[]);
       });
@@ -181,19 +179,27 @@ export default function TransactionModal({
 
   // テンプレート適用
   const applyTemplate = async (tpl: ExpenseTemplate) => {
-    const legs = (tpl.route_legs || []) as any[];
-    // ルート概要生成: 自宅 → JR千葉駅 → ... → 最終地
-    const stops = legs.length > 0
-      ? [legs[0].from, ...legs.map((l: any) => l.to)].join(' → ')
-      : tpl.description || tpl.name;
+    let desc = '';
+    let store = '';
+    if (tpl.template_type === 'transport') {
+      const legs = (tpl.route_legs || []) as any[];
+      desc = legs.length > 0
+        ? [legs[0].from, ...legs.map((l: any) => l.to)].join(' → ')
+        : tpl.description || tpl.name;
+    } else {
+      desc = tpl.description || '';
+      store = tpl.store || '';
+    }
 
     setSelectedTemplate(tpl);
     setGreenMode(false);
     setForm(prev => ({
       ...prev,
       amount: (tpl.amount || 0).toString(),
-      description: stops,
-      store: '',
+      description: desc,
+      store,
+      ...(tpl.template_type === 'general' && tpl.kamoku ? { kamoku: tpl.kamoku } : {}),
+      ...(tpl.payment_method ? { payment_method: tpl.payment_method } : {}),
     }));
 
     // use_count + 1
@@ -443,11 +449,11 @@ export default function TransactionModal({
             </select>
           </div>
 
-          {form.kamoku === 'travel' && templates.length > 0 && (
+          {form.kamoku === 'travel' && templates.filter(t => t.template_type === 'transport').length > 0 && (
             <div className="space-y-2">
               <p className="text-xs text-[#999]">テンプレートから入力</p>
               <div className="flex flex-wrap gap-1.5">
-                {templates.map((tpl) => (
+                {templates.filter(t => t.template_type === 'transport').slice(0, 5).map((tpl) => (
                   <button
                     key={tpl.id}
                     onClick={() => applyTemplate(tpl)}
@@ -484,6 +490,34 @@ export default function TransactionModal({
               )}
             </div>
           )}
+
+          {/* 汎用テンプレートチップ（交通費以外の科目） */}
+          {form.kamoku !== 'travel' && (() => {
+            const generalTpls = templates.filter(t => t.template_type === 'general' && t.kamoku === form.kamoku);
+            return generalTpls.length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-xs text-[#999]">テンプレートから入力</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {generalTpls.slice(0, 5).map((tpl) => (
+                    <button
+                      key={tpl.id}
+                      onClick={() => applyTemplate(tpl)}
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all ${
+                        selectedTemplate?.id === tpl.id
+                          ? 'bg-[#1a1a1a] text-white border-[#1a1a1a]'
+                          : 'bg-[#F5F5F3] text-[#555] border-[#E0E0E0] hover:border-[#D4A03A] hover:text-[#D4A03A]'
+                      }`}
+                    >
+                      <span>{tpl.name}</span>
+                      <span className="font-['Saira_Condensed'] tabular-nums opacity-70">
+                        ¥{(tpl.amount || 0).toLocaleString()}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null;
+          })()}
 
           {form.kamoku === 'travel' && <TransportFields data={transportData} onChange={setTransportData} />}
           {form.kamoku === 'entertainment' && <EntertainmentFields data={entertainmentData} onChange={setEntertainmentData} />}

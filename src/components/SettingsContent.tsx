@@ -229,7 +229,7 @@ export default function SettingsContent() {
 
   // 交通費テンプレート
   const [expenseTemplates, setExpenseTemplates] = useState<ExpenseTemplate[]>([]);
-  const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  const [templateModalOpen, setTemplateModalOpen] = useState<false | 'transport' | 'general'>(false);
   const [editingTemplate, setEditingTemplate] = useState<ExpenseTemplate | null>(null);
   const [templateDeleteTarget, setTemplateDeleteTarget] = useState<string | null>(null);
 
@@ -911,35 +911,70 @@ export default function SettingsContent() {
 
   const saveTemplate = async (form: {
     name: string;
+    template_type: 'transport' | 'general';
     route_legs: RouteLeg[];
+    kamoku?: string;
+    store?: string;
+    description?: string;
+    amount?: number;
+    payment_method?: string;
   }) => {
     if (!supabase) return;
-    const total = form.route_legs.reduce((s, l) => s + (l.amount || 0), 0);
-    const greenTotal = form.route_legs.reduce((s, l) => {
-      if (l.green_available && l.green_surcharge) return s + l.amount + l.green_surcharge;
-      return s + l.amount;
-    }, 0);
     try {
-      if (editingTemplate) {
-        await supabase.from('expense_templates').update({
-          name: form.name,
-          route_legs: form.route_legs,
-          amount: total,
-          green_amount: greenTotal,
-          updated_at: new Date().toISOString(),
-        }).eq('id', editingTemplate.id);
+      if (form.template_type === 'transport') {
+        const total = form.route_legs.reduce((s, l) => s + (l.amount || 0), 0);
+        const greenTotal = form.route_legs.reduce((s, l) => {
+          if (l.green_available && l.green_surcharge) return s + l.amount + l.green_surcharge;
+          return s + l.amount;
+        }, 0);
+        if (editingTemplate) {
+          await supabase.from('expense_templates').update({
+            name: form.name,
+            route_legs: form.route_legs,
+            amount: total,
+            green_amount: greenTotal,
+            updated_at: new Date().toISOString(),
+          }).eq('id', editingTemplate.id);
+        } else {
+          await supabase.from('expense_templates').insert({
+            owner: effectiveOwner,
+            name: form.name,
+            template_type: 'transport',
+            kamoku: 'transport',
+            route_legs: form.route_legs,
+            amount: total,
+            green_amount: greenTotal,
+            payment_method: 'personal',
+            use_count: 0,
+          });
+        }
       } else {
-        await supabase.from('expense_templates').insert({
-          owner: effectiveOwner,
-          name: form.name,
-          template_type: 'transport',
-          kamoku: 'transport',
-          route_legs: form.route_legs,
-          amount: total,
-          green_amount: greenTotal,
-          payment_method: 'personal',
-          use_count: 0,
-        });
+        // 汎用テンプレート
+        if (editingTemplate) {
+          await supabase.from('expense_templates').update({
+            name: form.name,
+            kamoku: form.kamoku || 'misc',
+            store: form.store || '',
+            description: form.description || '',
+            amount: form.amount || 0,
+            payment_method: form.payment_method || 'personal',
+            updated_at: new Date().toISOString(),
+          }).eq('id', editingTemplate.id);
+        } else {
+          await supabase.from('expense_templates').insert({
+            owner: effectiveOwner,
+            name: form.name,
+            template_type: 'general',
+            kamoku: form.kamoku || 'misc',
+            store: form.store || '',
+            description: form.description || '',
+            amount: form.amount || 0,
+            route_legs: [],
+            green_amount: 0,
+            payment_method: form.payment_method || 'personal',
+            use_count: 0,
+          });
+        }
       }
       setTemplateModalOpen(false);
       setEditingTemplate(null);
@@ -2055,26 +2090,31 @@ export default function SettingsContent() {
           </div>
         </section>
 
-        {/* ── 交通費テンプレート ── */}
+        {/* ── 経費テンプレート ── */}
         <section className="mb-10">
           <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
-            交通費テンプレート
+            経費テンプレート
           </div>
-          <div className="bg-white rounded-xl shadow-sm p-5">
+
+          {/* 交通費テンプレート */}
+          <div className="bg-white rounded-xl shadow-sm p-5 mb-4">
             <div className="flex items-center justify-between mb-4">
-              <p className="text-xs text-[#666]">よく使うルートを登録しておくと、経費入力時に一発入力できます。</p>
+              <div>
+                <p className="text-xs font-medium text-[#1a1a1a] mb-0.5">交通費</p>
+                <p className="text-[10px] text-[#999]">よく使うルートを登録→経費入力時に一発入力</p>
+              </div>
               <button
-                onClick={() => { setEditingTemplate(null); setTemplateModalOpen(true); }}
+                onClick={() => { setEditingTemplate(null); setTemplateModalOpen('transport'); }}
                 className="flex items-center gap-1 px-3 py-1.5 text-[11px] text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] transition-colors whitespace-nowrap ml-3"
               >
                 <Plus className="w-3.5 h-3.5" />追加
               </button>
             </div>
-            {expenseTemplates.length === 0 ? (
-              <p className="text-xs text-[#bbb] text-center py-6">テンプレートがまだありません</p>
+            {expenseTemplates.filter(t => t.template_type === 'transport').length === 0 ? (
+              <p className="text-xs text-[#bbb] text-center py-4">交通費テンプレートがまだありません</p>
             ) : (
               <div className="space-y-3">
-                {expenseTemplates.map(tmpl => {
+                {expenseTemplates.filter(t => t.template_type === 'transport').map(tmpl => {
                   const total = tmpl.route_legs.reduce((s, l) => s + (l.amount || 0), 0);
                   const routeLabel = tmpl.route_legs.length > 0
                     ? tmpl.route_legs.map(l => l.from).join(' → ') + ' → ' + tmpl.route_legs[tmpl.route_legs.length - 1].to
@@ -2101,7 +2141,66 @@ export default function SettingsContent() {
                       </div>
                       <div className="flex items-center gap-1 ml-3">
                         <button
-                          onClick={() => { setEditingTemplate(tmpl); setTemplateModalOpen(true); }}
+                          onClick={() => { setEditingTemplate(tmpl); setTemplateModalOpen('transport'); }}
+                          className="p-1.5 rounded-lg hover:bg-[#eee] transition-colors"
+                        >
+                          <Pencil className="w-3 h-3 text-[#999]" />
+                        </button>
+                        <button
+                          onClick={() => setTemplateDeleteTarget(tmpl.id)}
+                          className="p-1.5 rounded-lg hover:bg-[#fee] transition-colors"
+                        >
+                          <Trash2 className="w-3 h-3 text-[#C23728]" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* 汎用テンプレート */}
+          <div className="bg-white rounded-xl shadow-sm p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-xs font-medium text-[#1a1a1a] mb-0.5">汎用</p>
+                <p className="text-[10px] text-[#999]">よく使う経費パターンを登録→科目選択時にチップ表示</p>
+              </div>
+              <button
+                onClick={() => { setEditingTemplate(null); setTemplateModalOpen('general'); }}
+                className="flex items-center gap-1 px-3 py-1.5 text-[11px] text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] transition-colors whitespace-nowrap ml-3"
+              >
+                <Plus className="w-3.5 h-3.5" />追加
+              </button>
+            </div>
+            {expenseTemplates.filter(t => t.template_type === 'general').length === 0 ? (
+              <p className="text-xs text-[#bbb] text-center py-4">汎用テンプレートがまだありません</p>
+            ) : (
+              <div className="space-y-3">
+                {expenseTemplates.filter(t => t.template_type === 'general').map(tmpl => {
+                  const kamokuName = tmpl.kamoku ? (KAMOKU[tmpl.kamoku as keyof typeof KAMOKU]?.name || tmpl.kamoku) : '—';
+                  return (
+                    <div key={tmpl.id} className="flex items-start justify-between py-3 px-4 bg-[#F5F5F3] rounded-xl">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-medium text-[#1a1a1a]">{tmpl.name}</span>
+                          <span className="text-[9px] px-1.5 py-0.5 bg-[#eee] text-[#999] rounded-full">{kamokuName}</span>
+                          {tmpl.use_count > 0 && (
+                            <span className="text-[9px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full">{tmpl.use_count}回使用</span>
+                          )}
+                        </div>
+                        {tmpl.store && (
+                          <p className="text-[10px] text-[#999] truncate">{tmpl.store}</p>
+                        )}
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[11px] font-medium text-[#1a1a1a]">¥{(tmpl.amount || 0).toLocaleString()}</span>
+                          <span className="text-[9px] text-[#bbb]">{tmpl.payment_method === 'bank_account' ? '口座' : '個人'}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 ml-3">
+                        <button
+                          onClick={() => { setEditingTemplate(tmpl); setTemplateModalOpen('general'); }}
                           className="p-1.5 rounded-lg hover:bg-[#eee] transition-colors"
                         >
                           <Pencil className="w-3 h-3 text-[#999]" />
@@ -2222,6 +2321,7 @@ export default function SettingsContent() {
       {templateModalOpen && (
         <TemplateModal
           template={editingTemplate}
+          templateType={templateModalOpen}
           onSave={saveTemplate}
           onClose={() => { setTemplateModalOpen(false); setEditingTemplate(null); }}
         />
@@ -3322,36 +3422,60 @@ function EquipmentEditModal({
 }
 
 // ============================================================
-// TemplateModal — 交通費テンプレート作成・編集
+// TemplateModal — 経費テンプレート作成・編集（交通費 / 汎用）
 // ============================================================
 function TemplateModal({
   template,
+  templateType,
   onSave,
   onClose,
 }: {
   template: ExpenseTemplate | null;
-  onSave: (form: { name: string; route_legs: RouteLeg[] }) => Promise<void>;
+  templateType: 'transport' | 'general';
+  onSave: (form: {
+    name: string;
+    template_type: 'transport' | 'general';
+    route_legs: RouteLeg[];
+    kamoku?: string;
+    store?: string;
+    description?: string;
+    amount?: number;
+    payment_method?: string;
+  }) => Promise<void>;
   onClose: () => void;
 }) {
   const [name, setName] = useState(template?.name || '');
+  const [saving, setSaving] = useState(false);
+
+  // 交通費用
   const [legs, setLegs] = useState<RouteLeg[]>(
     template?.route_legs && template.route_legs.length > 0
       ? template.route_legs
       : [{ from: '', to: '', method: 'JR', amount: 0 }]
   );
-  const [saving, setSaving] = useState(false);
 
+  // 汎用用
+  const [kamoku, setKamoku] = useState(template?.kamoku || 'misc');
+  const [store, setStore] = useState(template?.store || '');
+  const [description, setDescription] = useState(template?.description || '');
+  const [amount, setAmount] = useState(template?.amount?.toString() || '');
+  const [paymentMethod, setPaymentMethod] = useState(template?.payment_method || 'personal');
+
+  const GENERAL_KAMOKU = Object.entries(KAMOKU)
+    .filter(([, v]) => v.type === 'expense')
+    .filter(([id]) => id !== 'travel')
+    .map(([id, v]) => ({ id, name: v.name }));
+
+  // 交通費区間操作
   const updateLeg = (idx: number, field: keyof RouteLeg, value: string | number | boolean) => {
     setLegs(prev => prev.map((l, i) => i === idx ? { ...l, [field]: value } : l));
   };
-
   const addLeg = () => {
     setLegs(prev => {
       const last = prev[prev.length - 1];
       return [...prev, { from: last?.to || '', to: '', method: last?.method || 'JR', amount: 0 }];
     });
   };
-
   const removeLeg = (idx: number) => {
     if (legs.length <= 1) return;
     setLegs(prev => prev.filter((_, i) => i !== idx));
@@ -3366,10 +3490,24 @@ function TemplateModal({
 
   const handleSave = async () => {
     if (!name.trim()) return;
-    const validLegs = legs.filter(l => l.from && l.to && Number(l.amount) > 0);
-    if (validLegs.length === 0) return;
     setSaving(true);
-    await onSave({ name: name.trim(), route_legs: validLegs });
+    if (templateType === 'transport') {
+      const validLegs = legs.filter(l => l.from && l.to && Number(l.amount) > 0);
+      if (validLegs.length === 0) { setSaving(false); return; }
+      await onSave({ name: name.trim(), template_type: 'transport', route_legs: validLegs });
+    } else {
+      if (!Number(amount)) { setSaving(false); return; }
+      await onSave({
+        name: name.trim(),
+        template_type: 'general',
+        route_legs: [],
+        kamoku,
+        store: store.trim(),
+        description: description.trim(),
+        amount: Number(amount),
+        payment_method: paymentMethod,
+      });
+    }
     setSaving(false);
   };
 
@@ -3380,7 +3518,7 @@ function TemplateModal({
         style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-sm font-medium text-[#1a1a1a]">
-            {template ? 'テンプレートを編集' : 'テンプレートを追加'}
+            {template ? 'テンプレートを編集' : templateType === 'transport' ? '交通費テンプレートを追加' : '汎用テンプレートを追加'}
           </h3>
           <button onClick={onClose} className="p-1 rounded hover:bg-[#F5F5F3]">
             <X className="w-4 h-4 text-[#999]" />
@@ -3393,109 +3531,118 @@ function TemplateModal({
           <input
             value={name}
             onChange={e => setName(e.target.value)}
-            placeholder="例: 自宅→四ツ谷"
+            placeholder={templateType === 'transport' ? '例: 自宅→四ツ谷' : '例: Adobe CC月額'}
             className="w-full px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors"
           />
         </div>
 
-        {/* ルート区間 */}
-        <div className="mb-4">
-          <label className="text-[10px] font-medium tracking-wider text-[#999] block mb-2">ルート区間</label>
-          <div className="space-y-3">
-            {legs.map((leg, idx) => (
-              <div key={idx} className="bg-[#F5F5F3] rounded-xl p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[9px] font-medium text-[#999] tracking-wider">区間 {idx + 1}</span>
-                  {legs.length > 1 && (
-                    <button onClick={() => removeLeg(idx)} className="p-1 rounded hover:bg-[#eee]">
-                      <X className="w-3 h-3 text-[#C23728]" />
-                    </button>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-2 mb-2">
-                  <input
-                    value={leg.from}
-                    onChange={e => updateLeg(idx, 'from', e.target.value)}
-                    placeholder="出発地"
-                    className="px-2.5 py-2 text-xs border border-[#e8e8e8] rounded-lg bg-white focus:outline-none focus:border-[#1a1a1a]"
-                  />
-                  <input
-                    value={leg.to}
-                    onChange={e => updateLeg(idx, 'to', e.target.value)}
-                    placeholder="到着地"
-                    className="px-2.5 py-2 text-xs border border-[#e8e8e8] rounded-lg bg-white focus:outline-none focus:border-[#1a1a1a]"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <select
-                    value={leg.method}
-                    onChange={e => updateLeg(idx, 'method', e.target.value)}
-                    className="px-2.5 py-2 text-xs border border-[#e8e8e8] rounded-lg bg-white focus:outline-none focus:border-[#1a1a1a]"
-                  >
-                    {TRANSPORT_METHODS.map(m => (
-                      <option key={m} value={m}>{m}</option>
-                    ))}
-                  </select>
-                  <input
-                    type="number"
-                    value={leg.amount || ''}
-                    onChange={e => updateLeg(idx, 'amount', Number(e.target.value))}
-                    placeholder="運賃（円）"
-                    className="px-2.5 py-2 text-xs border border-[#e8e8e8] rounded-lg bg-white focus:outline-none focus:border-[#1a1a1a]"
-                  />
-                </div>
-                {/* グリーン車 */}
-                {(leg.method === 'JR' || leg.method === '新幹線') && (
-                  <div className="mt-2">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={!!leg.green_available}
-                        onChange={e => updateLeg(idx, 'green_available', e.target.checked)}
-                        className="rounded"
-                      />
-                      <span className="text-[10px] text-[#666]">グリーン車対応</span>
-                    </label>
-                    {leg.green_available && (
-                      <div className="mt-1.5 flex items-center gap-2">
-                        <span className="text-[10px] text-[#999]">グリーン追加料金</span>
-                        <input
-                          type="number"
-                          value={leg.green_surcharge || ''}
-                          onChange={e => updateLeg(idx, 'green_surcharge', Number(e.target.value))}
-                          placeholder="例: 780"
-                          className="w-24 px-2 py-1 text-xs border border-[#e8e8e8] rounded-lg bg-white focus:outline-none focus:border-[#1a1a1a]"
-                        />
-                        <span className="text-[10px] text-[#999]">円</span>
+        {templateType === 'transport' ? (
+          <>
+            {/* ルート区間 */}
+            <div className="mb-4">
+              <label className="text-[10px] font-medium tracking-wider text-[#999] block mb-2">ルート区間</label>
+              <div className="space-y-3">
+                {legs.map((leg, idx) => (
+                  <div key={idx} className="bg-[#F5F5F3] rounded-xl p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[9px] font-medium text-[#999] tracking-wider">区間 {idx + 1}</span>
+                      {legs.length > 1 && (
+                        <button onClick={() => removeLeg(idx)} className="p-1 rounded hover:bg-[#eee]">
+                          <X className="w-3 h-3 text-[#C23728]" />
+                        </button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 mb-2">
+                      <input value={leg.from} onChange={e => updateLeg(idx, 'from', e.target.value)} placeholder="出発地"
+                        className="px-2.5 py-2 text-xs border border-[#e8e8e8] rounded-lg bg-white focus:outline-none focus:border-[#1a1a1a]" />
+                      <input value={leg.to} onChange={e => updateLeg(idx, 'to', e.target.value)} placeholder="到着地"
+                        className="px-2.5 py-2 text-xs border border-[#e8e8e8] rounded-lg bg-white focus:outline-none focus:border-[#1a1a1a]" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <select value={leg.method} onChange={e => updateLeg(idx, 'method', e.target.value)}
+                        className="px-2.5 py-2 text-xs border border-[#e8e8e8] rounded-lg bg-white focus:outline-none focus:border-[#1a1a1a]">
+                        {TRANSPORT_METHODS.map(m => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                      <input type="number" value={leg.amount || ''} onChange={e => updateLeg(idx, 'amount', Number(e.target.value))} placeholder="運賃（円）"
+                        className="px-2.5 py-2 text-xs border border-[#e8e8e8] rounded-lg bg-white focus:outline-none focus:border-[#1a1a1a]" />
+                    </div>
+                    {(leg.method === 'JR' || leg.method === '新幹線') && (
+                      <div className="mt-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input type="checkbox" checked={!!leg.green_available} onChange={e => updateLeg(idx, 'green_available', e.target.checked)} className="rounded" />
+                          <span className="text-[10px] text-[#666]">グリーン車対応</span>
+                        </label>
+                        {leg.green_available && (
+                          <div className="mt-1.5 flex items-center gap-2">
+                            <span className="text-[10px] text-[#999]">グリーン追加料金</span>
+                            <input type="number" value={leg.green_surcharge || ''} onChange={e => updateLeg(idx, 'green_surcharge', Number(e.target.value))} placeholder="例: 780"
+                              className="w-24 px-2 py-1 text-xs border border-[#e8e8e8] rounded-lg bg-white focus:outline-none focus:border-[#1a1a1a]" />
+                            <span className="text-[10px] text-[#999]">円</span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
+                ))}
+              </div>
+              <button onClick={addLeg}
+                className="mt-2 w-full py-2 text-xs text-[#999] border border-dashed border-[#ddd] rounded-xl hover:border-[#999] hover:text-[#666] transition-colors flex items-center justify-center gap-1">
+                <Plus className="w-3.5 h-3.5" />区間を追加
+              </button>
+            </div>
+
+            {/* 合計プレビュー */}
+            {total > 0 && (
+              <div className="mb-5 px-4 py-3 bg-[#F5F5F3] rounded-xl">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-[#999]">通常合計</span>
+                  <span className="text-sm font-medium text-[#1a1a1a]">¥{total.toLocaleString()}</span>
+                </div>
+                {hasGreen && greenTotal > total && (
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-[10px] text-[#4a7c59]">グリーン合計</span>
+                    <span className="text-sm font-medium text-[#4a7c59]">¥{greenTotal.toLocaleString()}</span>
+                  </div>
                 )}
               </div>
-            ))}
-          </div>
-          <button
-            onClick={addLeg}
-            className="mt-2 w-full py-2 text-xs text-[#999] border border-dashed border-[#ddd] rounded-xl hover:border-[#999] hover:text-[#666] transition-colors flex items-center justify-center gap-1"
-          >
-            <Plus className="w-3.5 h-3.5" />区間を追加
-          </button>
-        </div>
-
-        {/* 合計プレビュー */}
-        {total > 0 && (
-          <div className="mb-5 px-4 py-3 bg-[#F5F5F3] rounded-xl">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] text-[#999]">通常合計</span>
-              <span className="text-sm font-medium text-[#1a1a1a]">¥{total.toLocaleString()}</span>
-            </div>
-            {hasGreen && greenTotal > total && (
-              <div className="flex items-center justify-between mt-1">
-                <span className="text-[10px] text-[#4a7c59]">グリーン合計</span>
-                <span className="text-sm font-medium text-[#4a7c59]">¥{greenTotal.toLocaleString()}</span>
-              </div>
             )}
-          </div>
+          </>
+        ) : (
+          <>
+            {/* 汎用テンプレート入力フィールド */}
+            <div className="space-y-4 mb-5">
+              <div>
+                <label className="text-[10px] font-medium tracking-wider text-[#999] block mb-1.5">勘定科目</label>
+                <select value={kamoku} onChange={e => setKamoku(e.target.value)}
+                  className="w-full px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors">
+                  {GENERAL_KAMOKU.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-medium tracking-wider text-[#999] block mb-1.5">取引先</label>
+                <input value={store} onChange={e => setStore(e.target.value)} placeholder="例: Adobe / AWS"
+                  className="w-full px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors" />
+              </div>
+              <div>
+                <label className="text-[10px] font-medium tracking-wider text-[#999] block mb-1.5">金額（円）</label>
+                <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="例: 7780"
+                  className="w-full px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors" />
+              </div>
+              <div>
+                <label className="text-[10px] font-medium tracking-wider text-[#999] block mb-1.5">摘要（任意）</label>
+                <input value={description} onChange={e => setDescription(e.target.value)} placeholder="例: Creative Cloud年間サブスク"
+                  className="w-full px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors" />
+              </div>
+              <div>
+                <label className="text-[10px] font-medium tracking-wider text-[#999] block mb-1.5">支払方法</label>
+                <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}
+                  className="w-full px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors">
+                  <option value="personal">個人（事業主借）</option>
+                  <option value="bank_account">口座</option>
+                </select>
+              </div>
+            </div>
+          </>
         )}
 
         <div className="flex gap-2">
