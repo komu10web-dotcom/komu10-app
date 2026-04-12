@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { DIVISIONS, KAMOKU } from '@/types/database';
-import type { Transaction, Project, TransactionAllocation, BankAccount } from '@/types/database';
+import type { Transaction, Project, TransactionAllocation, BankAccount, FundTransfer } from '@/types/database';
 import { RefreshCw, CheckCircle2, AlertCircle, Loader2, ChevronDown, ChevronUp, Plus, Trash2, Save } from 'lucide-react';
 import { usePeriodRange } from './HeaderControls';
 
@@ -100,9 +100,31 @@ export default function ManagementContent() {
   const [divFilter, setDivFilter] = useState('all');
   const [showAllPJ, setShowAllPJ] = useState(false);
 
-  // PL/CF切替
-  const [viewMode, setViewMode] = useState<'pl' | 'cf'>('pl');
+  // PL/CF/資金 切替
+  const [viewMode, setViewMode] = useState<'pl' | 'cf' | 'fund'>('pl');
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+
+  // 資金移動
+  const [fundTransfers, setFundTransfers] = useState<FundTransfer[]>([]);
+  const [fundForm, setFundForm] = useState<{
+    transfer_type: 'owner_deposit' | 'owner_withdrawal' | 'internal_transfer';
+    from_bank_account_id: string;
+    to_bank_account_id: string;
+    amount: string;
+    transfer_fee: string;
+    transfer_date: string;
+    memo: string;
+  }>({
+    transfer_type: 'owner_deposit',
+    from_bank_account_id: '',
+    to_bank_account_id: '',
+    amount: '',
+    transfer_fee: '0',
+    transfer_date: new Date().toISOString().slice(0, 10),
+    memo: '',
+  });
+  const [savingFund, setSavingFund] = useState(false);
+  const [fundError, setFundError] = useState<string | null>(null);
 
   // 同期
   const [syncing, setSyncing] = useState(false);
@@ -171,6 +193,14 @@ export default function ManagementContent() {
       if (owner !== 'all') bankQ = bankQ.eq('owner', owner);
       const { data: bankData } = await bankQ;
       setBankAccounts((bankData as BankAccount[]) || []);
+
+      // 資金移動（年間）
+      let ftQ = supabase.from('fund_transfers').select('*')
+        .gte('transfer_date', `${year}-01-01`).lte('transfer_date', `${year}-12-31`)
+        .order('transfer_date', { ascending: false });
+      if (owner !== 'all') ftQ = ftQ.eq('owner', owner);
+      const { data: ftData } = await ftQ;
+      setFundTransfers((ftData as FundTransfer[]) || []);
     } catch (err) {
       console.error('Fetch error:', err);
     } finally {
@@ -478,6 +508,77 @@ export default function ManagementContent() {
     finally { setSyncing(false); }
   };
 
+  // ========== 資金移動 保存 ==========
+
+  const saveFundTransfer = async () => {
+    if (!supabase) return;
+    setFundError(null);
+    const amount = parseInt(fundForm.amount, 10);
+    const fee = parseInt(fundForm.transfer_fee, 10) || 0;
+    if (!amount || amount <= 0) { setFundError('金額を入力してください'); return; }
+    if (!fundForm.transfer_date) { setFundError('日付を入力してください'); return; }
+    if (fundForm.transfer_type === 'owner_deposit' && !fundForm.to_bank_account_id) { setFundError('入金先口座を選択してください'); return; }
+    if (fundForm.transfer_type === 'owner_withdrawal' && !fundForm.from_bank_account_id) { setFundError('引出元口座を選択してください'); return; }
+    if (fundForm.transfer_type === 'internal_transfer') {
+      if (!fundForm.from_bank_account_id || !fundForm.to_bank_account_id) { setFundError('移動元・移動先口座を選択してください'); return; }
+      if (fundForm.from_bank_account_id === fundForm.to_bank_account_id) { setFundError('移動元と移動先が同じです'); return; }
+    }
+
+    setSavingFund(true);
+    try {
+      const payload: Record<string, unknown> = {
+        owner: owner === 'all' ? 'tomo' : owner,
+        transfer_type: fundForm.transfer_type,
+        from_description: fundForm.transfer_type === 'owner_deposit' ? '個人口座' :
+          (bankAccounts.find(b => b.id === fundForm.from_bank_account_id)?.name || '事業口座'),
+        to_description: fundForm.transfer_type === 'owner_withdrawal' ? '個人口座' :
+          (bankAccounts.find(b => b.id === fundForm.to_bank_account_id)?.name || '事業口座'),
+        from_bank_account_id: fundForm.from_bank_account_id || null,
+        to_bank_account_id: fundForm.to_bank_account_id || null,
+        amount,
+        transfer_fee: fee,
+        transfer_date: fundForm.transfer_date,
+        memo: fundForm.memo || null,
+      };
+
+      const { error: insertErr } = await supabase.from('fund_transfers').insert(payload);
+      if (insertErr) throw insertErr;
+
+      // 口座残高自動更新
+      if (fundForm.transfer_type === 'owner_deposit' && fundForm.to_bank_account_id) {
+        const ba = bankAccounts.find(b => b.id === fundForm.to_bank_account_id);
+        if (ba) await supabase.from('bank_accounts').update({ balance: ba.balance + amount }).eq('id', ba.id);
+      } else if (fundForm.transfer_type === 'owner_withdrawal' && fundForm.from_bank_account_id) {
+        const ba = bankAccounts.find(b => b.id === fundForm.from_bank_account_id);
+        if (ba) {
+          const deduct = amount + (fee > 0 ? fee : 0);
+          await supabase.from('bank_accounts').update({ balance: ba.balance - deduct }).eq('id', ba.id);
+        }
+      } else if (fundForm.transfer_type === 'internal_transfer') {
+        const fromBa = bankAccounts.find(b => b.id === fundForm.from_bank_account_id);
+        const toBa = bankAccounts.find(b => b.id === fundForm.to_bank_account_id);
+        if (fromBa) await supabase.from('bank_accounts').update({ balance: fromBa.balance - amount - fee }).eq('id', fromBa.id);
+        if (toBa) await supabase.from('bank_accounts').update({ balance: toBa.balance + amount }).eq('id', toBa.id);
+      }
+
+      // フォームリセット
+      setFundForm(prev => ({
+        ...prev,
+        amount: '',
+        transfer_fee: '0',
+        memo: '',
+        from_bank_account_id: '',
+        to_bank_account_id: '',
+      }));
+      await fetchData();
+    } catch (e) {
+      setFundError('保存に失敗しました');
+      console.error(e);
+    } finally {
+      setSavingFund(false);
+    }
+  };
+
   // ========== 按分編集UI（共通） ==========
 
   const renderAllocEditor = (tx: Transaction) => {
@@ -611,6 +712,10 @@ export default function ManagementContent() {
               onClick={() => setViewMode('cf')}
               className={`px-3 py-1 rounded-md text-[10px] font-medium transition-colors ${viewMode === 'cf' ? 'bg-white text-[#1a1a1a] shadow-sm' : 'text-[#999] hover:text-[#666]'}`}
             >CF</button>
+            <button
+              onClick={() => setViewMode('fund')}
+              className={`px-3 py-1 rounded-md text-[10px] font-medium transition-colors ${viewMode === 'fund' ? 'bg-white text-[#1a1a1a] shadow-sm' : 'text-[#999] hover:text-[#666]'}`}
+            >資金</button>
           </div>
         </div>
 
@@ -749,6 +854,192 @@ export default function ManagementContent() {
                   <span className="text-[9px] text-[#999]">出金</span>
                 </div>
               </div>
+            </div>
+          </>
+        ) : viewMode === 'fund' ? (
+          <>
+            {/* ===== 資金タブ ===== */}
+
+            {/* 口座残高一覧 */}
+            <div className="bg-white rounded-2xl px-5 py-5 mb-6" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
+              <p className="text-[10px] tracking-wider text-[#999] mb-4">口座残高</p>
+              {bankAccounts.length === 0 ? (
+                <p className="text-xs text-[#ccc]">口座未登録（設定 → 口座管理で追加）</p>
+              ) : (
+                <div className="space-y-2">
+                  {bankAccounts.map(ba => (
+                    <div key={ba.id} className="flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0">
+                      <div>
+                        <span className="text-[12px] text-[#1a1a1a] font-medium">{ba.name}</span>
+                        {ba.bank_name && <span className="text-[10px] text-[#999] ml-2">{ba.bank_name}</span>}
+                      </div>
+                      <span className="font-['Saira_Condensed'] text-lg tabular-nums text-[#1a1a1a]">{yen(ba.balance)}</span>
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-between pt-2 mt-1">
+                    <span className="text-[11px] text-[#999] font-medium">合計</span>
+                    <span className="font-['Saira_Condensed'] text-xl tabular-nums text-[#1a1a1a] font-medium">{yen(bankAccounts.reduce((s, b) => s + b.balance, 0))}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 資金移動登録フォーム */}
+            <div className="bg-white rounded-2xl px-5 py-5 mb-6" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
+              <p className="text-[10px] tracking-wider text-[#999] mb-4">資金移動を登録</p>
+
+              {/* 種別選択 */}
+              <div className="flex gap-2 mb-4">
+                {[
+                  { val: 'owner_deposit' as const, label: '入金（個人→事業）' },
+                  { val: 'owner_withdrawal' as const, label: '引出（事業→個人）' },
+                  { val: 'internal_transfer' as const, label: '口座間移動' },
+                ].map(opt => (
+                  <button
+                    key={opt.val}
+                    onClick={() => setFundForm(p => ({ ...p, transfer_type: opt.val, from_bank_account_id: '', to_bank_account_id: '' }))}
+                    className={`px-3 py-1.5 rounded-lg text-[10px] font-medium transition-colors border ${
+                      fundForm.transfer_type === opt.val
+                        ? 'bg-[#1a1a1a] text-white border-[#1a1a1a]'
+                        : 'bg-white text-[#999] border-gray-200 hover:border-gray-400'
+                    }`}
+                  >{opt.label}</button>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                {/* 入金先 or 引出元 or 移動元 */}
+                {(fundForm.transfer_type === 'owner_withdrawal' || fundForm.transfer_type === 'internal_transfer') && (
+                  <div>
+                    <label className="text-[10px] text-[#999] block mb-1">
+                      {fundForm.transfer_type === 'internal_transfer' ? '移動元口座' : '引出元口座'}
+                    </label>
+                    <select
+                      value={fundForm.from_bank_account_id}
+                      onChange={e => setFundForm(p => ({ ...p, from_bank_account_id: e.target.value }))}
+                      className="w-full px-3 py-2 bg-[#FAFAF8] rounded-lg text-[11px] border border-gray-200 outline-none"
+                    >
+                      <option value="">選択してください</option>
+                      {bankAccounts.map(ba => <option key={ba.id} value={ba.id}>{ba.name} ({yen(ba.balance)})</option>)}
+                    </select>
+                  </div>
+                )}
+
+                {(fundForm.transfer_type === 'owner_deposit' || fundForm.transfer_type === 'internal_transfer') && (
+                  <div>
+                    <label className="text-[10px] text-[#999] block mb-1">
+                      {fundForm.transfer_type === 'internal_transfer' ? '移動先口座' : '入金先口座'}
+                    </label>
+                    <select
+                      value={fundForm.to_bank_account_id}
+                      onChange={e => setFundForm(p => ({ ...p, to_bank_account_id: e.target.value }))}
+                      className="w-full px-3 py-2 bg-[#FAFAF8] rounded-lg text-[11px] border border-gray-200 outline-none"
+                    >
+                      <option value="">選択してください</option>
+                      {bankAccounts
+                        .filter(ba => ba.id !== fundForm.from_bank_account_id)
+                        .map(ba => <option key={ba.id} value={ba.id}>{ba.name} ({yen(ba.balance)})</option>)}
+                    </select>
+                  </div>
+                )}
+
+                {/* 金額 */}
+                <div>
+                  <label className="text-[10px] text-[#999] block mb-1">金額</label>
+                  <input
+                    type="number"
+                    value={fundForm.amount}
+                    onChange={e => setFundForm(p => ({ ...p, amount: e.target.value }))}
+                    placeholder="0"
+                    className="w-full px-3 py-2 bg-[#FAFAF8] rounded-lg text-[11px] border border-gray-200 outline-none font-['Saira_Condensed'] tabular-nums"
+                  />
+                </div>
+
+                {/* 振込手数料 */}
+                <div>
+                  <label className="text-[10px] text-[#999] block mb-1">振込手数料</label>
+                  <input
+                    type="number"
+                    value={fundForm.transfer_fee}
+                    onChange={e => setFundForm(p => ({ ...p, transfer_fee: e.target.value }))}
+                    placeholder="0"
+                    className="w-full px-3 py-2 bg-[#FAFAF8] rounded-lg text-[11px] border border-gray-200 outline-none font-['Saira_Condensed'] tabular-nums"
+                  />
+                </div>
+
+                {/* 日付（着金日） */}
+                <div>
+                  <label className="text-[10px] text-[#999] block mb-1">着金日</label>
+                  <input
+                    type="date"
+                    value={fundForm.transfer_date}
+                    onChange={e => setFundForm(p => ({ ...p, transfer_date: e.target.value }))}
+                    className="w-full px-3 py-2 bg-[#FAFAF8] rounded-lg text-[11px] border border-gray-200 outline-none"
+                  />
+                </div>
+
+                {/* メモ */}
+                <div>
+                  <label className="text-[10px] text-[#999] block mb-1">メモ（任意）</label>
+                  <input
+                    type="text"
+                    value={fundForm.memo}
+                    onChange={e => setFundForm(p => ({ ...p, memo: e.target.value }))}
+                    placeholder="例: GMO給与振込 手数料無料"
+                    className="w-full px-3 py-2 bg-[#FAFAF8] rounded-lg text-[11px] border border-gray-200 outline-none"
+                  />
+                </div>
+              </div>
+
+              {fundError && <p className="text-[11px] text-[#C23728] mb-3">{fundError}</p>}
+
+              <button
+                onClick={saveFundTransfer}
+                disabled={savingFund}
+                className="flex items-center gap-1.5 px-4 py-2 bg-[#1a1a1a] text-white rounded-lg text-[11px] font-medium disabled:opacity-50"
+              >
+                {savingFund ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                {savingFund ? '登録中...' : '登録'}
+              </button>
+            </div>
+
+            {/* 資金移動履歴 */}
+            <div className="bg-white rounded-2xl px-5 py-5 mb-8" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
+              <p className="text-[10px] tracking-wider text-[#999] mb-4">
+                {year}年 資金移動履歴
+                <span className="ml-2 text-[#ccc]">{fundTransfers.length}件</span>
+              </p>
+              {fundTransfers.length === 0 ? (
+                <p className="text-xs text-[#ccc]">履歴がありません</p>
+              ) : (
+                <div className="space-y-2">
+                  {fundTransfers.map(ft => {
+                    const typeLabel = ft.transfer_type === 'owner_deposit' ? '入金' : ft.transfer_type === 'owner_withdrawal' ? '引出' : '口座間';
+                    const typeColor = ft.transfer_type === 'owner_deposit' ? '#1B4D3E' : ft.transfer_type === 'owner_withdrawal' ? '#C23728' : '#D4A03A';
+                    const desc = ft.transfer_type === 'owner_deposit'
+                      ? `個人口座 → ${ft.to_description}`
+                      : ft.transfer_type === 'owner_withdrawal'
+                      ? `${ft.from_description} → 個人口座`
+                      : `${ft.from_description} → ${ft.to_description}`;
+                    return (
+                      <div key={ft.id} className="flex items-start justify-between py-2 border-b border-gray-50 last:border-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] px-2 py-0.5 rounded-full font-medium" style={{ background: `${typeColor}15`, color: typeColor }}>{typeLabel}</span>
+                          <div>
+                            <p className="text-[11px] text-[#1a1a1a]">{desc}</p>
+                            <p className="text-[10px] text-[#999]">
+                              {ft.transfer_date}
+                              {ft.transfer_fee > 0 && <span className="ml-2">手数料 {yen(ft.transfer_fee)}</span>}
+                              {ft.memo && <span className="ml-2">{ft.memo}</span>}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="font-['Saira_Condensed'] text-sm tabular-nums text-[#1a1a1a] font-medium">{yen(ft.amount)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </>
         ) : (
