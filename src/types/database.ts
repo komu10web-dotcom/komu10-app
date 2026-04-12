@@ -48,6 +48,8 @@ export interface Database {
           expected_payment_date: string | null; // CF計上予定日
           actual_payment_date: string | null; // 実際の入出金日
           client_id: string | null; // 取引先マスタID
+          payment_method: string | null; // 'personal' | 'bank_account'
+          bank_account_id: string | null; // bank_accountsテーブルのUUID
           created_at: string;
           updated_at: string;
         };
@@ -382,6 +384,50 @@ export type SyncSource = {
   column_mapping: Record<string, string>;
   last_synced_at: string | null;
   is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+// 資金移動
+export type FundTransfer = {
+  id: string;
+  owner: string;
+  transfer_type: 'owner_deposit' | 'owner_withdrawal' | 'internal_transfer';
+  from_description: string;
+  to_description: string;
+  from_bank_account_id: string | null;
+  to_bank_account_id: string | null;
+  amount: number;
+  transfer_fee: number;
+  transfer_date: string;
+  memo: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+// 交通費・汎用経費テンプレート
+export type RouteLeg = {
+  from: string;
+  to: string;
+  method: string;
+  amount: number;
+  green_available?: boolean;
+  green_surcharge?: number;
+};
+
+export type ExpenseTemplate = {
+  id: string;
+  owner: string;
+  name: string;
+  template_type: 'transport' | 'general';
+  kamoku: string | null;
+  store: string | null;
+  description: string | null;
+  amount: number | null;
+  payment_method: string;
+  route_legs: RouteLeg[];
+  green_amount: number;
+  use_count: number;
   created_at: string;
   updated_at: string;
 };

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { KAMOKU } from '@/types/database';
-import type { Transaction, Asset, AnbunSetting } from '@/types/database';
+import type { Transaction, Asset, AnbunSetting, FundTransfer, BankAccount } from '@/types/database';
 import { Copy, Check, Download, Loader2, AlertTriangle } from 'lucide-react';
 import { usePeriodRange } from './HeaderControls';
 
@@ -150,9 +150,20 @@ function generateJournalEntries(
   transactions: Transaction[],
   kamokuSummaries: KamokuSummary[],
   depreciationRows: DepreciationRow[],
-  year: number
+  year: number,
+  bankAccounts: BankAccount[],
+  fundTransfers: FundTransfer[]
 ): JournalEntry[] {
   const entries: JournalEntry[] = [];
+
+  // 貸方口座の動的決定
+  const getCreditAccount = (tx: Transaction): string => {
+    if (tx.payment_method === 'bank_account' && tx.bank_account_id) {
+      const bank = bankAccounts.find(b => b.id === tx.bank_account_id);
+      return `普通預金【${bank?.name || '不明'}】`;
+    }
+    return '事業主借';
+  };
 
   // 確定申告仕訳帳はsettledのみ対象（forecast/accrued/billedは除外）
   const settled = transactions.filter(tx => tx.status === 'settled' || !tx.status);
@@ -165,15 +176,11 @@ function generateJournalEntries(
     const hasDateDiff = tx.actual_payment_date && tx.date !== tx.actual_payment_date;
 
     if (tx.tx_type === 'expense') {
-      // 貸方: 個人立替→事業主借、事業口座支払→普通預金
-      // 現状は全経費が個人立替のため事業主借
-      // 口座開設後: 開設日以降の経費は貸方「普通預金」に自動切替
-      // （bank_accountsの開設日で判定。経費ごとの支払方法選択は不要）
-      const creditAccount = '事業主借';
+      const creditAccount = getCreditAccount(tx);
 
       if (hasDateDiff) {
         // 前払い: 支払日と利用日が異なる
-        // 1) 支払時: 前払費用 / 事業主借 ← actual_payment_date
+        // 1) 支払時: 前払費用 / [貸方]  ← actual_payment_date
         entries.push({
           date: tx.actual_payment_date!,
           debitAccount: '前払費用',
@@ -192,7 +199,7 @@ function generateJournalEntries(
           description: desc,
         });
       } else {
-        // 即時: 科目 / 事業主借
+        // 即時: 科目 / [貸方]
         entries.push({
           date: tx.date,
           debitAccount: k.name,
@@ -233,6 +240,78 @@ function generateJournalEntries(
           creditAccount: '売上高',
           creditAmount: tx.amount,
           description: desc,
+        });
+      }
+    }
+  }
+
+  // 資金移動の仕訳（fund_transfers）
+  for (const ft of fundTransfers) {
+    const fromBank = ft.from_bank_account_id
+      ? bankAccounts.find(b => b.id === ft.from_bank_account_id)
+      : null;
+    const toBank = ft.to_bank_account_id
+      ? bankAccounts.find(b => b.id === ft.to_bank_account_id)
+      : null;
+
+    if (ft.transfer_type === 'owner_deposit') {
+      // 個人→事業口座: 普通預金 / 事業主借
+      entries.push({
+        date: ft.transfer_date,
+        debitAccount: `普通預金【${toBank?.name || '事業口座'}】`,
+        debitAmount: ft.amount,
+        creditAccount: '事業主借',
+        creditAmount: ft.amount,
+        description: ft.memo || '個人資金入金',
+      });
+      if (ft.transfer_fee > 0) {
+        entries.push({
+          date: ft.transfer_date,
+          debitAccount: '支払手数料',
+          debitAmount: ft.transfer_fee,
+          creditAccount: '事業主借',
+          creditAmount: ft.transfer_fee,
+          description: '振込手数料',
+        });
+      }
+    } else if (ft.transfer_type === 'owner_withdrawal') {
+      // 事業→個人口座: 事業主貸 / 普通預金
+      entries.push({
+        date: ft.transfer_date,
+        debitAccount: '事業主貸',
+        debitAmount: ft.amount,
+        creditAccount: `普通預金【${fromBank?.name || '事業口座'}】`,
+        creditAmount: ft.amount,
+        description: ft.memo || '個人引出',
+      });
+      if (ft.transfer_fee > 0) {
+        entries.push({
+          date: ft.transfer_date,
+          debitAccount: '支払手数料',
+          debitAmount: ft.transfer_fee,
+          creditAccount: `普通預金【${fromBank?.name || '事業口座'}】`,
+          creditAmount: ft.transfer_fee,
+          description: '振込手数料',
+        });
+      }
+    } else if (ft.transfer_type === 'internal_transfer') {
+      // 口座間移動: 普通預金[先] / 普通預金[元]
+      entries.push({
+        date: ft.transfer_date,
+        debitAccount: `普通預金【${toBank?.name || '移動先'}】`,
+        debitAmount: ft.amount,
+        creditAccount: `普通預金【${fromBank?.name || '移動元'}】`,
+        creditAmount: ft.amount,
+        description: ft.memo || '口座間振替',
+      });
+      if (ft.transfer_fee > 0) {
+        entries.push({
+          date: ft.transfer_date,
+          debitAccount: '支払手数料',
+          debitAmount: ft.transfer_fee,
+          creditAccount: `普通預金【${fromBank?.name || '移動元'}】`,
+          creditAmount: ft.transfer_fee,
+          description: '振込手数料',
         });
       }
     }
@@ -287,6 +366,8 @@ export default function TaxReturnContent() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [anbunSettings, setAnbunSettings] = useState<AnbunSetting[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+  const [fundTransfers, setFundTransfers] = useState<FundTransfer[]>([]);
 
   // データ取得
   const fetchData = useCallback(async () => {
@@ -318,9 +399,26 @@ export default function TaxReturnContent() {
         .eq('owner', effectiveOwner)
         .lte('acquisition_date', `${year}-12-31`);
 
+      // 銀行口座
+      const { data: bankData } = await supabase
+        .from('bank_accounts')
+        .select('*')
+        .eq('owner', effectiveOwner);
+
+      // 資金移動（当年分）
+      const { data: ftData } = await supabase
+        .from('fund_transfers')
+        .select('*')
+        .eq('owner', effectiveOwner)
+        .gte('transfer_date', `${year}-01-01`)
+        .lt('transfer_date', `${year + 1}-01-01`)
+        .order('transfer_date', { ascending: true });
+
       setTransactions(txData || []);
       setAnbunSettings(anbunData || []);
       setAssets(assetData || []);
+      setBankAccounts(bankData || []);
+      setFundTransfers(ftData || []);
     } catch (err) {
       console.error('データ取得エラー:', err);
     } finally {
@@ -403,7 +501,7 @@ export default function TaxReturnContent() {
   const income = revenueTotal - expenseTotal;
 
   // 仕訳帳
-  const journalEntries = generateJournalEntries(transactions, kamokuSummaries, depreciationRows, year);
+  const journalEntries = generateJournalEntries(transactions, kamokuSummaries, depreciationRows, year, bankAccounts, fundTransfers);
 
   // 按分対象で設定がない科目の警告
   const missingAnbun = kamokuSummaries.filter(
