@@ -15,6 +15,11 @@ export interface Database {
           gas_api_url: string | null;
           fiscal_start_month: number; // 決算期開始月（1=1月, 4=4月等）デフォルト1
           owner_color: string | null; // 背景色（個人設定）
+          business_name: string | null; // 屋号
+          postal_code: string | null; // 郵便番号
+          address: string | null; // 住所
+          phone: string | null; // 電話番号
+          email: string | null; // メールアドレス
           created_at: string;
           updated_at: string;
         };

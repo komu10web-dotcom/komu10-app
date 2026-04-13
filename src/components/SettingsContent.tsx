@@ -143,6 +143,14 @@ export default function SettingsContent() {
   const [ownerColor, setOwnerColor] = useState<string>('');
   const [ownerColorSaving, setOwnerColorSaving] = useState(false);
 
+  // 請求元情報
+  const [billingName, setBillingName] = useState('');
+  const [billingPostalCode, setBillingPostalCode] = useState('');
+  const [billingAddress, setBillingAddress] = useState('');
+  const [billingPhone, setBillingPhone] = useState('');
+  const [billingEmail, setBillingEmail] = useState('');
+  const [billingSaving, setBillingSaving] = useState(false);
+
   // 按分設定
   const [anbunSettings, setAnbunSettings] = useState<AnbunSetting[]>([]);
   const [anbunDraft, setAnbunDraft] = useState<Record<string, { ratio: number; note: string }>>({});
@@ -254,10 +262,10 @@ export default function SettingsContent() {
         .eq('owner', effectiveOwner)
         .order('acquisition_date', { ascending: false });
 
-      // プロフィール（テーマ + 背景色）
+      // プロフィール（テーマ + 背景色 + 請求元情報）
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('theme, fiscal_start_month, owner_color')
+        .select('theme, fiscal_start_month, owner_color, business_name, postal_code, address, phone, email')
         .eq('user_key', effectiveOwner)
         .single();
 
@@ -331,6 +339,11 @@ export default function SettingsContent() {
         setCurrentTheme(profileData.theme || 'light');
         setFiscalStartMonth((profileData as any).fiscal_start_month || 1);
         setOwnerColor((profileData as any).owner_color || '');
+        setBillingName((profileData as any).business_name || '');
+        setBillingPostalCode((profileData as any).postal_code || '');
+        setBillingAddress((profileData as any).address || '');
+        setBillingPhone((profileData as any).phone || '');
+        setBillingEmail((profileData as any).email || '');
       }
       setContractTypes(ctData || []);
       setRevenueTypes(rtData || []);
@@ -1606,6 +1619,80 @@ export default function SettingsContent() {
 
         {/* ━━━━━━━ 個人設定 ━━━━━━━ */}
         {settingsTab === 'personal' && (<>
+
+        {/* ── 請求元情報 ── */}
+        <section className="mb-10">
+          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+            請求元情報
+          </div>
+          <div className="bg-white rounded-xl shadow-sm p-5">
+            <p className="text-[11px] text-[#999] mb-4">
+              請求書に印字される{ownerLabel}の情報です。
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs text-[#999] mb-1">屋号・名前</label>
+                <input type="text" value={billingName}
+                  onChange={(e) => setBillingName(e.target.value)}
+                  placeholder="例: komu10"
+                  className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+              </div>
+              <div className="flex gap-3">
+                <div className="w-28">
+                  <label className="block text-xs text-[#999] mb-1">郵便番号</label>
+                  <input type="text" value={billingPostalCode}
+                    onChange={(e) => setBillingPostalCode(e.target.value)}
+                    placeholder="000-0000"
+                    className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed'] tabular-nums" />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-xs text-[#999] mb-1">住所</label>
+                  <input type="text" value={billingAddress}
+                    onChange={(e) => setBillingAddress(e.target.value)}
+                    placeholder="東京都渋谷区…"
+                    className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <label className="block text-xs text-[#999] mb-1">電話番号</label>
+                  <input type="tel" value={billingPhone}
+                    onChange={(e) => setBillingPhone(e.target.value)}
+                    placeholder="090-0000-0000"
+                    className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed'] tabular-nums" />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-xs text-[#999] mb-1">メールアドレス</label>
+                  <input type="email" value={billingEmail}
+                    onChange={(e) => setBillingEmail(e.target.value)}
+                    placeholder="tomo@komu10.jp"
+                    className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={async () => {
+                if (!supabase) return;
+                setBillingSaving(true);
+                try {
+                  await supabase.from('profiles').update({
+                    business_name: billingName.trim() || null,
+                    postal_code: billingPostalCode.trim() || null,
+                    address: billingAddress.trim() || null,
+                    phone: billingPhone.trim() || null,
+                    email: billingEmail.trim() || null,
+                  } as any).eq('user_key', effectiveOwner);
+                } catch (err) { console.error('請求元情報保存エラー:', err); }
+                finally { setBillingSaving(false); }
+              }}
+              disabled={billingSaving}
+              className="mt-4 px-4 py-2 text-xs text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] transition-colors disabled:opacity-50 flex items-center gap-1.5"
+            >
+              {billingSaving && <Loader2 className="w-3 h-3 animate-spin" />}
+              保存する
+            </button>
+          </div>
+        </section>
 
         {/* ── 背景色 ── */}
         <section className="mb-10">

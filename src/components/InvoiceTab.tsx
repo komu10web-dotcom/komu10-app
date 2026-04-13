@@ -702,6 +702,7 @@ function InvoicePreview({
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [client, setClient] = useState<Client | null>(null);
   const [bankAccount, setBankAccount] = useState<BankAccount | null>(null);
+  const [issuer, setIssuer] = useState<{ business_name?: string; postal_code?: string; address?: string; phone?: string; email?: string } | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -713,16 +714,18 @@ function InvoicePreview({
         if (!inv) return;
         setInvoice(inv);
 
-        const [itemRes, clientRes, bankRes] = await Promise.all([
+        const [itemRes, clientRes, bankRes, profileRes] = await Promise.all([
           supabase.from('invoice_items').select('*').eq('invoice_id', invoiceId).order('sort_order'),
           supabase.from('clients').select('*').eq('id', inv.client_id).single(),
           inv.bank_account_id
             ? supabase.from('bank_accounts').select('*').eq('id', inv.bank_account_id).single()
             : Promise.resolve({ data: null }),
+          supabase.from('profiles').select('business_name, postal_code, address, phone, email').eq('user_key', inv.owner).single(),
         ]);
         setItems(itemRes.data || []);
         if (clientRes.data) setClient(clientRes.data);
         if (bankRes.data) setBankAccount(bankRes.data);
+        if (profileRes.data) setIssuer(profileRes.data as any);
       } catch (err) {
         console.error('プレビュー読込エラー:', err);
       } finally {
@@ -772,7 +775,7 @@ function InvoicePreview({
           請　求　書
         </h1>
 
-        {/* 宛先・日付 */}
+        {/* 宛先・日付・請求元 */}
         <div className="flex justify-between mb-8">
           <div>
             <div className="text-lg font-medium text-[#1a1a1a] mb-1">
@@ -788,9 +791,19 @@ function InvoicePreview({
             <div className="font-['Saira_Condensed'] text-sm text-[#999] tabular-nums">
               {invoice.invoice_number}
             </div>
-            <div className="text-xs text-[#999] mt-1">
+            <div className="text-xs text-[#999] mt-1 mb-3">
               {formatDate(invoice.issue_date)}
             </div>
+            {issuer && (
+              <div className="text-xs text-[#1a1a1a] space-y-0.5">
+                {issuer.business_name && <div className="font-medium">{issuer.business_name}</div>}
+                {issuer.address && (
+                  <div className="text-[#999]">{issuer.postal_code ? `〒${issuer.postal_code} ` : ''}{issuer.address}</div>
+                )}
+                {issuer.phone && <div className="text-[#999] font-['Saira_Condensed'] tabular-nums">TEL {issuer.phone}</div>}
+                {issuer.email && <div className="text-[#999]">{issuer.email}</div>}
+              </div>
+            )}
           </div>
         </div>
 
