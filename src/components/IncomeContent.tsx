@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { DIVISIONS, TRANSACTION_STATUS } from '@/types/database';
 import type { Transaction, RevenueType, RevenueTypeDivision, ContractType, Project, Client } from '@/types/database';
+import InvoiceTab from './InvoiceTab';
 
 // ステータスバッジの色定義
 const STATUS_STYLES: Record<string, { bg: string; text: string }> = {
@@ -25,6 +26,9 @@ const DIVISION_OPTIONS = Object.entries(DIVISIONS).map(([id, v]) => ({
 
 export default function IncomeContent() {
   const { owner, startDate, endDate } = usePeriodRange();
+
+  // タブ切り替え
+  const [activeTab, setActiveTab] = useState<'sales' | 'invoices'>('sales');
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -252,40 +256,62 @@ export default function IncomeContent() {
     <div className="min-h-screen">
       <div className="max-w-5xl mx-auto px-6 py-8">
 
-        {/* ── ヘッダー ── */}
+        {/* ── ヘッダー + タブ ── */}
         <div className="flex items-end justify-between mb-6">
           <div>
             <h1 className="font-['Shippori_Mincho'] text-xl text-[#1a1a1a]">売上</h1>
             <p className="text-[10px] font-light tracking-wider text-[#999] mt-1">SALES</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 bg-[#F5F5F3] rounded-lg p-0.5">
             <button
-              onClick={() => { setEditTarget(null); setModalOpen(true); }}
-              className="flex items-center gap-1.5 px-4 py-2 bg-[#1a1a1a] text-white rounded-lg text-xs font-medium hover:bg-[#333] transition-colors"
+              onClick={() => setActiveTab('sales')}
+              className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
+                activeTab === 'sales' ? 'bg-white text-[#1a1a1a] shadow-sm font-medium' : 'text-[#999] hover:text-[#666]'
+              }`}
             >
-              <Plus className="w-3.5 h-3.5" />
-              売上入力
+              売上一覧
             </button>
-            <label className="flex items-center gap-1.5 px-4 py-2 bg-white text-[#1a1a1a] rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors cursor-pointer border border-gray-200">
-              <Upload className="w-3.5 h-3.5" />
-              {importing ? 'インポート中...' : 'CSV'}
-              <input
-                ref={csvRef}
-                type="file"
-                accept=".csv"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) handleCsvImport(f);
-                }}
-              />
-            </label>
+            <button
+              onClick={() => setActiveTab('invoices')}
+              className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
+                activeTab === 'invoices' ? 'bg-white text-[#1a1a1a] shadow-sm font-medium' : 'text-[#999] hover:text-[#666]'
+              }`}
+            >
+              請求書
+            </button>
           </div>
         </div>
 
-        {/* ── フィルター ── */}
-        <div className="flex flex-wrap items-center gap-2 mb-4">
-          <div className="relative">
+        {/* ── 請求書タブ ── */}
+        {activeTab === 'invoices' ? (
+          <InvoiceTab owner={owner} clients={clients} />
+        ) : (
+        <>
+
+        {/* ── 売上タブ: ヘッダーアクション ── */}
+        <div className="flex items-center gap-2 mb-4">
+          <button
+            onClick={() => { setEditTarget(null); setModalOpen(true); }}
+            className="flex items-center gap-1.5 px-4 py-2 bg-[#1a1a1a] text-white rounded-lg text-xs font-medium hover:bg-[#333] transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            売上入力
+          </button>
+          <label className="flex items-center gap-1.5 px-4 py-2 bg-white text-[#1a1a1a] rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors cursor-pointer border border-gray-200">
+            <Upload className="w-3.5 h-3.5" />
+            {importing ? 'インポート中...' : 'CSV'}
+            <input
+              ref={csvRef}
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleCsvImport(f);
+              }}
+            />
+          </label>
+          <div className="relative ml-auto">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#999]" />
             <input
               type="text"
@@ -295,7 +321,7 @@ export default function IncomeContent() {
               className="pl-8 pr-3 py-2 bg-white rounded-lg text-xs border border-gray-200 outline-none focus:ring-2 focus:ring-[#D4A03A]/50 w-40"
             />
           </div>
-          <span className="text-xs text-[#999] ml-auto">
+          <span className="text-xs text-[#999]">
             {filtered.length}件
           </span>
         </div>
@@ -428,7 +454,6 @@ export default function IncomeContent() {
             );
           })()}
         </div>
-      </div>
 
       {/* ── 売上入力/編集モーダル ── */}
       {modalOpen && (
@@ -468,6 +493,9 @@ export default function IncomeContent() {
           </div>
         </div>
       )}
+        </>
+        )}
+      </div>
     </div>
   );
 }
