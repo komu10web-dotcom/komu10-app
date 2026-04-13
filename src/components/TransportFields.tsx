@@ -18,12 +18,12 @@ const CLASS_REASONS = [
 ];
 
 const DEFAULT_PURPOSES = [
-  { id: 'default-1', name: '撮影' },
-  { id: 'default-2', name: '取材' },
-  { id: 'default-3', name: '打合せ（対面）' },
+  { id: 'default-1', name: '商談' },
+  { id: 'default-2', name: '会議・打合せ' },
+  { id: 'default-3', name: '業務' },
   { id: 'default-4', name: 'ロケハン' },
-  { id: 'default-5', name: '納品' },
-  { id: 'default-6', name: 'イベント・登壇' },
+  { id: 'default-5', name: '撮影・取材' },
+  { id: 'default-6', name: 'セミナー・イベント' },
   { id: 'default-7', name: 'その他' },
 ];
 
@@ -58,7 +58,7 @@ export const EMPTY_LEG: RouteLeg = {
 };
 
 export const EMPTY_TRANSPORT: TransportData = {
-  purpose: '撮影',
+  purpose: '商談',
   route_legs: [{ ...EMPTY_LEG }],
   round_trip: 'one_way',
   class_value: '普通席',
