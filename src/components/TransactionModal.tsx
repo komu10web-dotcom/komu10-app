@@ -277,7 +277,7 @@ export default function TransactionModal({
 
   const hasGreenLegs = (tpl: ExpenseTemplate) => {
     const legs = (tpl.route_legs || []) as any[];
-    return legs.some((l: any) => l.green_available);
+    return legs.some((l: any) => l.green);
   };
 
   

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ChevronDown, ChevronRight, Plus, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
@@ -85,10 +85,14 @@ export default function TransportFields({ data, onChange, onAmountChange }: Tran
   }, []);
 
   // 合計金額を親に通知
+  const prevTotalRef = useRef<number>(0);
   useEffect(() => {
     const total = data.route_legs.reduce((s, l) => s + (l.amount || 0), 0);
-    onAmountChange?.(total);
-  }, [data.route_legs]);
+    if (total !== prevTotalRef.current) {
+      prevTotalRef.current = total;
+      onAmountChange?.(total);
+    }
+  }, [data.route_legs, onAmountChange]);
 
   const setField = <K extends keyof TransportData>(key: K, value: TransportData[K]) => {
     onChange({ ...data, [key]: value });
