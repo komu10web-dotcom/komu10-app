@@ -290,7 +290,7 @@ export default function SettingsContent() {
         .from('clients')
         .select('*')
         .eq('owner', effectiveOwner)
-        .order('name');
+        .order('client_number');
 
       // 固定契約
       const { data: recurringData } = await supabase
@@ -686,22 +686,32 @@ export default function SettingsContent() {
 
   const refreshClients = async () => {
     if (!supabase) return;
-    const { data } = await supabase.from('clients').select('*').eq('owner', effectiveOwner).order('name');
+    const { data } = await supabase.from('clients').select('*').eq('owner', effectiveOwner).order('client_number');
     setClients(data || []);
   };
 
   const saveClient = async (data: {
-    name: string; payment_terms: string; payment_terms_days: number | null;
-    default_contact: string; notes: string;
+    name: string; short_name: string | null; postal_code: string | null;
+    address: string | null; contact_name: string | null; contact_email: string | null;
+    payment_terms: string | null; notes: string | null; is_active: boolean;
+    client_number?: string;
   }) => {
     if (!supabase) return;
     try {
-      const record = { ...data, owner: effectiveOwner };
       if (editingClient) {
-        const { error } = await supabase.from('clients').update(record).eq('id', editingClient.id);
+        const { client_number: _cn, ...updateData } = data;
+        const { error } = await supabase.from('clients').update(updateData).eq('id', editingClient.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('clients').insert(record);
+        // 新規: client_number自動採番（オーナー内最大+1、3桁ゼロ埋め）
+        const { data: existing } = await supabase
+          .from('clients').select('client_number').eq('owner', effectiveOwner)
+          .order('client_number', { ascending: false }).limit(1);
+        const maxNum = existing?.[0] ? parseInt(existing[0].client_number) : 0;
+        const nextNum = String(maxNum + 1).padStart(3, '0');
+        const { error } = await supabase.from('clients').insert({
+          ...data, owner: effectiveOwner, client_number: nextNum,
+        });
         if (error) throw error;
       }
       setClientModalOpen(false);
@@ -1768,12 +1778,17 @@ export default function SettingsContent() {
             ) : (
               <div className="space-y-2 mb-4">
                 {clients.map((cl) => (
-                  <div key={cl.id} className="flex items-center justify-between py-2 px-3 bg-[#F5F5F3] rounded-lg">
+                  <div key={cl.id} className={`flex items-center justify-between py-2 px-3 rounded-lg ${cl.is_active ? 'bg-[#F5F5F3]' : 'bg-[#F5F5F3]/50 opacity-60'}`}>
                     <div>
-                      <div className="text-sm text-[#1a1a1a] font-medium">{cl.name}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-['Saira_Condensed'] text-[#999] tabular-nums">{cl.client_number}</span>
+                        <span className="text-sm text-[#1a1a1a] font-medium">{cl.name}</span>
+                        {cl.short_name && <span className="text-[11px] text-[#999]">({cl.short_name})</span>}
+                        {!cl.is_active && <span className="text-[9px] bg-[#999] text-white px-1.5 py-0.5 rounded">停止</span>}
+                      </div>
                       <div className="text-[11px] text-[#999]">
                         {cl.payment_terms || '支払いサイト未設定'}
-                        {cl.default_contact ? ` / ${cl.default_contact}` : ''}
+                        {cl.contact_name ? ` / ${cl.contact_name}` : ''}
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
@@ -2829,9 +2844,9 @@ function BankModal({
 // 取引先モーダル
 // ============================================================
 const PAYMENT_TERMS_PRESETS = [
-  { label: '月末締翌月末', terms: '月末締翌月末', days: 30 },
-  { label: '月末締翌々月末', terms: '月末締翌々月末', days: 60 },
-  { label: '即日', terms: '即日', days: 0 },
+  { label: '月末締翌月末', terms: '月末締翌月末' },
+  { label: '月末締翌々月末', terms: '月末締翌々月末' },
+  { label: '即日', terms: '即日' },
 ] as const;
 
 function ClientModal({
@@ -2840,37 +2855,41 @@ function ClientModal({
   onClose,
 }: {
   client: Client | null;
-  onSave: (data: { name: string; payment_terms: string; payment_terms_days: number | null; default_contact: string; notes: string }) => void;
+  onSave: (data: {
+    name: string; short_name: string | null; postal_code: string | null;
+    address: string | null; contact_name: string | null; contact_email: string | null;
+    payment_terms: string | null; notes: string | null; is_active: boolean;
+  }) => void;
   onClose: () => void;
 }) {
   const [form, setForm] = useState({
     name: client?.name || '',
+    short_name: client?.short_name || '',
+    postal_code: client?.postal_code || '',
+    address: client?.address || '',
+    contact_name: client?.contact_name || '',
+    contact_email: client?.contact_email || '',
     payment_terms: client?.payment_terms || '',
-    payment_terms_days: client?.payment_terms_days?.toString() || '',
-    default_contact: client?.default_contact || '',
     notes: client?.notes || '',
+    is_active: client?.is_active ?? true,
   });
 
   const [saving, setSaving] = useState(false);
   const canSave = form.name.trim().length > 0;
-
-  const applyPreset = (preset: typeof PAYMENT_TERMS_PRESETS[number]) => {
-    setForm(prev => ({
-      ...prev,
-      payment_terms: preset.terms,
-      payment_terms_days: preset.days.toString(),
-    }));
-  };
 
   const handleSave = () => {
     if (!canSave) return;
     setSaving(true);
     onSave({
       name: form.name.trim(),
-      payment_terms: form.payment_terms.trim() || null as any,
-      payment_terms_days: form.payment_terms_days ? parseInt(form.payment_terms_days) : null,
-      default_contact: form.default_contact.trim() || null as any,
-      notes: form.notes.trim() || null as any,
+      short_name: form.short_name.trim() || null,
+      postal_code: form.postal_code.trim() || null,
+      address: form.address.trim() || null,
+      contact_name: form.contact_name.trim() || null,
+      contact_email: form.contact_email.trim() || null,
+      payment_terms: form.payment_terms.trim() || null,
+      notes: form.notes.trim() || null,
+      is_active: form.is_active,
     });
   };
 
@@ -2881,7 +2900,7 @@ function ClientModal({
         style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <h2 className="text-sm font-medium text-[#1a1a1a]">
-            {client ? '取引先を編集' : '取引先を追加'}
+            {client ? `取引先を編集（${client.client_number}）` : '取引先を追加'}
           </h2>
           <button onClick={onClose} className="p-1 hover:bg-black/5 rounded-md transition-colors">
             <X className="w-4 h-4 text-[#999]" />
@@ -2894,8 +2913,53 @@ function ClientModal({
             <label className="block text-xs text-[#999] mb-1">取引先名 <span className="text-[#C23728]">*</span></label>
             <input type="text" value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="例: 長崎市DMO"
+              placeholder="例: KKDAY JAPAN"
               className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+          </div>
+
+          {/* 略称 */}
+          <div>
+            <label className="block text-xs text-[#999] mb-1">略称（任意）</label>
+            <input type="text" value={form.short_name}
+              onChange={(e) => setForm({ ...form, short_name: e.target.value })}
+              placeholder="例: KKDAY"
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+          </div>
+
+          {/* 住所 */}
+          <div className="flex gap-3">
+            <div className="w-28">
+              <label className="block text-xs text-[#999] mb-1">郵便番号</label>
+              <input type="text" value={form.postal_code}
+                onChange={(e) => setForm({ ...form, postal_code: e.target.value })}
+                placeholder="000-0000"
+                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed'] tabular-nums" />
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs text-[#999] mb-1">住所</label>
+              <input type="text" value={form.address}
+                onChange={(e) => setForm({ ...form, address: e.target.value })}
+                placeholder="東京都渋谷区…"
+                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+            </div>
+          </div>
+
+          {/* 担当者 */}
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-xs text-[#999] mb-1">担当者名</label>
+              <input type="text" value={form.contact_name}
+                onChange={(e) => setForm({ ...form, contact_name: e.target.value })}
+                placeholder="田中太郎"
+                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+            </div>
+            <div className="flex-1">
+              <label className="block text-xs text-[#999] mb-1">メール</label>
+              <input type="email" value={form.contact_email}
+                onChange={(e) => setForm({ ...form, contact_email: e.target.value })}
+                placeholder="tanaka@example.com"
+                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+            </div>
           </div>
 
           {/* 支払いサイト */}
@@ -2904,7 +2968,7 @@ function ClientModal({
             <div className="flex gap-1.5 mb-2">
               {PAYMENT_TERMS_PRESETS.map((p) => (
                 <button key={p.label} type="button"
-                  onClick={() => applyPreset(p)}
+                  onClick={() => setForm(prev => ({ ...prev, payment_terms: p.terms }))}
                   className={`px-2.5 py-1 text-[11px] rounded-md transition-colors ${
                     form.payment_terms === p.terms
                       ? 'bg-[#1a1a1a] text-white'
@@ -2914,29 +2978,9 @@ function ClientModal({
                 </button>
               ))}
             </div>
-            <div className="flex gap-3">
-              <div className="flex-1">
-                <input type="text" value={form.payment_terms}
-                  onChange={(e) => setForm({ ...form, payment_terms: e.target.value })}
-                  placeholder="表示名（月末締翌月末 等）"
-                  className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
-              </div>
-              <div className="w-20">
-                <input type="text" inputMode="numeric" value={form.payment_terms_days}
-                  onChange={(e) => { const v = e.target.value.replace(/\D/g, ''); setForm({ ...form, payment_terms_days: v }); }}
-                  placeholder="日数"
-                  className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed'] tabular-nums text-center" />
-                <span className="text-[10px] text-[#999] mt-0.5 block text-center">日</span>
-              </div>
-            </div>
-          </div>
-
-          {/* 担当者連絡先 */}
-          <div>
-            <label className="block text-xs text-[#999] mb-1">担当者・連絡先（任意）</label>
-            <input type="text" value={form.default_contact}
-              onChange={(e) => setForm({ ...form, default_contact: e.target.value })}
-              placeholder="例: 田中太郎 tanaka@example.com"
+            <input type="text" value={form.payment_terms}
+              onChange={(e) => setForm({ ...form, payment_terms: e.target.value })}
+              placeholder="表示名（月末締翌月末 等）"
               className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
           </div>
 
@@ -2949,6 +2993,18 @@ function ClientModal({
               rows={2}
               className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 resize-none" />
           </div>
+
+          {/* ステータス（編集時のみ） */}
+          {client && (
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-[#999]">有効</label>
+              <button type="button"
+                onClick={() => setForm(prev => ({ ...prev, is_active: !prev.is_active }))}
+                className={`relative w-9 h-5 rounded-full transition-colors ${form.is_active ? 'bg-[#1B4D3E]' : 'bg-[#ccc]'}`}>
+                <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${form.is_active ? 'left-[18px]' : 'left-0.5'}`} />
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="px-5 py-4 border-t border-gray-100 flex gap-2">
