@@ -1,6 +1,6 @@
-// komu10 会計システム v0.3
+// komu10 会計システム v0.4.0
 // Supabase Database 型定義（DB実態に完全一致）
-// 2026-02-16 Phase 1 Step 1
+// 2026-04-13 Session 14 — clients/invoices/invoice_items 再設計反映
 
 export interface Database {
   public: {
@@ -190,19 +190,24 @@ export interface Database {
       invoices: {
         Row: {
           id: string;
-          invoice_number: string;
-          client_name: string;
-          client_address: string | null;
-          owner: string;
-          project_id: string | null;
-          issue_date: string;
-          due_date: string;
-          status: string;
-          subtotal: number;
-          tax_amount: number;
-          total: number;
-          note: string | null;
-          paid_at: string | null;
+          owner: string; // 'tomo' | 'toshiki'
+          client_id: string; // FK→clients
+          invoice_number: string; // INV-YYYY-NNNN（全体通し）
+          issue_date: string; // 発行日
+          period_start: string | null; // 対象期間開始
+          period_end: string | null; // 対象期間終了
+          subtotal: number; // 小計（税抜）
+          tax_amount: number; // 消費税額（免税=0）
+          total: number; // 合計
+          status: string; // 'draft' | 'issued' | 'paid'
+          bank_account_id: string | null; // FK→bank_accounts（振込先）
+          notes: string | null; // 備考
+          drive_folder_id: string | null; // Google DriveフォルダID
+          drive_file_id: string | null; // Google DriveファイルID
+          pdf_url: string | null; // PDF URL
+          issued_at: string | null; // 発行日時
+          paid_at: string | null; // 入金確認日時
+          transaction_id: string | null; // FK→transactions（売上仕訳連携）
           created_at: string;
           updated_at: string;
         };
@@ -214,14 +219,15 @@ export interface Database {
       invoice_items: {
         Row: {
           id: string;
-          invoice_id: string;
-          description: string;
+          invoice_id: string; // FK→invoices (CASCADE)
+          sort_order: number;
+          description: string; // 品名・内容
           quantity: number;
           unit_price: number;
-          amount: number;
-          sort_order: number;
+          amount: number; // quantity × unit_price
+          created_at: string;
         };
-        Insert: Omit<Database['public']['Tables']['invoice_items']['Row'], 'id'>;
+        Insert: Omit<Database['public']['Tables']['invoice_items']['Row'], 'id' | 'created_at'>;
         Update: Partial<Database['public']['Tables']['invoice_items']['Insert']>;
       };
 
@@ -266,12 +272,17 @@ export interface Database {
       clients: {
         Row: {
           id: string;
-          name: string;
-          owner: string;
-          payment_terms: string | null;       // 表示用（月末締翌月末 等）
-          payment_terms_days: number | null;  // 日数（30, 60, 0等）
-          default_contact: string | null;
+          owner: string; // 'tomo' | 'toshiki'
+          client_number: string; // オーナー内連番（001, 002…）
+          name: string; // 取引先名（KKDAY JAPAN等）
+          short_name: string | null; // 略称
+          postal_code: string | null; // 郵便番号
+          address: string | null; // 住所
+          contact_name: string | null; // 担当者名
+          contact_email: string | null; // 担当者メール
+          payment_terms: string | null; // 支払条件（月末締翌月末 等）
           notes: string | null;
+          is_active: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -528,6 +539,26 @@ export const BANK_MATCH_STATUS = {
   internal_transfer: '口座間振替',
   ignored: '無視',
 } as const;
+
+// 請求書ステータス定義
+export const INVOICE_STATUS = {
+  draft: '下書き',
+  issued: '発行済',
+  paid: '入金済',
+} as const;
+
+export type InvoiceStatusKey = keyof typeof INVOICE_STATUS;
+
+// 請求書 + 明細行（結合型）
+export type InvoiceWithItems = Invoice & {
+  items: InvoiceItem[];
+  client?: Client;
+};
+
+// 取引先 + 請求書件数（一覧用）
+export type ClientWithInvoiceCount = Client & {
+  invoice_count: number;
+};
 
 // 資金移動パターンと仕訳ルール（Phase 4で使用）
 // ① 個人→事業口座（資金注入）: 普通預金 / 事業主借 → match_status = owner_deposit
