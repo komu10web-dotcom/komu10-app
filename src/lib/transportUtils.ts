@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
-import type { TransportData } from '@/components/TransportFields';
+import type { TransportData, RouteLeg } from '@/components/TransportFields';
+import { EMPTY_TRANSPORT } from '@/components/TransportFields';
 
 export async function saveTransportDetails(
   transactionId: string,
@@ -11,14 +12,11 @@ export async function saveTransportDetails(
     .from('transport_details')
     .insert({
       transaction_id: transactionId,
-      from_location: data.from_location,
-      to_location: data.to_location,
-      transport_type: data.transport_type,
       purpose: data.purpose,
-      carrier: data.carrier,
+      route_legs: data.route_legs,
+      round_trip: data.round_trip || 'one_way',
       class: data.class_value || null,
       class_reason: data.class_reason || null,
-      round_trip: data.round_trip || 'one_way',
       companion: data.companion || null,
       flight_train_no: data.flight_train_no || null,
       route_note: data.route_note || null,
@@ -33,7 +31,7 @@ export async function updateTransportDetails(
 ): Promise<void> {
   if (!supabase) throw new Error('Supabase not initialized');
 
-  // 既存レコードを削除してから再挿入（簡潔さ優先）
+  // 既存レコードを削除してから再挿入
   await supabase
     .from('transport_details')
     .delete()
@@ -55,17 +53,38 @@ export async function loadTransportDetails(
 
   if (!data) return null;
 
+  const row = data as any;
+  const legs: RouteLeg[] = Array.isArray(row.route_legs) && row.route_legs.length > 0
+    ? row.route_legs.map((l: any) => ({
+        from: l.from || '',
+        to: l.to || '',
+        method: l.method || '電車',
+        carrier: l.carrier || '',
+        amount: l.amount || 0,
+        green: l.green || false,
+      }))
+    : [{ from: '', to: '', method: '電車', carrier: '', amount: 0, green: false }];
+
   return {
-    from_location: (data as any).from_location || '',
-    to_location: (data as any).to_location || '',
-    transport_type: (data as any).transport_type || '電車',
-    purpose: (data as any).purpose || '撮影',
-    carrier: (data as any).carrier || '',
-    class_value: (data as any).class || '普通席',
-    class_reason: (data as any).class_reason || '',
-    round_trip: (data as any).round_trip || 'one_way',
-    companion: (data as any).companion || '',
-    flight_train_no: (data as any).flight_train_no || '',
-    route_note: (data as any).route_note || '',
+    purpose: row.purpose || '撮影',
+    route_legs: legs,
+    round_trip: row.round_trip || 'one_way',
+    class_value: row.class || '普通席',
+    class_reason: row.class_reason || '',
+    companion: row.companion || '',
+    flight_train_no: row.flight_train_no || '',
+    route_note: row.route_note || '',
   };
+}
+
+/** route_legsからルートプレビュー文字列を生成 */
+export function buildRoutePreview(legs: RouteLeg[]): string {
+  if (!legs || legs.length === 0) return '';
+  return [legs[0].from, ...legs.map(l => l.to)].filter(Boolean).join(' → ');
+}
+
+/** route_legsの合計金額を計算 */
+export function calcRouteTotal(legs: RouteLeg[]): number {
+  if (!legs) return 0;
+  return legs.reduce((s, l) => s + (l.amount || 0), 0);
 }

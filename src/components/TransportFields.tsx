@@ -1,14 +1,12 @@
 'use client';
 
-import { useState } from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ChevronDown, ChevronRight, Plus, X } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
-const TRANSPORT_TYPES = [
-  '飛行機', '新幹線', '電車', 'バス', 'タクシー', 'レンタカー', '自家用車', 'フェリー',
-];
-
-const PURPOSES = [
-  '撮影', '取材', '打合せ（対面）', 'ロケハン', '納品', 'イベント・登壇', 'その他',
+// ── 定数 ──────────────────────────────────────────────
+const TRANSPORT_METHODS = [
+  '電車', '新幹線', 'バス', 'タクシー', '飛行機', 'レンタカー', '自家用車', 'フェリー',
 ];
 
 const CLASSES = [
@@ -19,47 +17,114 @@ const CLASS_REASONS = [
   '車内業務', 'WEB会議', '機材運搬', '対面打合せ', 'クライアント同行', '長距離移動', 'その他',
 ];
 
-export interface TransportData {
-  from_location: string;
-  to_location: string;
-  transport_type: string;
-  purpose: string;
+// ── 型定義 ──────────────────────────────────────────────
+export interface RouteLeg {
+  from: string;
+  to: string;
+  method: string;
   carrier: string;
+  amount: number;
+  green: boolean;
+}
+
+export interface TransportData {
+  purpose: string;
+  route_legs: RouteLeg[];
+  round_trip: string;
   class_value: string;
   class_reason: string;
-  round_trip: string;
   companion: string;
   flight_train_no: string;
   route_note: string;
 }
 
-export const EMPTY_TRANSPORT: TransportData = {
-  from_location: '',
-  to_location: '',
-  transport_type: '電車',
-  purpose: '撮影',
+export const EMPTY_LEG: RouteLeg = {
+  from: '',
+  to: '',
+  method: '電車',
   carrier: '',
+  amount: 0,
+  green: false,
+};
+
+export const EMPTY_TRANSPORT: TransportData = {
+  purpose: '撮影',
+  route_legs: [{ ...EMPTY_LEG }],
+  round_trip: 'one_way',
   class_value: '普通席',
   class_reason: '',
-  round_trip: 'one_way',
   companion: '',
   flight_train_no: '',
   route_note: '',
 };
 
+// ── Props ──────────────────────────────────────────────
 interface TransportFieldsProps {
   data: TransportData;
   onChange: (data: TransportData) => void;
+  onAmountChange?: (total: number) => void;
 }
 
 const inputClass = "w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50";
 
-export default function TransportFields({ data, onChange }: TransportFieldsProps) {
+// ── コンポーネント ──────────────────────────────────────────
+export default function TransportFields({ data, onChange, onAmountChange }: TransportFieldsProps) {
   const [showDetail, setShowDetail] = useState(false);
+  const [purposes, setPurposes] = useState<{ id: string; name: string }[]>([]);
 
-  const set = (key: keyof TransportData, value: string) => {
+  // 目的マスタ取得
+  useEffect(() => {
+    if (!supabase) return;
+    supabase
+      .from('transport_purposes')
+      .select('id, name')
+      .order('sort_order')
+      .then(({ data: rows }: { data: any }) => {
+        if (rows) setPurposes(rows as any[]);
+      });
+  }, []);
+
+  // 合計金額を親に通知
+  useEffect(() => {
+    const total = data.route_legs.reduce((s, l) => s + (l.amount || 0), 0);
+    onAmountChange?.(total);
+  }, [data.route_legs]);
+
+  const setField = <K extends keyof TransportData>(key: K, value: TransportData[K]) => {
     onChange({ ...data, [key]: value });
   };
+
+  const updateLeg = (idx: number, field: keyof RouteLeg, value: string | number | boolean) => {
+    const legs = data.route_legs.map((leg, i) => {
+      if (i !== idx) return leg;
+      return { ...leg, [field]: value };
+    });
+    // 次の区間の出発地を自動セット
+    if (field === 'to' && idx < legs.length - 1) {
+      legs[idx + 1] = { ...legs[idx + 1], from: value as string };
+    }
+    onChange({ ...data, route_legs: legs });
+  };
+
+  const addLeg = () => {
+    const lastLeg = data.route_legs[data.route_legs.length - 1];
+    const newLeg: RouteLeg = {
+      ...EMPTY_LEG,
+      from: lastLeg?.to || '',
+    };
+    onChange({ ...data, route_legs: [...data.route_legs, newLeg] });
+  };
+
+  const removeLeg = (idx: number) => {
+    if (data.route_legs.length <= 1) return;
+    const legs = data.route_legs.filter((_, i) => i !== idx);
+    onChange({ ...data, route_legs: legs });
+  };
+
+  const total = data.route_legs.reduce((s, l) => s + (l.amount || 0), 0);
+  const routePreview = data.route_legs.length > 0
+    ? [data.route_legs[0].from, ...data.route_legs.map(l => l.to)].filter(Boolean).join(' → ')
+    : '';
 
   const isUpperClass = data.class_value !== '普通席' && data.class_value !== '自由席' && data.class_value !== '';
 
@@ -67,69 +132,131 @@ export default function TransportFields({ data, onChange }: TransportFieldsProps
     <div className="border border-[#D4A03A]/30 rounded-xl p-4 space-y-3 bg-[#D4A03A]/5">
       <p className="text-xs font-medium text-[#D4A03A]">交通費詳細</p>
 
-      {/* 必須5項目 */}
-      <div className="flex gap-2">
-        <div className="flex-1">
-          <label className="text-xs text-[#999] block mb-1">出発地</label>
-          <input
-            type="text"
-            value={data.from_location}
-            onChange={(e) => set('from_location', e.target.value)}
-            className={inputClass}
-            placeholder="東京"
-          />
-        </div>
-        <div className="flex-1">
-          <label className="text-xs text-[#999] block mb-1">到着地</label>
-          <input
-            type="text"
-            value={data.to_location}
-            onChange={(e) => set('to_location', e.target.value)}
-            className={inputClass}
-            placeholder="長崎"
-          />
-        </div>
-      </div>
-
-      <div className="flex gap-2">
-        <div className="flex-1">
-          <label className="text-xs text-[#999] block mb-1">交通手段</label>
-          <select
-            value={data.transport_type}
-            onChange={(e) => set('transport_type', e.target.value)}
-            className={inputClass}
-          >
-            {TRANSPORT_TYPES.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
-        </div>
-        <div className="flex-1">
-          <label className="text-xs text-[#999] block mb-1">目的</label>
-          <select
-            value={data.purpose}
-            onChange={(e) => set('purpose', e.target.value)}
-            className={inputClass}
-          >
-            {PURPOSES.map((p) => (
-              <option key={p} value={p}>{p}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
+      {/* 目的（トランザクション単位） */}
       <div>
-        <label className="text-xs text-[#999] block mb-1">利用会社</label>
-        <input
-          type="text"
-          value={data.carrier}
-          onChange={(e) => set('carrier', e.target.value)}
+        <label className="text-xs text-[#999] block mb-1">目的</label>
+        <select
+          value={data.purpose}
+          onChange={(e) => setField('purpose', e.target.value)}
           className={inputClass}
-          placeholder="JAL / JR東日本 / 東急 等"
-        />
+        >
+          {purposes.length > 0
+            ? purposes.map((p) => <option key={p.id} value={p.name}>{p.name}</option>)
+            : ['撮影', '取材', '打合せ（対面）', 'ロケハン', '納品', 'イベント・登壇', 'その他'].map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))
+          }
+        </select>
       </div>
 
-      {/* 任意項目トグル */}
+      {/* 区間リスト */}
+      {data.route_legs.map((leg, idx) => (
+        <div key={idx} className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-[#999] font-medium tracking-wide">区間 {idx + 1}</span>
+            {idx > 0 && (
+              <button
+                type="button"
+                onClick={() => removeLeg(idx)}
+                className="p-0.5 hover:bg-red-50 rounded-full transition-colors"
+              >
+                <X className="w-3 h-3 text-red-400" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex gap-2 items-center">
+            <div className="flex-1">
+              <input
+                type="text"
+                value={leg.from}
+                onChange={(e) => updateLeg(idx, 'from', e.target.value)}
+                className={`${inputClass} ${idx > 0 ? 'bg-[#EDEDEB] text-[#999]' : ''}`}
+                placeholder="出発地"
+                readOnly={idx > 0}
+              />
+            </div>
+            <span className="text-xs text-[#999]">→</span>
+            <div className="flex-1">
+              <input
+                type="text"
+                value={leg.to}
+                onChange={(e) => updateLeg(idx, 'to', e.target.value)}
+                className={inputClass}
+                placeholder="到着地"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <div className="w-[90px]">
+              <select
+                value={leg.method}
+                onChange={(e) => updateLeg(idx, 'method', e.target.value)}
+                className={inputClass}
+              >
+                {TRANSPORT_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
+              </select>
+            </div>
+            <div className="flex-1">
+              <input
+                type="text"
+                value={leg.carrier}
+                onChange={(e) => updateLeg(idx, 'carrier', e.target.value)}
+                className={inputClass}
+                placeholder="利用会社"
+              />
+            </div>
+            <div className="w-[100px]">
+              <input
+                type="text"
+                inputMode="numeric"
+                value={leg.amount ? leg.amount.toLocaleString() : ''}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/,/g, '');
+                  if (/^\d*$/.test(v)) updateLeg(idx, 'amount', parseInt(v) || 0);
+                }}
+                className={inputClass}
+                placeholder="¥ 金額"
+              />
+            </div>
+          </div>
+
+          {(leg.method === '新幹線' || leg.method === '電車') && (
+            <label className="flex items-center gap-2 cursor-pointer">
+              <div
+                onClick={() => updateLeg(idx, 'green', !leg.green)}
+                className={`relative w-8 h-4 rounded-full transition-colors ${leg.green ? 'bg-[#1B4D3E]' : 'bg-[#DDD]'}`}
+              >
+                <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${leg.green ? 'translate-x-4' : 'translate-x-0.5'}`} />
+              </div>
+              <span className="text-xs text-[#555]">グリーン車</span>
+            </label>
+          )}
+        </div>
+      ))}
+
+      {/* 区間追加 */}
+      <button
+        type="button"
+        onClick={addLeg}
+        className="flex items-center gap-1 text-xs text-[#D4A03A] hover:text-[#B8862D] transition-colors"
+      >
+        <Plus className="w-3 h-3" />
+        区間を追加
+      </button>
+
+      {/* ルートプレビュー + 合計 */}
+      {routePreview && (
+        <div className="bg-white/60 rounded-lg px-3 py-2 space-y-1">
+          <p className="text-xs text-[#999]">{routePreview}</p>
+          <p className="text-sm font-medium font-['Saira_Condensed'] tabular-nums text-[#1a1a1a]">
+            合計 ¥{total.toLocaleString()}
+          </p>
+        </div>
+      )}
+
+      {/* 詳細トグル */}
       <button
         type="button"
         onClick={() => setShowDetail(!showDetail)}
@@ -146,19 +273,17 @@ export default function TransportFields({ data, onChange }: TransportFieldsProps
               <label className="text-xs text-[#999] block mb-1">座席クラス</label>
               <select
                 value={data.class_value}
-                onChange={(e) => set('class_value', e.target.value)}
+                onChange={(e) => setField('class_value', e.target.value)}
                 className={inputClass}
               >
-                {CLASSES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
+                {CLASSES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div className="flex-1">
               <label className="text-xs text-[#999] block mb-1">片道/往復</label>
               <select
                 value={data.round_trip}
-                onChange={(e) => set('round_trip', e.target.value)}
+                onChange={(e) => setField('round_trip', e.target.value)}
                 className={inputClass}
               >
                 <option value="one_way">片道</option>
@@ -172,13 +297,11 @@ export default function TransportFields({ data, onChange }: TransportFieldsProps
               <label className="text-xs text-[#999] block mb-1">上位クラス理由</label>
               <select
                 value={data.class_reason}
-                onChange={(e) => set('class_reason', e.target.value)}
+                onChange={(e) => setField('class_reason', e.target.value)}
                 className={inputClass}
               >
                 <option value="">選択してください</option>
-                {CLASS_REASONS.map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
+                {CLASS_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>
           )}
@@ -188,7 +311,7 @@ export default function TransportFields({ data, onChange }: TransportFieldsProps
             <input
               type="text"
               value={data.companion}
-              onChange={(e) => set('companion', e.target.value)}
+              onChange={(e) => setField('companion', e.target.value)}
               className={inputClass}
               placeholder="任意"
             />
@@ -199,7 +322,7 @@ export default function TransportFields({ data, onChange }: TransportFieldsProps
             <input
               type="text"
               value={data.flight_train_no}
-              onChange={(e) => set('flight_train_no', e.target.value)}
+              onChange={(e) => setField('flight_train_no', e.target.value)}
               className={inputClass}
               placeholder="JAL601 / のぞみ15号"
             />
@@ -210,7 +333,7 @@ export default function TransportFields({ data, onChange }: TransportFieldsProps
             <input
               type="text"
               value={data.route_note}
-              onChange={(e) => set('route_note', e.target.value)}
+              onChange={(e) => setField('route_note', e.target.value)}
               className={inputClass}
               placeholder="任意"
             />

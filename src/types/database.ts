@@ -123,11 +123,8 @@ export interface Database {
         Row: {
           id: string;
           transaction_id: string;
-          from_location: string;
-          to_location: string;
-          transport_type: string;
           purpose: string;
-          carrier: string;
+          route_legs: any[];
           class: string | null;
           class_reason: string | null;
           round_trip: string;
@@ -139,6 +136,20 @@ export interface Database {
         };
         Insert: Omit<Database['public']['Tables']['transport_details']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['transport_details']['Insert']>;
+      };
+
+      // 交通費目的マスタ
+      transport_purposes: {
+        Row: {
+          id: string;
+          name: string;
+          sort_order: number;
+          is_default: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['transport_purposes']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['transport_purposes']['Insert']>;
       };
 
       // 銀行口座

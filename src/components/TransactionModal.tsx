@@ -189,17 +189,9 @@ export default function TransactionModal({
     const snap = savedFormSnapshot;
     try {
       if (snap.kamoku === 'travel' && snap.transportData) {
-        // 交通費テンプレ: transportDataからroute_legsを構築
+        // 交通費テンプレ: route_legsをそのまま保存
         const td = snap.transportData;
-        const legs: any[] = [];
-        if (td.from_location && td.to_location) {
-          legs.push({
-            from: td.from_location,
-            to: td.to_location,
-            method: td.carrier || 'JR',
-            amount: snap.amount,
-          });
-        }
+        const legs = td.route_legs || [];
         const total = legs.reduce((s: number, l: any) => s + (l.amount || 0), 0);
         await supabase.from('expense_templates').insert({
           owner: snap.owner,
@@ -244,8 +236,20 @@ export default function TransactionModal({
     if (tpl.template_type === 'transport') {
       const legs = (tpl.route_legs || []) as any[];
       desc = legs.length > 0
-        ? [legs[0].from, ...legs.map((l: any) => l.to)].join(' → ')
+        ? [legs[0].from, ...legs.map((l: any) => l.to)].filter(Boolean).join(' → ')
         : tpl.description || tpl.name;
+      // route_legsをTransportDataに流し込み
+      setTransportData({
+        ...EMPTY_TRANSPORT,
+        route_legs: legs.map((l: any) => ({
+          from: l.from || '',
+          to: l.to || '',
+          method: l.method || '電車',
+          carrier: l.carrier || '',
+          amount: l.amount || 0,
+          green: l.green || false,
+        })),
+      });
     } else {
       desc = tpl.description || '';
       store = tpl.store || '';
@@ -301,9 +305,16 @@ export default function TransactionModal({
       setError('日付と金額は必須です');
       return;
     }
-    if (form.kamoku === 'travel' && (!transportData.from_location || !transportData.to_location || !transportData.carrier)) {
-      setError('交通費の出発地・到着地・利用会社は必須です');
-      return;
+    if (form.kamoku === 'travel') {
+      const legs = transportData.route_legs || [];
+      if (legs.length === 0 || !legs[0].from || !legs[legs.length - 1].to) {
+        setError('交通費の出発地・到着地は必須です');
+        return;
+      }
+      if (legs.some(l => !l.from || !l.to)) {
+        setError('すべての区間の出発地・到着地を入力してください');
+        return;
+      }
     }
     if (form.kamoku === 'entertainment' && !entertainmentData.guest_name) {
       setError('接待交際費の相手先名は必須です');
@@ -347,6 +358,11 @@ export default function TransactionModal({
     setError(null);
 
     let finalDescription = form.description || null;
+    if (form.kamoku === 'travel') {
+      const legs = transportData.route_legs || [];
+      const routeStr = [legs[0]?.from, ...legs.map(l => l.to)].filter(Boolean).join(' → ');
+      finalDescription = routeStr || form.description || null;
+    }
     if (form.kamoku === 'entertainment') {
       finalDescription = entertainmentToDescription(entertainmentData, form.description);
     }
@@ -593,7 +609,15 @@ export default function TransactionModal({
             ) : null;
           })()}
 
-          {form.kamoku === 'travel' && <TransportFields data={transportData} onChange={setTransportData} />}
+          {form.kamoku === 'travel' && (
+            <TransportFields
+              data={transportData}
+              onChange={setTransportData}
+              onAmountChange={(total) => {
+                if (total > 0) setForm(prev => ({ ...prev, amount: total.toString() }));
+              }}
+            />
+          )}
           {form.kamoku === 'entertainment' && <EntertainmentFields data={entertainmentData} onChange={setEntertainmentData} />}
 
           {form.kamoku === 'equipment' && (

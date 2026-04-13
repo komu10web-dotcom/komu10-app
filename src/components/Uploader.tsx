@@ -149,9 +149,12 @@ export function Uploader({ onUploadComplete, defaultOwner = 'tomo' }: UploaderPr
       setError('日付と金額は必須です');
       return;
     }
-    if (formData.kamoku === 'travel' && (!transportData.from_location || !transportData.to_location || !transportData.carrier)) {
-      setError('交通費の出発地・到着地・利用会社は必須です');
-      return;
+    if (formData.kamoku === 'travel') {
+      const legs = transportData.route_legs || [];
+      if (legs.length === 0 || !legs[0].from || !legs[legs.length - 1].to) {
+        setError('交通費の出発地・到着地は必須です');
+        return;
+      }
     }
     if (formData.kamoku === 'entertainment' && !entertainmentData.guest_name) {
       setError('接待交際費の相手先名は必須です');
