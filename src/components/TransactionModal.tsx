@@ -53,6 +53,9 @@ export default function TransactionModal({
   const [templates, setTemplates] = useState<ExpenseTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<ExpenseTemplate | null>(null);
   const [greenMode, setGreenMode] = useState(false);
+  const [showTemplateSave, setShowTemplateSave] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [savedFormSnapshot, setSavedFormSnapshot] = useState<any>(null);
 
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -171,11 +174,68 @@ export default function TransactionModal({
       setAllocRows([]);
       setSelectedTemplate(null);
       setGreenMode(false);
+      setShowTemplateSave(false);
+      setTemplateName('');
+      setSavedFormSnapshot(null);
     }
     setError(null);
     setDupWarning(null);
     setDupConfirmed(false);
   }, [editData, isOpen, defaultOwner]);
+
+  // テンプレとして保存
+  const saveAsTemplate = async () => {
+    if (!supabase || !savedFormSnapshot || !templateName.trim()) return;
+    const snap = savedFormSnapshot;
+    try {
+      if (snap.kamoku === 'travel' && snap.transportData) {
+        // 交通費テンプレ: transportDataからroute_legsを構築
+        const td = snap.transportData;
+        const legs: any[] = [];
+        if (td.from_location && td.to_location) {
+          legs.push({
+            from: td.from_location,
+            to: td.to_location,
+            method: td.carrier || 'JR',
+            amount: snap.amount,
+          });
+        }
+        const total = legs.reduce((s: number, l: any) => s + (l.amount || 0), 0);
+        await supabase.from('expense_templates').insert({
+          owner: snap.owner,
+          name: templateName.trim(),
+          template_type: 'transport',
+          kamoku: 'transport',
+          route_legs: legs,
+          amount: total,
+          green_amount: 0,
+          payment_method: snap.payment_method || 'personal',
+          use_count: 0,
+        });
+      } else {
+        // 汎用テンプレ
+        await supabase.from('expense_templates').insert({
+          owner: snap.owner,
+          name: templateName.trim(),
+          template_type: 'general',
+          kamoku: snap.kamoku,
+          store: snap.store || '',
+          description: snap.description || '',
+          amount: snap.amount || 0,
+          route_legs: [],
+          green_amount: 0,
+          payment_method: snap.payment_method || 'personal',
+          use_count: 0,
+        });
+      }
+    } catch (err) {
+      console.error('テンプレ保存エラー:', err);
+    }
+    setShowTemplateSave(false);
+    setTemplateName('');
+    setSavedFormSnapshot(null);
+    onClose();
+  };
 
   // テンプレート適用
   const applyTemplate = async (tpl: ExpenseTemplate) => {
@@ -384,7 +444,21 @@ export default function TransactionModal({
       }
 
       onSaved();
-      onClose();
+      // 新規登録 & テンプレ未使用 → テンプレ保存提案
+      if (!editData && !selectedTemplate) {
+        setSavedFormSnapshot({
+          kamoku: form.kamoku,
+          store: form.store,
+          amount: txAmount,
+          description: finalDescription,
+          owner: form.owner,
+          payment_method: (payload as any).payment_method || 'personal',
+          transportData: form.kamoku === 'travel' ? { ...transportData } : null,
+        });
+        setShowTemplateSave(true);
+      } else {
+        onClose();
+      }
     } catch (err) {
       console.error('Save error:', err);
       setError('保存に失敗しました');
@@ -738,10 +812,34 @@ export default function TransactionModal({
         </div>
 
         <div className="px-5 pb-5">
-          <button onClick={handleSave} disabled={saving || !form.amount || !form.date}
-            className="w-full py-3 bg-[#1a1a1a] text-white rounded-xl text-sm font-medium hover:bg-[#333] disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2">
-            {saving ? (<><Loader2 className="w-4 h-4 animate-spin" />保存中...</>) : editData ? '更新する' : '登録する'}
-          </button>
+          {showTemplateSave ? (
+            <div className="space-y-3">
+              <p className="text-xs text-[#1a1a1a] font-medium">テンプレートとして保存しますか？</p>
+              <p className="text-[10px] text-[#999]">次回から同じ内容をワンタップで入力できます</p>
+              <input
+                value={templateName}
+                onChange={e => setTemplateName(e.target.value)}
+                placeholder="テンプレ名（例: Adobe CC / 自宅→四ツ谷）"
+                className="w-full px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors"
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <button onClick={() => { setShowTemplateSave(false); setSavedFormSnapshot(null); onClose(); }}
+                  className="flex-1 py-2.5 text-xs text-[#999] bg-[#F5F5F3] rounded-xl hover:bg-gray-200 transition-colors">
+                  スキップ
+                </button>
+                <button onClick={saveAsTemplate} disabled={!templateName.trim()}
+                  className="flex-1 py-2.5 text-xs text-white bg-[#1a1a1a] rounded-xl hover:bg-[#333] disabled:opacity-40 transition-colors">
+                  保存する
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={handleSave} disabled={saving || !form.amount || !form.date}
+              className="w-full py-3 bg-[#1a1a1a] text-white rounded-xl text-sm font-medium hover:bg-[#333] disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2">
+              {saving ? (<><Loader2 className="w-4 h-4 animate-spin" />保存中...</>) : editData ? '更新する' : '登録する'}
+            </button>
+          )}
         </div>
       </div>
     </div>
