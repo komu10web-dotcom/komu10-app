@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { INVOICE_STATUS } from '@/types/database';
 import type { Invoice, InvoiceItem, Client, BankAccount, InvoiceStatusKey } from '@/types/database';
-import { Plus, Pencil, Eye, Trash2, Loader2, X, ChevronLeft, Copy } from 'lucide-react';
+import { Plus, Pencil, Eye, Trash2, Loader2, X, ChevronLeft, Copy, Download } from 'lucide-react';
 
 // ============================================================
 // 型定義
@@ -704,6 +704,8 @@ function InvoicePreview({
   const [bankAccount, setBankAccount] = useState<BankAccount | null>(null);
   const [issuer, setIssuer] = useState<{ business_name?: string; postal_code?: string; address?: string; phone?: string; email?: string } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const [exportResult, setExportResult] = useState<{ spreadsheetUrl?: string; pdfUrl?: string } | null>(null);
 
   useEffect(() => {
     if (!supabase) return;
@@ -742,6 +744,35 @@ function InvoicePreview({
     );
   }
 
+  const handleExport = async () => {
+    setExporting(true);
+    setExportResult(null);
+    try {
+      const res = await fetch('/api/invoices/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invoiceId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setExportResult({
+          spreadsheetUrl: data.spreadsheetUrl,
+          pdfUrl: data.pdfUrl,
+        });
+        if (invoice) {
+          setInvoice({ ...invoice, pdf_url: data.pdfUrl, drive_file_id: data.spreadsheetId });
+        }
+      } else {
+        alert(`出力に失敗しました: ${data.error}`);
+      }
+    } catch (err) {
+      console.error('Export error:', err);
+      alert('出力に失敗しました');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const formatDate = (d: string) => {
     const parts = d.split('-');
     return `${parts[0]}年${parseInt(parts[1])}月${parseInt(parts[2])}日`;
@@ -760,12 +791,32 @@ function InvoicePreview({
           </h2>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={handleExport} disabled={exporting}
+            className="flex items-center gap-1.5 px-4 py-2 bg-[#1a1a1a] text-white rounded-lg text-xs font-medium hover:bg-[#333] transition-colors disabled:opacity-50">
+            {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+            {exporting ? '出力中...' : 'PDF & シート出力'}
+          </button>
           <button onClick={() => onEdit(invoiceId)}
             className="flex items-center gap-1.5 px-4 py-2 bg-white text-[#1a1a1a] rounded-lg text-xs border border-gray-200 hover:bg-gray-50 transition-colors">
             <Pencil className="w-3.5 h-3.5" />編集
           </button>
         </div>
       </div>
+
+      {/* 出力結果リンク */}
+      {exportResult && (
+        <div className="bg-[#1B4D3E]/5 rounded-lg px-4 py-3 mb-4 flex items-center gap-4">
+          <span className="text-xs text-[#1B4D3E] font-medium">出力完了</span>
+          {exportResult.pdfUrl && (
+            <a href={exportResult.pdfUrl} target="_blank" rel="noopener noreferrer"
+              className="text-xs text-[#D4A03A] hover:underline">PDF</a>
+          )}
+          {exportResult.spreadsheetUrl && (
+            <a href={exportResult.spreadsheetUrl} target="_blank" rel="noopener noreferrer"
+              className="text-xs text-[#D4A03A] hover:underline">スプレッドシート</a>
+          )}
+        </div>
+      )}
 
       {/* 請求書本体 */}
       <div className="bg-white rounded-2xl p-8 max-w-2xl mx-auto" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
