@@ -3,17 +3,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Uploader } from '@/components/Uploader';
 import { supabase } from '@/lib/supabase';
-import { KAMOKU, DIVISIONS } from '@/types/database';
+import { KAMOKU } from '@/types/database';
 import type { Project } from '@/types/database';
-import { CheckCircle2, AlertTriangle, ArrowRight, Camera, PenLine, Loader2, Plus, Trash2 } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, ArrowRight, Camera, PenLine } from 'lucide-react';
 import Link from 'next/link';
 import { usePeriodRange } from './HeaderControls';
-import TransportFields, { EMPTY_TRANSPORT } from '@/components/TransportFields';
-import type { TransportData } from '@/components/TransportFields';
-import { saveTransportDetails } from '@/lib/transportUtils';
-import EntertainmentFields, { EMPTY_ENTERTAINMENT } from '@/components/EntertainmentFields';
-import type { EntertainmentData } from '@/components/EntertainmentFields';
-import { entertainmentToDescription } from '@/lib/entertainmentUtils';
+import TransactionModal from '@/components/TransactionModal';
 
 interface TransactionRow {
   id: string;
@@ -37,22 +32,7 @@ export default function HomeContent() {
 
   // 撮影 / 手入力 切替
   const [inputMode, setInputMode] = useState<'camera' | 'manual'>('camera');
-
-  // 手入力フォーム
-  const [manualForm, setManualForm] = useState({
-    date: new Date().toISOString().split('T')[0],
-    amount: '',
-    store: '',
-    kamoku: 'misc',
-    owner: owner === 'all' ? 'tomo' : owner,
-    description: '',
-  });
-  const [manualSaving, setManualSaving] = useState(false);
-  const [manualSuccess, setManualSuccess] = useState(false);
-  const [manualError, setManualError] = useState<string | null>(null);
-  const [transportData, setTransportData] = useState<TransportData>({ ...EMPTY_TRANSPORT });
-  const [entertainmentData, setEntertainmentData] = useState<EntertainmentData>({ ...EMPTY_ENTERTAINMENT });
-  const [allocRows, setAllocRows] = useState<{ division_id: string; project_id: string; percent: number }[]>([]);
+  const [manualModalOpen, setManualModalOpen] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
 
   const fetchData = useCallback(async () => {
@@ -123,102 +103,6 @@ export default function HomeContent() {
     return `${parseInt(parts[1])}/${parseInt(parts[2])}`;
   };
 
-  const expenseKamoku = Object.entries(KAMOKU)
-    .filter(([, v]) => v.type === 'expense')
-    .map(([id, v]) => ({ id, name: v.name }));
-
-  const handleManualSave = async () => {
-    if (!manualForm.amount || !manualForm.date) {
-      setManualError('日付と金額は必須です');
-      return;
-    }
-    if (manualForm.kamoku === 'travel' && (!transportData.from_location || !transportData.to_location || !transportData.carrier)) {
-      setManualError('交通費の出発地・到着地・利用会社は必須です');
-      return;
-    }
-    if (manualForm.kamoku === 'entertainment' && !entertainmentData.guest_name) {
-      setManualError('接待交際費の相手先名は必須です');
-      return;
-    }
-    if (allocRows.length > 0) {
-      const total = allocRows.reduce((s, r) => s + r.percent, 0);
-      if (total !== 100) { setManualError('事業割り当ての合計が100%になるようにしてください'); return; }
-      if (allocRows.some(r => !r.division_id)) { setManualError('事業を選択してください'); return; }
-    }
-    if (!supabase) return;
-
-    setManualSaving(true);
-    setManualError(null);
-
-    // 接待交際費の場合、descriptionを構造化
-    let finalDescription = manualForm.description || null;
-    if (manualForm.kamoku === 'entertainment') {
-      finalDescription = entertainmentToDescription(entertainmentData, manualForm.description);
-    }
-
-    try {
-      const { data: inserted, error: dbErr } = await supabase
-        .from('transactions')
-        .insert({
-          tx_type: 'expense',
-          date: manualForm.date,
-          amount: parseInt(manualForm.amount.replace(/,/g, '')) || 0,
-          store: manualForm.store || null,
-          kamoku: manualForm.kamoku,
-          division: 'general',
-          owner: manualForm.owner,
-          description: finalDescription,
-          source: 'manual',
-          confirmed: true,
-        } as any)
-        .select('id')
-        .single();
-      if (dbErr) throw dbErr;
-
-      if (manualForm.kamoku === 'travel' && inserted) {
-        await saveTransportDetails((inserted as any).id, transportData);
-      }
-
-      // allocation保存（事業割り当てがある場合）
-      if (allocRows.length > 0 && inserted) {
-        const txAmount = parseInt(manualForm.amount.replace(/,/g, '')) || 0;
-        const inserts = allocRows.map(r => ({
-          transaction_id: (inserted as any).id,
-          division_id: r.division_id,
-          project_id: r.project_id || null,
-          percent: r.percent,
-          amount: Math.round(txAmount * r.percent / 100),
-        }));
-        await supabase.from('transaction_allocations').insert(inserts);
-      }
-
-      setManualSuccess(true);
-      if ('vibrate' in navigator) navigator.vibrate([50, 50, 50]);
-
-      setTimeout(() => {
-        setManualForm({
-          date: new Date().toISOString().split('T')[0],
-          amount: '',
-          store: '',
-          kamoku: 'misc',
-          owner: owner === 'all' ? 'tomo' : owner,
-          description: '',
-        });
-        setTransportData({ ...EMPTY_TRANSPORT });
-        setEntertainmentData({ ...EMPTY_ENTERTAINMENT });
-        setAllocRows([]);
-        setManualSuccess(false);
-      }, 1500);
-
-      fetchData();
-    } catch (err) {
-      console.error('Manual save error:', err);
-      setManualError('保存に失敗しました');
-    } finally {
-      setManualSaving(false);
-    }
-  };
-
   return (
     <div className="min-h-screen">
       <div className="max-w-lg mx-auto px-4 py-8 space-y-6">
@@ -280,7 +164,7 @@ export default function HomeContent() {
               撮影
             </button>
             <button
-              onClick={() => setInputMode('manual')}
+              onClick={() => { setInputMode('manual'); setManualModalOpen(true); }}
               className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs transition-colors ${
                 inputMode === 'manual'
                   ? 'text-[#1a1a1a] font-medium border-b-2 border-[#1a1a1a]'
@@ -295,169 +179,15 @@ export default function HomeContent() {
           {inputMode === 'camera' && (
             <Uploader onUploadComplete={fetchData} defaultOwner={owner === 'all' ? 'tomo' : owner} />
           )}
-
-          {inputMode === 'manual' && (
-            <div className="bg-white rounded-b-2xl p-5" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
-              {manualSuccess ? (
-                <div className="flex flex-col items-center py-6">
-                  <CheckCircle2 className="w-10 h-10 text-[#1B4D3E] mb-2" />
-                  <p className="text-sm text-[#1B4D3E] font-medium">登録完了</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-xs text-[#999] block mb-1">日付</label>
-                    <input
-                      type="date"
-                      value={manualForm.date}
-                      onChange={(e) => setManualForm({ ...manualForm, date: e.target.value })}
-                      className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-[#999] block mb-1">金額（税込）</label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={manualForm.amount ? Number(manualForm.amount.replace(/,/g, '')).toLocaleString() : ''}
-                      onChange={(e) => {
-                        const v = e.target.value.replace(/,/g, '');
-                        if (/^\d*$/.test(v)) setManualForm({ ...manualForm, amount: v });
-                      }}
-                      className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
-                      placeholder="15,300"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-[#999] block mb-1">取引先</label>
-                    <input
-                      type="text"
-                      value={manualForm.store}
-                      onChange={(e) => setManualForm({ ...manualForm, store: e.target.value })}
-                      className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
-                      placeholder="スターバックス"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-[#999] block mb-1">勘定科目</label>
-                    <select
-                      value={manualForm.kamoku}
-                      onChange={(e) => setManualForm({ ...manualForm, kamoku: e.target.value })}
-                      className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
-                    >
-                      {expenseKamoku.map((k) => (
-                        <option key={k.id} value={k.id}>{k.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  {manualForm.kamoku === 'travel' && (
-                    <TransportFields data={transportData} onChange={setTransportData} />
-                  )}
-                  {manualForm.kamoku === 'entertainment' && (
-                    <EntertainmentFields data={entertainmentData} onChange={setEntertainmentData} />
-                  )}
-                  <div>
-                    <label className="text-xs text-[#999] block mb-1">担当者</label>
-                    <select
-                      value={manualForm.owner}
-                      onChange={(e) => setManualForm({ ...manualForm, owner: e.target.value })}
-                      className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
-                    >
-                      <option value="tomo">トモ</option>
-                      <option value="toshiki">トシキ</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs text-[#999] block mb-1">メモ</label>
-                    <input
-                      type="text"
-                      value={manualForm.description}
-                      onChange={(e) => setManualForm({ ...manualForm, description: e.target.value })}
-                      className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
-                      placeholder="任意"
-                    />
-                  </div>
-                  {manualError && <p className="text-xs text-[#C23728]">{manualError}</p>}
-
-                  {/* 事業・PJ割り当て（複数行按分） */}
-                  <div className="pt-2 border-t border-gray-50">
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="text-xs text-[#999]">事業・PJ割り当て（任意）</label>
-                      {allocRows.length === 0 && (
-                        <button onClick={() => setAllocRows([{ division_id: '', project_id: '', percent: 100 }])}
-                          className="flex items-center gap-1 text-[10px] text-[#D4A03A] hover:underline">
-                          <Plus className="w-3 h-3" />追加
-                        </button>
-                      )}
-                    </div>
-                    {allocRows.length > 0 ? (
-                      <div className="space-y-2">
-                        {allocRows.map((row, idx) => {
-                          const filteredPJ = row.division_id ? projects.filter(p => p.division === row.division_id && p.status !== 'completed') : [];
-                          return (
-                            <div key={idx} className="flex items-center gap-1.5">
-                              <select value={row.division_id}
-                                onChange={e => setAllocRows(prev => prev.map((r, i) => i === idx ? { ...r, division_id: e.target.value, project_id: '' } : r))}
-                                className="px-2 py-1.5 bg-[#F5F5F3] rounded text-[11px] border-0 outline-none flex-1">
-                                <option value="">事業</option>
-                                {Object.entries(DIVISIONS).filter(([id]) => id !== 'general').map(([id, v]) => (
-                                  <option key={id} value={id}>{v.name}</option>
-                                ))}
-                              </select>
-                              <select value={row.project_id}
-                                onChange={e => setAllocRows(prev => prev.map((r, i) => i === idx ? { ...r, project_id: e.target.value } : r))}
-                                className="px-2 py-1.5 bg-[#F5F5F3] rounded text-[11px] border-0 outline-none flex-1 truncate">
-                                <option value="">PJ</option>
-                                {filteredPJ.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                              </select>
-                              <input type="number" value={row.percent}
-                                onChange={e => setAllocRows(prev => prev.map((r, i) => i === idx ? { ...r, percent: parseInt(e.target.value, 10) || 0 } : r))}
-                                className="w-12 px-1.5 py-1.5 bg-[#F5F5F3] rounded text-[11px] border-0 outline-none text-right font-['Saira_Condensed'] tabular-nums"
-                                min={0} max={100} />
-                              <span className="text-[10px] text-[#999]">%</span>
-                              <button onClick={() => setAllocRows(prev => prev.filter((_, i) => i !== idx))}
-                                className="text-[#C23728]/60 hover:text-[#C23728] p-0.5">
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            </div>
-                          );
-                        })}
-                        <div className="flex items-center justify-between pt-1">
-                          <button onClick={() => setAllocRows(prev => [...prev, { division_id: '', project_id: '', percent: 0 }])}
-                            className="flex items-center gap-1 text-[10px] text-[#D4A03A] hover:underline">
-                            <Plus className="w-3 h-3" />行を追加
-                          </button>
-                          <span className={`text-[10px] font-['Saira_Condensed'] tabular-nums ${allocRows.reduce((s, r) => s + r.percent, 0) === 100 ? 'text-[#1B4D3E]' : 'text-[#C23728]'}`}>
-                            合計 {allocRows.reduce((s, r) => s + r.percent, 0)}%
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="text-[10px] text-[#999]">後から経営ページでも割り当て・変更できます</p>
-                    )}
-                  </div>
-
-                  <button
-                    onClick={handleManualSave}
-                    disabled={manualSaving || !manualForm.amount || !manualForm.date}
-                    className="w-full py-3 bg-[#1a1a1a] text-white rounded-xl text-sm font-medium
-                      hover:bg-[#333] disabled:opacity-40 disabled:cursor-not-allowed
-                      transition-all duration-200 flex items-center justify-center gap-2"
-                  >
-                    {manualSaving ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        保存中...
-                      </>
-                    ) : (
-                      '登録する'
-                    )}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
         </div>
+
+        <TransactionModal
+          isOpen={manualModalOpen}
+          onClose={() => setManualModalOpen(false)}
+          onSaved={fetchData}
+          defaultOwner={owner === 'all' ? 'tomo' : owner}
+          projects={projects}
+        />
 
         {/* ── 最近の取引 ── */}
         <div className="bg-white rounded-2xl p-5" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
