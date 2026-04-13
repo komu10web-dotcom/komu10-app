@@ -352,6 +352,7 @@ function InvoiceEditor({
   const [notes, setNotes] = useState('');
   const [status, setStatus] = useState<string>('draft');
   const [invoiceNumber, setInvoiceNumber] = useState('');
+  const [existingTransactionId, setExistingTransactionId] = useState<string | null>(null);
 
   // 明細行
   const [items, setItems] = useState<ItemForm[]>([
@@ -374,6 +375,7 @@ function InvoiceEditor({
           setNotes(inv.notes || '');
           setStatus(inv.status);
           setInvoiceNumber(inv.invoice_number);
+          setExistingTransactionId(inv.transaction_id || null);
         }
         const { data: itemData } = await supabase
           .from('invoice_items').select('*').eq('invoice_id', invoiceId).order('sort_order');
@@ -501,9 +503,59 @@ function InvoiceEditor({
         if (itemErr) throw itemErr;
       }
 
-      // 発行時にissued_atを記録
-      if (status === 'issued' && isNew) {
-        await supabase.from('invoices').update({ issued_at: new Date().toISOString() }).eq('id', savedId);
+      // 発行時にissued_atを記録 + 売上仕訳自動作成
+      if (status === 'issued') {
+        const updates: any = {};
+        if (isNew) updates.issued_at = new Date().toISOString();
+
+        // 売上仕訳の作成/更新
+        const selectedClient = clients.find(c => c.id === clientId);
+        const txData = {
+          tx_type: 'revenue' as const,
+          date: issueDate,
+          amount: total,
+          kamoku: 'sales',
+          division: 'support', // デフォルト事業（後で編集可）
+          owner,
+          store: selectedClient?.name || null,
+          description: `請求書 ${isNew ? invoiceData.invoice_number : invoiceNumber}`,
+          source: 'manual',
+          confirmed: true,
+          status: 'billed',
+          accrual_date: issueDate,
+          client_id: clientId,
+        };
+
+        if (existingTransactionId) {
+          // 既存仕訳を更新
+          await supabase.from('transactions').update(txData).eq('id', existingTransactionId);
+        } else {
+          // 新規仕訳作成
+          const { data: txInserted } = await supabase
+            .from('transactions').insert(txData).select('id').single();
+          if (txInserted) {
+            updates.transaction_id = txInserted.id;
+          }
+        }
+
+        if (Object.keys(updates).length > 0) {
+          await supabase.from('invoices').update(updates).eq('id', savedId);
+        }
+      }
+
+      // 入金済み時にpaid_atを記録 + 仕訳ステータス更新
+      if (status === 'paid') {
+        const paidUpdates: any = { paid_at: new Date().toISOString() };
+        await supabase.from('invoices').update(paidUpdates).eq('id', savedId);
+
+        // 紐付き仕訳があればsettledに更新
+        const txId = existingTransactionId;
+        if (txId) {
+          await supabase.from('transactions').update({
+            status: 'settled',
+            actual_payment_date: new Date().toISOString().split('T')[0],
+          }).eq('id', txId);
+        }
       }
 
       onBack();
