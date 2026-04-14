@@ -149,16 +149,16 @@ export default function TransportFields({ data, onChange, onAmountChange }: Tran
       <p className="text-xs font-medium text-[#D4A03A]">交通費詳細</p>
 
       {/* 注意書き */}
-      <div className="text-[11px] text-[#888] leading-relaxed space-y-2.5">
+      <div className="text-[11px] text-[#888] leading-relaxed space-y-2 border-l-2 border-[#D4A03A]/30 pl-3">
         <div>
           <p className="font-medium text-[#666]">電車・バス</p>
-          <p>出発地と最終目的地だけ入力。乗り継ぎはメモ欄に記載してください。</p>
-          <p className="text-[10px] text-[#aaa]">※ 不安な場合は「区間追加」で経由地も登録できます。</p>
+          <p className="mt-0.5">出発地と最終目的地だけ入力。乗り継ぎはメモ欄に記載してください。</p>
+          <p className="text-[10px] text-[#aaa] mt-0.5">※ 不安な場合は「区間追加」で経由地も登録できます。</p>
         </div>
         <div>
           <p className="font-medium text-[#666]">タクシー・飛行機</p>
-          <p>領収書ごとに1件ずつ登録してください。</p>
-          <p className="text-[10px] text-[#aaa]">※ 区間追加には対応していません。</p>
+          <p className="mt-0.5">領収書ごとに1件ずつ登録してください。</p>
+          <p className="text-[10px] text-[#aaa] mt-0.5">※ 区間追加には対応していません。</p>
         </div>
       </div>
 
