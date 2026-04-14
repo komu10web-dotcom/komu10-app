@@ -24,6 +24,7 @@ interface ItemForm {
   id?: string;
   description: string;
   quantity: string;
+  unit: string;
   unit_price: string;
 }
 
@@ -346,8 +347,9 @@ function InvoiceEditor({
   // フォーム
   const [clientId, setClientId] = useState('');
   const [issueDate, setIssueDate] = useState(new Date().toISOString().slice(0, 10));
-  const [periodStart, setPeriodStart] = useState('');
-  const [periodEnd, setPeriodEnd] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [subject, setSubject] = useState('');
+  const [paymentTerms, setPaymentTerms] = useState('契約書記載の支払条件に準ずる');
   const [bankAccountId, setBankAccountId] = useState('');
   const [notes, setNotes] = useState('');
   const [status, setStatus] = useState<string>('draft');
@@ -356,7 +358,7 @@ function InvoiceEditor({
 
   // 明細行
   const [items, setItems] = useState<ItemForm[]>([
-    { description: '', quantity: '1', unit_price: '' },
+    { description: '', quantity: '1', unit: '式', unit_price: '' },
   ]);
 
   // 既存データ読み込み
@@ -369,8 +371,9 @@ function InvoiceEditor({
         if (inv) {
           setClientId(inv.client_id || '');
           setIssueDate(inv.issue_date);
-          setPeriodStart(inv.period_start || '');
-          setPeriodEnd(inv.period_end || '');
+          setDueDate(inv.due_date || '');
+          setSubject(inv.subject || '');
+          setPaymentTerms(inv.payment_terms || '契約書記載の支払条件に準ずる');
           setBankAccountId(inv.bank_account_id || '');
           setNotes(inv.notes || '');
           setStatus(inv.status);
@@ -384,6 +387,7 @@ function InvoiceEditor({
             id: it.id,
             description: it.description,
             quantity: it.quantity.toString(),
+            unit: it.unit || '式',
             unit_price: it.unit_price.toString(),
           })));
         }
@@ -406,11 +410,14 @@ function InvoiceEditor({
       if (data && data.length > 0) {
         const prev = data[0];
         if (prev.bank_account_id) setBankAccountId(prev.bank_account_id);
+        if (prev.subject) setSubject(prev.subject);
+        if (prev.payment_terms) setPaymentTerms(prev.payment_terms);
         if (prev.invoice_items && prev.invoice_items.length > 0) {
           const sorted = [...prev.invoice_items].sort((a: any, b: any) => a.sort_order - b.sort_order);
           setItems(sorted.map((it: any) => ({
             description: it.description,
             quantity: it.quantity.toString(),
+            unit: it.unit || '式',
             unit_price: it.unit_price.toString(),
           })));
         }
@@ -431,7 +438,7 @@ function InvoiceEditor({
   const total = subtotal + taxAmount;
 
   // 明細行操作
-  const addItem = () => setItems([...items, { description: '', quantity: '1', unit_price: '' }]);
+  const addItem = () => setItems([...items, { description: '', quantity: '1', unit: '式', unit_price: '' }]);
   const removeItem = (idx: number) => {
     if (items.length <= 1) return;
     setItems(items.filter((_, i) => i !== idx));
@@ -449,8 +456,9 @@ function InvoiceEditor({
         owner,
         client_id: clientId,
         issue_date: issueDate,
-        period_start: periodStart || null,
-        period_end: periodEnd || null,
+        due_date: dueDate || null,
+        subject: subject || null,
+        payment_terms: paymentTerms || null,
         subtotal,
         tax_amount: taxAmount,
         total,
@@ -494,6 +502,7 @@ function InvoiceEditor({
           sort_order: idx + 1,
           description: it.description.trim(),
           quantity: parseFloat(it.quantity) || 0,
+          unit: it.unit || '式',
           unit_price: parseFloat(it.unit_price) || 0,
           amount: calcItemAmount(it),
         }));
@@ -611,16 +620,19 @@ function InvoiceEditor({
               className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed']" />
           </div>
 
-          {/* 対象期間 */}
+          {/* 支払期限 */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">対象期間（開始）</label>
-            <input type="date" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)}
+            <label className="block text-xs text-[#999] mb-1">お支払期限</label>
+            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)}
               className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed']" />
           </div>
-          <div>
-            <label className="block text-xs text-[#999] mb-1">対象期間（終了）</label>
-            <input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed']" />
+
+          {/* 件名 */}
+          <div className="col-span-2">
+            <label className="block text-xs text-[#999] mb-1">件名</label>
+            <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)}
+              placeholder="例: 法人営業／企画提案業務"
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
           </div>
 
           {/* 振込先 */}
@@ -664,13 +676,19 @@ function InvoiceEditor({
                     placeholder="品名・内容"
                     className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
                 </div>
-                <div className="w-20">
+                <div className="w-16">
                   <input type="text" inputMode="numeric" value={item.quantity}
                     onChange={(e) => updateItem(idx, 'quantity', e.target.value.replace(/[^\d.]/g, ''))}
                     placeholder="数量"
                     className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 text-center font-['Saira_Condensed'] tabular-nums" />
                 </div>
-                <div className="w-32">
+                <div className="w-16">
+                  <input type="text" value={item.unit}
+                    onChange={(e) => updateItem(idx, 'unit', e.target.value)}
+                    placeholder="単位"
+                    className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 text-center" />
+                </div>
+                <div className="w-28">
                   <input type="text" inputMode="numeric" value={item.unit_price}
                     onChange={(e) => updateItem(idx, 'unit_price', e.target.value.replace(/[^\d]/g, ''))}
                     placeholder="単価"
@@ -711,6 +729,14 @@ function InvoiceEditor({
           </div>
         </div>
 
+        {/* 支払条件 */}
+        <div className="mb-6">
+          <label className="block text-xs text-[#999] mb-1">お支払条件</label>
+          <input type="text" value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)}
+            placeholder="契約書記載の支払条件に準ずる"
+            className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+        </div>
+
         {/* 備考 */}
         <div className="mb-6">
           <label className="block text-xs text-[#999] mb-1">備考</label>
@@ -719,8 +745,6 @@ function InvoiceEditor({
             rows={2}
             className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 resize-none" />
         </div>
-
-        {/* アクション */}
         <div className="flex gap-2">
           <button onClick={onBack}
             className="px-6 py-2.5 text-xs text-[#999] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors">
@@ -910,28 +934,38 @@ function InvoicePreview({
           </div>
         </div>
 
-        {/* 対象期間 */}
-        {(invoice.period_start || invoice.period_end) && (
-          <div className="text-xs text-[#999] mb-4">
-            対象期間: {invoice.period_start ? formatDate(invoice.period_start) : ''} 〜 {invoice.period_end ? formatDate(invoice.period_end) : ''}
+        {/* 件名 */}
+        {invoice.subject && (
+          <div className="mb-4">
+            <div className="text-xs text-[#999] mb-0.5">件名</div>
+            <div className="text-sm text-[#1a1a1a]">{invoice.subject}</div>
           </div>
         )}
 
         {/* 合計金額 */}
-        <div className="bg-[#F5F5F3] rounded-lg px-6 py-4 mb-6 flex items-center justify-between">
-          <span className="text-sm text-[#1a1a1a]">ご請求金額</span>
+        <div className="bg-[#F5F5F3] rounded-lg px-6 py-4 mb-4 flex items-center justify-between">
+          <span className="text-sm text-[#1a1a1a]">ご請求金額（税込）</span>
           <span className="text-2xl font-['Saira_Condensed'] tabular-nums font-medium text-[#1B4D3E]">
             ¥{invoice.total.toLocaleString()}
           </span>
         </div>
 
+        {/* 支払期限 */}
+        {invoice.due_date && (
+          <div className="mb-6 text-sm">
+            <span className="text-[#999] mr-3">お支払期限</span>
+            <span className="text-[#1a1a1a]">{formatDate(invoice.due_date)}</span>
+          </div>
+        )}
+
         {/* 明細テーブル */}
         <table className="w-full text-sm mb-6">
           <thead>
             <tr className="border-b-2 border-[#1a1a1a]">
-              <th className="text-left py-2 text-xs text-[#1a1a1a] font-medium" style={{ width: '50%' }}>品名</th>
-              <th className="text-center py-2 text-xs text-[#1a1a1a] font-medium w-20">数量</th>
-              <th className="text-right py-2 text-xs text-[#1a1a1a] font-medium w-28">単価</th>
+              <th className="text-left py-2 text-xs text-[#1a1a1a] font-medium" style={{ width: '45%' }}>品名・摘要</th>
+              <th className="text-center py-2 text-xs text-[#1a1a1a] font-medium w-16">数量</th>
+              <th className="text-center py-2 text-xs text-[#1a1a1a] font-medium w-14">単位</th>
+              <th className="text-right py-2 text-xs text-[#1a1a1a] font-medium w-24">単価</th>
               <th className="text-right py-2 text-xs text-[#1a1a1a] font-medium w-28">金額</th>
             </tr>
           </thead>
@@ -940,6 +974,7 @@ function InvoicePreview({
               <tr key={item.id} className="border-b border-gray-100">
                 <td className="py-2.5 text-[#1a1a1a]">{item.description}</td>
                 <td className="py-2.5 text-center font-['Saira_Condensed'] tabular-nums text-[#666]">{item.quantity}</td>
+                <td className="py-2.5 text-center text-[#666]">{item.unit || '式'}</td>
                 <td className="py-2.5 text-right font-['Saira_Condensed'] tabular-nums text-[#666]">¥{item.unit_price.toLocaleString()}</td>
                 <td className="py-2.5 text-right font-['Saira_Condensed'] tabular-nums text-[#1a1a1a]">¥{item.amount.toLocaleString()}</td>
               </tr>
@@ -959,7 +994,7 @@ function InvoicePreview({
               <span className="font-['Saira_Condensed'] tabular-nums text-[#999]">—</span>
             </div>
             <div className="flex justify-between py-1.5 text-sm border-t-2 border-[#1a1a1a] mt-1 pt-2">
-              <span className="font-medium text-[#1a1a1a]">合計</span>
+              <span className="font-medium text-[#1a1a1a]">合計（税込）</span>
               <span className="font-['Saira_Condensed'] tabular-nums font-medium text-[#1B4D3E] text-lg">¥{invoice.total.toLocaleString()}</span>
             </div>
           </div>
@@ -969,12 +1004,20 @@ function InvoicePreview({
         {bankAccount && (
           <div className="border-t border-gray-100 pt-4 mb-4">
             <div className="text-xs text-[#999] mb-2">お振込先</div>
-            <div className="text-sm text-[#1a1a1a]">
-              {bankAccount.bank_name} {bankAccount.branch_name || ''}
+            <div className="text-sm text-[#1a1a1a] space-y-0.5">
+              <div>{bankAccount.bank_name}{bankAccount.bank_code ? `（${bankAccount.bank_code}）` : ''}</div>
+              <div className="text-[#666]">{bankAccount.branch_name || ''}{bankAccount.branch_code ? `（${bankAccount.branch_code}）` : ''}</div>
+              <div className="text-[#666]">{bankAccount.account_type === 'ordinary' ? '普通' : bankAccount.account_type} {bankAccount.account_number || ''}</div>
+              <div className="text-[#666]">{bankAccount.account_holder_kana || bankAccount.account_holder_name || bankAccount.name}</div>
             </div>
-            <div className="text-xs text-[#999] mt-0.5">
-              {bankAccount.account_type} {bankAccount.account_number_last4 ? `****${bankAccount.account_number_last4}` : ''} / {bankAccount.name}
-            </div>
+          </div>
+        )}
+
+        {/* 支払条件 */}
+        {invoice.payment_terms && (
+          <div className="border-t border-gray-100 pt-4 mb-4">
+            <div className="text-xs text-[#999] mb-1">お支払条件</div>
+            <div className="text-sm text-[#666]">{invoice.payment_terms}</div>
           </div>
         )}
 

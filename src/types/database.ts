@@ -1,6 +1,7 @@
-// komu10 会計システム v0.4.0
+// komu10 会計システム v0.5.1
 // Supabase Database 型定義（DB実態に完全一致）
-// 2026-04-13 Session 14 — clients/invoices/invoice_items 再設計反映
+// 2026-04-15 invoices: subject/due_date/payment_terms追加、period_start/end削除
+// 2026-04-15 invoice_items: unit追加
 
 export interface Database {
   public: {
@@ -204,8 +205,9 @@ export interface Database {
           client_id: string; // FK→clients
           invoice_number: string; // INV-YYYY-NNNN（全体通し）
           issue_date: string; // 発行日
-          period_start: string | null; // 対象期間開始
-          period_end: string | null; // 対象期間終了
+          due_date: string | null; // 支払期限
+          subject: string | null; // 件名
+          payment_terms: string | null; // 支払条件
           subtotal: number; // 小計（税抜）
           tax_amount: number; // 消費税額（免税=0）
           total: number; // 合計
@@ -233,6 +235,7 @@ export interface Database {
           sort_order: number;
           description: string; // 品名・内容
           quantity: number;
+          unit: string | null; // 単位（式・月・時間等）デフォルト「式」
           unit_price: number;
           amount: number; // quantity × unit_price
           created_at: string;

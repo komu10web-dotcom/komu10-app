@@ -242,7 +242,7 @@ async function createInvoiceSpreadsheet(
     const atm: Record<string, string> = { ordinary: '普通', checking: '当座', savings: '貯蓄' };
     R.push(['', '口座種別', '', atm[bankAccount.account_type] || '普通', '', '', '', '']);
     R.push(['', '口座番号', '', bankAccount.account_number || bankAccount.account_number_last4 || '', '', '', '', '']);
-    R.push(['', '口座名義', '', bankAccount.account_holder || bankAccount.name || '', '', '', '', '']);
+    R.push(['', '口座名義', '', bankAccount.account_holder_kana || bankAccount.account_holder_name || bankAccount.name || '', '', '', '', '']);
   } else {
     for (let i = 0; i < 6; i++) R.push(['', '', '', '', '', '', '', '']);
   }
