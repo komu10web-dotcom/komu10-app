@@ -148,6 +148,12 @@ export default function TransportFields({ data, onChange, onAmountChange }: Tran
     <div className="border border-[#D4A03A]/30 rounded-xl p-4 space-y-3 bg-[#D4A03A]/5">
       <p className="text-xs font-medium text-[#D4A03A]">交通費詳細</p>
 
+      {/* 注意書き */}
+      <div className="text-[11px] text-[#888] leading-relaxed space-y-0.5">
+        <p>電車・バスは出発地と最終目的地だけでOK（乗り継ぎはメモに記載。メモで不安な場合は区間追加で登録できます）</p>
+        <p>タクシー・飛行機は領収書ごとに分けて登録してください（区間追加での対応不可）</p>
+      </div>
+
       {/* 目的（トランザクション単位） */}
       <div>
         <label className="text-xs text-[#999] block mb-1">目的</label>
@@ -269,6 +275,11 @@ export default function TransportFields({ data, onChange, onAmountChange }: Tran
           <p className="text-base font-medium font-['Saira_Condensed'] tabular-nums text-[#1a1a1a]">
             合計 ¥{total.toLocaleString()}
           </p>
+          {total >= 30000 && (
+            <p className="text-[11px] text-[#E07A3A]">
+              3万円以上の交通費は領収書の保管が推奨されます
+            </p>
+          )}
         </div>
       )}
 
