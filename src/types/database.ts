@@ -161,11 +161,16 @@ export interface Database {
       bank_accounts: {
         Row: {
           id: string;
-          name: string;
-          bank_name: string;
-          branch_name: string | null;
-          account_type: string;
-          account_number_last4: string | null;
+          name: string; // 通称（メイン口座等）
+          bank_name: string; // 銀行名
+          bank_code: string | null; // 金融機関コード
+          branch_name: string | null; // 支店名
+          branch_code: string | null; // 支店コード
+          account_type: string; // 普通・当座等
+          account_number: string | null; // 口座番号（フル）
+          account_number_last4: string | null; // 口座番号下4桁（一覧表示用）
+          account_holder_name: string | null; // 口座名義（漢字）
+          account_holder_kana: string | null; // 口座名義（カナ）
           owner: string;
           balance: number;
           created_at: string;

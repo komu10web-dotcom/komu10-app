@@ -639,8 +639,9 @@ export default function SettingsContent() {
   // 口座 CRUD
   // ============================================================
   const saveBank = async (data: {
-    name: string; bank_name: string; branch_name: string;
-    account_type: string; account_number_last4: string; balance: number;
+    name: string; bank_name: string; bank_code: string; branch_name: string; branch_code: string;
+    account_type: string; account_number: string; account_number_last4: string;
+    account_holder_name: string; account_holder_kana: string; balance: number;
   }) => {
     if (!supabase) return;
     try {
@@ -2818,15 +2819,23 @@ function BankModal({
   onClose,
 }: {
   bank: BankAccount | null;
-  onSave: (data: { name: string; bank_name: string; branch_name: string; account_type: string; account_number_last4: string; balance: number }) => void;
+  onSave: (data: {
+    name: string; bank_name: string; bank_code: string; branch_name: string; branch_code: string;
+    account_type: string; account_number: string; account_number_last4: string;
+    account_holder_name: string; account_holder_kana: string; balance: number;
+  }) => void;
   onClose: () => void;
 }) {
   const [form, setForm] = useState({
     name: bank?.name || '',
     bank_name: bank?.bank_name || '',
+    bank_code: bank?.bank_code || '',
     branch_name: bank?.branch_name || '',
+    branch_code: bank?.branch_code || '',
     account_type: bank?.account_type || 'savings',
-    account_number_last4: bank?.account_number_last4 || '',
+    account_number: bank?.account_number || '',
+    account_holder_name: bank?.account_holder_name || '',
+    account_holder_kana: bank?.account_holder_kana || '',
     balance: bank?.balance?.toString() || '0',
   });
 
@@ -2836,12 +2845,18 @@ function BankModal({
   const handleSave = () => {
     if (!canSave) return;
     setSaving(true);
+    const accountNum = form.account_number.replace(/\D/g, '');
     onSave({
       name: form.name.trim(),
       bank_name: form.bank_name.trim(),
+      bank_code: form.bank_code.replace(/\D/g, ''),
       branch_name: form.branch_name.trim(),
+      branch_code: form.branch_code.replace(/\D/g, ''),
       account_type: form.account_type,
-      account_number_last4: form.account_number_last4.trim(),
+      account_number: accountNum,
+      account_number_last4: accountNum.slice(-4),
+      account_holder_name: form.account_holder_name.trim(),
+      account_holder_kana: form.account_holder_kana.trim(),
       balance: parseInt(form.balance.replace(/,/g, '')) || 0,
     });
   };
@@ -2865,25 +2880,45 @@ function BankModal({
             <label className="block text-xs text-[#999] mb-1">口座名（通称）</label>
             <input type="text" value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="例: 住信SBI メイン"
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
-          </div>
-          <div>
-            <label className="block text-xs text-[#999] mb-1">銀行名</label>
-            <input type="text" value={form.bank_name}
-              onChange={(e) => setForm({ ...form, bank_name: e.target.value })}
-              placeholder="例: 住信SBIネット銀行"
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
-          </div>
-          <div>
-            <label className="block text-xs text-[#999] mb-1">支店名（任意）</label>
-            <input type="text" value={form.branch_name}
-              onChange={(e) => setForm({ ...form, branch_name: e.target.value })}
-              placeholder="例: 法人第一支店"
+              placeholder="例: メイン口座"
               className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
           </div>
           <div className="flex gap-3">
             <div className="flex-1">
+              <label className="block text-xs text-[#999] mb-1">銀行名</label>
+              <input type="text" value={form.bank_name}
+                onChange={(e) => setForm({ ...form, bank_name: e.target.value })}
+                placeholder="例: GMOあおぞらネット銀行"
+                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+            </div>
+            <div className="w-24">
+              <label className="block text-xs text-[#999] mb-1">金融機関コード</label>
+              <input type="text" inputMode="numeric" value={form.bank_code}
+                onChange={(e) => { const v = e.target.value.replace(/\D/g, '').slice(0, 4); setForm({ ...form, bank_code: v }); }}
+                placeholder="0310"
+                maxLength={4}
+                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed'] tabular-nums text-center" />
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-xs text-[#999] mb-1">支店名</label>
+              <input type="text" value={form.branch_name}
+                onChange={(e) => setForm({ ...form, branch_name: e.target.value })}
+                placeholder="例: ビジネス第二支店"
+                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+            </div>
+            <div className="w-24">
+              <label className="block text-xs text-[#999] mb-1">支店コード</label>
+              <input type="text" inputMode="numeric" value={form.branch_code}
+                onChange={(e) => { const v = e.target.value.replace(/\D/g, '').slice(0, 3); setForm({ ...form, branch_code: v }); }}
+                placeholder="202"
+                maxLength={3}
+                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed'] tabular-nums text-center" />
+            </div>
+          </div>
+          <div className="flex gap-3">
+            <div className="w-28">
               <label className="block text-xs text-[#999] mb-1">口座種別</label>
               <select value={form.account_type}
                 onChange={(e) => setForm({ ...form, account_type: e.target.value })}
@@ -2893,13 +2928,26 @@ function BankModal({
               </select>
             </div>
             <div className="flex-1">
-              <label className="block text-xs text-[#999] mb-1">口座番号（下4桁）</label>
-              <input type="text" value={form.account_number_last4}
-                onChange={(e) => { const v = e.target.value.replace(/\D/g, '').slice(0, 4); setForm({ ...form, account_number_last4: v }); }}
-                placeholder="1234"
-                maxLength={4}
+              <label className="block text-xs text-[#999] mb-1">口座番号</label>
+              <input type="text" inputMode="numeric" value={form.account_number}
+                onChange={(e) => { const v = e.target.value.replace(/\D/g, ''); setForm({ ...form, account_number: v }); }}
+                placeholder="1108530"
                 className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed'] tabular-nums" />
             </div>
+          </div>
+          <div>
+            <label className="block text-xs text-[#999] mb-1">口座名義（漢字）</label>
+            <input type="text" value={form.account_holder_name}
+              onChange={(e) => setForm({ ...form, account_holder_name: e.target.value })}
+              placeholder="例: komu10 小林 寿樹"
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+          </div>
+          <div>
+            <label className="block text-xs text-[#999] mb-1">口座名義（カナ）</label>
+            <input type="text" value={form.account_holder_kana}
+              onChange={(e) => setForm({ ...form, account_holder_kana: e.target.value })}
+              placeholder="例: コウムテン コバヤシ トシキ"
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
           </div>
           <div>
             <label className="block text-xs text-[#999] mb-1">現在残高（円）</label>
