@@ -351,7 +351,8 @@ function InvoiceEditor({
   const [subject, setSubject] = useState('');
   const [paymentTerms, setPaymentTerms] = useState('契約書記載の支払条件に準ずる');
   const [bankAccountId, setBankAccountId] = useState('');
-  const [notes, setNotes] = useState('');
+  const DEFAULT_NOTES = 'インボイス制度における適格請求書発行事業者の登録番号はございません（免税事業者）。\n恐れ入りますが、お振込手数料は御社にてご負担ください。';
+  const [notes, setNotes] = useState(isNew ? DEFAULT_NOTES : '');
   const [status, setStatus] = useState<string>('draft');
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [existingTransactionId, setExistingTransactionId] = useState<string | null>(null);
@@ -412,6 +413,7 @@ function InvoiceEditor({
         if (prev.bank_account_id) setBankAccountId(prev.bank_account_id);
         if (prev.subject) setSubject(prev.subject);
         if (prev.payment_terms) setPaymentTerms(prev.payment_terms);
+        if (prev.notes) setNotes(prev.notes);
         if (prev.invoice_items && prev.invoice_items.length > 0) {
           const sorted = [...prev.invoice_items].sort((a: any, b: any) => a.sort_order - b.sort_order);
           setItems(sorted.map((it: any) => ({
@@ -742,7 +744,7 @@ function InvoiceEditor({
           <label className="block text-xs text-[#999] mb-1">備考</label>
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
             placeholder="備考・特記事項"
-            rows={2}
+            rows={4}
             className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 resize-none" />
         </div>
         <div className="flex gap-2">
