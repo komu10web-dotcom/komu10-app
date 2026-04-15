@@ -198,6 +198,7 @@ export default function TransactionModal({
           name: templateName.trim(),
           template_type: 'transport',
           kamoku: 'transport',
+          description: snap.description || '',
           route_legs: legs,
           amount: total,
           green_amount: 0,
@@ -235,9 +236,7 @@ export default function TransactionModal({
     let store = '';
     if (tpl.template_type === 'transport') {
       const legs = (tpl.route_legs || []) as any[];
-      desc = legs.length > 0
-        ? [legs[0].from, ...legs.map((l: any) => l.to)].filter(Boolean).join(' → ')
-        : tpl.description || tpl.name;
+      desc = tpl.description || '';
       // route_legsをTransportDataに流し込み
       setTransportData({
         ...EMPTY_TRANSPORT,

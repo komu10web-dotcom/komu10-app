@@ -2331,20 +2331,41 @@ export default function SettingsContent() {
             リリースノート
           </div>
           <div className="space-y-3">
-            {/* v0.4.0 */}
+            {/* v0.5.0 */}
             <div className="bg-white rounded-xl shadow-sm p-4">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.4.0</span>
-                <span className="text-[9px] text-[#999]">2026.04.12</span>
+                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.5.0</span>
+                <span className="text-[9px] text-[#999]">2026.04.15</span>
                 <span className="text-[8px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full font-medium">LATEST</span>
               </div>
+              <ul className="space-y-1">
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>交通費入力フロー全面再設計（片道/往復・経由地・分割保存）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>請求書管理（作成・PDF出力・Drive自動保存・売上仕訳連携）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>取引先マスタ（設定ページCRUD・自動採番）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>科目分岐の基盤設計（日付→科目→専用フォーム切替）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>交通費支払方法（IC/現金/クレカ/請求書払い）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>交通費注意書き（経営企画本部校閲済み）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>テンプレ適用時の摘要復元修正</li>
+              </ul>
+            </div>
+
+            {/* v0.4.0 */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.4.0</span>
+                  <span className="text-[9px] text-[#999]">2026.04.12</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
               <ul className="space-y-1">
                 <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>経費テンプレート（交通費ルート＋汎用パターン）</li>
                 <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>経営ページ「資金」タブ（口座残高・資金移動・手数料管理）</li>
                 <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>支払方法（個人/口座）+ 仕訳自動分岐</li>
                 <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>セマンティックバージョニング導入</li>
               </ul>
-            </div>
+              </div>
+            </details>
 
             {/* v0.3.x 折りたたみ */}
             <details className="bg-white rounded-xl shadow-sm">
@@ -2411,7 +2432,7 @@ export default function SettingsContent() {
 
         {/* バージョン */}
         <div className="text-center py-8">
-          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.4.0</span>
+          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.5.0</span>
         </div>
 
       </div>{/* end max-w-3xl */}
