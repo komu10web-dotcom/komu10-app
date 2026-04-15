@@ -40,7 +40,12 @@ export interface RouteLeg {
 export interface TransportData {
   purpose: string;
   route_legs: RouteLeg[];
-  round_trip: string;
+  round_trip: 'one_way' | 'round_trip';
+  same_route: boolean;
+  same_amount: boolean;
+  return_legs: RouteLeg[];
+  return_amount: number;
+  payment_method: string;
   class_value: string;
   class_reason: string;
   companion: string;
@@ -61,6 +66,11 @@ export const EMPTY_TRANSPORT: TransportData = {
   purpose: '商談',
   route_legs: [{ ...EMPTY_LEG }],
   round_trip: 'one_way',
+  same_route: true,
+  same_amount: true,
+  return_legs: [],
+  return_amount: 0,
+  payment_method: 'ic',
   class_value: '普通席',
   class_reason: '',
   companion: '',
@@ -97,15 +107,26 @@ export default function TransportFields({ data, onChange, onAmountChange }: Tran
       });
   }, []);
 
-  // 合計金額を親に通知
+  // 合計金額を親に通知（往復対応）
   const prevTotalRef = useRef<number>(0);
   useEffect(() => {
-    const total = data.route_legs.reduce((s, l) => s + (l.amount || 0), 0);
+    const oneWayTotal = data.route_legs.reduce((s, l) => s + (l.amount || 0), 0);
+    let total = oneWayTotal;
+    if (data.round_trip === 'round_trip') {
+      if (data.same_amount) {
+        total = oneWayTotal * 2;
+      } else {
+        const returnTotal = data.same_route
+          ? (data.return_amount || 0)
+          : data.return_legs.reduce((s, l) => s + (l.amount || 0), 0);
+        total = oneWayTotal + returnTotal;
+      }
+    }
     if (total !== prevTotalRef.current) {
       prevTotalRef.current = total;
       onAmountChange?.(total);
     }
-  }, [data.route_legs, onAmountChange]);
+  }, [data.route_legs, data.round_trip, data.same_amount, data.same_route, data.return_amount, data.return_legs, onAmountChange]);
 
   const setField = <K extends keyof TransportData>(key: K, value: TransportData[K]) => {
     onChange({ ...data, [key]: value });
@@ -137,7 +158,16 @@ export default function TransportFields({ data, onChange, onAmountChange }: Tran
     onChange({ ...data, route_legs: legs });
   };
 
-  const total = data.route_legs.reduce((s, l) => s + (l.amount || 0), 0);
+  const oneWayTotal = data.route_legs.reduce((s, l) => s + (l.amount || 0), 0);
+  const returnTotal = data.round_trip === 'round_trip'
+    ? data.same_amount
+      ? oneWayTotal
+      : data.same_route
+        ? (data.return_amount || 0)
+        : data.return_legs.reduce((s, l) => s + (l.amount || 0), 0)
+    : 0;
+  const total = data.round_trip === 'round_trip' ? oneWayTotal + returnTotal : oneWayTotal;
+
   const routePreview = data.route_legs.length > 0
     ? [data.route_legs[0].from, ...data.route_legs.map(l => l.to)].filter(Boolean).join(' → ')
     : '';
@@ -276,10 +306,184 @@ export default function TransportFields({ data, onChange, onAmountChange }: Tran
         区間を追加
       </button>
 
+      {/* ⑥ 片道/往復 */}
+      <div>
+        <label className="text-xs text-[#999] block mb-1">片道 / 往復</label>
+        <div className="flex gap-2">
+          {(['one_way', 'round_trip'] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => {
+                const updated: Partial<TransportData> = { round_trip: v };
+                if (v === 'one_way') {
+                  updated.same_route = true;
+                  updated.same_amount = true;
+                  updated.return_legs = [];
+                  updated.return_amount = 0;
+                }
+                onChange({ ...data, ...updated });
+              }}
+              className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                data.round_trip === v
+                  ? 'bg-[#1a1a1a] text-white'
+                  : 'bg-[#F5F5F3] text-[#999] hover:text-[#555]'
+              }`}
+            >
+              {v === 'one_way' ? '片道' : '往復'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ⑧ 往復の場合の分岐 */}
+      {data.round_trip === 'round_trip' && (
+        <div className="space-y-3 pl-3 border-l-2 border-[#D4A03A]/20">
+          {/* 同じルート？ */}
+          <div>
+            <label className="text-xs text-[#999] block mb-1">帰りのルート</label>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => onChange({ ...data, same_route: true, return_legs: [] })}
+                className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${data.same_route ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#999]'}`}>
+                同じルート
+              </button>
+              <button type="button" onClick={() => {
+                const legs = data.route_legs;
+                const reversedLegs: RouteLeg[] = [{
+                  ...EMPTY_LEG,
+                  from: legs[legs.length - 1]?.to || '',
+                  to: legs[0]?.from || '',
+                }];
+                onChange({ ...data, same_route: false, return_legs: reversedLegs });
+              }}
+                className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${!data.same_route ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#999]'}`}>
+                別ルート
+              </button>
+            </div>
+          </div>
+
+          {/* 同じ金額？ */}
+          <div>
+            <label className="text-xs text-[#999] block mb-1">帰りの金額</label>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => onChange({ ...data, same_amount: true, return_amount: 0 })}
+                className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${data.same_amount ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#999]'}`}>
+                同じ金額
+              </button>
+              <button type="button" onClick={() => onChange({ ...data, same_amount: false })}
+                className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${!data.same_amount ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#999]'}`}>
+                別の金額
+              </button>
+            </div>
+          </div>
+
+          {/* 別ルートの場合：帰り区間入力 */}
+          {!data.same_route && (
+            <div className="space-y-2">
+              <p className="text-[10px] text-[#999] font-medium tracking-wide">帰りの区間</p>
+              {(data.return_legs || []).map((leg, idx) => (
+                <div key={idx} className="space-y-2">
+                  <div className="flex gap-2 items-center">
+                    <div className="flex-1">
+                      <input type="text" value={leg.from}
+                        onChange={(e) => {
+                          const legs = [...(data.return_legs || [])];
+                          legs[idx] = { ...legs[idx], from: e.target.value };
+                          onChange({ ...data, return_legs: legs });
+                        }}
+                        className={`${inputClass} ${idx > 0 ? 'bg-[#EDEDEB] text-[#999]' : ''}`}
+                        placeholder="出発地" readOnly={idx > 0} />
+                    </div>
+                    <span className="text-xs text-[#999] shrink-0">→</span>
+                    <div className="flex-1">
+                      <input type="text" value={leg.to}
+                        onChange={(e) => {
+                          const legs = [...(data.return_legs || [])];
+                          legs[idx] = { ...legs[idx], to: e.target.value };
+                          if (idx < legs.length - 1) legs[idx + 1] = { ...legs[idx + 1], from: e.target.value };
+                          onChange({ ...data, return_legs: legs });
+                        }}
+                        className={inputClass} placeholder="到着地" />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="w-[100px] shrink-0">
+                      <select value={leg.method}
+                        onChange={(e) => {
+                          const legs = [...(data.return_legs || [])];
+                          legs[idx] = { ...legs[idx], method: e.target.value };
+                          onChange({ ...data, return_legs: legs });
+                        }}
+                        className={inputClass}>
+                        {TRANSPORT_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                    </div>
+                    <div className="flex-1">
+                      <input type="text" value={leg.carrier}
+                        onChange={(e) => {
+                          const legs = [...(data.return_legs || [])];
+                          legs[idx] = { ...legs[idx], carrier: e.target.value };
+                          onChange({ ...data, return_legs: legs });
+                        }}
+                        className={inputClass} placeholder="利用会社" />
+                    </div>
+                  </div>
+                  <input type="text" inputMode="numeric"
+                    value={leg.amount ? `¥${leg.amount.toLocaleString()}` : ''}
+                    onChange={(e) => {
+                      const v = e.target.value.replace(/[¥,]/g, '');
+                      if (/^\d*$/.test(v)) {
+                        const legs = [...(data.return_legs || [])];
+                        legs[idx] = { ...legs[idx], amount: parseInt(v) || 0 };
+                        onChange({ ...data, return_legs: legs });
+                      }
+                    }}
+                    className={`${inputClass} font-['Saira_Condensed'] tabular-nums`} placeholder="¥ 金額" />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 同ルート・別金額の場合：帰りの金額入力 */}
+          {data.same_route && !data.same_amount && (
+            <div>
+              <label className="text-xs text-[#999] block mb-1">帰りの金額</label>
+              <input type="text" inputMode="numeric"
+                value={data.return_amount ? `¥${data.return_amount.toLocaleString()}` : ''}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/[¥,]/g, '');
+                  if (/^\d*$/.test(v)) onChange({ ...data, return_amount: parseInt(v) || 0 });
+                }}
+                className={`${inputClass} font-['Saira_Condensed'] tabular-nums`} placeholder="¥ 帰りの金額" />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ⑩ 支払方法 */}
+      <div>
+        <label className="text-xs text-[#999] block mb-1">支払方法</label>
+        <select value={data.payment_method} onChange={(e) => setField('payment_method', e.target.value)}
+          className={inputClass}>
+          <option value="ic">IC（Suica等）</option>
+          <option value="cash">現金</option>
+          <option value="credit">クレジットカード</option>
+          <option value="invoice">請求書払い</option>
+        </select>
+      </div>
+
       {/* ルートプレビュー + 合計 */}
       {routePreview && (
         <div className="bg-white/60 rounded-lg px-3 py-2.5 space-y-1">
-          <p className="text-xs text-[#999]">{routePreview}</p>
+          <p className="text-xs text-[#999]">
+            {routePreview}
+            {data.round_trip === 'round_trip' && ' (往復)'}
+          </p>
+          {data.round_trip === 'round_trip' && !data.same_amount && (
+            <p className="text-[10px] text-[#999]">
+              往路 ¥{oneWayTotal.toLocaleString()} + 復路 ¥{returnTotal.toLocaleString()}
+            </p>
+          )}
           <p className="text-base font-medium font-['Saira_Condensed'] tabular-nums text-[#1a1a1a]">
             合計 ¥{total.toLocaleString()}
           </p>
@@ -303,28 +507,15 @@ export default function TransportFields({ data, onChange, onAmountChange }: Tran
 
       {showDetail && (
         <div className="space-y-3 pt-1">
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <label className="text-xs text-[#999] block mb-1">座席クラス</label>
-              <select
-                value={data.class_value}
-                onChange={(e) => setField('class_value', e.target.value)}
-                className={inputClass}
-              >
-                {CLASSES.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            <div className="flex-1">
-              <label className="text-xs text-[#999] block mb-1">片道/往復</label>
-              <select
-                value={data.round_trip}
-                onChange={(e) => setField('round_trip', e.target.value)}
-                className={inputClass}
-              >
-                <option value="one_way">片道</option>
-                <option value="round_trip">往復</option>
-              </select>
-            </div>
+          <div>
+            <label className="text-xs text-[#999] block mb-1">座席クラス</label>
+            <select
+              value={data.class_value}
+              onChange={(e) => setField('class_value', e.target.value)}
+              className={inputClass}
+            >
+              {CLASSES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
           </div>
 
           {isUpperClass && (

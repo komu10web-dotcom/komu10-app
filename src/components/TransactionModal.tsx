@@ -372,47 +372,89 @@ export default function TransactionModal({
     }
 
     const txAmount = parseInt(form.amount.replace(/,/g, '')) || 0;
-    const payload = {
+
+    // 往復別金額 → 2レコード分割判定
+    const isRoundTripSplit = form.kamoku === 'travel'
+      && transportData.round_trip === 'round_trip'
+      && !transportData.same_amount
+      && !editData;
+
+    const buildPayload = (amount: number, desc: string | null) => ({
       tx_type: 'expense' as const,
       date: form.date,
-      amount: txAmount,
+      amount,
       store: form.store || null,
       kamoku: form.kamoku,
       division: 'general',
       owner: form.owner,
-      description: finalDescription,
+      description: desc,
       source: 'manual' as const,
       confirmed: true,
       status: form.status || 'settled',
       accrual_date: form.date,
       actual_payment_date: form.actual_payment_date || form.date,
-    };
+    });
 
     try {
       let txId: string;
 
-      if (editData) {
-        txId = editData.id;
-        const { error: dbErr } = await supabase
-          .from('transactions')
-          .update(payload as any)
-          .eq('id', editData.id);
-        if (dbErr) throw dbErr;
+      if (isRoundTripSplit) {
+        // 往路
+        const oneWayAmount = transportData.route_legs.reduce((s, l) => s + (l.amount || 0), 0);
+        const returnAmount = transportData.same_route
+          ? (transportData.return_amount || 0)
+          : transportData.return_legs.reduce((s, l) => s + (l.amount || 0), 0);
 
-        if (form.kamoku === 'travel') {
-          await updateTransportDetails(editData.id, transportData);
-        }
+        const outDesc = finalDescription ? `${finalDescription}（往路）` : '（往路）';
+        const retDesc = finalDescription ? `${finalDescription}（復路）` : '（復路）';
+
+        const { data: ins1, error: err1 } = await supabase
+          .from('transactions')
+          .insert(buildPayload(oneWayAmount, outDesc) as any)
+          .select('id').single();
+        if (err1) throw err1;
+        txId = (ins1 as any).id;
+        await saveTransportDetails(txId, transportData);
+
+        // 復路
+        const { data: ins2, error: err2 } = await supabase
+          .from('transactions')
+          .insert(buildPayload(returnAmount, retDesc) as any)
+          .select('id').single();
+        if (err2) throw err2;
+        const returnTransportData = {
+          ...transportData,
+          route_legs: transportData.same_route
+            ? transportData.route_legs.map(l => ({ ...l })).reverse()
+            : transportData.return_legs,
+        };
+        await saveTransportDetails((ins2 as any).id, returnTransportData);
       } else {
-        const { data: inserted, error: dbErr } = await supabase
-          .from('transactions')
-          .insert(payload as any)
-          .select('id')
-          .single();
-        if (dbErr) throw dbErr;
-        txId = (inserted as any).id;
+        const payload = buildPayload(txAmount, finalDescription);
 
-        if (form.kamoku === 'travel' && inserted) {
-          await saveTransportDetails((inserted as any).id, transportData);
+        if (editData) {
+          txId = editData.id;
+          const { error: dbErr } = await supabase
+            .from('transactions')
+            .update(payload as any)
+            .eq('id', editData.id);
+          if (dbErr) throw dbErr;
+
+          if (form.kamoku === 'travel') {
+            await updateTransportDetails(editData.id, transportData);
+          }
+        } else {
+          const { data: inserted, error: dbErr } = await supabase
+            .from('transactions')
+            .insert(payload as any)
+            .select('id')
+            .single();
+          if (dbErr) throw dbErr;
+          txId = (inserted as any).id;
+
+          if (form.kamoku === 'travel' && inserted) {
+            await saveTransportDetails((inserted as any).id, transportData);
+          }
         }
       }
 
@@ -468,7 +510,7 @@ export default function TransactionModal({
           amount: txAmount,
           description: finalDescription,
           owner: form.owner,
-          payment_method: (payload as any).payment_method || 'personal',
+          payment_method: form.kamoku === 'travel' ? transportData.payment_method : 'personal',
           transportData: form.kamoku === 'travel' ? { ...transportData } : null,
         });
         setShowTemplateSave(true);

@@ -20,6 +20,8 @@ export async function saveTransportDetails(
       companion: data.companion || null,
       flight_train_no: data.flight_train_no || null,
       route_note: data.route_note || null,
+      daily_allowance: 0,
+      hotel_allowance: 0,
     } as any);
 
   if (error) throw error;
@@ -69,6 +71,11 @@ export async function loadTransportDetails(
     purpose: row.purpose || '撮影',
     route_legs: legs,
     round_trip: row.round_trip || 'one_way',
+    same_route: true,
+    same_amount: true,
+    return_legs: [],
+    return_amount: 0,
+    payment_method: 'ic',
     class_value: row.class || '普通席',
     class_reason: row.class_reason || '',
     companion: row.companion || '',
