@@ -503,34 +503,13 @@ export default function TransactionModal({
         </div>
 
         <div className="px-5 py-4 space-y-3">
+          {/* ① 日付 */}
           <div>
             <label className="text-xs text-[#999] block mb-1">日付</label>
             <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })}
               className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
           </div>
-          <div>
-            <label className="text-xs text-[#999] block mb-1">金額（税込）</label>
-            <input type="text" inputMode="numeric"
-              value={form.amount ? Number(form.amount.replace(/,/g, '')).toLocaleString() : ''}
-              onChange={(e) => { const v = e.target.value.replace(/,/g, ''); if (/^\d*$/.test(v)) setForm({ ...form, amount: v }); }}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50" placeholder="15,300" />
-          </div>
-          <div>
-            <label className="text-xs text-[#999] block mb-1">取引先</label>
-            <input type="text" value={form.store} onChange={(e) => setForm({ ...form, store: e.target.value })}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
-              placeholder={
-                form.kamoku === 'travel' ? 'JAL / JR東日本等' :
-                form.kamoku === 'entertainment' ? '店名（レストラン等）' :
-                form.kamoku === 'equipment' ? 'ヨドバシカメラ / Amazon等' :
-                form.kamoku === 'outsource' ? '委託先名' :
-                form.kamoku === 'rent' ? '不動産会社 / 家主名' :
-                form.kamoku === 'communication' ? 'NTTドコモ / UQ等' :
-                form.kamoku === 'subscription' ? 'Adobe / Google等' :
-                form.kamoku === 'tax' ? '税務署 / 市区町村' :
-                '取引先名'
-              } />
-          </div>
+          {/* ② 勘定科目（日付の直後 — ここで分岐） */}
           <div>
             <label className="text-xs text-[#999] block mb-1">勘定科目</label>
             <select value={form.kamoku} onChange={(e) => setForm({ ...form, kamoku: e.target.value })}
@@ -538,6 +517,33 @@ export default function TransactionModal({
               {EXPENSE_KAMOKU.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
             </select>
           </div>
+          {/* 金額・取引先（交通費以外） — 交通費は専用UI内で完結 */}
+          {form.kamoku !== 'travel' && (
+            <>
+              <div>
+                <label className="text-xs text-[#999] block mb-1">金額（税込）</label>
+                <input type="text" inputMode="numeric"
+                  value={form.amount ? Number(form.amount.replace(/,/g, '')).toLocaleString() : ''}
+                  onChange={(e) => { const v = e.target.value.replace(/,/g, ''); if (/^\d*$/.test(v)) setForm({ ...form, amount: v }); }}
+                  className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50" placeholder="15,300" />
+              </div>
+              <div>
+                <label className="text-xs text-[#999] block mb-1">取引先</label>
+                <input type="text" value={form.store} onChange={(e) => setForm({ ...form, store: e.target.value })}
+                  className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+                  placeholder={
+                    form.kamoku === 'entertainment' ? '店名（レストラン等）' :
+                    form.kamoku === 'equipment' ? 'ヨドバシカメラ / Amazon等' :
+                    form.kamoku === 'outsource' ? '委託先名' :
+                    form.kamoku === 'rent' ? '不動産会社 / 家主名' :
+                    form.kamoku === 'communication' ? 'NTTドコモ / UQ等' :
+                    form.kamoku === 'subscription' ? 'Adobe / Google等' :
+                    form.kamoku === 'tax' ? '税務署 / 市区町村' :
+                    '取引先名'
+                  } />
+              </div>
+            </>
+          )}
 
           {form.kamoku === 'travel' && templates.filter(t => t.template_type === 'transport').length > 0 && (
             <div className="space-y-2">
