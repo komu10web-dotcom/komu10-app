@@ -199,7 +199,7 @@ export default function ExpensesContent() {
                   <tr className="border-b border-gray-100">
                     <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">日付</th>
                     <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">ステータス</th>
-                    <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">取引先</th>
+                    <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">支払先</th>
                     <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">科目</th>
                     <th className="text-right px-4 py-3 text-xs text-[#999] font-normal">金額</th>
                     <th className="text-right px-4 py-3 text-xs text-[#999] font-normal w-20">操作</th>

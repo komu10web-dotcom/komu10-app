@@ -347,7 +347,7 @@ export default function TransactionModal({
       if (form.store) dupQ = dupQ.eq('store', form.store);
       const { data: dups } = await dupQ;
       if (dups && dups.length > 0) {
-        const storeLabel = form.store || '（取引先未入力）';
+        const storeLabel = form.store || '（支払先未入力）';
         setDupWarning(`${form.date} / ${storeLabel} / ¥${txAmount.toLocaleString()} と同じ経費が既に${dups.length}件あります。本当に登録しますか？`);
         return;
       }
@@ -357,10 +357,15 @@ export default function TransactionModal({
     setError(null);
 
     let finalDescription = form.description || null;
+    let finalStore = form.store || null;
     if (form.kamoku === 'travel') {
+      // store = 区間 + 目的（自動生成）
+      const legs = transportData.route_legs || [];
+      const routeStr = [legs[0]?.from, ...legs.map(l => l.to)].filter(Boolean).join(' → ');
+      const purposeStr = transportData.purpose || '';
+      finalStore = routeStr ? `${routeStr}（${purposeStr}）` : null;
+      // description = ボス入力のみ。空ならルート概要フォールバック
       if (!form.description) {
-        const legs = transportData.route_legs || [];
-        const routeStr = [legs[0]?.from, ...legs.map(l => l.to)].filter(Boolean).join(' → ');
         finalDescription = routeStr || null;
       }
     }
@@ -384,7 +389,7 @@ export default function TransactionModal({
       tx_type: 'expense' as const,
       date: form.date,
       amount,
-      store: form.store || null,
+      store: finalStore,
       kamoku: form.kamoku,
       division: 'general',
       owner: form.owner,
@@ -560,7 +565,7 @@ export default function TransactionModal({
               {EXPENSE_KAMOKU.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
             </select>
           </div>
-          {/* 金額・取引先（交通費以外） — 交通費は専用UI内で完結 */}
+          {/* 金額・支払先（交通費以外） — 交通費は専用UI内で完結 */}
           {form.kamoku !== 'travel' && (
             <>
               <div>
@@ -571,7 +576,7 @@ export default function TransactionModal({
                   className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50" placeholder="15,300" />
               </div>
               <div>
-                <label className="text-xs text-[#999] block mb-1">取引先</label>
+                <label className="text-xs text-[#999] block mb-1">支払先</label>
                 <input type="text" value={form.store} onChange={(e) => setForm({ ...form, store: e.target.value })}
                   className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
                   placeholder={
@@ -582,7 +587,7 @@ export default function TransactionModal({
                     form.kamoku === 'communication' ? 'NTTドコモ / UQ等' :
                     form.kamoku === 'subscription' ? 'Adobe / Google等' :
                     form.kamoku === 'tax' ? '税務署 / 市区町村' :
-                    '取引先名'
+                    '支払先名'
                   } />
               </div>
             </>
