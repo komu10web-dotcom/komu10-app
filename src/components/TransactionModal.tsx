@@ -358,9 +358,11 @@ export default function TransactionModal({
 
     let finalDescription = form.description || null;
     if (form.kamoku === 'travel') {
-      const legs = transportData.route_legs || [];
-      const routeStr = [legs[0]?.from, ...legs.map(l => l.to)].filter(Boolean).join(' → ');
-      finalDescription = routeStr || form.description || null;
+      if (!form.description) {
+        const legs = transportData.route_legs || [];
+        const routeStr = [legs[0]?.from, ...legs.map(l => l.to)].filter(Boolean).join(' → ');
+        finalDescription = routeStr || null;
+      }
     }
     if (form.kamoku === 'entertainment') {
       finalDescription = entertainmentToDescription(entertainmentData, form.description);
