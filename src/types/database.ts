@@ -1,4 +1,4 @@
-// komu10 会計システム v0.5.2
+// komu10 会計システム v0.5.3
 // Supabase Database 型定義（DB実態に完全一致）
 // 2026-04-15 invoices: subject/due_date/payment_terms追加、period_start/end削除
 // 2026-04-15 invoice_items: unit追加

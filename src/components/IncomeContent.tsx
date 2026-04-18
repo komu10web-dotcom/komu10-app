@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { DIVISIONS, TRANSACTION_STATUS } from '@/types/database';
 import type { Transaction, RevenueType, RevenueTypeDivision, ContractType, BusinessDomain, Project, Client } from '@/types/database';
@@ -27,9 +27,19 @@ const DIVISION_OPTIONS = Object.entries(DIVISIONS).map(([id, v]) => ({
 
 export default function IncomeContent() {
   const { owner, startDate, endDate } = usePeriodRange();
+  const searchParams = useSearchParams();
 
   // タブ切り替え
   const [activeTab, setActiveTab] = useState<'sales' | 'invoices'>('sales');
+
+  // URLパラメータで初期タブ＋請求書自動起動（売上モーダルからの遷移用）
+  const initialTransactionId = searchParams.get('transaction_id');
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'invoices') {
+      setActiveTab('invoices');
+    }
+  }, [searchParams]);
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -288,7 +298,7 @@ export default function IncomeContent() {
 
         {/* ── 請求書タブ ── */}
         {activeTab === 'invoices' ? (
-          <InvoiceTab owner={owner} clients={clients} />
+          <InvoiceTab owner={owner} clients={clients} initialTransactionId={initialTransactionId} />
         ) : (
         <>
 

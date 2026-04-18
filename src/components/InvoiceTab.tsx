@@ -12,6 +12,7 @@ import { Plus, Pencil, Eye, Trash2, Loader2, X, ChevronLeft, Copy, Download } fr
 interface InvoiceTabProps {
   owner: string; // 'tomo' | 'toshiki' | 'all'
   clients: Client[];
+  initialTransactionId?: string | null;
 }
 
 interface InvoiceRow extends Invoice {
@@ -40,7 +41,7 @@ const INV_STATUS_STYLES: Record<string, { bg: string; text: string }> = {
 // ============================================================
 // メインコンポーネント
 // ============================================================
-export default function InvoiceTab({ owner, clients }: InvoiceTabProps) {
+export default function InvoiceTab({ owner, clients, initialTransactionId }: InvoiceTabProps) {
   // 画面モード: list / edit / preview
   const [view, setView] = useState<'list' | 'edit' | 'preview'>('list');
 
@@ -53,6 +54,10 @@ export default function InvoiceTab({ owner, clients }: InvoiceTabProps) {
   const [editInvoiceId, setEditInvoiceId] = useState<string | null>(null);
   const [previewInvoiceId, setPreviewInvoiceId] = useState<string | null>(null);
 
+  // 売上モーダルからの起動用（transaction_idをpreloadに渡す）
+  const [preloadFromTxId, setPreloadFromTxId] = useState<string | null>(null);
+  const [handledInitialTxId, setHandledInitialTxId] = useState<string | null>(null);
+
   // 削除確認
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
@@ -60,6 +65,16 @@ export default function InvoiceTab({ owner, clients }: InvoiceTabProps) {
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
 
   const effectiveOwner = owner === 'all' ? 'tomo' : owner;
+
+  // initialTransactionId があれば起動時に新規エディタ + 売上転記モードに遷移
+  useEffect(() => {
+    if (initialTransactionId && initialTransactionId !== handledInitialTxId) {
+      setHandledInitialTxId(initialTransactionId);
+      setPreloadFromTxId(initialTransactionId);
+      setEditInvoiceId(null);
+      setView('edit');
+    }
+  }, [initialTransactionId, handledInitialTxId]);
 
   // ── データ取得 ──
   const fetchInvoices = useCallback(async () => {
@@ -123,6 +138,7 @@ export default function InvoiceTab({ owner, clients }: InvoiceTabProps) {
   // ── 編集画面に遷移 ──
   const openEdit = (invoiceId: string | null) => {
     setEditInvoiceId(invoiceId);
+    setPreloadFromTxId(null); // 通常の新規/編集ではpreloadを使わない
     setView('edit');
   };
 
@@ -295,10 +311,16 @@ export default function InvoiceTab({ owner, clients }: InvoiceTabProps) {
     return (
       <InvoiceEditor
         invoiceId={editInvoiceId}
+        preloadFromTxId={preloadFromTxId}
         owner={effectiveOwner}
         clients={clients.filter(c => c.owner === effectiveOwner && c.is_active)}
         bankAccounts={bankAccounts.filter(b => b.owner === effectiveOwner)}
-        onBack={() => { setView('list'); setEditInvoiceId(null); fetchInvoices(); }}
+        onBack={() => {
+          setView('list');
+          setEditInvoiceId(null);
+          setPreloadFromTxId(null);
+          fetchInvoices();
+        }}
         onPreview={(id) => { setPreviewInvoiceId(id); setView('preview'); }}
       />
     );
@@ -326,6 +348,7 @@ export default function InvoiceTab({ owner, clients }: InvoiceTabProps) {
 // ============================================================
 function InvoiceEditor({
   invoiceId,
+  preloadFromTxId,
   owner,
   clients,
   bankAccounts,
@@ -333,6 +356,7 @@ function InvoiceEditor({
   onPreview,
 }: {
   invoiceId: string | null;
+  preloadFromTxId: string | null;
   owner: string;
   clients: Client[];
   bankAccounts: BankAccount[];
@@ -400,6 +424,37 @@ function InvoiceEditor({
     })();
   }, [invoiceId]);
 
+  // 売上モーダルからの転記（新規作成＋preloadFromTxIdあり時のみ）
+  useEffect(() => {
+    if (!preloadFromTxId || invoiceId || !supabase) return;
+    (async () => {
+      try {
+        const { data: tx } = await supabase
+          .from('transactions')
+          .select('*, projects(name)')
+          .eq('id', preloadFromTxId)
+          .single();
+        if (!tx) return;
+
+        const projectName = (tx as any).projects?.name || tx.description || '';
+
+        setClientId(tx.client_id || '');
+        setSubject(projectName);
+        setExistingTransactionId(tx.id);
+        setItems([{
+          description: projectName,
+          quantity: '1',
+          unit: '式',
+          unit_price: tx.amount.toString(),
+        }]);
+        // 売上の発生日がある場合は請求書発行日の候補にする（ユーザーが最終確定）
+        if (tx.accrual_date) setIssueDate(tx.accrual_date);
+      } catch (err) {
+        console.error('売上転記エラー:', err);
+      }
+    })();
+  }, [preloadFromTxId, invoiceId]);
+
   // 前回の請求書から自動入力
   useEffect(() => {
     if (!isNew || !clientId || !supabase) return;
@@ -410,22 +465,26 @@ function InvoiceEditor({
         .order('issue_date', { ascending: false }).limit(1);
       if (data && data.length > 0) {
         const prev = data[0];
+        // 振込先・支払条件・備考は常に前回を引き継ぐ
         if (prev.bank_account_id) setBankAccountId(prev.bank_account_id);
-        if (prev.subject) setSubject(prev.subject);
         if (prev.payment_terms) setPaymentTerms(prev.payment_terms);
         if (prev.notes) setNotes(prev.notes);
-        if (prev.invoice_items && prev.invoice_items.length > 0) {
-          const sorted = [...prev.invoice_items].sort((a: any, b: any) => a.sort_order - b.sort_order);
-          setItems(sorted.map((it: any) => ({
-            description: it.description,
-            quantity: it.quantity.toString(),
-            unit: it.unit || '式',
-            unit_price: it.unit_price.toString(),
-          })));
+        // 件名・明細は売上転記モードでは上書きしない（売上側の値を優先）
+        if (!preloadFromTxId) {
+          if (prev.subject) setSubject(prev.subject);
+          if (prev.invoice_items && prev.invoice_items.length > 0) {
+            const sorted = [...prev.invoice_items].sort((a: any, b: any) => a.sort_order - b.sort_order);
+            setItems(sorted.map((it: any) => ({
+              description: it.description,
+              quantity: it.quantity.toString(),
+              unit: it.unit || '式',
+              unit_price: it.unit_price.toString(),
+            })));
+          }
         }
       }
     })();
-  }, [isNew, clientId, owner]);
+  }, [isNew, clientId, owner, preloadFromTxId]);
 
   // 合計計算
   const calcItemAmount = (item: ItemForm) => {
@@ -519,33 +578,52 @@ function InvoiceEditor({
         const updates: any = {};
         if (isNew) updates.issued_at = new Date().toISOString();
 
-        // 売上仕訳の作成/更新
-        const selectedClient = clients.find(c => c.id === clientId);
-        const txData = {
-          tx_type: 'revenue' as const,
-          date: issueDate,
-          amount: total,
-          kamoku: 'sales',
-          division: 'support', // デフォルト事業（後で編集可）
-          owner,
-          store: selectedClient?.name || null,
-          description: `請求書 ${isNew ? invoiceData.invoice_number : invoiceNumber}`,
-          source: 'manual',
-          confirmed: true,
-          status: 'billed',
-          accrual_date: issueDate,
-          client_id: clientId,
-        };
-
         if (existingTransactionId) {
-          // 既存仕訳を更新
-          await supabase.from('transactions').update(txData).eq('id', existingTransactionId);
+          // 経路A: 売上モーダル経由 or 既存紐付き
+          // → 既存仕訳を発行済に更新（他カラム [division/business_domain/contract_type_id/project_id 等] は温存）
+          await supabase.from('transactions').update({
+            status: 'billed',
+            accrual_date: issueDate,
+            amount: total,
+          }).eq('id', existingTransactionId);
         } else {
-          // 新規仕訳作成
+          // 経路B: 請求書タブから独立起動（売上紐付きなし）
+          // → 証跡不足の警告を出したうえで新規INSERT
+          const proceed = confirm(
+            '⚠️ この請求書は売上登録から紐づいていません。\n\n' +
+            '発行すると新しい売上が作成されますが、以下の経営分析項目が空のまま記録されます:\n' +
+            '  ・契約形態\n' +
+            '  ・事業領域\n' +
+            '  ・案件名\n\n' +
+            '売上タブの「売上入力」から登録し、請求書発行トグルON経由で作成することを推奨します。\n\n' +
+            'このまま発行しますか？'
+          );
+          if (!proceed) {
+            setSaving(false);
+            return;
+          }
+
+          const selectedClient = clients.find(c => c.id === clientId);
+          const txData = {
+            tx_type: 'revenue' as const,
+            date: issueDate,
+            amount: total,
+            kamoku: 'sales',
+            division: 'general', // 経路B: 分類未定のため general（後で編集可）
+            owner,
+            store: selectedClient?.name || null,
+            description: `請求書 ${isNew ? invoiceData.invoice_number : invoiceNumber}`,
+            source: 'manual',
+            confirmed: true,
+            status: 'billed',
+            accrual_date: issueDate,
+            client_id: clientId,
+          };
           const { data: txInserted } = await supabase
             .from('transactions').insert(txData).select('id').single();
           if (txInserted) {
             updates.transaction_id = txInserted.id;
+            setExistingTransactionId(txInserted.id);
           }
         }
 
