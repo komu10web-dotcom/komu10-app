@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { DIVISIONS, TRANSACTION_STATUS } from '@/types/database';
-import type { Transaction, RevenueType, RevenueTypeDivision, ContractType, Project, Client } from '@/types/database';
+import type { Transaction, RevenueType, RevenueTypeDivision, ContractType, BusinessDomain, Project, Client } from '@/types/database';
 import InvoiceTab from './InvoiceTab';
 
 // ステータスバッジの色定義
@@ -37,6 +38,7 @@ export default function IncomeContent() {
   const [revenueTypes, setRevenueTypes] = useState<RevenueType[]>([]);
   const [revenueTypeDivisions, setRevenueTypeDivisions] = useState<RevenueTypeDivision[]>([]);
   const [contractTypes, setContractTypes] = useState<ContractType[]>([]);
+  const [businessDomains, setBusinessDomains] = useState<BusinessDomain[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
 
@@ -58,16 +60,18 @@ export default function IncomeContent() {
   const fetchRevenueTypes = useCallback(async () => {
     if (!supabase) return;
     try {
-      const [rtRes, rtdRes, ctRes, pjRes, clRes] = await Promise.all([
+      const [rtRes, rtdRes, ctRes, bdRes, pjRes, clRes] = await Promise.all([
         supabase.from('revenue_types').select('*').order('sort_order'),
         supabase.from('revenue_type_divisions').select('*'),
         supabase.from('contract_types').select('*').order('sort_order'),
+        supabase.from('business_domains').select('*').order('sort_order'),
         supabase.from('projects').select('*').order('name'),
         supabase.from('clients').select('*').order('name'),
       ]);
       if (rtRes.data) setRevenueTypes(rtRes.data as RevenueType[]);
       if (rtdRes.data) setRevenueTypeDivisions(rtdRes.data as RevenueTypeDivision[]);
       if (ctRes.data) setContractTypes(ctRes.data as ContractType[]);
+      if (bdRes.data) setBusinessDomains(bdRes.data as BusinessDomain[]);
       if (pjRes.data) setProjects(pjRes.data as Project[]);
       if (clRes.data) setClients(clRes.data as Client[]);
     } catch (err) {
@@ -463,6 +467,7 @@ export default function IncomeContent() {
           revenueTypes={revenueTypes}
           revenueTypeDivisions={revenueTypeDivisions}
           contractTypes={contractTypes}
+          businessDomains={businessDomains}
           projects={projects}
           clients={clients}
           onClose={() => { setModalOpen(false); setEditTarget(null); }}
@@ -511,13 +516,15 @@ interface IncomeModalProps {
   revenueTypes: RevenueType[];
   revenueTypeDivisions: RevenueTypeDivision[];
   contractTypes: ContractType[];
+  businessDomains: BusinessDomain[];
   projects: Project[];
   clients: Client[];
   onClose: () => void;
   onSaved: () => void;
 }
 
-function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivisions, contractTypes, projects, clients, onClose, onSaved }: IncomeModalProps) {
+function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivisions, contractTypes, businessDomains, projects, clients, onClose, onSaved }: IncomeModalProps) {
+  const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -528,6 +535,10 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
     client_id: editData?.client_id || '',
     division: editData?.division || '',
     project_id: editData?.project_id || '',
+    project_name_input: editData?.project_id
+      ? (projects.find(p => p.id === editData.project_id)?.name || '')
+      : '',
+    business_domain: (editData as any)?.business_domain || '',
     contract_type_id: editData?.contract_type_id || '',
     revenue_type: editData?.revenue_type || '',
     owner: editData?.owner || defaultOwner,
@@ -535,11 +546,16 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
     status: editData?.status || 'forecast',
     expected_payment_date: editData?.expected_payment_date || '',
     actual_payment_date: editData?.actual_payment_date || '',
+    issue_invoice: false, // 請求書発行トグル（新規作成時のみ有効）
   });
 
-  const handleChange = (field: string, value: string) => {
+  // 案件名サジェスト用
+  const [projectSuggestions, setProjectSuggestions] = useState<Project[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const handleChange = (field: string, value: any) => {
     setForm((prev) => {
-      const next = { ...prev, [field]: value };
+      const next: any = { ...prev, [field]: value };
       // 取引先選択時、storeをclient.nameで自動セット（後方互換）
       if (field === 'client_id') {
         const selected = clients.find((c) => c.id === value);
@@ -553,16 +569,41 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
             next.revenue_type = '';
           }
         }
-        // PJが変更後の事業に紐づかなければリセット
-        if (next.project_id) {
-          const availablePJ = getFilteredProjects(value);
-          if (!availablePJ.find((pj) => pj.id === next.project_id)) {
-            next.project_id = '';
-          }
-        }
+      }
+      // 案件名入力変更時、project_idをクリア（再紐付けはサジェスト選択 or 新規作成で行う）
+      if (field === 'project_name_input') {
+        next.project_id = '';
       }
       return next;
     });
+  };
+
+  // 案件名入力時のサジェスト更新
+  const handleProjectNameInput = (value: string) => {
+    handleChange('project_name_input', value);
+    if (value.trim().length >= 1) {
+      const matches = projects
+        .filter(p => p.name.toLowerCase().includes(value.toLowerCase()))
+        .slice(0, 5);
+      setProjectSuggestions(matches);
+      setShowSuggestions(matches.length > 0);
+    } else {
+      setProjectSuggestions([]);
+      setShowSuggestions(false);
+    }
+  };
+
+  // サジェストクリック時：既存プロジェクトに紐付け
+  const handleSelectSuggestion = (project: Project) => {
+    setForm(prev => ({
+      ...prev,
+      project_id: project.id,
+      project_name_input: project.name,
+      // 既存PJの部門を自動セット（未設定なら）
+      division: prev.division || project.division,
+    }));
+    setProjectSuggestions([]);
+    setShowSuggestions(false);
   };
 
   // 選択事業に紐づく収益タイプを返す（未選択時は全件）
@@ -576,20 +617,15 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
     return revenueTypes.filter((rt) => linkedIds.has(rt.id));
   };
 
-  // 選択事業に紐づくPJを返す（未選択時は全件）
-  const getFilteredProjects = (divisionId: string): Project[] => {
-    if (!divisionId) return projects;
-    return projects.filter((pj) => pj.division === divisionId);
-  };
-
   const filteredRT = getFilteredRevenueTypes(form.division);
-  const filteredPJ = getFilteredProjects(form.division);
 
   // owner連動：選択ownerの取引先のみ表示
   const filteredClients = clients.filter((c) => c.owner === form.owner);
 
   const handleSave = async () => {
     if (!supabase) return;
+
+    // 基本バリデーション
     if (!form.date || !form.amount) {
       setError('日付と金額は必須です');
       return;
@@ -601,22 +637,91 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
       return;
     }
 
+    // 3軸必須バリデーション（軸A：契約形態 / 軸B：事業領域 / 軸C：案件名）
+    if (!form.contract_type_id) {
+      setError('契約形態を選んでください');
+      return;
+    }
+    if (!form.business_domain) {
+      setError('事業領域を選んでください');
+      return;
+    }
+    if (!form.project_name_input.trim()) {
+      setError('案件名を入力してください');
+      return;
+    }
+
+    // 部門（DIVISIONS）も必須
+    if (!form.division) {
+      setError('部門を選んでください');
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
     try {
+      // 案件の解決：既存サジェスト選択済 or 完全一致既存 or 新規作成
+      let projectId: string | null = form.project_id || null;
+      const trimmedName = form.project_name_input.trim();
+
+      if (!projectId) {
+        // サジェストで選ばれていない場合、完全一致するprojectを探す
+        const exactMatch = projects.find(p => p.name === trimmedName);
+        if (exactMatch) {
+          // 同名警告：既存案件として登録するか、別案件として新規作成するか
+          const useExisting = confirm(
+            `既存の案件「${exactMatch.name}」と同名です。\n\nOK: 既存案件として登録する\nキャンセル: 別案件として新規作成する`
+          );
+          if (useExisting) {
+            projectId = exactMatch.id;
+          } else {
+            // 新規作成（別案件として）
+            const { data: newProject, error: pjErr } = await supabase
+              .from('projects')
+              .insert({
+                name: trimmedName,
+                division: form.division,
+                owner: form.owner,
+                business_domain: form.business_domain,
+                status: 'active',
+              } as any)
+              .select()
+              .single();
+            if (pjErr) throw pjErr;
+            projectId = newProject?.id || null;
+          }
+        } else {
+          // 新規作成
+          const { data: newProject, error: pjErr } = await supabase
+            .from('projects')
+            .insert({
+              name: trimmedName,
+              division: form.division,
+              owner: form.owner,
+              business_domain: form.business_domain,
+              status: 'active',
+            } as any)
+            .select()
+            .single();
+          if (pjErr) throw pjErr;
+          projectId = newProject?.id || null;
+        }
+      }
+
       const record = {
         tx_type: 'revenue' as const,
         date: form.date,
         amount,
         kamoku: 'sales',
-        division: form.division || 'general',
+        division: form.division,
         owner: form.owner,
         store: form.store || null,
         description: form.description || null,
         revenue_type: form.revenue_type || null,
-        contract_type_id: form.contract_type_id || null,
-        project_id: form.project_id || null,
+        contract_type_id: form.contract_type_id,
+        business_domain: form.business_domain,
+        project_id: projectId,
         client_id: form.client_id || null,
         source: 'manual',
         confirmed: true,
@@ -626,15 +731,30 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
         actual_payment_date: form.actual_payment_date || null,
       };
 
+      let savedTxId: string | null = null;
+
       if (editData) {
         const { error: err } = await supabase
           .from('transactions')
           .update(record)
           .eq('id', editData.id);
         if (err) throw err;
+        savedTxId = editData.id;
       } else {
-        const { error: err } = await supabase.from('transactions').insert(record);
+        const { data: saved, error: err } = await supabase
+          .from('transactions')
+          .insert(record)
+          .select('id')
+          .single();
         if (err) throw err;
+        savedTxId = saved?.id || null;
+      }
+
+      // 請求書発行トグルONなら、請求書タブに遷移（新規作成時のみ）
+      if (!editData && form.issue_invoice && savedTxId) {
+        onSaved();
+        router.push(`/income?tab=invoices&transaction_id=${savedTxId}`);
+        return;
       }
 
       onSaved();
@@ -750,9 +870,9 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
             )}
           </div>
 
-          {/* 事業 */}
+          {/* 事業（部門） */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">事業</label>
+            <label className="block text-xs text-[#999] mb-1">部門 <span className="text-[#C23728]">*</span></label>
             <select
               value={form.division}
               onChange={(e) => handleChange('division', e.target.value)}
@@ -765,45 +885,93 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
             </select>
           </div>
 
-          {/* プロジェクト */}
-          <div>
-            <label className="block text-xs text-[#999] mb-1">プロジェクト（任意）</label>
-            <select
-              value={form.project_id}
-              onChange={(e) => handleChange('project_id', e.target.value)}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
-            >
-              <option value="">未選択</option>
-              {filteredPJ.map((pj) => (
-                <option key={pj.id} value={pj.id}>{pj.name}</option>
-              ))}
-            </select>
+          {/* ─── 分類（経営分析用）ディバイダ ─── */}
+          <div className="pt-1">
+            <div className="text-[10px] font-medium tracking-widest text-[#bbb] mb-2 border-t border-[#f0f0f0] pt-3">
+              分類（経営分析用）
+            </div>
           </div>
 
-          {/* 契約区分 */}
+          {/* 契約形態（軸A・必須） */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">契約区分（任意）</label>
+            <label className="block text-xs text-[#999] mb-1">契約形態 <span className="text-[#C23728]">*</span></label>
             <select
               value={form.contract_type_id}
               onChange={(e) => handleChange('contract_type_id', e.target.value)}
               className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
             >
-              <option value="">未選択</option>
+              <option value="">選択してください</option>
               {contractTypes.map((ct) => (
                 <option key={ct.id} value={ct.id}>{ct.name}</option>
               ))}
             </select>
           </div>
 
-          {/* 収益タイプ */}
+          {/* 事業領域（軸B・必須） */}
+          <div>
+            <label className="block text-xs text-[#999] mb-1">事業領域 <span className="text-[#C23728]">*</span></label>
+            <select
+              value={form.business_domain}
+              onChange={(e) => handleChange('business_domain', e.target.value)}
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+            >
+              <option value="">選択してください</option>
+              {businessDomains.map((bd) => (
+                <option key={bd.id} value={bd.id}>{bd.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* 案件名（軸C・必須・サジェスト） */}
+          <div className="relative">
+            <label className="block text-xs text-[#999] mb-1">
+              案件名 <span className="text-[#C23728]">*</span>
+              {form.project_id && (
+                <span className="ml-2 text-[10px] text-[#1B4D3E]">（既存案件に紐付け済）</span>
+              )}
+            </label>
+            <input
+              type="text"
+              value={form.project_name_input}
+              onChange={(e) => handleProjectNameInput(e.target.value)}
+              onFocus={() => { if (projectSuggestions.length > 0) setShowSuggestions(true); }}
+              onBlur={() => { setTimeout(() => setShowSuggestions(false), 150); }}
+              placeholder="例: KKDAY_自治体DMO関連事業支援_2026Q2"
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+              autoComplete="off"
+            />
+            {showSuggestions && projectSuggestions.length > 0 && (
+              <div className="absolute z-10 left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-[#f0f0f0] overflow-hidden">
+                {projectSuggestions.map((pj) => (
+                  <button
+                    key={pj.id}
+                    type="button"
+                    onMouseDown={(e) => { e.preventDefault(); handleSelectSuggestion(pj); }}
+                    className="w-full px-3 py-2 text-left text-xs text-[#333] hover:bg-[#F5F5F3] border-b border-[#f0f0f0] last:border-b-0"
+                  >
+                    {pj.name}
+                    <span className="ml-2 text-[10px] text-[#999]">
+                      {DIVISIONS[pj.division as keyof typeof DIVISIONS]?.label || pj.division}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {!form.project_id && form.project_name_input.trim() && projectSuggestions.length === 0 && (
+              <p className="text-[10px] text-[#bbb] mt-1">＋ 新しい案件として登録されます</p>
+            )}
+          </div>
+
+          {/* 収益タイプ（任意・マスタ空時は無効化） */}
           <div>
             <label className="block text-xs text-[#999] mb-1">収益タイプ（任意）</label>
             <select
               value={form.revenue_type}
               onChange={(e) => handleChange('revenue_type', e.target.value)}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+              disabled={revenueTypes.length === 0}
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 disabled:opacity-50"
             >
-              <option value="">未選択</option>
+              <option value="">{revenueTypes.length === 0 ? '（未登録）' : '未選択'}</option>
               {filteredRT.map((rt) => (
                 <option key={rt.id} value={rt.id}>{rt.name}</option>
               ))}
@@ -834,6 +1002,25 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
               className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
             />
           </div>
+
+          {/* 請求書発行トグル（新規作成時のみ） */}
+          {!editData && (
+            <div className="flex items-center gap-2 p-3 bg-[#F5F5F3] rounded-lg">
+              <input
+                type="checkbox"
+                id="issue_invoice"
+                checked={form.issue_invoice}
+                onChange={(e) => handleChange('issue_invoice', e.target.checked)}
+                className="w-4 h-4 accent-[#D4A03A] cursor-pointer"
+              />
+              <label htmlFor="issue_invoice" className="text-xs text-[#1a1a1a] cursor-pointer flex-1">
+                この売上の請求書を発行する
+                <span className="block text-[10px] text-[#999] mt-0.5">
+                  登録後、請求書作成画面に移動します
+                </span>
+              </label>
+            </div>
+          )}
 
           {/* エラー */}
           {error && (
