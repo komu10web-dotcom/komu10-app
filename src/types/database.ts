@@ -1,7 +1,9 @@
-// komu10 会計システム v0.5.1
+// komu10 会計システム v0.5.2
 // Supabase Database 型定義（DB実態に完全一致）
 // 2026-04-15 invoices: subject/due_date/payment_terms追加、period_start/end削除
 // 2026-04-15 invoice_items: unit追加
+// 2026-04-18 business_domains新設 / transactions.business_domain / projects.business_domain 追加
+// 2026-04-18 contract_types を6区分に再定義（請負/準委任/スポット/継続課金/権利収入/その他）
 
 export interface Database {
   public: {
@@ -45,6 +47,7 @@ export interface Database {
           tags: string[] | null; // タグ配列
           revenue_type: string | null; // 収益タイプID（売上時）
           contract_type_id: string | null; // 契約区分ID（売上時）
+          business_domain: string | null; // 事業領域ID（売上時必須 / 経費時null可）FK→business_domains.id
           source: string; // 'manual' | 'receipt_ai' | 'csv' | 'google_sheets'
           ai_confidence: number | null; // AI推定確信度 0-1
           confirmed: boolean; // AI入力の確認済み
@@ -71,6 +74,7 @@ export interface Database {
           division: string; // 部門ID
           owner: string; // 担当者
           status: string; // 'ordered' | 'active' | 'completed'
+          business_domain: string | null; // 事業領域ID（将来拡張用）FK→business_domains.id
           client: string | null; // クライアント名
           youtube_id: string | null; // YouTube動画ID
           category: string | null; // カテゴリ（種別）
@@ -281,6 +285,20 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['contract_types']['Insert']>;
       };
 
+      // 事業領域マスタ（2026-04-18追加）
+      // ブランディング・経営マーケ・自主事業の3区分（軸B）
+      business_domains: {
+        Row: {
+          id: string; // 'branding' | 'consulting' | 'own_business' 等
+          name: string;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['business_domains']['Row'], 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['business_domains']['Insert']>;
+      };
+
       // 取引先マスタ
       clients: {
         Row: {
@@ -388,6 +406,7 @@ export type InvoiceItem = Database['public']['Tables']['invoice_items']['Row'];
 export type RevenueType = Database['public']['Tables']['revenue_types']['Row'];
 export type RevenueTypeDivision = Database['public']['Tables']['revenue_type_divisions']['Row'];
 export type ContractType = Database['public']['Tables']['contract_types']['Row'];
+export type BusinessDomain = Database['public']['Tables']['business_domains']['Row'];
 export type TransactionAllocation = Database['public']['Tables']['transaction_allocations']['Row'];
 export type Client = Database['public']['Tables']['clients']['Row'];
 export type RecurringExpense = Database['public']['Tables']['recurring_expenses']['Row'];
@@ -475,6 +494,16 @@ export const DIVISIONS = {
   support: { name: '事業伴走・業務支援', label: 'SUP', color: '#D4A03A', prefix: 'SP' },
   general: { name: 'その他', label: 'GEN', color: '#C4B49A', prefix: 'GEN' },
 } as const;
+
+// 事業領域定義（定数）— 軸B：経営分析用
+// DBの business_domains テーブルと id を同期すること
+export const BUSINESS_DOMAINS = {
+  branding:     { name: 'ブランディング・クリエイティブ受託', short: 'ブランディング' },
+  consulting:   { name: '経営・マーケティング受託',           short: '経営・マーケ' },
+  own_business: { name: '自主事業',                           short: '自主事業' },
+} as const;
+
+export type BusinessDomainKey = keyof typeof BUSINESS_DOMAINS;
 
 // 勘定科目定義（定数）
 export const KAMOKU = {
