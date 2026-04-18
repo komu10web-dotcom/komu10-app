@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { KAMOKU, DIVISIONS, RECURRING_FREQUENCY } from '@/types/database';
-import type { AnbunSetting, Asset, RevenueType, RevenueTypeDivision, ContractType, BankAccount, Client, RecurringExpense, Project, EquipmentItem, SyncSource, ExpenseTemplate, RouteLeg } from '@/types/database';
+import type { AnbunSetting, Asset, RevenueType, RevenueTypeDivision, ContractType, BusinessDomain, BankAccount, Client, RecurringExpense, Project, EquipmentItem, SyncSource, ExpenseTemplate, RouteLeg } from '@/types/database';
 import { Plus, Pencil, Trash2, Save, X, Loader2, ChevronDown, ChevronUp, HelpCircle, Cloud, CheckCircle2, RefreshCw, FolderOpen, Camera } from 'lucide-react';
 import { OWNER_COLOR_PRESETS } from './HeaderControls';
 
@@ -183,6 +183,14 @@ export default function SettingsContent() {
   const [ctNewName, setCtNewName] = useState('');
   const [ctSaving, setCtSaving] = useState(false);
 
+  // 事業領域（軸B）— 初期3区分（branding/consulting/own_business）は削除不可
+  const [businessDomains, setBusinessDomains] = useState<BusinessDomain[]>([]);
+  const [bdEditId, setBdEditId] = useState<string | null>(null);
+  const [bdEditName, setBdEditName] = useState('');
+  const [bdNewName, setBdNewName] = useState('');
+  const [bdNewId, setBdNewId] = useState(''); // 英字ID（自動生成後編集可）
+  const [bdSaving, setBdSaving] = useState(false);
+
   // 収益タイプ
   const [revenueTypes, setRevenueTypes] = useState<RevenueType[]>([]);
   const [revenueTypeDivisions, setRevenueTypeDivisions] = useState<RevenueTypeDivision[]>([]);
@@ -275,6 +283,12 @@ export default function SettingsContent() {
         .select('*')
         .order('sort_order');
 
+      // 事業領域（軸B）
+      const { data: bdData } = await supabase
+        .from('business_domains')
+        .select('*')
+        .order('sort_order');
+
       // 収益タイプ
       const { data: rtData } = await supabase
         .from('revenue_types')
@@ -346,6 +360,7 @@ export default function SettingsContent() {
         setBillingEmail((profileData as any).email || '');
       }
       setContractTypes(ctData || []);
+      setBusinessDomains(bdData || []);
       setRevenueTypes(rtData || []);
       setRevenueTypeDivisions(rtdData || []);
       setBankAccounts(bankData || []);
@@ -560,6 +575,99 @@ export default function SettingsContent() {
       const { data } = await supabase.from('contract_types').select('*').order('sort_order');
       setContractTypes(data || []);
     } catch (err) { console.error('契約区分削除エラー:', err); }
+  };
+
+  // ============================================================
+  // 事業領域（軸B） CRUD
+  // - 初期3区分（branding/consulting/own_business）は削除不可
+  // - 新規追加時はID自動連番（domain_N）+ ユーザー編集可
+  // ============================================================
+  const PROTECTED_DOMAIN_IDS = ['branding', 'consulting', 'own_business'] as const;
+  const isProtectedDomain = (id: string) => (PROTECTED_DOMAIN_IDS as readonly string[]).includes(id);
+
+  // 連番ID提案（domain_4, domain_5, ...）
+  const suggestNextDomainId = (): string => {
+    const existingNumbers = businessDomains
+      .map(bd => bd.id.match(/^domain_(\d+)$/))
+      .filter((m): m is RegExpMatchArray => m !== null)
+      .map(m => parseInt(m[1], 10));
+    // 初期3区分（branding/consulting/own_business）を含めて4から開始
+    const baseCount = businessDomains.length + 1;
+    const maxNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
+    return `domain_${Math.max(baseCount, maxNumber + 1)}`;
+  };
+
+  // 新規追加フォームを開く時にID自動セット
+  const openBdNewForm = () => {
+    if (!bdNewId) {
+      setBdNewId(suggestNextDomainId());
+    }
+  };
+
+  const addBusinessDomain = async () => {
+    if (!supabase) return;
+    const name = bdNewName.trim();
+    const id = bdNewId.trim();
+    if (!name || !id) return;
+    // ID形式チェック（英数字とアンダースコアのみ）
+    if (!/^[a-z0-9_]+$/i.test(id)) {
+      alert('IDは英数字とアンダースコアのみ使えます（例: marketing_support）');
+      return;
+    }
+    // 重複チェック
+    if (businessDomains.some(bd => bd.id === id)) {
+      alert(`ID「${id}」は既に使われています。別のIDにしてください。`);
+      return;
+    }
+    setBdSaving(true);
+    try {
+      const maxSort = businessDomains.length > 0 ? Math.max(...businessDomains.map(b => b.sort_order)) : 0;
+      await supabase.from('business_domains').insert({
+        id,
+        name,
+        sort_order: maxSort + 1,
+      });
+      setBdNewName('');
+      setBdNewId('');
+      const { data } = await supabase.from('business_domains').select('*').order('sort_order');
+      setBusinessDomains(data || []);
+    } catch (err) {
+      console.error('事業領域追加エラー:', err);
+      alert('事業領域の追加に失敗しました');
+    } finally {
+      setBdSaving(false);
+    }
+  };
+
+  const startEditBusinessDomain = (bd: BusinessDomain) => {
+    setBdEditId(bd.id);
+    setBdEditName(bd.name);
+  };
+
+  const updateBusinessDomain = async (id: string) => {
+    if (!supabase || !bdEditName.trim()) return;
+    setBdSaving(true);
+    try {
+      await supabase.from('business_domains').update({ name: bdEditName.trim() }).eq('id', id);
+      setBdEditId(null);
+      const { data } = await supabase.from('business_domains').select('*').order('sort_order');
+      setBusinessDomains(data || []);
+    } catch (err) { console.error('事業領域更新エラー:', err); }
+    finally { setBdSaving(false); }
+  };
+
+  const deleteBusinessDomain = async (id: string) => {
+    if (!supabase) return;
+    if (isProtectedDomain(id)) {
+      alert('初期3区分は削除できません（名前の編集のみ可能）');
+      return;
+    }
+    if (!confirm('この事業領域を削除しますか？\n（紐付いた売上の事業領域は空欄になります）')) return;
+    try {
+      await supabase.from('business_domains').delete().eq('id', id);
+      const { data } = await supabase.from('business_domains').select('*').order('sort_order');
+      setBusinessDomains(data || []);
+    } catch (err) { console.error('事業領域削除エラー:', err); }
   };
 
   // ============================================================
@@ -1306,12 +1414,105 @@ export default function SettingsContent() {
           </div>
         </section>
 
+        {/* ── 事業領域管理（軸B） ── */}
+        <section className="mb-10">
+          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+            事業領域
+          </div>
+          <div className="text-[11px] text-[#999] mb-3 leading-relaxed">
+            売上を「ブランディング受託 / 経営マーケ受託 / 自主事業」で分類するための軸です。初期3区分は削除できません（名前の編集のみ可能）。
+          </div>
+          <div className="bg-white rounded-xl shadow-sm">
+            {businessDomains.map((bd) => {
+              const protectedFlag = isProtectedDomain(bd.id);
+              return (
+                <div key={bd.id} className="flex items-center gap-2 px-5 py-3 border-b border-[#f0f0f0] last:border-b-0">
+                  {bdEditId === bd.id ? (
+                    <>
+                      <input
+                        type="text"
+                        value={bdEditName}
+                        onChange={(e) => setBdEditName(e.target.value)}
+                        className="flex-1 px-2 py-1 text-sm border border-[#D4A03A] rounded-md outline-none"
+                        onKeyDown={(e) => { if (e.key === 'Enter') updateBusinessDomain(bd.id); if (e.key === 'Escape') setBdEditId(null); }}
+                        autoFocus
+                      />
+                      <button onClick={() => updateBusinessDomain(bd.id)} disabled={bdSaving} className="p-1 hover:bg-black/5 rounded-md">
+                        <Save className="w-3.5 h-3.5 text-[#1B4D3E]" />
+                      </button>
+                      <button onClick={() => setBdEditId(null)} className="p-1 hover:bg-black/5 rounded-md">
+                        <X className="w-3.5 h-3.5 text-[#999]" />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="flex-1 text-sm text-[#333]">{bd.name}</span>
+                      <span className="text-[10px] text-[#bbb] font-mono mr-1">{bd.id}</span>
+                      <button onClick={() => startEditBusinessDomain(bd)} className="p-1 hover:bg-black/5 rounded-md">
+                        <Pencil className="w-3.5 h-3.5 text-[#999]" />
+                      </button>
+                      {protectedFlag ? (
+                        <span className="p-1 opacity-30 cursor-not-allowed" title="初期3区分は削除できません">
+                          <Trash2 className="w-3.5 h-3.5 text-[#ccc]" />
+                        </span>
+                      ) : (
+                        <button onClick={() => deleteBusinessDomain(bd.id)} className="p-1 hover:bg-[#C23728]/10 rounded-md">
+                          <Trash2 className="w-3.5 h-3.5 text-[#999]" />
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              );
+            })}
+            {/* 新規追加 */}
+            <div className="px-5 py-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={bdNewName}
+                  onChange={(e) => setBdNewName(e.target.value)}
+                  onFocus={openBdNewForm}
+                  placeholder="新しい事業領域の名前..."
+                  className="flex-1 px-2 py-1 text-sm bg-[#F5F5F3] rounded-md outline-none focus:ring-1 focus:ring-[#D4A03A]/50"
+                  onKeyDown={(e) => { if (e.key === 'Enter') addBusinessDomain(); }}
+                />
+                <button
+                  onClick={addBusinessDomain}
+                  disabled={!bdNewName.trim() || !bdNewId.trim() || bdSaving}
+                  className="p-1.5 bg-[#1a1a1a] text-white rounded-md disabled:opacity-30"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              {bdNewName.trim() && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-[#999] font-mono w-10 shrink-0">ID:</span>
+                  <input
+                    type="text"
+                    value={bdNewId}
+                    onChange={(e) => setBdNewId(e.target.value)}
+                    placeholder="domain_4"
+                    className="flex-1 px-2 py-1 text-xs font-mono bg-[#F5F5F3] rounded-md outline-none focus:ring-1 focus:ring-[#D4A03A]/50"
+                  />
+                  <span className="text-[10px] text-[#bbb]">英数字・_のみ</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
         {/* ── 収益タイプ管理 ── */}
         <section className="mb-10">
           <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
             収益タイプ
           </div>
           <div className="bg-white rounded-xl shadow-sm">
+            {revenueTypes.length === 0 && (
+              <div className="px-5 py-4 text-xs text-[#999] italic leading-relaxed">
+                収益タイプはまだ登録されていません。運用の中で必要性が見えてから追加してください。
+              </div>
+            )}
             {revenueTypes.map((rt) => {
               const linkedDivs = revenueTypeDivisions.filter(d => d.revenue_type_id === rt.id).map(d => d.division);
               const isEditing = rtEditId === rt.id;
