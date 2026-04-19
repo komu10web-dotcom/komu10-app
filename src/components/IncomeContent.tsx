@@ -548,7 +548,10 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
     project_name_input: editData?.project_id
       ? (projects.find(p => p.id === editData.project_id)?.name || '')
       : '',
-    new_project_invoice_display_name: '', // 新規案件作成時の「請求書の件名」（v0.5.4追加）
+    new_project_invoice_display_name: '', // 旧v0.5.4フィールド（後方互換・未使用）
+    invoice_display_name_input: editData?.project_id
+      ? (projects.find(p => p.id === editData.project_id)?.invoice_display_name || '')
+      : '', // v0.5.6: 請求書の件名（既存案件選択時は既存値をロード・編集可能）
     business_domain: (editData as any)?.business_domain || '',
     contract_type_id: editData?.contract_type_id || '',
     revenue_type: editData?.revenue_type || '',
@@ -619,6 +622,8 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
       project_name_input: project.name,
       // 既存PJの部門を自動セット（未設定なら）
       division: prev.division || project.division,
+      // v0.5.6: 既存案件の請求書の件名を自動ロード
+      invoice_display_name_input: (project as any).invoice_display_name || '',
     }));
     setProjectSuggestions([]);
     setShowSuggestions(false);
@@ -714,6 +719,7 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
       // 案件の解決：既存サジェスト選択済 or 完全一致既存 or 新規作成
       let projectId: string | null = form.project_id || null;
       const trimmedName = form.project_name_input.trim();
+      const trimmedInvName = form.invoice_display_name_input.trim();
 
       if (!projectId) {
         // サジェストで選ばれていない場合、完全一致するprojectを探す
@@ -725,13 +731,17 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
           );
           if (useExisting) {
             projectId = exactMatch.id;
+            // v0.5.6: 既存案件のinvoice_display_nameが変更されていれば更新
+            if (trimmedInvName !== ((exactMatch as any).invoice_display_name || '')) {
+              await supabase.from('projects').update({ invoice_display_name: trimmedInvName || null } as any).eq('id', exactMatch.id);
+            }
           } else {
             // 新規作成（別案件として）
             const { data: newProject, error: pjErr } = await supabase
               .from('projects')
               .insert({
                 name: trimmedName,
-                invoice_display_name: form.new_project_invoice_display_name.trim() || null,
+                invoice_display_name: trimmedInvName || null,
                 division: form.division,
                 owner: form.owner,
                 business_domain: form.business_domain,
@@ -748,7 +758,7 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
             .from('projects')
             .insert({
               name: trimmedName,
-              invoice_display_name: form.new_project_invoice_display_name.trim() || null,
+              invoice_display_name: trimmedInvName || null,
               division: form.division,
               owner: form.owner,
               business_domain: form.business_domain,
@@ -758,6 +768,12 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
             .single();
           if (pjErr) throw pjErr;
           projectId = newProject?.id || null;
+        }
+      } else {
+        // v0.5.6: 既存案件紐付け時、invoice_display_nameが変更されていれば案件側を更新
+        const existingProject = projects.find(p => p.id === projectId);
+        if (existingProject && trimmedInvName !== ((existingProject as any).invoice_display_name || '')) {
+          await supabase.from('projects').update({ invoice_display_name: trimmedInvName || null } as any).eq('id', projectId);
         }
       }
 
@@ -891,9 +907,13 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
           <div>
             <label className="block text-xs text-[#999] mb-1">金額（円）</label>
             <input
-              type="number"
-              value={form.amount}
-              onChange={(e) => handleChange('amount', e.target.value)}
+              type="text"
+              inputMode="numeric"
+              value={form.amount ? Number(form.amount).toLocaleString('ja-JP') : ''}
+              onChange={(e) => {
+                const raw = e.target.value.replace(/[^\d]/g, '');
+                handleChange('amount', raw);
+              }}
               placeholder="0"
               className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed'] tabular-nums"
             />
@@ -1013,42 +1033,25 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
             {!form.project_id && form.project_name_input.trim() && projectSuggestions.length === 0 && (
               <p className="text-[10px] text-[#bbb] mt-1">＋ 新しい案件として登録されます</p>
             )}
-            {/* 選択中案件の「請求書の件名」プレビュー（v0.5.4追加） */}
-            {form.project_id && (() => {
-              const selected = projects.find(p => p.id === form.project_id);
-              if (!selected) return null;
-              const invName = selected.invoice_display_name || selected.name;
-              return (
-                <p className="text-[10px] text-[#999] mt-1">
-                  請求書の件名: <span className="text-[#666]">{invName}</span>
-                </p>
-              );
-            })()}
-            {/* 新規案件作成時の折りたたみ「請求書の件名（任意）」（v0.5.4追加） */}
-            {!form.project_id && form.project_name_input.trim() && (
-              <div className="mt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowNewProjectDetails(v => !v)}
-                  className="text-[10px] text-[#999] hover:text-[#666]"
-                >
-                  {showNewProjectDetails ? '▾' : '▸'} 詳細オプション
-                </button>
-                {showNewProjectDetails && (
-                  <div className="mt-1.5">
-                    <label className="block text-[10px] text-[#999] mb-1">請求書の件名（先方が見る表記・任意）</label>
-                    <input
-                      type="text"
-                      value={form.new_project_invoice_display_name}
-                      onChange={(e) => handleChange('new_project_invoice_display_name', e.target.value)}
-                      placeholder="例: 自治体DMO関連事業支援"
-                      className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-xs border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
-                    />
-                    <p className="text-[10px] text-[#bbb] mt-1">未入力の場合、案件名がそのまま請求書に表示されます</p>
-                  </div>
-                )}
-              </div>
-            )}
+          </div>
+
+          {/* 請求書の件名（v0.5.6: インライン編集可能・既存案件も新規案件も統一UI） */}
+          <div>
+            <label className="block text-xs text-[#999] mb-1">
+              請求書の件名（先方が見る表記・任意）
+            </label>
+            <input
+              type="text"
+              value={form.invoice_display_name_input}
+              onChange={(e) => handleChange('invoice_display_name_input', e.target.value)}
+              placeholder="例: 自治体DMO関連事業支援（空欄なら案件管理名を使用）"
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+            />
+            <p className="text-[10px] text-[#bbb] mt-1">
+              {form.project_id
+                ? '※ この案件の全ての売上・請求書に反映されます（案件単位で保存）'
+                : '請求書を発行しない場合は空欄で構いません'}
+            </p>
           </div>
 
           {/* 品名・摘要（v0.5.4追加・常に必須） */}

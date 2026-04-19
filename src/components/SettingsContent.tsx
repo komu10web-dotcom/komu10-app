@@ -2535,21 +2535,37 @@ export default function SettingsContent() {
             リリースノート
           </div>
           <div className="space-y-3">
-            {/* v0.5.5 */}
+            {/* v0.5.6 */}
             <div className="bg-white rounded-xl shadow-sm p-4">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.5.5</span>
+                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.5.6</span>
                 <span className="text-[9px] text-[#999]">2026.04.19</span>
                 <span className="text-[8px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full font-medium">LATEST</span>
               </div>
               <ul className="space-y-1">
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>売上モーダルの「請求書の件名」をインライン編集可能化（既存案件選択時も直接編集できる）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>請求書の件名は任意入力（空欄なら案件管理名を使用・請求書を発行しない売上は空欄でOK）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>金額入力欄に3桁カンマ自動整形（例: 585000 → 585,000）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>請求書の件名を編集して保存すると、既存案件の invoice_display_name が自動更新される</li>
+              </ul>
+            </div>
+
+            {/* v0.5.5 */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.5.5</span>
+                  <span className="text-[9px] text-[#999]">2026.04.19</span>
+                </div>
+              </summary>
+              <ul className="space-y-1 px-4 pb-4">
                 <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>売上モーダルの「案件名」を「案件管理名（内部管理用）」にラベル変更</li>
                 <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#C23728]">-</span>売上モーダルから旧「摘要」欄を削除（品名・摘要に統合）</li>
                 <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>請求書プレビュー・PDF出力の銀行名／支店名重複括弧を防御（既に括弧内コードが含まれる場合は追記しない）</li>
                 <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>口座種別 account_type='savings' を「普通」に正しく表示（英語残留バグ修正）</li>
                 <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>PDF出力時のSheets APIエラーハンドリング強化（失敗時に詳細メッセージを返す）</li>
               </ul>
-            </div>
+            </details>
 
             {/* v0.5.4 */}
             <details className="bg-white rounded-xl shadow-sm">
@@ -2670,7 +2686,7 @@ export default function SettingsContent() {
 
         {/* バージョン */}
         <div className="text-center py-8">
-          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.5.5</span>
+          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.5.6</span>
         </div>
 
       </div>{/* end max-w-3xl */}
