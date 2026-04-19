@@ -773,7 +773,8 @@ function InvoiceEditor({
                     className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 text-center" />
                 </div>
                 <div className="w-28">
-                  <input type="text" inputMode="numeric" value={item.unit_price}
+                  <input type="text" inputMode="numeric"
+                    value={item.unit_price ? Number(item.unit_price).toLocaleString('ja-JP') : ''}
                     onChange={(e) => updateItem(idx, 'unit_price', e.target.value.replace(/[^\d]/g, ''))}
                     placeholder="単価"
                     className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 text-right font-['Saira_Condensed'] tabular-nums" />
