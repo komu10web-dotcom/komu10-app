@@ -118,6 +118,7 @@ function resizeImage(file: File, maxPx: number): Promise<File> {
 
 interface ProjectForm {
   name: string;
+  invoice_display_name: string;
   division: string;
   owner: string;
   status: string;
@@ -1002,6 +1003,7 @@ export default function SettingsContent() {
       if (editingProject) {
         await supabase.from('projects').update({
           name: form.name,
+          invoice_display_name: form.invoice_display_name.trim() || null,
           division: form.division,
           owner: form.owner,
           status: form.status,
@@ -1011,6 +1013,7 @@ export default function SettingsContent() {
       } else {
         await supabase.from('projects').insert({
           name: form.name,
+          invoice_display_name: form.invoice_display_name.trim() || null,
           division: form.division,
           owner: form.owner,
           status: form.status,
@@ -2532,20 +2535,37 @@ export default function SettingsContent() {
             リリースノート
           </div>
           <div className="space-y-3">
-            {/* v0.5.3 */}
+            {/* v0.5.4 */}
             <div className="bg-white rounded-xl shadow-sm p-4">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.5.3</span>
-                <span className="text-[9px] text-[#999]">2026.04.18</span>
+                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.5.4</span>
+                <span className="text-[9px] text-[#999]">2026.04.19</span>
                 <span className="text-[8px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full font-medium">LATEST</span>
               </div>
               <ul className="space-y-1">
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>案件名・請求書件名・品名摘要の3層分離（内部管理名／対外件名／明細行摘要を別フィールドに）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>品名・摘要サジェスト（案件紐付きの直近3件をワンタップで再利用）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>案件管理の「請求書の件名（任意）」欄（未設定時は案件名フォールバック）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>売上モーダルの案件選択時に請求書の件名をプレビュー表示</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>既存売上に品名未記入がある場合は黄色バッジで警告表示</li>
+              </ul>
+            </div>
+
+            {/* v0.5.3 */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.5.3</span>
+                  <span className="text-[9px] text-[#999]">2026.04.18</span>
+                </div>
+              </summary>
+              <ul className="space-y-1 px-4 pb-4">
                 <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>売上→請求書のシームレス遷移（発行トグルONで請求書エディタに自動転記）</li>
                 <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>請求書発行時の2経路対応（売上紐付きあり=既存仕訳UPDATE / なし=警告+新規）</li>
                 <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>売上紐付きあり時は division/business_domain/案件名を温存</li>
                 <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>独立起動の新規仕訳の初期部門を 'support' ハードコードから 'general' に変更</li>
               </ul>
-            </div>
+            </details>
 
             {/* v0.5.0 */}
             <details className="bg-white rounded-xl shadow-sm">
@@ -2649,7 +2669,7 @@ export default function SettingsContent() {
 
         {/* バージョン */}
         <div className="text-center py-8">
-          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.5.3</span>
+          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.5.4</span>
         </div>
 
       </div>{/* end max-w-3xl */}
@@ -3631,6 +3651,7 @@ function ProjectModal({
 }) {
   const [form, setForm] = useState<ProjectForm>(() => ({
     name: project?.name || '',
+    invoice_display_name: project?.invoice_display_name || '',
     division: project?.division || 'youtube',
     owner: project?.owner || 'tomo',
     status: project?.status || 'active',
@@ -3658,11 +3679,21 @@ function ProjectModal({
 
         <div className="px-5 py-4 space-y-4">
           <div>
-            <label className="block text-xs text-[#999] mb-1">プロジェクト名 <span className="text-[#C23728]">*</span></label>
+            <label className="block text-xs text-[#999] mb-1">案件名（内部管理用） <span className="text-[#C23728]">*</span></label>
             <input type="text" value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="例: KKday 沖縄プロモーション"
+              placeholder="例: KKDAY_自治体DMO関連事業支援_2026Q2"
               className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+            <p className="text-[11px] text-[#999] mt-1">社内で案件を識別するための名前です</p>
+          </div>
+
+          <div>
+            <label className="block text-xs text-[#999] mb-1">請求書の件名（先方が見る表記）</label>
+            <input type="text" value={form.invoice_display_name}
+              onChange={(e) => setForm({ ...form, invoice_display_name: e.target.value })}
+              placeholder="例: 自治体DMO関連事業支援"
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+            <p className="text-[11px] text-[#999] mt-1">未設定の場合、案件名がそのまま使われます</p>
           </div>
 
           <div className="flex gap-3">

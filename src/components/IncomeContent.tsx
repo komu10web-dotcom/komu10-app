@@ -548,16 +548,24 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
     project_name_input: editData?.project_id
       ? (projects.find(p => p.id === editData.project_id)?.name || '')
       : '',
+    new_project_invoice_display_name: '', // 新規案件作成時の「請求書の件名」（v0.5.4追加）
     business_domain: (editData as any)?.business_domain || '',
     contract_type_id: editData?.contract_type_id || '',
     revenue_type: editData?.revenue_type || '',
     owner: editData?.owner || defaultOwner,
     description: editData?.description || '',
+    item_description: (editData as any)?.item_description || '', // 品名・摘要（v0.5.4追加・UI必須）
     status: editData?.status || 'forecast',
     expected_payment_date: editData?.expected_payment_date || '',
     actual_payment_date: editData?.actual_payment_date || '',
     issue_invoice: false, // 請求書発行トグル（新規作成時のみ有効）
   });
+
+  // 新規案件作成時の「詳細オプション」折りたたみ表示
+  const [showNewProjectDetails, setShowNewProjectDetails] = useState(false);
+
+  // 品名・摘要サジェスト（選択中案件の直近3件）
+  const [itemDescSuggestions, setItemDescSuggestions] = useState<string[]>([]);
 
   // 案件名サジェスト用
   const [projectSuggestions, setProjectSuggestions] = useState<Project[]>([]);
@@ -616,6 +624,32 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
     setShowSuggestions(false);
   };
 
+  // 案件選択時：その案件の過去 item_description を直近3件サジェストとして取得
+  useEffect(() => {
+    if (!supabase || !form.project_id) {
+      setItemDescSuggestions([]);
+      return;
+    }
+    let active = true;
+    (async () => {
+      const { data } = await supabase!
+        .from('transactions')
+        .select('item_description, date')
+        .eq('project_id', form.project_id)
+        .not('item_description', 'is', null)
+        .order('date', { ascending: false })
+        .limit(10);
+      if (!active) return;
+      const uniq: string[] = [];
+      (data || []).forEach((row: any) => {
+        const d = (row.item_description || '').trim();
+        if (d && !uniq.includes(d)) uniq.push(d);
+      });
+      setItemDescSuggestions(uniq.slice(0, 3));
+    })();
+    return () => { active = false; };
+  }, [form.project_id]);
+
   // 選択事業に紐づく収益タイプを返す（未選択時は全件）
   const getFilteredRevenueTypes = (divisionId: string): RevenueType[] => {
     if (!divisionId) return revenueTypes;
@@ -667,6 +701,12 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
       return;
     }
 
+    // 品名・摘要も必須（UIレベル・v0.5.4追加）
+    if (!form.item_description.trim()) {
+      setError('品名・摘要を入力してください（請求書明細にそのまま使われます）');
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
@@ -691,6 +731,7 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
               .from('projects')
               .insert({
                 name: trimmedName,
+                invoice_display_name: form.new_project_invoice_display_name.trim() || null,
                 division: form.division,
                 owner: form.owner,
                 business_domain: form.business_domain,
@@ -707,6 +748,7 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
             .from('projects')
             .insert({
               name: trimmedName,
+              invoice_display_name: form.new_project_invoice_display_name.trim() || null,
               division: form.division,
               owner: form.owner,
               business_domain: form.business_domain,
@@ -728,6 +770,7 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
         owner: form.owner,
         store: form.store || null,
         description: form.description || null,
+        item_description: form.item_description.trim() || null,
         revenue_type: form.revenue_type || null,
         contract_type_id: form.contract_type_id,
         business_domain: form.business_domain,
@@ -969,6 +1012,75 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
             )}
             {!form.project_id && form.project_name_input.trim() && projectSuggestions.length === 0 && (
               <p className="text-[10px] text-[#bbb] mt-1">＋ 新しい案件として登録されます</p>
+            )}
+            {/* 選択中案件の「請求書の件名」プレビュー（v0.5.4追加） */}
+            {form.project_id && (() => {
+              const selected = projects.find(p => p.id === form.project_id);
+              if (!selected) return null;
+              const invName = selected.invoice_display_name || selected.name;
+              return (
+                <p className="text-[10px] text-[#999] mt-1">
+                  請求書の件名: <span className="text-[#666]">{invName}</span>
+                </p>
+              );
+            })()}
+            {/* 新規案件作成時の折りたたみ「請求書の件名（任意）」（v0.5.4追加） */}
+            {!form.project_id && form.project_name_input.trim() && (
+              <div className="mt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowNewProjectDetails(v => !v)}
+                  className="text-[10px] text-[#999] hover:text-[#666]"
+                >
+                  {showNewProjectDetails ? '▾' : '▸'} 詳細オプション
+                </button>
+                {showNewProjectDetails && (
+                  <div className="mt-1.5">
+                    <label className="block text-[10px] text-[#999] mb-1">請求書の件名（先方が見る表記・任意）</label>
+                    <input
+                      type="text"
+                      value={form.new_project_invoice_display_name}
+                      onChange={(e) => handleChange('new_project_invoice_display_name', e.target.value)}
+                      placeholder="例: 自治体DMO関連事業支援"
+                      className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-xs border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+                    />
+                    <p className="text-[10px] text-[#bbb] mt-1">未入力の場合、案件名がそのまま請求書に表示されます</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* 品名・摘要（v0.5.4追加・常に必須） */}
+          <div>
+            <label className="block text-xs text-[#999] mb-1">
+              品名・摘要（個別売上・請求書明細） <span className="text-[#C23728]">*</span>
+              {editData && !(editData as any).item_description && (
+                <span className="ml-2 text-[10px] text-[#D4A03A] bg-[#D4A03A]/10 px-1.5 py-0.5 rounded">摘要未記入</span>
+              )}
+            </label>
+            <input
+              type="text"
+              value={form.item_description}
+              onChange={(e) => handleChange('item_description', e.target.value)}
+              placeholder="例: 2026年4月度 業務委託報酬（4/1〜4/30）"
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+            />
+            <p className="text-[10px] text-[#999] mt-1">請求書の明細行にそのまま使われます</p>
+            {/* サジェスト（案件選択時のみ、直近3件） */}
+            {form.project_id && itemDescSuggestions.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {itemDescSuggestions.map((s, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => handleChange('item_description', s)}
+                    className="text-[10px] text-[#666] bg-[#F5F5F3] hover:bg-[#D4A03A]/10 hover:text-[#D4A03A] px-2 py-1 rounded-full border border-[#f0f0f0] transition-colors"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
 

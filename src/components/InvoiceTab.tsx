@@ -431,18 +431,22 @@ function InvoiceEditor({
       try {
         const { data: tx } = await supabase
           .from('transactions')
-          .select('*, projects(name)')
+          .select('*, projects(name, invoice_display_name)')
           .eq('id', preloadFromTxId)
           .single();
         if (!tx) return;
 
-        const projectName = (tx as any).projects?.name || tx.description || '';
+        const proj = (tx as any).projects;
+        // 件名：請求書の件名（対外的表記） → 案件名 → description の順でフォールバック（v0.5.4）
+        const invoiceSubject: string = proj?.invoice_display_name || proj?.name || tx.description || '';
+        // 明細行の品名：item_description → 案件名（旧運用の互換） の順でフォールバック（v0.5.4）
+        const itemDesc: string = (tx as any).item_description || proj?.name || tx.description || '';
 
         setClientId(tx.client_id || '');
-        setSubject(projectName);
+        setSubject(invoiceSubject);
         setExistingTransactionId(tx.id);
         setItems([{
-          description: projectName,
+          description: itemDesc,
           quantity: '1',
           unit: '式',
           unit_price: tx.amount.toString(),
