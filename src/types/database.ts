@@ -1,10 +1,11 @@
-// komu10 会計システム v0.5.3
+// komu10 会計システム v0.5.4
 // Supabase Database 型定義（DB実態に完全一致）
 // 2026-04-15 invoices: subject/due_date/payment_terms追加、period_start/end削除
 // 2026-04-15 invoice_items: unit追加
 // 2026-04-18 business_domains新設 / transactions.business_domain / projects.business_domain 追加
 // 2026-04-18 contract_types を6区分に再定義（請負/準委任/スポット/継続課金/権利収入/その他）
-
+// 2026-04-19 projects.invoice_display_name / transactions.item_description 追加（案件名・請求書件名・品名摘要の3層分離）
+ 
 export interface Database {
   public: {
     Tables: {
@@ -29,7 +30,7 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['profiles']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['profiles']['Insert']>;
       };
-
+ 
       // 取引データ（売上・経費）
       transactions: {
         Row: {
@@ -43,6 +44,7 @@ export interface Database {
           store: string | null; // 取引先・店名
           description: string | null; // 内容・摘要
           memo: string | null; // メモ
+          item_description: string | null; // 請求書明細行の品名・摘要（v0.5.4追加）
           project_id: string | null; // プロジェクト紐付け
           tags: string[] | null; // タグ配列
           revenue_type: string | null; // 収益タイプID（売上時）
@@ -65,12 +67,13 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['transactions']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['transactions']['Insert']>;
       };
-
+ 
       // プロジェクト（案件・YouTube企画等）
       projects: {
         Row: {
           id: string;
-          name: string; // プロジェクト名
+          name: string; // プロジェクト名（内部管理名）
+          invoice_display_name: string | null; // 請求書に印字する対外的な件名（v0.5.4追加。NULL時はnameをフォールバック）
           division: string; // 部門ID
           owner: string; // 担当者
           status: string; // 'ordered' | 'active' | 'completed'
@@ -93,7 +96,7 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['projects']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['projects']['Insert']>;
       };
-
+ 
       // 固定資産台帳
       assets: {
         Row: {
@@ -112,7 +115,7 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['assets']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['assets']['Insert']>;
       };
-
+ 
       // 按分設定
       anbun_settings: {
         Row: {
@@ -127,7 +130,7 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['anbun_settings']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['anbun_settings']['Insert']>;
       };
-
+ 
       // 交通費詳細
       transport_details: {
         Row: {
@@ -147,7 +150,7 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['transport_details']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['transport_details']['Insert']>;
       };
-
+ 
       // 交通費目的マスタ
       transport_purposes: {
         Row: {
@@ -161,7 +164,7 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['transport_purposes']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['transport_purposes']['Insert']>;
       };
-
+ 
       // 銀行口座
       bank_accounts: {
         Row: {
@@ -184,7 +187,7 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['bank_accounts']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['bank_accounts']['Insert']>;
       };
-
+ 
       // 入出金明細
       bank_transactions: {
         Row: {
@@ -200,7 +203,7 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['bank_transactions']['Row'], 'id' | 'created_at'>;
         Update: Partial<Database['public']['Tables']['bank_transactions']['Insert']>;
       };
-
+ 
       // 請求書
       invoices: {
         Row: {
@@ -230,7 +233,7 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['invoices']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['invoices']['Insert']>;
       };
-
+ 
       // 請求書明細
       invoice_items: {
         Row: {
@@ -247,7 +250,7 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['invoice_items']['Row'], 'id' | 'created_at'>;
         Update: Partial<Database['public']['Tables']['invoice_items']['Insert']>;
       };
-
+ 
       // 収益タイプマスタ
       revenue_types: {
         Row: {
@@ -260,7 +263,7 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['revenue_types']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['revenue_types']['Insert']>;
       };
-
+ 
       // 収益タイプ×事業 中間テーブル
       revenue_type_divisions: {
         Row: {
@@ -271,7 +274,7 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['revenue_type_divisions']['Row'], 'id'>;
         Update: Partial<Database['public']['Tables']['revenue_type_divisions']['Insert']>;
       };
-
+ 
       // 契約区分マスタ
       contract_types: {
         Row: {
@@ -284,7 +287,7 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['contract_types']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['contract_types']['Insert']>;
       };
-
+ 
       // 事業領域マスタ（2026-04-18追加）
       // ブランディング・経営マーケ・自主事業の3区分（軸B）
       business_domains: {
@@ -298,7 +301,7 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['business_domains']['Row'], 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['business_domains']['Insert']>;
       };
-
+ 
       // 取引先マスタ
       clients: {
         Row: {
@@ -320,7 +323,7 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['clients']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['clients']['Insert']>;
       };
-
+ 
       // 固定経費テンプレート
       recurring_expenses: {
         Row: {
@@ -342,7 +345,7 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['recurring_expenses']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['recurring_expenses']['Insert']>;
       };
-
+ 
       // 備品台帳
       equipment_items: {
         Row: {
@@ -364,7 +367,7 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['equipment_items']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['equipment_items']['Insert']>;
       };
-
+ 
       // 取引按分（1取引→複数事業・PJに比率配分）
       transaction_allocations: {
         Row: {
@@ -382,7 +385,7 @@ export interface Database {
     };
   };
 }
-
+ 
 // エクスポート用の型エイリアス
 export type Profile = Database['public']['Tables']['profiles']['Row'];
 export type Transaction = Database['public']['Tables']['transactions']['Row'];
@@ -392,7 +395,7 @@ export type AnbunSetting = Database['public']['Tables']['anbun_settings']['Row']
 export type TransportDetail = Database['public']['Tables']['transport_details']['Row'];
 export type BankAccount = Database['public']['Tables']['bank_accounts']['Row'];
 export type BankTransaction = Database['public']['Tables']['bank_transactions']['Row'];
-
+ 
 // bank_balances（月次残高スナップショット）
 export type BankBalance = {
   id: string;
@@ -411,7 +414,7 @@ export type TransactionAllocation = Database['public']['Tables']['transaction_al
 export type Client = Database['public']['Tables']['clients']['Row'];
 export type RecurringExpense = Database['public']['Tables']['recurring_expenses']['Row'];
 export type EquipmentItem = Database['public']['Tables']['equipment_items']['Row'];
-
+ 
 // audit_log（訂正・削除履歴 — 優良な電子帳簿保存 要件❶）
 export type AuditLog = {
   id: string;
@@ -425,7 +428,7 @@ export type AuditLog = {
   changed_at: string;
   is_late_entry: boolean;
 };
-
+ 
 // sync_sources（DBテーブルだがDatabaseインターフェース外で定義）
 export type SyncSource = {
   id: string;
@@ -441,7 +444,7 @@ export type SyncSource = {
   created_at: string;
   updated_at: string;
 };
-
+ 
 // 資金移動
 export type FundTransfer = {
   id: string;
@@ -458,7 +461,7 @@ export type FundTransfer = {
   created_at: string;
   updated_at: string;
 };
-
+ 
 // 交通費・汎用経費テンプレート
 export type RouteLeg = {
   from: string;
@@ -468,7 +471,7 @@ export type RouteLeg = {
   green_available?: boolean;
   green_surcharge?: number;
 };
-
+ 
 export type ExpenseTemplate = {
   id: string;
   owner: string;
@@ -485,7 +488,7 @@ export type ExpenseTemplate = {
   created_at: string;
   updated_at: string;
 };
-
+ 
 // 部門定義（定数）— 表示順もこの順
 export const DIVISIONS = {
   youtube: { name: 'YouTube', label: 'YT', color: '#C23728', prefix: 'YT' },
@@ -494,7 +497,7 @@ export const DIVISIONS = {
   support: { name: '事業伴走・業務支援', label: 'SUP', color: '#D4A03A', prefix: 'SP' },
   general: { name: 'その他', label: 'GEN', color: '#C4B49A', prefix: 'GEN' },
 } as const;
-
+ 
 // 事業領域定義（定数）— 軸B：経営分析用
 // DBの business_domains テーブルと id を同期すること
 export const BUSINESS_DOMAINS = {
@@ -502,9 +505,9 @@ export const BUSINESS_DOMAINS = {
   consulting:   { name: '経営・マーケティング受託',           short: '経営・マーケ' },
   own_business: { name: '自主事業',                           short: '自主事業' },
 } as const;
-
+ 
 export type BusinessDomainKey = keyof typeof BUSINESS_DOMAINS;
-
+ 
 // 勘定科目定義（定数）
 export const KAMOKU = {
   // 収益
@@ -528,7 +531,7 @@ export const KAMOKU = {
   software: { name: 'ソフトウェア', type: 'expense', anbun: true },
   repair: { name: '修繕費', type: 'expense', anbun: false },
   misc: { name: '雑費', type: 'expense', anbun: false },
-
+ 
   // 内部科目（UIに出さない。仕訳帳で自動生成用）
   prepaid: { name: '前払費用', type: 'asset', internal: true },
   advance_received: { name: '前受金', type: 'liability', internal: true },
@@ -538,7 +541,7 @@ export const KAMOKU = {
   jigyounushi_kashi: { name: '事業主貸', type: 'equity', internal: true },
   bank_deposit: { name: '普通預金', type: 'asset', internal: true },
 } as const;
-
+ 
 // 収益タイプ定義
 export const REVENUE_TYPES = {
   consulting: 'コンサルティング報酬',
@@ -549,14 +552,14 @@ export const REVENUE_TYPES = {
   license: 'ライセンス（写真等）',
   other: 'その他',
 } as const;
-
+ 
 // ステータス定義
 export const PROJECT_STATUS = {
   ordered: '受注',
   active: '進行中',
   completed: '完了',
 } as const;
-
+ 
 // 取引ステータス定義（PL/CFライフサイクル）
 export const TRANSACTION_STATUS = {
   forecast: '見込み',
@@ -564,14 +567,14 @@ export const TRANSACTION_STATUS = {
   billed: '請求済',
   settled: '決済完了',
 } as const;
-
+ 
 // 固定経費の頻度
 export const RECURRING_FREQUENCY = {
   monthly: '毎月',
   quarterly: '四半期',
   annual: '年次',
 } as const;
-
+ 
 // 口座明細の照合ステータス
 export const BANK_MATCH_STATUS = {
   unmatched: '未照合',
@@ -581,30 +584,45 @@ export const BANK_MATCH_STATUS = {
   internal_transfer: '口座間振替',
   ignored: '無視',
 } as const;
-
+ 
 // 請求書ステータス定義
 export const INVOICE_STATUS = {
   draft: '下書き',
   issued: '発行済',
   paid: '入金済',
 } as const;
-
+ 
 export type InvoiceStatusKey = keyof typeof INVOICE_STATUS;
-
+ 
 // 請求書 + 明細行（結合型）
 export type InvoiceWithItems = Invoice & {
   items: InvoiceItem[];
   client?: Client;
 };
-
+ 
 // 取引先 + 請求書件数（一覧用）
 export type ClientWithInvoiceCount = Client & {
   invoice_count: number;
 };
-
+ 
 // 資金移動パターンと仕訳ルール（Phase 4で使用）
 // ① 個人→事業口座（資金注入）: 普通預金 / 事業主借 → match_status = owner_deposit
 // ② クライアント→事業口座（売上入金）: 普通預金 / 売掛金 → match_status = matched
 // ③ 事業口座→経費支払（デビット）: 科目 / 普通預金 → match_status = matched
 // ④ 事業口座→個人口座（生活費引出）: 事業主貸 / 普通預金 → match_status = owner_withdrawal
 // 口座開設日以降の経費は貸方「普通預金」、それ以前は「事業主借」（仕訳帳で自動判定）
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
