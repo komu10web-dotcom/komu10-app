@@ -2535,20 +2535,36 @@ export default function SettingsContent() {
             リリースノート
           </div>
           <div className="space-y-3">
-            {/* v0.5.6 */}
+            {/* v0.5.7 */}
             <div className="bg-white rounded-xl shadow-sm p-4">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.5.6</span>
+                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.5.7</span>
                 <span className="text-[9px] text-[#999]">2026.04.19</span>
                 <span className="text-[8px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full font-medium">LATEST</span>
               </div>
               <ul className="space-y-1">
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>売上モーダルの「請求書の件名」をインライン編集可能化（既存案件選択時も直接編集できる）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>請求書の件名は任意入力（空欄なら案件管理名を使用・請求書を発行しない売上は空欄でOK）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>金額入力欄に3桁カンマ自動整形（例: 585000 → 585,000）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>請求書の件名を編集して保存すると、既存案件の invoice_display_name が自動更新される</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>請求書作成フロー全面刷新：テンプレスプシをコピーして値を流し込む方式に変更</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>「PDF & シート出力」ボタンを「請求書作成」に変更（デザイン崩れ撲滅）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>明細5行まで対応（6行以上はエラー表示）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>作成後、スプシを自動で新規タブで開く（プレビュー確認→PDFダウンロード運用）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>備考の固定2行（インボイス／振込手数料）はテンプレ側に書き込み、動的備考のみ入力可</li>
               </ul>
             </div>
+
+            {/* v0.5.6 */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.5.6</span>
+                  <span className="text-[9px] text-[#999]">2026.04.19</span>
+                </div>
+              </summary>
+              <ul className="space-y-1 px-4 pb-4">
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>売上モーダルの「請求書の件名」をインライン編集可能化</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>金額入力欄に3桁カンマ自動整形（売上モーダル・請求書エディタ単価欄）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>請求書の件名編集で案件マスタのinvoice_display_nameを自動更新</li>
+              </ul>
+            </details>
 
             {/* v0.5.5 */}
             <details className="bg-white rounded-xl shadow-sm">
@@ -2686,7 +2702,7 @@ export default function SettingsContent() {
 
         {/* バージョン */}
         <div className="text-center py-8">
-          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.5.6</span>
+          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.5.7</span>
         </div>
 
       </div>{/* end max-w-3xl */}

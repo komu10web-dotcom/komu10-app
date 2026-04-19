@@ -375,7 +375,7 @@ function InvoiceEditor({
   const [subject, setSubject] = useState('');
   const [paymentTerms, setPaymentTerms] = useState('契約書記載の支払条件に準ずる');
   const [bankAccountId, setBankAccountId] = useState('');
-  const DEFAULT_NOTES = 'インボイス制度における適格請求書発行事業者の登録番号はございません（免税事業者）。\n恐れ入りますが、お振込手数料は御社にてご負担ください。';
+  const DEFAULT_NOTES = ''; // v0.5.7: テンプレに固定2行を書き込むため、コード側のデフォルトは空文字に
   const [notes, setNotes] = useState(isNew ? DEFAULT_NOTES : '');
   const [status, setStatus] = useState<string>('draft');
   const [invoiceNumber, setInvoiceNumber] = useState('');
@@ -824,11 +824,14 @@ function InvoiceEditor({
 
         {/* 備考 */}
         <div className="mb-6">
-          <label className="block text-xs text-[#999] mb-1">備考</label>
+          <label className="block text-xs text-[#999] mb-1">備考（任意・案件固有のメモ）</label>
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
-            placeholder="備考・特記事項"
-            rows={4}
+            placeholder="例: 本請求書は、業務委託契約に基づく月額固定報酬の請求です。"
+            rows={3}
             className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 resize-none" />
+          <p className="text-[10px] text-[#bbb] mt-1">
+            ※「インボイス制度...免税事業者」「振込手数料ご負担」の2行は自動で追記されます
+          </p>
         </div>
         <div className="flex gap-2">
           <button onClick={onBack}
@@ -921,14 +924,18 @@ function InvoicePreview({
           pdfUrl: data.pdfUrl,
         });
         if (invoice) {
-          setInvoice({ ...invoice, pdf_url: data.pdfUrl, drive_file_id: data.spreadsheetId });
+          setInvoice({ ...invoice, pdf_url: null, drive_file_id: data.spreadsheetId });
+        }
+        // v0.5.7: 生成されたスプシを自動で新規タブで開く（プレビュー確認用）
+        if (data.spreadsheetUrl) {
+          window.open(data.spreadsheetUrl, '_blank', 'noopener,noreferrer');
         }
       } else {
-        alert(`出力に失敗しました: ${data.error}`);
+        alert(`作成に失敗しました: ${data.error}`);
       }
     } catch (err) {
       console.error('Export error:', err);
-      alert('出力に失敗しました');
+      alert('請求書の作成に失敗しました');
     } finally {
       setExporting(false);
     }
@@ -955,7 +962,7 @@ function InvoicePreview({
           <button onClick={handleExport} disabled={exporting}
             className="flex items-center gap-1.5 px-4 py-2 bg-[#1a1a1a] text-white rounded-lg text-xs font-medium hover:bg-[#333] transition-colors disabled:opacity-50">
             {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-            {exporting ? '出力中...' : 'PDF & シート出力'}
+            {exporting ? '作成中...' : '請求書作成'}
           </button>
           <button onClick={() => onEdit(invoiceId)}
             className="flex items-center gap-1.5 px-4 py-2 bg-white text-[#1a1a1a] rounded-lg text-xs border border-gray-200 hover:bg-gray-50 transition-colors">
@@ -965,17 +972,12 @@ function InvoicePreview({
       </div>
 
       {/* 出力結果リンク */}
-      {exportResult && (
+      {exportResult && exportResult.spreadsheetUrl && (
         <div className="bg-[#1B4D3E]/5 rounded-lg px-4 py-3 mb-4 flex items-center gap-4">
-          <span className="text-xs text-[#1B4D3E] font-medium">出力完了</span>
-          {exportResult.pdfUrl && (
-            <a href={exportResult.pdfUrl} target="_blank" rel="noopener noreferrer"
-              className="text-xs text-[#D4A03A] hover:underline">PDF</a>
-          )}
-          {exportResult.spreadsheetUrl && (
-            <a href={exportResult.spreadsheetUrl} target="_blank" rel="noopener noreferrer"
-              className="text-xs text-[#D4A03A] hover:underline">スプレッドシート</a>
-          )}
+          <span className="text-xs text-[#1B4D3E] font-medium">作成完了</span>
+          <a href={exportResult.spreadsheetUrl} target="_blank" rel="noopener noreferrer"
+            className="text-xs text-[#D4A03A] hover:underline">スプレッドシートを開く</a>
+          <span className="text-[10px] text-[#999]">※ プレビュー確認後、スプシから「ファイル→ダウンロード→PDF」で保存してください</span>
         </div>
       )}
 
