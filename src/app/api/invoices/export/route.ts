@@ -162,6 +162,9 @@ async function createInvoiceSpreadsheet(
     }),
   });
   const created = await createRes.json();
+  if (!createRes.ok || !created.spreadsheetId || !created.sheets || !created.sheets[0]) {
+    throw new Error(`Sheets API failed (status=${createRes.status}): ${JSON.stringify(created).substring(0, 500)}`);
+  }
   const spreadsheetId = created.spreadsheetId;
   const sid = created.sheets[0].properties.sheetId;
 
@@ -235,11 +238,13 @@ async function createInvoiceSpreadsheet(
   const bsR = R.length;
   if (bankAccount) {
     R.push(['', 'お振込先', '', 'いつもお世話になっております。下記までお振込をお願いいたします。', '', '', '', '']);
-    const bi = bankAccount.bank_name + (bankAccount.bank_code ? `\u3000（金融機関コード：${bankAccount.bank_code}）` : '');
+    const bankNameHasCode = bankAccount.bank_code && (bankAccount.bank_name || '').includes(`（${bankAccount.bank_code}）`);
+    const bi = bankAccount.bank_name + (bankAccount.bank_code && !bankNameHasCode ? `\u3000（金融機関コード：${bankAccount.bank_code}）` : '');
     R.push(['', '金融機関', '', bi, '', '', '', '']);
-    const br = (bankAccount.branch_name || '') + (bankAccount.branch_code ? `\u3000（支店コード： ${bankAccount.branch_code}）` : '');
+    const branchNameHasCode = bankAccount.branch_code && (bankAccount.branch_name || '').includes(`（${bankAccount.branch_code}）`);
+    const br = (bankAccount.branch_name || '') + (bankAccount.branch_code && !branchNameHasCode ? `\u3000（支店コード： ${bankAccount.branch_code}）` : '');
     R.push(['', '支店', '', br, '', '', '', '']);
-    const atm: Record<string, string> = { ordinary: '普通', checking: '当座', savings: '貯蓄' };
+    const atm: Record<string, string> = { ordinary: '普通', savings: '普通', checking: '当座' };
     R.push(['', '口座種別', '', atm[bankAccount.account_type] || '普通', '', '', '', '']);
     R.push(['', '口座番号', '', bankAccount.account_number || bankAccount.account_number_last4 || '', '', '', '', '']);
     R.push(['', '口座名義', '', bankAccount.account_holder_kana || bankAccount.account_holder_name || bankAccount.name || '', '', '', '', '']);

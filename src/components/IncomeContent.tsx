@@ -691,7 +691,7 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
       return;
     }
     if (!form.project_name_input.trim()) {
-      setError('案件名を入力してください');
+      setError('案件管理名を入力してください');
       return;
     }
 
@@ -769,7 +769,7 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
         division: form.division,
         owner: form.owner,
         store: form.store || null,
-        description: form.description || null,
+        description: (form.description && form.description.trim()) || form.item_description.trim() || null,
         item_description: form.item_description.trim() || null,
         revenue_type: form.revenue_type || null,
         contract_type_id: form.contract_type_id,
@@ -975,10 +975,10 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
             </select>
           </div>
 
-          {/* 案件名（軸C・必須・サジェスト） */}
+          {/* 案件管理名（軸C・必須・サジェスト） */}
           <div className="relative">
             <label className="block text-xs text-[#999] mb-1">
-              案件名 <span className="text-[#C23728]">*</span>
+              案件管理名（内部管理用） <span className="text-[#C23728]">*</span>
               {form.project_id && (
                 <span className="ml-2 text-[10px] text-[#1B4D3E]">（既存案件に紐付け済）</span>
               )}
@@ -1113,17 +1113,9 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
             </select>
           </div>
 
-          {/* 摘要 */}
-          <div>
-            <label className="block text-xs text-[#999] mb-1">摘要</label>
-            <input
-              type="text"
-              value={form.description}
-              onChange={(e) => handleChange('description', e.target.value)}
-              placeholder="例: DMO観光データ分析・3月分"
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
-            />
-          </div>
+          {/* 摘要（旧フィールド・UIから削除・v0.5.5）
+              DBのtransactions.descriptionカラムは後方互換のため残置、
+              新規保存時はitem_descriptionと同値を自動セットする */}
 
           {/* 請求書発行トグル（新規作成時のみ） */}
           {!editData && (

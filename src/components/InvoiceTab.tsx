@@ -1089,9 +1089,9 @@ function InvoicePreview({
           <div className="border-t border-gray-100 pt-4 mb-4">
             <div className="text-xs text-[#999] mb-2">お振込先</div>
             <div className="text-sm text-[#1a1a1a] space-y-0.5">
-              <div>{bankAccount.bank_name}{bankAccount.bank_code ? `（${bankAccount.bank_code}）` : ''}</div>
-              <div className="text-[#666]">{bankAccount.branch_name || ''}{bankAccount.branch_code ? `（${bankAccount.branch_code}）` : ''}</div>
-              <div className="text-[#666]">{bankAccount.account_type === 'ordinary' ? '普通' : bankAccount.account_type} {bankAccount.account_number || ''}</div>
+              <div>{bankAccount.bank_name}{bankAccount.bank_code && !(bankAccount.bank_name || '').includes(`（${bankAccount.bank_code}）`) ? `（${bankAccount.bank_code}）` : ''}</div>
+              <div className="text-[#666]">{bankAccount.branch_name || ''}{bankAccount.branch_code && !(bankAccount.branch_name || '').includes(`（${bankAccount.branch_code}）`) ? `（${bankAccount.branch_code}）` : ''}</div>
+              <div className="text-[#666]">{({ savings: '普通', ordinary: '普通', checking: '当座' } as Record<string, string>)[bankAccount.account_type] || bankAccount.account_type} {bankAccount.account_number || ''}</div>
               <div className="text-[#666]">{bankAccount.account_holder_kana || bankAccount.account_holder_name || bankAccount.name}</div>
             </div>
           </div>
