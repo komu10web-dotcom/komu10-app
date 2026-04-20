@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { KAMOKU, DIVISIONS, RECURRING_FREQUENCY } from '@/types/database';
 import type { AnbunSetting, Asset, RevenueType, RevenueTypeDivision, ContractType, BusinessDomain, BankAccount, Client, RecurringExpense, Project, EquipmentItem, SyncSource, ExpenseTemplate, RouteLeg } from '@/types/database';
-import { Plus, Pencil, Trash2, Save, X, Loader2, ChevronDown, ChevronUp, HelpCircle, Cloud, CheckCircle2, RefreshCw, FolderOpen, Camera } from 'lucide-react';
+import { Plus, Pencil, Trash2, Save, X, Loader2, ChevronDown, ChevronUp, HelpCircle, Cloud, CheckCircle2, RefreshCw, FolderOpen, Camera, StickyNote } from 'lucide-react';
 import { OWNER_COLOR_PRESETS } from './HeaderControls';
 
 // ============================================================
@@ -216,6 +216,10 @@ export default function SettingsContent() {
   // 取引先
   const [clients, setClients] = useState<Client[]>([]);
   const [clientModalOpen, setClientModalOpen] = useState(false);
+  const [expandedClientId, setExpandedClientId] = useState<string | null>(null); // v0.6.1: メモ展開
+  const [seedLoading, setSeedLoading] = useState(false); // v0.6.1: シードAPI実行中
+  const [seedMsg, setSeedMsg] = useState<string | null>(null);
+  const [developerOpen, setDeveloperOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [clientDeleteTarget, setClientDeleteTarget] = useState<string | null>(null);
 
@@ -856,6 +860,51 @@ export default function SettingsContent() {
       setClientDeleteTarget(null);
       await refreshClients();
     } catch (err) { console.error('取引先削除エラー:', err); }
+  };
+
+  // v0.6.1: シードデータ投入/削除
+  const handleSeedInsert = async () => {
+    if (seedLoading) return;
+    if (!confirm('検証用のダミー取引先2件・請求書2件を投入します。既存のシードデータは上書きされます。よろしいですか？')) return;
+    setSeedLoading(true);
+    setSeedMsg(null);
+    try {
+      const res = await fetch('/api/dev/seed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ owner: effectiveOwner }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || '投入失敗');
+      setSeedMsg(`✓ 投入完了: 取引先${data.summary.clients}件・請求書${data.summary.invoices}件・明細${data.summary.invoice_items}件`);
+      await refreshClients();
+    } catch (err) {
+      setSeedMsg(`✕ 失敗: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setSeedLoading(false);
+    }
+  };
+
+  const handleSeedDelete = async () => {
+    if (seedLoading) return;
+    if (!confirm('シードタグ __SEED__ が付いた取引先・請求書・明細・関連仕訳を全て削除します。本番データは影響を受けません。実行しますか？')) return;
+    setSeedLoading(true);
+    setSeedMsg(null);
+    try {
+      const res = await fetch('/api/dev/seed', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ owner: effectiveOwner }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || '削除失敗');
+      setSeedMsg(`✓ 削除完了: 取引先${data.summary.clients}件・請求書${data.summary.invoices}件・明細${data.summary.invoice_items}件・関連仕訳${data.summary.transactions}件`);
+      await refreshClients();
+    } catch (err) {
+      setSeedMsg(`✕ 失敗: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setSeedLoading(false);
+    }
   };
 
   // ============================================================
@@ -2075,28 +2124,48 @@ export default function SettingsContent() {
               <p className="text-[11px] text-[#999] mb-3">取引先が登録されていません</p>
             ) : (
               <div className="space-y-2 mb-4">
-                {clients.map((cl) => (
-                  <div key={cl.id} className={`flex items-center justify-between py-2 px-3 rounded-lg ${cl.is_active ? 'bg-[#F5F5F3]' : 'bg-[#F5F5F3]/50 opacity-60'}`}>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-['Saira_Condensed'] text-[#999] tabular-nums">{cl.client_number}</span>
-                        <span className="text-sm text-[#1a1a1a] font-medium">{cl.name}</span>
-                        {cl.short_name && <span className="text-[11px] text-[#999]">({cl.short_name})</span>}
-                        {!cl.is_active && <span className="text-[9px] bg-[#999] text-white px-1.5 py-0.5 rounded">停止</span>}
+                {clients.map((cl) => {
+                  const hasNote = !!(cl.notes && cl.notes.trim());
+                  const isExpanded = expandedClientId === cl.id;
+                  return (
+                    <div key={cl.id}>
+                      <div className={`flex items-center justify-between py-2 px-3 rounded-lg ${cl.is_active ? 'bg-[#F5F5F3]' : 'bg-[#F5F5F3]/50 opacity-60'}`}>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-['Saira_Condensed'] text-[#999] tabular-nums">{cl.client_number}</span>
+                            <span className="text-sm text-[#1a1a1a] font-medium">{cl.name}</span>
+                            {cl.short_name && <span className="text-[11px] text-[#999]">({cl.short_name})</span>}
+                            {!cl.is_active && <span className="text-[9px] bg-[#999] text-white px-1.5 py-0.5 rounded">停止</span>}
+                          </div>
+                          <div className="text-[11px] text-[#999]">
+                            {cl.payment_terms || '支払いサイト未設定'}
+                            {cl.contact_name ? ` / ${cl.contact_name}` : ''}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {hasNote && (
+                            <button
+                              onClick={() => setExpandedClientId(isExpanded ? null : cl.id)}
+                              className={`p-1 rounded-md transition-colors ${isExpanded ? 'bg-[#D4A03A]/15' : 'hover:bg-black/5'}`}
+                              title="メモを表示">
+                              <StickyNote className={`w-3.5 h-3.5 ${isExpanded ? 'text-[#D4A03A]' : 'text-[#999]'}`} />
+                            </button>
+                          )}
+                          <button onClick={() => { setEditingClient(cl); setClientModalOpen(true); }}
+                            className="p-1 hover:bg-black/5 rounded-md"><Pencil className="w-3.5 h-3.5 text-[#999]" /></button>
+                          <button onClick={() => setClientDeleteTarget(cl.id)}
+                            className="p-1 hover:bg-[#C23728]/10 rounded-md"><Trash2 className="w-3.5 h-3.5 text-[#999]" /></button>
+                        </div>
                       </div>
-                      <div className="text-[11px] text-[#999]">
-                        {cl.payment_terms || '支払いサイト未設定'}
-                        {cl.contact_name ? ` / ${cl.contact_name}` : ''}
-                      </div>
+                      {isExpanded && hasNote && (
+                        <div className="mt-1 mx-3 px-3 py-2 bg-[#FAFAF8] border-l-2 border-[#D4A03A]/40 rounded-r-md">
+                          <div className="text-[10px] text-[#bbb] mb-1 tracking-wider">MEMO</div>
+                          <p className="text-[12px] text-[#333] whitespace-pre-wrap leading-relaxed">{cl.notes}</p>
+                        </div>
+                      )}
                     </div>
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => { setEditingClient(cl); setClientModalOpen(true); }}
-                        className="p-1 hover:bg-black/5 rounded-md"><Pencil className="w-3.5 h-3.5 text-[#999]" /></button>
-                      <button onClick={() => setClientDeleteTarget(cl.id)}
-                        className="p-1 hover:bg-[#C23728]/10 rounded-md"><Trash2 className="w-3.5 h-3.5 text-[#999]" /></button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
             <button
@@ -2105,6 +2174,54 @@ export default function SettingsContent() {
             >
               <Plus className="w-3.5 h-3.5" />取引先を追加
             </button>
+          </div>
+        </section>
+
+        {/* ── 開発者メニュー（v0.6.1: シードデータ操作） ── */}
+        <section className="mb-10">
+          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+            開発者メニュー
+          </div>
+          <div className="bg-white rounded-xl shadow-sm p-5">
+            <button
+              onClick={() => setDeveloperOpen(v => !v)}
+              className="w-full flex items-center justify-between text-left">
+              <span className="text-xs text-[#666]">
+                検証用ダミーデータの投入・削除
+                <span className="text-[#bbb] ml-2">（本番データに影響なし）</span>
+              </span>
+              <span className="text-[#999] text-xs">{developerOpen ? '閉じる' : '開く'}</span>
+            </button>
+            {developerOpen && (
+              <div className="mt-4 space-y-3">
+                <p className="text-[11px] text-[#999] leading-relaxed">
+                  検証用のダミー取引先（源泉あり／源泉なし各1件）と請求書（各1件）を一括投入します。
+                  全データに識別子 <code className="bg-[#F5F5F3] px-1 rounded text-[10px]">__SEED__</code> が付与され、
+                  削除時は識別子で厳密マッチするため本番データは影響を受けません。
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSeedInsert}
+                    disabled={seedLoading}
+                    className="flex items-center gap-1.5 px-3 py-2 text-[11px] bg-[#1B4D3E] text-white rounded-lg hover:bg-[#1a3d32] transition-colors disabled:opacity-50">
+                    {seedLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                    シードデータを投入
+                  </button>
+                  <button
+                    onClick={handleSeedDelete}
+                    disabled={seedLoading}
+                    className="flex items-center gap-1.5 px-3 py-2 text-[11px] bg-[#C23728] text-white rounded-lg hover:bg-[#a92e22] transition-colors disabled:opacity-50">
+                    {seedLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                    シードデータを削除
+                  </button>
+                </div>
+                {seedMsg && (
+                  <p className={`text-[11px] ${seedMsg.startsWith('✓') ? 'text-[#1B4D3E]' : 'text-[#C23728]'}`}>
+                    {seedMsg}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </section>
 
