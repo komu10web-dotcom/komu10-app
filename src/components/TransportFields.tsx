@@ -83,15 +83,19 @@ interface TransportFieldsProps {
   data: TransportData;
   onChange: (data: TransportData) => void;
   onAmountChange?: (total: number) => void;
+  // v0.6.6: テンプレ編集時は区間リストとグリーン車トグルのみ表示
+  // デフォルト 'entry' = 経費入力画面(全要素表示)
+  mode?: 'entry' | 'template';
 }
 
 // スマホ最適化: 16px以上でiOSのズーム防止、タッチターゲット44px以上
 const inputClass = "w-full px-3 py-2.5 bg-[#F5F5F3] rounded-lg text-[16px] sm:text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50";
 
 // ── コンポーネント ──────────────────────────────────────────
-export default function TransportFields({ data, onChange, onAmountChange }: TransportFieldsProps) {
+export default function TransportFields({ data, onChange, onAmountChange, mode = 'entry' }: TransportFieldsProps) {
   const [showDetail, setShowDetail] = useState(false);
   const [purposes, setPurposes] = useState<{ id: string; name: string }[]>(DEFAULT_PURPOSES);
+  const isTemplate = mode === 'template';
 
   // 目的マスタ取得
   useEffect(() => {
@@ -158,6 +162,34 @@ export default function TransportFields({ data, onChange, onAmountChange }: Tran
     onChange({ ...data, route_legs: legs });
   };
 
+  // 復路用ヘルパー(往路と同等の操作を提供) — v0.6.6
+  const updateReturnLeg = (idx: number, field: keyof RouteLeg, value: string | number | boolean) => {
+    const legs = (data.return_legs || []).map((leg, i) => {
+      if (i !== idx) return leg;
+      return { ...leg, [field]: value };
+    });
+    if (field === 'to' && idx < legs.length - 1) {
+      legs[idx + 1] = { ...legs[idx + 1], from: value as string };
+    }
+    onChange({ ...data, return_legs: legs });
+  };
+
+  const addReturnLeg = () => {
+    const legs = data.return_legs || [];
+    const lastLeg = legs[legs.length - 1];
+    const newLeg: RouteLeg = {
+      ...EMPTY_LEG,
+      from: lastLeg?.to || '',
+    };
+    onChange({ ...data, return_legs: [...legs, newLeg] });
+  };
+
+  const removeReturnLeg = (idx: number) => {
+    const legs = data.return_legs || [];
+    if (legs.length <= 1) return;
+    onChange({ ...data, return_legs: legs.filter((_, i) => i !== idx) });
+  };
+
   const oneWayTotal = data.route_legs.reduce((s, l) => s + (l.amount || 0), 0);
   const returnTotal = data.round_trip === 'round_trip'
     ? data.same_amount
@@ -176,9 +208,10 @@ export default function TransportFields({ data, onChange, onAmountChange }: Tran
 
   return (
     <div className="border border-[#D4A03A]/30 rounded-xl p-4 space-y-3 bg-[#D4A03A]/5">
-      <p className="text-xs font-medium text-[#D4A03A]">交通費詳細</p>
+      <p className="text-xs font-medium text-[#D4A03A]">{isTemplate ? '交通費テンプレート' : '交通費詳細'}</p>
 
       {/* 注意書き */}
+      {!isTemplate && (
       <div className="text-[11px] text-[#888] leading-relaxed space-y-2 border-l-2 border-[#D4A03A]/30 pl-3">
         <div>
           <p className="font-medium text-[#666]">電車・バス</p>
@@ -191,8 +224,10 @@ export default function TransportFields({ data, onChange, onAmountChange }: Tran
           <p className="text-[10px] text-[#aaa] mt-0.5">※ 区間追加には対応していません。</p>
         </div>
       </div>
+      )}
 
       {/* 目的（トランザクション単位） */}
+      {!isTemplate && (
       <div>
         <label className="text-xs text-[#999] block mb-1">目的</label>
         <select
@@ -205,6 +240,7 @@ export default function TransportFields({ data, onChange, onAmountChange }: Tran
           ))}
         </select>
       </div>
+      )}
 
       {/* 区間リスト */}
       {data.route_legs.map((leg, idx) => (
@@ -307,6 +343,7 @@ export default function TransportFields({ data, onChange, onAmountChange }: Tran
       </button>
 
       {/* ⑥ 片道/往復 */}
+      {!isTemplate && (
       <div>
         <label className="text-xs text-[#999] block mb-1">片道 / 往復</label>
         <div className="flex gap-2">
@@ -335,9 +372,10 @@ export default function TransportFields({ data, onChange, onAmountChange }: Tran
           ))}
         </div>
       </div>
+      )}
 
       {/* ⑧ 往復の場合の分岐 */}
-      {data.round_trip === 'round_trip' && (
+      {!isTemplate && data.round_trip === 'round_trip' && (
         <div className="space-y-3 pl-3 border-l-2 border-[#D4A03A]/20">
           {/* 同じルート？ */}
           <div>
@@ -377,54 +415,50 @@ export default function TransportFields({ data, onChange, onAmountChange }: Tran
             </div>
           </div>
 
-          {/* 別ルートの場合：帰り区間入力 */}
+          {/* 別ルートの場合：帰り区間入力 — v0.6.6: 往路と同等UI */}
           {!data.same_route && (
             <div className="space-y-2">
               <p className="text-[10px] text-[#999] font-medium tracking-wide">帰りの区間</p>
               {(data.return_legs || []).map((leg, idx) => (
                 <div key={idx} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-[#999] font-medium tracking-wide">区間 {idx + 1}</span>
+                    {idx > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => removeReturnLeg(idx)}
+                        className="p-1.5 hover:bg-red-50 rounded-full transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5 text-red-400" />
+                      </button>
+                    )}
+                  </div>
+
                   <div className="flex gap-2 items-center">
                     <div className="flex-1">
                       <input type="text" value={leg.from}
-                        onChange={(e) => {
-                          const legs = [...(data.return_legs || [])];
-                          legs[idx] = { ...legs[idx], from: e.target.value };
-                          onChange({ ...data, return_legs: legs });
-                        }}
+                        onChange={(e) => updateReturnLeg(idx, 'from', e.target.value)}
                         className={`${inputClass} ${idx > 0 ? 'bg-[#EDEDEB] text-[#999]' : ''}`}
                         placeholder="出発地" readOnly={idx > 0} />
                     </div>
                     <span className="text-xs text-[#999] shrink-0">→</span>
                     <div className="flex-1">
                       <input type="text" value={leg.to}
-                        onChange={(e) => {
-                          const legs = [...(data.return_legs || [])];
-                          legs[idx] = { ...legs[idx], to: e.target.value };
-                          if (idx < legs.length - 1) legs[idx + 1] = { ...legs[idx + 1], from: e.target.value };
-                          onChange({ ...data, return_legs: legs });
-                        }}
+                        onChange={(e) => updateReturnLeg(idx, 'to', e.target.value)}
                         className={inputClass} placeholder="到着地" />
                     </div>
                   </div>
                   <div className="flex gap-2">
                     <div className="w-[100px] shrink-0">
                       <select value={leg.method}
-                        onChange={(e) => {
-                          const legs = [...(data.return_legs || [])];
-                          legs[idx] = { ...legs[idx], method: e.target.value };
-                          onChange({ ...data, return_legs: legs });
-                        }}
+                        onChange={(e) => updateReturnLeg(idx, 'method', e.target.value)}
                         className={inputClass}>
                         {TRANSPORT_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
                       </select>
                     </div>
                     <div className="flex-1">
                       <input type="text" value={leg.carrier}
-                        onChange={(e) => {
-                          const legs = [...(data.return_legs || [])];
-                          legs[idx] = { ...legs[idx], carrier: e.target.value };
-                          onChange({ ...data, return_legs: legs });
-                        }}
+                        onChange={(e) => updateReturnLeg(idx, 'carrier', e.target.value)}
                         className={inputClass} placeholder="利用会社" />
                     </div>
                   </div>
@@ -432,15 +466,34 @@ export default function TransportFields({ data, onChange, onAmountChange }: Tran
                     value={leg.amount ? `¥${leg.amount.toLocaleString()}` : ''}
                     onChange={(e) => {
                       const v = e.target.value.replace(/[¥,]/g, '');
-                      if (/^\d*$/.test(v)) {
-                        const legs = [...(data.return_legs || [])];
-                        legs[idx] = { ...legs[idx], amount: parseInt(v) || 0 };
-                        onChange({ ...data, return_legs: legs });
-                      }
+                      if (/^\d*$/.test(v)) updateReturnLeg(idx, 'amount', parseInt(v) || 0);
                     }}
                     className={`${inputClass} font-['Saira_Condensed'] tabular-nums`} placeholder="¥ 金額" />
+
+                  {/* グリーン車トグル(往路と同等) */}
+                  {(leg.method === '新幹線' || leg.method === '電車') && (
+                    <label className="flex items-center gap-2.5 cursor-pointer py-1">
+                      <div
+                        onClick={() => updateReturnLeg(idx, 'green', !leg.green)}
+                        className={`relative w-9 h-5 rounded-full transition-colors ${leg.green ? 'bg-[#1B4D3E]' : 'bg-[#DDD]'}`}
+                      >
+                        <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${leg.green ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                      </div>
+                      <span className="text-sm text-[#555]">グリーン車</span>
+                    </label>
+                  )}
                 </div>
               ))}
+
+              {/* 復路 区間追加ボタン(往路と同等) */}
+              <button
+                type="button"
+                onClick={addReturnLeg}
+                className="flex items-center gap-1.5 text-sm text-[#D4A03A] hover:text-[#B8862D] transition-colors py-1"
+              >
+                <Plus className="w-4 h-4" />
+                区間を追加
+              </button>
             </div>
           )}
 
@@ -461,6 +514,7 @@ export default function TransportFields({ data, onChange, onAmountChange }: Tran
       )}
 
       {/* ⑩ 支払方法 */}
+      {!isTemplate && (
       <div>
         <label className="text-xs text-[#999] block mb-1">支払方法</label>
         <select value={data.payment_method} onChange={(e) => setField('payment_method', e.target.value)}
@@ -471,6 +525,7 @@ export default function TransportFields({ data, onChange, onAmountChange }: Tran
           <option value="invoice">請求書払い</option>
         </select>
       </div>
+      )}
 
       {/* ルートプレビュー + 合計 */}
       {routePreview && (
@@ -487,7 +542,7 @@ export default function TransportFields({ data, onChange, onAmountChange }: Tran
           <p className="text-base font-medium font-['Saira_Condensed'] tabular-nums text-[#1a1a1a]">
             合計 ¥{total.toLocaleString()}
           </p>
-          {total >= 30000 && (
+          {!isTemplate && total >= 30000 && (
             <p className="text-[11px] text-[#E07A3A]">
               3万円以上の交通費は領収書の保管が推奨されます
             </p>
@@ -496,6 +551,7 @@ export default function TransportFields({ data, onChange, onAmountChange }: Tran
       )}
 
       {/* 詳細トグル */}
+      {!isTemplate && (
       <button
         type="button"
         onClick={() => setShowDetail(!showDetail)}
@@ -504,8 +560,9 @@ export default function TransportFields({ data, onChange, onAmountChange }: Tran
         {showDetail ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         詳細を追加
       </button>
+      )}
 
-      {showDetail && (
+      {!isTemplate && showDetail && (
         <div className="space-y-3 pt-1">
           <div>
             <label className="text-xs text-[#999] block mb-1">座席クラス</label>
