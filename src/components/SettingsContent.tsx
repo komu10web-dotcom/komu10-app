@@ -817,6 +817,12 @@ export default function SettingsContent() {
     name: string; short_name: string | null; postal_code: string | null;
     address: string | null; contact_name: string | null; contact_email: string | null;
     payment_terms: string | null; notes: string | null; is_active: boolean;
+    // v0.6.0 請求書管理v2
+    withholding_tax: boolean;
+    withholding_basis: string;
+    header_amount_type: string;
+    fee_burden: string;
+    payment_terms_type: string;
     client_number?: string;
   }) => {
     if (!supabase) return;
@@ -3285,6 +3291,12 @@ function ClientModal({
     name: string; short_name: string | null; postal_code: string | null;
     address: string | null; contact_name: string | null; contact_email: string | null;
     payment_terms: string | null; notes: string | null; is_active: boolean;
+    // v0.6.0 請求書管理v2
+    withholding_tax: boolean;
+    withholding_basis: string;
+    header_amount_type: string;
+    fee_burden: string;
+    payment_terms_type: string;
   }) => void;
   onClose: () => void;
 }) {
@@ -3298,6 +3310,12 @@ function ClientModal({
     payment_terms: client?.payment_terms || '',
     notes: client?.notes || '',
     is_active: client?.is_active ?? true,
+    // v0.6.0 請求書管理v2
+    withholding_tax:    (client as any)?.withholding_tax    ?? false,
+    withholding_basis:  (client as any)?.withholding_basis  ?? 'tax_included',
+    header_amount_type: (client as any)?.header_amount_type ?? 'total',
+    fee_burden:         (client as any)?.fee_burden         ?? 'client',
+    payment_terms_type: (client as any)?.payment_terms_type ?? 'month_end_next_month_end',
   });
 
   const [saving, setSaving] = useState(false);
@@ -3316,6 +3334,12 @@ function ClientModal({
       payment_terms: form.payment_terms.trim() || null,
       notes: form.notes.trim() || null,
       is_active: form.is_active,
+      // v0.6.0
+      withholding_tax: form.withholding_tax,
+      withholding_basis: form.withholding_basis,
+      header_amount_type: form.header_amount_type,
+      fee_burden: form.fee_burden,
+      payment_terms_type: form.payment_terms_type,
     });
   };
 
@@ -3408,6 +3432,92 @@ function ClientModal({
               onChange={(e) => setForm({ ...form, payment_terms: e.target.value })}
               placeholder="表示名（月末締翌月末 等）"
               className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+          </div>
+
+          {/* v0.6.0 請求書設定 */}
+          <div className="border-t border-gray-100 pt-4 space-y-3">
+            <div className="text-xs font-medium text-[#1a1a1a]">請求書設定</div>
+
+            {/* 支払サイト種別（自動期限算出用） */}
+            <div>
+              <label className="block text-xs text-[#999] mb-1">支払サイト種別</label>
+              <select value={form.payment_terms_type}
+                onChange={(e) => setForm({ ...form, payment_terms_type: e.target.value })}
+                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
+                <option value="month_end_next_month_end">月末締翌月末払い（期限自動算出）</option>
+                <option value="other">その他（個別・手動入力）</option>
+              </select>
+            </div>
+
+            {/* 源泉徴収 */}
+            <div className="flex items-center gap-3">
+              <label className="text-xs text-[#999] w-24 shrink-0">源泉徴収</label>
+              <div className="flex gap-1.5">
+                <button type="button"
+                  onClick={() => setForm({ ...form, withholding_tax: true })}
+                  className={`px-3 py-1.5 text-[11px] rounded-md transition-colors ${
+                    form.withholding_tax ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666] hover:bg-[#eee]'
+                  }`}>あり</button>
+                <button type="button"
+                  onClick={() => setForm({ ...form, withholding_tax: false })}
+                  className={`px-3 py-1.5 text-[11px] rounded-md transition-colors ${
+                    !form.withholding_tax ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666] hover:bg-[#eee]'
+                  }`}>なし</button>
+              </div>
+            </div>
+
+            {/* 源泉計算基準（源泉ありのみ） */}
+            {form.withholding_tax && (
+              <div className="flex items-center gap-3">
+                <label className="text-xs text-[#999] w-24 shrink-0">源泉計算基準</label>
+                <div className="flex gap-1.5">
+                  <button type="button"
+                    onClick={() => setForm({ ...form, withholding_basis: 'tax_included' })}
+                    className={`px-3 py-1.5 text-[11px] rounded-md transition-colors ${
+                      form.withholding_basis === 'tax_included' ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666] hover:bg-[#eee]'
+                    }`}>税込</button>
+                  <button type="button"
+                    onClick={() => setForm({ ...form, withholding_basis: 'tax_excluded' })}
+                    className={`px-3 py-1.5 text-[11px] rounded-md transition-colors ${
+                      form.withholding_basis === 'tax_excluded' ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666] hover:bg-[#eee]'
+                    }`}>税抜</button>
+                </div>
+              </div>
+            )}
+
+            {/* 冒頭金額表示 */}
+            <div className="flex items-center gap-3">
+              <label className="text-xs text-[#999] w-24 shrink-0">冒頭金額表示</label>
+              <div className="flex gap-1.5">
+                <button type="button"
+                  onClick={() => setForm({ ...form, header_amount_type: 'total' })}
+                  className={`px-3 py-1.5 text-[11px] rounded-md transition-colors ${
+                    form.header_amount_type === 'total' ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666] hover:bg-[#eee]'
+                  }`}>請求総額</button>
+                <button type="button"
+                  onClick={() => setForm({ ...form, header_amount_type: 'net_payment' })}
+                  className={`px-3 py-1.5 text-[11px] rounded-md transition-colors ${
+                    form.header_amount_type === 'net_payment' ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666] hover:bg-[#eee]'
+                  }`}>差引振込額</button>
+              </div>
+            </div>
+
+            {/* 振込手数料 */}
+            <div className="flex items-center gap-3">
+              <label className="text-xs text-[#999] w-24 shrink-0">振込手数料</label>
+              <div className="flex gap-1.5">
+                <button type="button"
+                  onClick={() => setForm({ ...form, fee_burden: 'client' })}
+                  className={`px-3 py-1.5 text-[11px] rounded-md transition-colors ${
+                    form.fee_burden === 'client' ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666] hover:bg-[#eee]'
+                  }`}>先方負担</button>
+                <button type="button"
+                  onClick={() => setForm({ ...form, fee_burden: 'self' })}
+                  className={`px-3 py-1.5 text-[11px] rounded-md transition-colors ${
+                    form.fee_burden === 'self' ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666] hover:bg-[#eee]'
+                  }`}>自社負担</button>
+              </div>
+            </div>
           </div>
 
           {/* メモ */}

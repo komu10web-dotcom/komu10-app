@@ -1,9 +1,16 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { INVOICE_STATUS } from '@/types/database';
-import type { Invoice, InvoiceItem, Client, BankAccount, InvoiceStatusKey } from '@/types/database';
+import type {
+  Invoice, InvoiceItem, Client, BankAccount, InvoiceStatusKey,
+  WithholdingBasis, HeaderAmountType, FeeBurden,
+} from '@/types/database';
+import {
+  calculateInvoiceAmounts, calculateDueDate, isOverdue,
+  feeBurdenLabel, formatYen,
+} from '@/lib/invoiceCalc';
 import { Plus, Pencil, Eye, Trash2, Loader2, X, ChevronLeft, Copy, Download } from 'lucide-react';
 
 // ============================================================
@@ -33,9 +40,11 @@ interface ItemForm {
 // ステータスバッジスタイル
 // ============================================================
 const INV_STATUS_STYLES: Record<string, { bg: string; text: string }> = {
-  draft:  { bg: 'bg-[#F5F5F3]', text: 'text-[#999]' },
-  issued: { bg: 'bg-[#D4A03A]/10', text: 'text-[#D4A03A]' },
-  paid:   { bg: 'bg-[#1B4D3E]/10', text: 'text-[#1B4D3E]' },
+  draft:   { bg: 'bg-[#F5F5F3]',    text: 'text-[#999]' },
+  issued:  { bg: 'bg-[#D4A03A]/10', text: 'text-[#D4A03A]' },
+  sent:    { bg: 'bg-[#1B4D3E]/10', text: 'text-[#1B4D3E]' },
+  paid:    { bg: 'bg-[#1B4D3E]/20', text: 'text-[#1B4D3E]' },
+  overdue: { bg: 'bg-[#C23728]/10', text: 'text-[#C23728]' },
 };
 
 // ============================================================
@@ -381,6 +390,13 @@ function InvoiceEditor({
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [existingTransactionId, setExistingTransactionId] = useState<string | null>(null);
 
+  // v0.6.0 請求書管理v2 — クライアント設定のオーバーライド値（null = クライアント設定を使う）
+  const [overrideWithholdingTax,   setOverrideWithholdingTax]   = useState<boolean | null>(null);
+  const [overrideWithholdingBasis, setOverrideWithholdingBasis] = useState<WithholdingBasis | null>(null);
+  const [overrideHeaderAmountType, setOverrideHeaderAmountType] = useState<HeaderAmountType | null>(null);
+  const [overrideFeeBurden,        setOverrideFeeBurden]        = useState<FeeBurden | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
   // 明細行
   const [items, setItems] = useState<ItemForm[]>([
     { description: '', quantity: '1', unit: '式', unit_price: '' },
@@ -404,6 +420,19 @@ function InvoiceEditor({
           setStatus(inv.status);
           setInvoiceNumber(inv.invoice_number);
           setExistingTransactionId(inv.transaction_id || null);
+          // v0.6.0: 既存レコードのv2カラムをオーバーライドstateにセット（DBの値が正）
+          if (typeof inv.withholding_tax === 'boolean') {
+            setOverrideWithholdingTax(inv.withholding_tax);
+          }
+          if (inv.withholding_basis) {
+            setOverrideWithholdingBasis(inv.withholding_basis as WithholdingBasis);
+          }
+          if (inv.header_amount_type) {
+            setOverrideHeaderAmountType(inv.header_amount_type as HeaderAmountType);
+          }
+          if (inv.fee_burden) {
+            setOverrideFeeBurden(inv.fee_burden as FeeBurden);
+          }
         }
         const { data: itemData } = await supabase
           .from('invoice_items').select('*').eq('invoice_id', invoiceId).order('sort_order');
@@ -497,10 +526,49 @@ function InvoiceEditor({
     return Math.round(qty * price);
   };
 
-  const subtotal = items.reduce((s, it) => s + calcItemAmount(it), 0);
-  // 免税事業者: tax_amount = 0
-  const taxAmount = 0;
-  const total = subtotal + taxAmount;
+  // v0.6.0: 新規作成時のみ、選択されたクライアントのデフォルト値をoverride stateに投入
+  useEffect(() => {
+    if (!isNew || !clientId) return;
+    const c = clients.find(cl => cl.id === clientId);
+    if (!c) return;
+    setOverrideWithholdingTax((c as any).withholding_tax ?? false);
+    setOverrideWithholdingBasis(((c as any).withholding_basis as WithholdingBasis) ?? 'tax_included');
+    setOverrideHeaderAmountType(((c as any).header_amount_type as HeaderAmountType) ?? 'total');
+    setOverrideFeeBurden(((c as any).fee_burden as FeeBurden) ?? 'client');
+  }, [clientId, clients, isNew]);
+
+  // v0.6.0: 実効値（override が null なら client 値、それも無ければデフォルト）
+  const effectiveClient = useMemo(
+    () => clients.find(c => c.id === clientId),
+    [clientId, clients],
+  );
+  const effWithholdingTax: boolean =
+    overrideWithholdingTax ?? (effectiveClient as any)?.withholding_tax ?? false;
+  const effWithholdingBasis: WithholdingBasis =
+    (overrideWithholdingBasis ?? ((effectiveClient as any)?.withholding_basis as WithholdingBasis) ?? 'tax_included') as WithholdingBasis;
+  const effHeaderAmountType: HeaderAmountType =
+    (overrideHeaderAmountType ?? ((effectiveClient as any)?.header_amount_type as HeaderAmountType) ?? 'total') as HeaderAmountType;
+  const effFeeBurden: FeeBurden =
+    (overrideFeeBurden ?? ((effectiveClient as any)?.fee_burden as FeeBurden) ?? 'client') as FeeBurden;
+
+  // v0.6.0: 全金額を単一ソース（invoiceCalc.ts）で一括算出
+  const calc = useMemo(() => {
+    const subtotalLocal = items.reduce(
+      (s, it) => s + calcItemAmount(it),
+      0,
+    );
+    return calculateInvoiceAmounts({
+      subtotal: subtotalLocal,
+      taxAmount: 0, // 免税事業者
+      withholdingTax: effWithholdingTax,
+      withholdingBasis: effWithholdingBasis,
+      headerAmountType: effHeaderAmountType,
+    });
+  }, [items, effWithholdingTax, effWithholdingBasis, effHeaderAmountType]);
+
+  const subtotal = calc.subtotal;
+  const taxAmount = calc.taxAmount;
+  const total = calc.total;
 
   // 明細行操作
   const addItem = () => setItems([...items, { description: '', quantity: '1', unit: '式', unit_price: '' }]);
@@ -530,7 +598,21 @@ function InvoiceEditor({
         status,
         bank_account_id: bankAccountId || null,
         notes: notes || null,
+        // v0.6.0 請求書管理v2
+        withholding_tax: effWithholdingTax,
+        withholding_basis: effWithholdingBasis,
+        withholding_amount: calc.withholdingAmount,
+        net_payment: calc.netPayment,
+        header_amount_type: effHeaderAmountType,
+        fee_burden: effFeeBurden,
       };
+
+      // v0.6.0: 発行時、支払期限が未設定ならクライアント設定から自動算出
+      if (status === 'issued' && !invoiceData.due_date) {
+        const termsType = (effectiveClient as any)?.payment_terms_type || 'month_end_next_month_end';
+        const auto = calculateDueDate(issueDate, termsType);
+        if (auto) invoiceData.due_date = auto;
+      }
 
       let savedId = invoiceId;
 
@@ -636,6 +718,20 @@ function InvoiceEditor({
         }
       }
 
+      // v0.6.0: 送付済時にsent_atを記録
+      if (status === 'sent') {
+        const sentUpdates: any = {};
+        // 既存レコードでsent_atが未セットの場合のみ記録（トグル時の上書き防止）
+        const { data: cur } = await supabase
+          .from('invoices').select('sent_at').eq('id', savedId).single();
+        if (!cur?.sent_at) {
+          sentUpdates.sent_at = new Date().toISOString();
+        }
+        if (Object.keys(sentUpdates).length > 0) {
+          await supabase.from('invoices').update(sentUpdates).eq('id', savedId);
+        }
+      }
+
       // 入金済み時にpaid_atを記録 + 仕訳ステータス更新
       if (status === 'paid') {
         const paidUpdates: any = { paid_at: new Date().toISOString() };
@@ -648,6 +744,38 @@ function InvoiceEditor({
             status: 'settled',
             actual_payment_date: new Date().toISOString().split('T')[0],
           }).eq('id', txId);
+
+          // v0.6.0: 源泉徴収ありの場合、仮払源泉税の別仕訳を追加
+          // 借方: 仮払源泉税 / 貸方: 売掛金
+          // 元仕訳の amount は total のままにし、source='withholding' で区別
+          if (effWithholdingTax && calc.withholdingAmount > 0) {
+            // 既存の源泉税仕訳が無い場合のみ作成（再入金時の重複防止）
+            const { data: existingWh } = await supabase
+              .from('transactions')
+              .select('id')
+              .eq('invoice_id', savedId)
+              .eq('kamoku', 'prepaid_withholding')
+              .limit(1);
+            if (!existingWh || existingWh.length === 0) {
+              const selectedClient = clients.find(c => c.id === clientId);
+              await supabase.from('transactions').insert({
+                tx_type: 'expense' as const, // 資産計上だが既存のtx_type制約に合わせる
+                date: new Date().toISOString().split('T')[0],
+                amount: calc.withholdingAmount,
+                kamoku: 'prepaid_withholding',
+                division: 'general',
+                owner,
+                store: selectedClient?.name || null,
+                description: `源泉徴収税（${invoiceNumber || invoiceData.invoice_number}）`,
+                source: 'manual',
+                confirmed: true,
+                status: 'settled',
+                actual_payment_date: new Date().toISOString().split('T')[0],
+                client_id: clientId,
+                invoice_id: savedId,
+              });
+            }
+          }
         }
       }
 
@@ -734,18 +862,133 @@ function InvoiceEditor({
           {/* ステータス */}
           <div>
             <label className="block text-xs text-[#999] mb-1">ステータス</label>
-            <div className="flex gap-1.5">
+            <div className="flex flex-wrap gap-1.5">
               {(Object.keys(INVOICE_STATUS) as InvoiceStatusKey[]).map((key) => (
                 <button key={key} type="button"
                   onClick={() => setStatus(key)}
-                  className={`px-3 py-2 text-[11px] rounded-lg transition-colors ${
+                  className={`px-2.5 py-1.5 text-[11px] rounded-lg transition-colors ${
                     status === key ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666] hover:bg-[#eee]'
                   }`}>
                   {INVOICE_STATUS[key]}
                 </button>
               ))}
             </div>
+            {/* issued 状態で送付済にする補助ボタン（v0.6.0） */}
+            {status === 'issued' && !isNew && (
+              <button type="button"
+                onClick={() => setStatus('sent')}
+                className="mt-2 text-[11px] text-[#1B4D3E] hover:underline">
+                → 送付済にする
+              </button>
+            )}
           </div>
+        </div>
+
+        {/* v0.6.0: 請求書設定パネル（折りたたみ・デフォルト閉じ） */}
+        <div className="mb-6 border border-gray-100 rounded-xl overflow-hidden">
+          <button type="button"
+            onClick={() => setSettingsOpen(v => !v)}
+            className="w-full flex items-center justify-between px-4 py-3 text-left bg-[#FAFAF8] hover:bg-[#F5F5F3] transition-colors">
+            <span className="text-xs text-[#666]">
+              請求書設定
+              {effectiveClient && (
+                <span className="text-[#bbb] ml-2">
+                  （{effectiveClient.name}のデフォルト{(
+                    overrideWithholdingTax !== null ||
+                    overrideWithholdingBasis !== null ||
+                    overrideHeaderAmountType !== null ||
+                    overrideFeeBurden !== null
+                  ) ? '＋オーバーライド' : 'を使用中'}）
+                </span>
+              )}
+            </span>
+            <span className="text-[#999] text-xs">{settingsOpen ? '閉じる' : '開く'}</span>
+          </button>
+          {settingsOpen && (
+            <div className="p-4 space-y-4 bg-white">
+              {/* 源泉徴収 */}
+              <div className="flex items-center gap-3">
+                <label className="text-xs text-[#666] w-28 shrink-0">源泉徴収</label>
+                <div className="flex gap-1.5">
+                  <button type="button"
+                    onClick={() => setOverrideWithholdingTax(true)}
+                    className={`px-3 py-1.5 text-[11px] rounded-lg transition-colors ${
+                      effWithholdingTax ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666]'
+                    }`}>あり</button>
+                  <button type="button"
+                    onClick={() => setOverrideWithholdingTax(false)}
+                    className={`px-3 py-1.5 text-[11px] rounded-lg transition-colors ${
+                      !effWithholdingTax ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666]'
+                    }`}>なし</button>
+                </div>
+              </div>
+
+              {/* 源泉計算基準（源泉ありのみ） */}
+              {effWithholdingTax && (
+                <div className="flex items-center gap-3">
+                  <label className="text-xs text-[#666] w-28 shrink-0">源泉計算基準</label>
+                  <div className="flex gap-1.5">
+                    <button type="button"
+                      onClick={() => setOverrideWithholdingBasis('tax_included')}
+                      className={`px-3 py-1.5 text-[11px] rounded-lg transition-colors ${
+                        effWithholdingBasis === 'tax_included' ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666]'
+                      }`}>税込</button>
+                    <button type="button"
+                      onClick={() => setOverrideWithholdingBasis('tax_excluded')}
+                      className={`px-3 py-1.5 text-[11px] rounded-lg transition-colors ${
+                        effWithholdingBasis === 'tax_excluded' ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666]'
+                      }`}>税抜</button>
+                  </div>
+                </div>
+              )}
+
+              {/* 冒頭金額表示 */}
+              <div className="flex items-center gap-3">
+                <label className="text-xs text-[#666] w-28 shrink-0">冒頭金額表示</label>
+                <div className="flex gap-1.5">
+                  <button type="button"
+                    onClick={() => setOverrideHeaderAmountType('total')}
+                    className={`px-3 py-1.5 text-[11px] rounded-lg transition-colors ${
+                      effHeaderAmountType === 'total' ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666]'
+                    }`}>請求総額</button>
+                  <button type="button"
+                    onClick={() => setOverrideHeaderAmountType('net_payment')}
+                    className={`px-3 py-1.5 text-[11px] rounded-lg transition-colors ${
+                      effHeaderAmountType === 'net_payment' ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666]'
+                    }`}>差引振込額</button>
+                </div>
+              </div>
+
+              {/* 振込手数料 */}
+              <div className="flex items-center gap-3">
+                <label className="text-xs text-[#666] w-28 shrink-0">振込手数料</label>
+                <div className="flex gap-1.5">
+                  <button type="button"
+                    onClick={() => setOverrideFeeBurden('client')}
+                    className={`px-3 py-1.5 text-[11px] rounded-lg transition-colors ${
+                      effFeeBurden === 'client' ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666]'
+                    }`}>先方負担</button>
+                  <button type="button"
+                    onClick={() => setOverrideFeeBurden('self')}
+                    className={`px-3 py-1.5 text-[11px] rounded-lg transition-colors ${
+                      effFeeBurden === 'self' ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666]'
+                    }`}>自社負担</button>
+                </div>
+              </div>
+
+              {/* オーバーライドを全てクリア */}
+              <button type="button"
+                onClick={() => {
+                  setOverrideWithholdingTax(null);
+                  setOverrideWithholdingBasis(null);
+                  setOverrideHeaderAmountType(null);
+                  setOverrideFeeBurden(null);
+                }}
+                className="text-[11px] text-[#999] hover:text-[#1a1a1a] underline">
+                クライアント設定に戻す
+              </button>
+            </div>
+          )}
         </div>
 
         {/* 明細行 */}
@@ -798,18 +1041,32 @@ function InvoiceEditor({
           </button>
         </div>
 
-        {/* 合計 */}
+        {/* 合計（v0.6.0 サマリー） */}
         <div className="border-t border-gray-100 pt-4 mb-6">
           <div className="flex justify-end gap-8">
             <div className="text-right space-y-1">
               <div className="text-xs text-[#999]">小計</div>
               <div className="text-xs text-[#999]">消費税</div>
               <div className="text-sm font-medium text-[#1a1a1a]">合計</div>
+              {effWithholdingTax && (
+                <>
+                  <div className="text-xs text-[#999]">源泉徴収額</div>
+                  <div className="text-sm font-medium text-[#1a1a1a]">差引振込額</div>
+                </>
+              )}
+              <div className="text-[11px] text-[#bbb] pt-1">冒頭表示額</div>
             </div>
             <div className="text-right space-y-1 font-['Saira_Condensed'] tabular-nums">
-              <div className="text-sm text-[#1a1a1a]">{`¥${subtotal.toLocaleString()}`}</div>
+              <div className="text-sm text-[#1a1a1a]">{formatYen(calc.subtotal)}</div>
               <div className="text-sm text-[#999]">—</div>
-              <div className="text-lg font-medium text-[#1B4D3E]">{`¥${total.toLocaleString()}`}</div>
+              <div className="text-lg font-medium text-[#1B4D3E]">{formatYen(calc.total)}</div>
+              {effWithholdingTax && (
+                <>
+                  <div className="text-sm text-[#C23728]">- {formatYen(calc.withholdingAmount)}</div>
+                  <div className="text-lg font-medium text-[#1B4D3E]">{formatYen(calc.netPayment)}</div>
+                </>
+              )}
+              <div className="text-[11px] text-[#bbb] pt-1">{formatYen(calc.headerAmount)}</div>
             </div>
           </div>
         </div>

@@ -218,15 +218,23 @@ export interface Database {
           subtotal: number; // 小計（税抜）
           tax_amount: number; // 消費税額（免税=0）
           total: number; // 合計
-          status: string; // 'draft' | 'issued' | 'paid'
+          status: string; // 'draft' | 'issued' | 'sent' | 'paid' | 'overdue'（v0.6.0で5種化）
           bank_account_id: string | null; // FK→bank_accounts（振込先）
           notes: string | null; // 備考
           drive_folder_id: string | null; // Google DriveフォルダID
           drive_file_id: string | null; // Google DriveファイルID
           pdf_url: string | null; // PDF URL
           issued_at: string | null; // 発行日時
+          sent_at: string | null; // 送付完了日時（v0.6.0追加）
           paid_at: string | null; // 入金確認日時
           transaction_id: string | null; // FK→transactions（売上仕訳連携）
+          // v0.6.0 請求書管理v2 — クライアント設定のスナップショット + オーバーライド
+          withholding_tax: boolean; // 源泉徴収あり/なし
+          withholding_basis: string; // 'tax_included' | 'tax_excluded'
+          withholding_amount: number; // 源泉徴収額
+          net_payment: number; // 差引振込額
+          header_amount_type: string; // 'total' | 'net_payment'
+          fee_burden: string; // 'client' | 'self'
           created_at: string;
           updated_at: string;
         };
@@ -314,9 +322,15 @@ export interface Database {
           address: string | null; // 住所
           contact_name: string | null; // 担当者名
           contact_email: string | null; // 担当者メール
-          payment_terms: string | null; // 支払条件（月末締翌月末 等）
+          payment_terms: string | null; // 支払条件（月末締翌月末 等）（自由記述・既存）
           notes: string | null;
           is_active: boolean;
+          // v0.6.0 請求書管理v2 — 請求書デフォルト設定
+          withholding_tax: boolean; // 源泉徴収あり/なし
+          withholding_basis: string; // 'tax_included' | 'tax_excluded'
+          header_amount_type: string; // 'total' | 'net_payment'
+          fee_burden: string; // 'client' | 'self'
+          payment_terms_type: string; // 'month_end_next_month_end' | 'other'
           created_at: string;
           updated_at: string;
         };
@@ -534,6 +548,7 @@ export const KAMOKU = {
  
   // 内部科目（UIに出さない。仕訳帳で自動生成用）
   prepaid: { name: '前払費用', type: 'asset', internal: true },
+  prepaid_withholding: { name: '仮払源泉税', type: 'asset', internal: true }, // v0.6.0 請求書管理v2
   advance_received: { name: '前受金', type: 'liability', internal: true },
   accounts_receivable: { name: '売掛金', type: 'asset', internal: true },
   accounts_payable: { name: '買掛金', type: 'liability', internal: true },
@@ -585,14 +600,41 @@ export const BANK_MATCH_STATUS = {
   ignored: '無視',
 } as const;
  
-// 請求書ステータス定義
+// 請求書ステータス定義（v0.6.0で5種化）
 export const INVOICE_STATUS = {
   draft: '下書き',
   issued: '発行済',
+  sent: '送付済',
   paid: '入金済',
+  overdue: '督促中',
 } as const;
  
 export type InvoiceStatusKey = keyof typeof INVOICE_STATUS;
+
+// v0.6.0 請求書管理v2 — 補助型・ラベル定数
+export type WithholdingBasis = 'tax_included' | 'tax_excluded';
+export const WITHHOLDING_BASIS_LABEL: Record<WithholdingBasis, string> = {
+  tax_included: '税込',
+  tax_excluded: '税抜',
+};
+
+export type HeaderAmountType = 'total' | 'net_payment';
+export const HEADER_AMOUNT_TYPE_LABEL: Record<HeaderAmountType, string> = {
+  total: '請求総額',
+  net_payment: '差引振込額',
+};
+
+export type FeeBurden = 'client' | 'self';
+export const FEE_BURDEN_LABEL: Record<FeeBurden, string> = {
+  client: '先方負担',
+  self: '自社負担',
+};
+
+export type PaymentTermsType = 'month_end_next_month_end' | 'other';
+export const PAYMENT_TERMS_TYPE_LABEL: Record<PaymentTermsType, string> = {
+  month_end_next_month_end: '月末締翌月末払い',
+  other: 'その他（個別）',
+};
  
 // 請求書 + 明細行（結合型）
 export type InvoiceWithItems = Invoice & {
