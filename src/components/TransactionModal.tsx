@@ -281,7 +281,10 @@ export default function TransactionModal({
 
   
   const addAllocRow = () => {
-    setAllocRows(prev => [...prev, { division_id: '', project_id: '', percent: 0 }]);
+    // v0.6.2: 現状の合計を100まで埋めるpercent値を自動算出（最大100%）
+    const currentTotal = allocRows.reduce((s, r) => s + r.percent, 0);
+    const defaultPercent = Math.max(0, Math.min(100, 100 - currentTotal));
+    setAllocRows(prev => [...prev, { division_id: '', project_id: '', percent: defaultPercent }]);
   };
   const removeAllocRow = (idx: number) => {
     setAllocRows(prev => prev.filter((_, i) => i !== idx));
@@ -820,52 +823,60 @@ export default function TransactionModal({
             </div>
 
             {hasAllocRows ? (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {allocRows.map((row, idx) => {
                   const filteredPJ = row.division_id
                     ? projects.filter(p => p.division === row.division_id && p.status !== 'completed')
                     : [];
                   return (
-                    <div key={idx} className="flex items-center gap-1.5">
-                      <select value={row.division_id} onChange={e => updateAllocRow(idx, 'division_id', e.target.value)}
-                        className="px-2 py-1.5 bg-[#F5F5F3] rounded text-[11px] border-0 outline-none w-32 shrink-0">
-                        <option value="">事業</option>
-                        {DIV_OPTIONS.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                      </select>
-                      <select value={row.project_id} onChange={e => updateAllocRow(idx, 'project_id', e.target.value)}
-                        className="px-2 py-1.5 bg-[#F5F5F3] rounded text-[11px] border-0 outline-none flex-1 truncate">
-                        <option value="">PJ（任意）</option>
-                        {filteredPJ.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                      </select>
-                      <div className="flex items-center gap-0.5 shrink-0">
-                        <input type="number" value={row.percent}
-                          onChange={e => updateAllocRow(idx, 'percent', parseInt(e.target.value, 10) || 0)}
-                          className="w-12 px-1.5 py-1.5 bg-[#F5F5F3] rounded text-[11px] border-0 outline-none text-right font-['Saira_Condensed'] tabular-nums"
-                          min={0} max={100} />
-                        <span className="text-[10px] text-[#999]">%</span>
+                    <div key={idx} className="bg-[#FAFAF8] rounded-lg p-2 space-y-1.5">
+                      {/* 1段目: 事業・PJ（スマホでも幅確保） */}
+                      <div className="flex items-center gap-1.5">
+                        <select value={row.division_id} onChange={e => updateAllocRow(idx, 'division_id', e.target.value)}
+                          className="px-2 py-1.5 bg-white rounded text-[11px] border-0 outline-none w-32 shrink-0">
+                          <option value="">事業を選択</option>
+                          {DIV_OPTIONS.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                        </select>
+                        <select value={row.project_id} onChange={e => updateAllocRow(idx, 'project_id', e.target.value)}
+                          className="px-2 py-1.5 bg-white rounded text-[11px] border-0 outline-none flex-1 min-w-0">
+                          <option value="">PJ（任意）</option>
+                          {filteredPJ.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
                       </div>
-                      {txAmount > 0 && (
-                        <span className="text-[9px] font-['Saira_Condensed'] tabular-nums text-[#999] w-16 text-right shrink-0">
-                          ¥{Math.round(txAmount * row.percent / 100).toLocaleString()}
-                        </span>
-                      )}
-                      <button onClick={() => removeAllocRow(idx)} className="text-[#C23728]/60 hover:text-[#C23728] p-0.5 shrink-0">
-                        <Trash2 className="w-3 h-3" />
-                      </button>
+                      {/* 2段目: %・金額・削除 */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-0.5">
+                          <input type="number" value={row.percent}
+                            onChange={e => updateAllocRow(idx, 'percent', parseInt(e.target.value, 10) || 0)}
+                            className="w-14 px-2 py-1.5 bg-white rounded text-[11px] border-0 outline-none text-right font-['Saira_Condensed'] tabular-nums"
+                            min={0} max={100} />
+                          <span className="text-[10px] text-[#999]">%</span>
+                        </div>
+                        {txAmount > 0 && (
+                          <span className="text-[10px] font-['Saira_Condensed'] tabular-nums text-[#999] flex-1 text-right">
+                            ¥{Math.round(txAmount * row.percent / 100).toLocaleString()}
+                          </span>
+                        )}
+                        <button onClick={() => removeAllocRow(idx)} className="text-[#C23728]/60 hover:text-[#C23728] p-1 shrink-0">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
                 <div className="flex items-center justify-between pt-1">
-                  <button onClick={addAllocRow} className="flex items-center gap-1 text-[10px] text-[#D4A03A] hover:underline">
+                  <button onClick={addAllocRow} className="flex items-center gap-1 text-[11px] text-[#D4A03A] hover:underline">
                     <Plus className="w-3 h-3" />行を追加
                   </button>
-                  <span className={`text-[10px] font-['Saira_Condensed'] tabular-nums ${totalPercent === 100 ? 'text-[#1B4D3E]' : 'text-[#C23728]'}`}>
+                  <span className={`text-[11px] font-['Saira_Condensed'] tabular-nums ${totalPercent === 100 ? 'text-[#1B4D3E]' : 'text-[#C23728]'}`}>
                     合計 {totalPercent}%
                   </span>
                 </div>
               </div>
             ) : (
-              <p className="text-[10px] text-[#999]">後から経営ページでも割り当て・変更できます</p>
+              <button onClick={addAllocRow} className="flex items-center gap-1 text-[11px] text-[#D4A03A] hover:underline">
+                <Plus className="w-3 h-3" />事業・PJを割り当てる
+              </button>
             )}
           </div>
 

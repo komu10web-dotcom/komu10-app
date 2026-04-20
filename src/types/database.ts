@@ -61,6 +61,7 @@ export interface Database {
           client_id: string | null; // 取引先マスタID
           payment_method: string | null; // 'personal' | 'bank_account'
           bank_account_id: string | null; // bank_accountsテーブルのUUID
+          invoice_id: string | null; // FK→invoices（v0.6.2追加: 源泉税仕訳など請求書紐付けで使用）
           created_at: string;
           updated_at: string;
         };
