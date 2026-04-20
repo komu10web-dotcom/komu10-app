@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { KAMOKU, DIVISIONS, RECURRING_FREQUENCY } from '@/types/database';
-import type { AnbunSetting, Asset, RevenueType, RevenueTypeDivision, ContractType, BusinessDomain, BankAccount, Client, RecurringExpense, Project, EquipmentItem, SyncSource, ExpenseTemplate, RouteLeg } from '@/types/database';
+import type { AnbunSetting, Asset, RevenueType, RevenueTypeDivision, ContractType, BusinessDomain, BankAccount, Client, RecurringExpense, Project, EquipmentItem, SyncSource, ExpenseTemplate, RouteLeg, TemplateAllocation } from '@/types/database';
 import { Plus, Pencil, Trash2, Save, X, Loader2, ChevronDown, ChevronUp, HelpCircle, Cloud, CheckCircle2, RefreshCw, FolderOpen, Camera, StickyNote } from 'lucide-react';
 import { OWNER_COLOR_PRESETS } from './HeaderControls';
 
@@ -1108,6 +1108,7 @@ export default function SettingsContent() {
     description?: string;
     amount?: number;
     payment_method?: string;
+    allocations: TemplateAllocation[];
   }) => {
     if (!supabase) return;
     try {
@@ -1123,6 +1124,7 @@ export default function SettingsContent() {
             route_legs: form.route_legs,
             amount: total,
             green_amount: greenTotal,
+            allocations: form.allocations,
             updated_at: new Date().toISOString(),
           }).eq('id', editingTemplate.id);
         } else {
@@ -1135,6 +1137,7 @@ export default function SettingsContent() {
             amount: total,
             green_amount: greenTotal,
             payment_method: 'personal',
+            allocations: form.allocations,
             use_count: 0,
           });
         }
@@ -1148,6 +1151,7 @@ export default function SettingsContent() {
             description: form.description || '',
             amount: form.amount || 0,
             payment_method: form.payment_method || 'personal',
+            allocations: form.allocations,
             updated_at: new Date().toISOString(),
           }).eq('id', editingTemplate.id);
         } else {
@@ -1162,6 +1166,7 @@ export default function SettingsContent() {
             route_legs: [],
             green_amount: 0,
             payment_method: form.payment_method || 'personal',
+            allocations: form.allocations,
             use_count: 0,
           });
         }
@@ -2928,6 +2933,7 @@ export default function SettingsContent() {
         <TemplateModal
           template={editingTemplate}
           templateType={templateModalOpen}
+          projects={projects}
           onSave={saveTemplate}
           onClose={() => { setTemplateModalOpen(false); setEditingTemplate(null); }}
         />
@@ -4236,11 +4242,13 @@ function EquipmentEditModal({
 function TemplateModal({
   template,
   templateType,
+  projects,
   onSave,
   onClose,
 }: {
   template: ExpenseTemplate | null;
   templateType: 'transport' | 'general';
+  projects: Project[];
   onSave: (form: {
     name: string;
     template_type: 'transport' | 'general';
@@ -4250,6 +4258,7 @@ function TemplateModal({
     description?: string;
     amount?: number;
     payment_method?: string;
+    allocations: TemplateAllocation[];
   }) => Promise<void>;
   onClose: () => void;
 }) {
@@ -4269,6 +4278,39 @@ function TemplateModal({
   const [description, setDescription] = useState(template?.description || '');
   const [amount, setAmount] = useState(template?.amount?.toString() || '');
   const [paymentMethod, setPaymentMethod] = useState(template?.payment_method || 'personal');
+
+  // v0.6.5: 事業・プロジェクト割り当て（経費入力画面と同じUX）
+  const [allocRows, setAllocRows] = useState<{ division_id: string; project_id: string; percent: number }[]>(
+    (template?.allocations || []).map(a => ({
+      division_id: a.division_id || '',
+      project_id: a.project_id || '',
+      percent: a.percent || 0,
+    }))
+  );
+
+  const addAllocRow = () => {
+    const remain = 100 - allocRows.reduce((s, r) => s + (r.percent || 0), 0);
+    setAllocRows(prev => [...prev, { division_id: '', project_id: '', percent: Math.max(0, remain) }]);
+  };
+  const updateAllocRow = (idx: number, field: 'division_id' | 'project_id' | 'percent', value: string | number) => {
+    setAllocRows(prev => prev.map((r, i) => {
+      if (i !== idx) return r;
+      // 部門変更時: PJが別部門のものだったらクリア
+      if (field === 'division_id') {
+        const newDiv = String(value);
+        const newProj = projects.find(p => p.id === r.project_id);
+        return {
+          ...r,
+          division_id: newDiv,
+          project_id: newProj && (newProj as any).division === newDiv ? r.project_id : '',
+        };
+      }
+      return { ...r, [field]: field === 'percent' ? Number(value) : value };
+    }));
+  };
+  const removeAllocRow = (idx: number) => {
+    setAllocRows(prev => prev.filter((_, i) => i !== idx));
+  };
 
   const GENERAL_KAMOKU = Object.entries(KAMOKU)
     .filter(([, v]) => v.type === 'expense')
@@ -4300,10 +4342,17 @@ function TemplateModal({
   const handleSave = async () => {
     if (!name.trim()) return;
     setSaving(true);
+    const cleanAllocs: TemplateAllocation[] = allocRows
+      .filter(r => r.division_id)
+      .map(r => ({
+        division_id: r.division_id,
+        project_id: r.project_id || null,
+        percent: r.percent || 0,
+      }));
     if (templateType === 'transport') {
       const validLegs = legs.filter(l => l.from && l.to && Number(l.amount) > 0);
       if (validLegs.length === 0) { setSaving(false); return; }
-      await onSave({ name: name.trim(), template_type: 'transport', route_legs: validLegs });
+      await onSave({ name: name.trim(), template_type: 'transport', route_legs: validLegs, allocations: cleanAllocs });
     } else {
       if (!Number(amount)) { setSaving(false); return; }
       await onSave({
@@ -4315,6 +4364,7 @@ function TemplateModal({
         description: description.trim(),
         amount: Number(amount),
         payment_method: paymentMethod,
+        allocations: cleanAllocs,
       });
     }
     setSaving(false);
@@ -4454,7 +4504,62 @@ function TemplateModal({
           </>
         )}
 
-        <div className="flex gap-2">
+        {/* 事業・PJ割り当て（交通費・汎用共通） */}
+        <div className="mb-5">
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-[10px] font-medium tracking-wider text-[#999]">事業・プロジェクト割り当て（任意）</label>
+            <span className={`text-[10px] tabular-nums ${
+              allocRows.reduce((s, r) => s + (r.percent || 0), 0) === 100 || allocRows.length === 0
+                ? 'text-[#999]' : 'text-[#C23728]'
+            }`}>
+              計 {allocRows.reduce((s, r) => s + (r.percent || 0), 0)}%
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            {allocRows.map((row, idx) => {
+              const divProjects = projects.filter(p => (p as any).division === row.division_id && (p as any).is_active !== false);
+              return (
+                <div key={idx} className="bg-[#F5F5F3] rounded-xl p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <select value={row.division_id} onChange={e => updateAllocRow(idx, 'division_id', e.target.value)}
+                      className="flex-1 px-2 py-2 text-xs bg-white border border-[#e8e8e8] rounded-lg focus:outline-none focus:border-[#1a1a1a]">
+                      <option value="">事業を選択</option>
+                      {Object.entries(DIVISIONS).map(([divId, divVal]) => (
+                        <option key={divId} value={divId}>{divVal.name}</option>
+                      ))}
+                    </select>
+                    <input type="number" value={row.percent || ''} onChange={e => updateAllocRow(idx, 'percent', e.target.value)}
+                      placeholder="%" min={0} max={100}
+                      className="w-16 px-2 py-2 text-xs text-right tabular-nums bg-white border border-[#e8e8e8] rounded-lg focus:outline-none focus:border-[#1a1a1a]" />
+                    <span className="text-[10px] text-[#999]">%</span>
+                    <button onClick={() => removeAllocRow(idx)} className="p-1 rounded hover:bg-gray-200">
+                      <X className="w-3.5 h-3.5 text-[#C23728]" />
+                    </button>
+                  </div>
+                  <select value={row.project_id} onChange={e => updateAllocRow(idx, 'project_id', e.target.value)}
+                    disabled={!row.division_id}
+                    className="w-full px-2 py-2 text-xs bg-white border border-[#e8e8e8] rounded-lg focus:outline-none focus:border-[#1a1a1a] disabled:opacity-50">
+                    <option value="">（PJ未指定）</option>
+                    {divProjects.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {(p as any).pj_number ? `${(p as any).pj_number} ` : ''}{p.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              );
+            })}
+          </div>
+
+          <button onClick={addAllocRow}
+            className="w-full mt-2 py-2 text-[10px] text-[#666] border border-dashed border-[#e8e8e8] rounded-xl hover:bg-[#F5F5F3] transition-colors flex items-center justify-center gap-1">
+            <Plus className="w-3 h-3" />事業を追加
+          </button>
+          <p className="text-[10px] text-[#bbb] mt-1.5">※ 未設定の場合、このテンプレ適用時は手動で割り当てしてください</p>
+        </div>
+
+        <div className="flex gap-2 mt-4">
           <button onClick={onClose}
             className="flex-1 py-2.5 text-xs text-[#999] bg-[#F5F5F3] rounded-xl hover:bg-gray-200 transition-colors">
             キャンセル
