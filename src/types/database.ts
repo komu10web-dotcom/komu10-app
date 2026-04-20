@@ -487,6 +487,12 @@ export type RouteLeg = {
   green_surcharge?: number;
 };
  
+export type TemplateAllocation = {
+  division_id: string;
+  project_id: string | null;
+  percent: number;
+};
+
 export type ExpenseTemplate = {
   id: string;
   owner: string;
@@ -499,6 +505,7 @@ export type ExpenseTemplate = {
   payment_method: string;
   route_legs: RouteLeg[];
   green_amount: number;
+  allocations: TemplateAllocation[];
   use_count: number;
   created_at: string;
   updated_at: string;

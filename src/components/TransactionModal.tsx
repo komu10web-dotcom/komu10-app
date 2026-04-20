@@ -203,6 +203,11 @@ export default function TransactionModal({
           amount: total,
           green_amount: 0,
           payment_method: snap.payment_method || 'personal',
+          allocations: allocRows.filter(r => r.division_id).map(r => ({
+            division_id: r.division_id,
+            project_id: r.project_id || null,
+            percent: r.percent || 0,
+          })),
           use_count: 0,
         });
       } else {
@@ -218,6 +223,11 @@ export default function TransactionModal({
           route_legs: [],
           green_amount: 0,
           payment_method: snap.payment_method || 'personal',
+          allocations: allocRows.filter(r => r.division_id).map(r => ({
+            division_id: r.division_id,
+            project_id: r.project_id || null,
+            percent: r.percent || 0,
+          })),
           use_count: 0,
         });
       }
@@ -264,6 +274,16 @@ export default function TransactionModal({
       ...(tpl.template_type === 'general' && tpl.kamoku ? { kamoku: tpl.kamoku } : {}),
       ...(tpl.payment_method ? { payment_method: tpl.payment_method } : {}),
     }));
+
+    // v0.6.4: 保存された事業・PJ割り当てを復元
+    const tplAllocs = (tpl.allocations || []) as any[];
+    if (Array.isArray(tplAllocs) && tplAllocs.length > 0) {
+      setAllocRows(tplAllocs.map((a: any) => ({
+        division_id: a.division_id || '',
+        project_id: a.project_id || '',
+        percent: a.percent || 0,
+      })));
+    }
 
     // use_count + 1
     if (supabase) {
