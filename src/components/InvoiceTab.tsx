@@ -582,7 +582,7 @@ function InvoiceEditor({
 
   // 保存
   const handleSave = async () => {
-    if (!supabase || !clientId || items.length === 0) return;
+    if (!supabase || !clientId || items.length === 0 || !bankAccountId) return;
     setSaving(true);
     try {
       const invoiceData: any = {
@@ -788,7 +788,8 @@ function InvoiceEditor({
     }
   };
 
-  const canSave = clientId && items.some(it => it.description.trim());
+  // v0.6.8: 振込先口座を必須化(空欄請求書の発行防止)
+  const canSave = clientId && items.some(it => it.description.trim()) && !!bankAccountId;
 
   if (loadingData) {
     return (
@@ -847,16 +848,27 @@ function InvoiceEditor({
               className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
           </div>
 
-          {/* 振込先 */}
+          {/* 振込先 — v0.6.8: 必須化 + 0件時は設定画面へ誘導 */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">振込先口座</label>
-            <select value={bankAccountId} onChange={(e) => setBankAccountId(e.target.value)}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
-              <option value="">選択してください</option>
-              {bankAccounts.map((ba) => (
-                <option key={ba.id} value={ba.id}>{ba.bank_name} {ba.branch_name || ''} ({ba.name})</option>
-              ))}
-            </select>
+            <label className="block text-xs text-[#999] mb-1">
+              振込先口座 <span className="text-[#C23728]">*</span>
+            </label>
+            {bankAccounts.length === 0 ? (
+              <div className="bg-[#FDF4E3] border border-[#D4A03A]/30 rounded-lg px-3 py-3 text-xs text-[#666] space-y-2">
+                <p>この所有者({owner})の振込先口座が未登録です。</p>
+                <a href={`/settings?owner=${owner}`} className="inline-block px-3 py-1.5 text-[11px] bg-[#1a1a1a] text-white rounded-lg hover:bg-[#333] transition-colors">
+                  設定画面で口座を登録する
+                </a>
+              </div>
+            ) : (
+              <select value={bankAccountId} onChange={(e) => setBankAccountId(e.target.value)}
+                className={`w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 ${!bankAccountId ? 'ring-1 ring-[#C23728]/30' : ''}`}>
+                <option value="">選択してください</option>
+                {bankAccounts.map((ba) => (
+                  <option key={ba.id} value={ba.id}>{ba.bank_name} {ba.branch_name || ''} ({ba.name})</option>
+                ))}
+              </select>
+            )}
           </div>
 
           {/* ステータス */}
