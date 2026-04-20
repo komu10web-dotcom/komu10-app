@@ -212,11 +212,15 @@ function fmtDate(d: string | null | undefined): string {
   return `${p[0]}年${parseInt(p[1])}月${parseInt(p[2])}日`;
 }
 
+// v0.6.3: 備考欄は (1)ユーザー備考 (2)インボイス免税注記 (3)振込手数料負担 の3要素で構成
+const INVOICE_EXEMPT_NOTE =
+  '本請求書は、2023年10月1日施行のインボイス制度における「適格請求書発行事業者以外の事業者」として発行するものです。';
+
 function buildNotes(invoice: any): string {
   const base = (invoice.notes || '').trim();
   const fee = feeBurdenLabel(invoice.fee_burden);
-  if (!base) return fee;
-  return `${base}\n\n${fee}`;
+  const parts = [base, INVOICE_EXEMPT_NOTE, fee].filter(Boolean);
+  return parts.join('\n\n');
 }
 
 async function batchUpdate(
@@ -273,18 +277,20 @@ async function fillInvoiceDataA(
   }
 
   updates.push({ range: '請求書!H27', values: [[calc.subtotal]] });
-  updates.push({ range: '請求書!H29', values: [[calc.withholdingAmount]] });
+  updates.push({ range: '請求書!H29', values: [[-calc.withholdingAmount]] });
+  updates.push({ range: '請求書!B30', values: [[calc.netPayment]] });
   updates.push({ range: '請求書!H30', values: [[calc.netPayment]] });
   updates.push({ range: '請求書!E17', values: [[calc.headerAmount]] });
 
-  updates.push({ range: '請求書!D33', values: [[bank.bankLine]] });
-  updates.push({ range: '請求書!D34', values: [[bank.branchLine]] });
-  updates.push({ range: '請求書!D35', values: [[bank.accountType]] });
-  updates.push({ range: '請求書!D36', values: [[bank.accountNumber]] });
-  updates.push({ range: '請求書!D37', values: [[bank.accountHolder]] });
+  // 振込先 (A: D34〜D38)
+  updates.push({ range: '請求書!D34', values: [[bank.bankLine]] });
+  updates.push({ range: '請求書!D35', values: [[bank.branchLine]] });
+  updates.push({ range: '請求書!D36', values: [[bank.accountType]] });
+  updates.push({ range: '請求書!D37', values: [[bank.accountNumber]] });
+  updates.push({ range: '請求書!D38', values: [[bank.accountHolder]] });
 
-  updates.push({ range: '請求書!D40', values: [[paymentTermsLabel(client?.payment_terms_type) || invoice.payment_terms || '契約書記載の支払条件に準ずる']] });
-  updates.push({ range: '請求書!B44', values: [[buildNotes(invoice)]] });
+  updates.push({ range: '請求書!D41', values: [[paymentTermsLabel(client?.payment_terms_type) || invoice.payment_terms || '契約書記載の支払条件に準ずる']] });
+  updates.push({ range: '請求書!B45', values: [[buildNotes(invoice)]] });
 
   await batchUpdate(token, spreadsheetId, updates);
 }
@@ -325,19 +331,20 @@ async function fillInvoiceDataB(
   }
 
   // 合計（免税のため subtotal = total）
-  updates.push({ range: '請求書!H27', values: [[calc.total]] });
+  updates.push({ range: '請求書!B29', values: [[calc.total]] });
+  updates.push({ range: '請求書!H29', values: [[calc.total]] });
   updates.push({ range: '請求書!E17', values: [[calc.headerAmount]] });
 
-  // 振込先（1行シフト: D32〜D36）
-  updates.push({ range: '請求書!D32', values: [[bank.bankLine]] });
-  updates.push({ range: '請求書!D33', values: [[bank.branchLine]] });
-  updates.push({ range: '請求書!D34', values: [[bank.accountType]] });
-  updates.push({ range: '請求書!D35', values: [[bank.accountNumber]] });
-  updates.push({ range: '請求書!D36', values: [[bank.accountHolder]] });
+  // 振込先 (B: D33〜D37)
+  updates.push({ range: '請求書!D33', values: [[bank.bankLine]] });
+  updates.push({ range: '請求書!D34', values: [[bank.branchLine]] });
+  updates.push({ range: '請求書!D35', values: [[bank.accountType]] });
+  updates.push({ range: '請求書!D36', values: [[bank.accountNumber]] });
+  updates.push({ range: '請求書!D37', values: [[bank.accountHolder]] });
 
-  // お支払条件・備考（1行シフト）
-  updates.push({ range: '請求書!D39', values: [[paymentTermsLabel(client?.payment_terms_type) || invoice.payment_terms || '契約書記載の支払条件に準ずる']] });
-  updates.push({ range: '請求書!B43', values: [[buildNotes(invoice)]] });
+  // お支払条件・備考 (B: D40 / B44)
+  updates.push({ range: '請求書!D40', values: [[paymentTermsLabel(client?.payment_terms_type) || invoice.payment_terms || '契約書記載の支払条件に準ずる']] });
+  updates.push({ range: '請求書!B44', values: [[buildNotes(invoice)]] });
 
   await batchUpdate(token, spreadsheetId, updates);
 }

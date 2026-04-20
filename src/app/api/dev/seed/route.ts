@@ -94,19 +94,19 @@ export async function POST(request: NextRequest) {
     const today = new Date().toISOString().slice(0, 10);
     const year = new Date().getFullYear();
 
-    // 請求書番号の採番
+    // v0.6.3: 請求書番号はTEST-INV-プレフィックスで本番連番から独立
     const { data: lastInv } = await supabase
       .from('invoices')
       .select('invoice_number')
-      .like('invoice_number', `INV-${year}-%`)
+      .like('invoice_number', `TEST-INV-${year}-%`)
       .order('invoice_number', { ascending: false })
       .limit(1);
     const lastInvNum = lastInv?.[0]
-      ? parseInt(lastInv[0].invoice_number.split('-')[2])
+      ? parseInt(lastInv[0].invoice_number.split('-')[3])
       : 0;
 
     // 請求書A: 源泉あり社向け・ドラフト
-    const invNumA = `INV-${year}-${String(lastInvNum + 1).padStart(4, '0')}`;
+    const invNumA = `TEST-INV-${year}-${String(lastInvNum + 1).padStart(4, '0')}`;
     const { data: invA, error: iErrA } = await supabase.from('invoices').insert({
       owner,
       client_id: clientA.id,
@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
     ]);
 
     // 請求書B: 源泉なし社向け・ドラフト
-    const invNumB = `INV-${year}-${String(lastInvNum + 2).padStart(4, '0')}`;
+    const invNumB = `TEST-INV-${year}-${String(lastInvNum + 2).padStart(4, '0')}`;
     const { data: invB, error: iErrB } = await supabase.from('invoices').insert({
       owner,
       client_id: clientB.id,

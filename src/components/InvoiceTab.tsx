@@ -1286,11 +1286,19 @@ function InvoicePreview({
           </div>
         )}
 
-        {/* 合計金額 */}
+        {/* 冒頭金額: header_amount_type で切替 */}
         <div className="bg-[#F5F5F3] rounded-lg px-6 py-4 mb-4 flex items-center justify-between">
-          <span className="text-sm text-[#1a1a1a]">ご請求金額（税込）</span>
+          <span className="text-sm text-[#1a1a1a]">
+            {invoice.withholding_tax && invoice.header_amount_type === 'net_payment'
+              ? '差引お振込額'
+              : 'ご請求金額（税込）'}
+          </span>
           <span className="text-2xl font-['Saira_Condensed'] tabular-nums font-medium text-[#1B4D3E]">
-            ¥{invoice.total.toLocaleString()}
+            ¥{(
+              invoice.withholding_tax && invoice.header_amount_type === 'net_payment'
+                ? (invoice.net_payment ?? invoice.total)
+                : invoice.total
+            ).toLocaleString()}
           </span>
         </div>
 
@@ -1326,7 +1334,7 @@ function InvoicePreview({
           </tbody>
         </table>
 
-        {/* 小計・税・合計 */}
+        {/* 小計・税・合計（源泉ありなら源泉行と差引お振込額を追加） */}
         <div className="flex justify-end mb-8">
           <div className="w-60">
             <div className="flex justify-between py-1.5 text-sm">
@@ -1339,8 +1347,20 @@ function InvoicePreview({
             </div>
             <div className="flex justify-between py-1.5 text-sm border-t-2 border-[#1a1a1a] mt-1 pt-2">
               <span className="font-medium text-[#1a1a1a]">合計（税込）</span>
-              <span className="font-['Saira_Condensed'] tabular-nums font-medium text-[#1B4D3E] text-lg">¥{invoice.total.toLocaleString()}</span>
+              <span className="font-['Saira_Condensed'] tabular-nums font-medium text-[#1a1a1a] text-lg">¥{invoice.total.toLocaleString()}</span>
             </div>
+            {invoice.withholding_tax && (
+              <>
+                <div className="flex justify-between py-1.5 text-sm">
+                  <span className="text-[#999]">源泉徴収額</span>
+                  <span className="font-['Saira_Condensed'] tabular-nums text-[#B85450]">−¥{(invoice.withholding_amount ?? 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between py-1.5 text-sm border-t-2 border-[#1a1a1a] mt-1 pt-2">
+                  <span className="font-medium text-[#1a1a1a]">差引お振込額</span>
+                  <span className="font-['Saira_Condensed'] tabular-nums font-medium text-[#1B4D3E] text-lg">¥{(invoice.net_payment ?? invoice.total).toLocaleString()}</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -1365,13 +1385,17 @@ function InvoicePreview({
           </div>
         )}
 
-        {/* 備考 */}
-        {invoice.notes && (
-          <div className="border-t border-gray-100 pt-4">
-            <div className="text-xs text-[#999] mb-1">備考</div>
-            <div className="text-sm text-[#666] whitespace-pre-wrap">{invoice.notes}</div>
+        {/* 備考（固定2行: インボイス免税注記 + 振込手数料負担 を必ず表示） */}
+        <div className="border-t border-gray-100 pt-4">
+          <div className="text-xs text-[#999] mb-1">備考</div>
+          <div className="text-sm text-[#666] whitespace-pre-wrap">
+            {[
+              (invoice.notes || '').trim(),
+              '本請求書は、2023年10月1日施行のインボイス制度における「適格請求書発行事業者以外の事業者」として発行するものです。',
+              feeBurdenLabel(invoice.fee_burden),
+            ].filter(Boolean).join('\n\n')}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
