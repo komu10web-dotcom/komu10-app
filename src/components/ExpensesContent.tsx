@@ -37,14 +37,20 @@ export default function ExpensesContent() {
   const [importing, setImporting] = useState(false);
   const csvRef = useRef<HTMLInputElement>(null);
 
-  // 削除確認
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  // 削除確認（v0.11.0: 領収書情報も保持）
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: string;
+    driveFileIds: string[];
+  } | null>(null);
 
   // v0.10.0: AI会計相談モーダル（一覧行から呼び出し）
   const [consultTarget, setConsultTarget] = useState<Transaction | null>(null);
 
   // プロジェクト（TransactionModalに渡す）
   const [projects, setProjects] = useState<Project[]>([]);
+
+  // v0.11.0: 経費ID → 領収書件数
+  const [receiptCountMap, setReceiptCountMap] = useState<Map<string, number>>(new Map());
 
   const fetchTransactions = useCallback(async () => {
     if (!supabase) return;
@@ -95,6 +101,22 @@ export default function ExpensesContent() {
       // プロジェクト取得
       const { data: pjData } = await supabase.from('projects').select('*').order('name');
       setProjects((pjData as Project[]) || []);
+
+      // v0.11.0: 領収書件数マップを構築
+      if (txList.length > 0) {
+        const txIds = txList.map(t => t.id);
+        const { data: receiptData } = await supabase
+          .from('expense_receipts' as any)
+          .select('transaction_id')
+          .in('transaction_id', txIds);
+        const countMap = new Map<string, number>();
+        (receiptData as any[] || []).forEach(r => {
+          countMap.set(r.transaction_id, (countMap.get(r.transaction_id) || 0) + 1);
+        });
+        setReceiptCountMap(countMap);
+      } else {
+        setReceiptCountMap(new Map());
+      }
     } catch (err) {
       console.error('Fetch error:', err);
     } finally {
@@ -128,12 +150,42 @@ export default function ExpensesContent() {
     return `${parts[1]}/${parts[2]}`;
   };
 
-  // 削除
-  const handleDelete = async (id: string) => {
+  // v0.11.0: 削除ターゲットをセット（領収書情報もフェッチ）
+  const requestDelete = async (id: string) => {
     if (!supabase) return;
     try {
-      const { error } = await supabase.from('transactions').delete().eq('id', id);
+      const { data } = await supabase
+        .from('expense_receipts' as any)
+        .select('drive_file_id')
+        .eq('transaction_id', id);
+      const driveFileIds = (data || []).map((r: any) => r.drive_file_id).filter(Boolean);
+      setDeleteTarget({ id, driveFileIds });
+    } catch {
+      setDeleteTarget({ id, driveFileIds: [] });
+    }
+  };
+
+  // 削除実行（v0.11.0: Drive ゴミ箱連動）
+  const handleDelete = async (target: { id: string; driveFileIds: string[] }) => {
+    if (!supabase) return;
+    try {
+      // 1. transactions 削除（CASCADE で expense_receipts も削除）
+      const { error } = await supabase.from('transactions').delete().eq('id', target.id);
       if (error) throw error;
+
+      // 2. Drive ゴミ箱移動（ベストエフォート）
+      if (target.driveFileIds.length > 0) {
+        try {
+          await fetch('/api/upload/trash', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fileIds: target.driveFileIds }),
+          });
+        } catch (trashErr) {
+          console.warn('Drive trash failed (non-fatal):', trashErr);
+        }
+      }
+
       setDeleteTarget(null);
       fetchTransactions();
     } catch (err) {
@@ -284,7 +336,17 @@ export default function ExpensesContent() {
                           </div>
                         </td>
                         <td className="px-4 py-3 text-right font-['Saira_Condensed'] tabular-nums text-[#1a1a1a]">
-                          {formatAmount(tx.amount)}
+                          <div className="flex items-center justify-end gap-1.5">
+                            {receiptCountMap.get(tx.id) ? (
+                              <span
+                                className="text-[9px] bg-[#1B4D3E]/10 text-[#1B4D3E] px-1.5 py-0.5 rounded-full font-medium"
+                                title={`領収書 ${receiptCountMap.get(tx.id)}件`}
+                              >
+                                📎 {receiptCountMap.get(tx.id)}
+                              </span>
+                            ) : null}
+                            <span>{formatAmount(tx.amount)}</span>
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
@@ -303,7 +365,7 @@ export default function ExpensesContent() {
                               <Pencil className="w-3.5 h-3.5 text-[#999]" />
                             </button>
                             <button
-                              onClick={() => setDeleteTarget(tx.id)}
+                              onClick={() => requestDelete(tx.id)}
                               className="p-1.5 hover:bg-[#C23728]/10 rounded-md transition-colors"
                               title="削除"
                             >
@@ -369,12 +431,21 @@ export default function ExpensesContent() {
         />
       )}
 
-      {/* ── 削除確認 ── */}
+      {/* ── 削除確認（v0.11.0: 領収書のゴミ箱連動も案内） ── */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/30" onClick={() => setDeleteTarget(null)} />
           <div className="relative bg-white rounded-2xl p-6 max-w-sm mx-4" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
-            <p className="text-sm text-[#1a1a1a] mb-4">この取引を削除しますか？</p>
+            <p className="text-sm text-[#1a1a1a] mb-2 font-medium">この取引を削除しますか？</p>
+            {deleteTarget.driveFileIds.length > 0 ? (
+              <p className="text-xs text-[#666] mb-4 leading-relaxed">
+                紐づく領収書 {deleteTarget.driveFileIds.length}件 も<br />
+                Google Driveのゴミ箱に移動されます<br />
+                <span className="text-[#999]">（30日間は復元可能）</span>
+              </p>
+            ) : (
+              <p className="text-xs text-[#666] mb-4">この操作は取り消せません。</p>
+            )}
             <div className="flex gap-2">
               <button
                 onClick={() => setDeleteTarget(null)}

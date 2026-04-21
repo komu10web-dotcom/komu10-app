@@ -456,6 +456,27 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['route_templates']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['route_templates']['Insert']>;
       };
+
+      // 経費領収書（v0.11.0: 1経費に最大10枚の領収書を紐付け）
+      expense_receipts: {
+        Row: {
+          id: string;
+          transaction_id: string;
+          seq_no: number;
+          label: string | null;
+          drive_file_id: string;
+          drive_url: string;
+          drive_folder_path: string | null;
+          generated_filename: string;
+          original_filename: string | null;
+          mime_type: string | null;
+          ai_extracted_amount: number | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['expense_receipts']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['expense_receipts']['Insert']>;
+      };
     };
   };
 }
@@ -491,6 +512,7 @@ export type RouteTemplate = Database['public']['Tables']['route_templates']['Row
 export type Client = Database['public']['Tables']['clients']['Row'];
 export type RecurringExpense = Database['public']['Tables']['recurring_expenses']['Row'];
 export type EquipmentItem = Database['public']['Tables']['equipment_items']['Row'];
+export type ExpenseReceipt = Database['public']['Tables']['expense_receipts']['Row'];
  
 // audit_log（訂正・削除履歴 — 優良な電子帳簿保存 要件❶）
 export type AuditLog = {

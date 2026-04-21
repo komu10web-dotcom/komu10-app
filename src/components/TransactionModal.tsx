@@ -11,8 +11,8 @@ import { saveTransportDetails, updateTransportDetails, loadTransportDetails } fr
 import EntertainmentFields, { EMPTY_ENTERTAINMENT } from '@/components/EntertainmentFields';
 import type { EntertainmentData } from '@/components/EntertainmentFields';
 import { entertainmentToDescription } from '@/lib/entertainmentUtils';
-import ReceiptUploadSection from '@/components/ReceiptUploadSection';
-import type { ReceiptExtractedData } from '@/components/ReceiptUploadSection';
+import ReceiptUploadSection, { commitReceiptsToDrive, trashReceiptsInDrive } from '@/components/ReceiptUploadSection';
+import type { ReceiptExtractedData, ReceiptItem } from '@/components/ReceiptUploadSection';
 import ConsultationModal from '@/components/ConsultationModal';
 
 interface TransactionModalProps {
@@ -63,8 +63,11 @@ export default function TransactionModal({
   const [showTemplateSave, setShowTemplateSave] = useState(false);
   const [templateName, setTemplateName] = useState('');
   const [savedFormSnapshot, setSavedFormSnapshot] = useState<any>(null);
-  // v0.9.0: 領収書アップロード（Uploader機能を統合）
-  const [driveUrl, setDriveUrl] = useState<string | null>(null);
+  // v0.11.0: 複数領収書（ステージング方式）
+  const [receiptItems, setReceiptItems] = useState<ReceiptItem[]>([]);
+  const [pendingReceiptTrashIds, setPendingReceiptTrashIds] = useState<string[]>([]);
+  const [pendingReceiptDeleteIds, setPendingReceiptDeleteIds] = useState<string[]>([]);
+  const [initialReceiptItems, setInitialReceiptItems] = useState<ReceiptItem[] | null>(null);
   // v0.10.0: AI会計相談モーダル表示制御
   const [showConsultation, setShowConsultation] = useState(false);
 
@@ -158,7 +161,6 @@ export default function TransactionModal({
         setTransportData({ ...EMPTY_TRANSPORT });
       }
       setEntertainmentData({ ...EMPTY_ENTERTAINMENT });
-      // 既存allocation読み込み
       if (supabase) {
         supabase.from('transaction_allocations').select('*').eq('transaction_id', editData.id).then(({ data }: { data: any }) => {
           if (data && data.length > 0) {
@@ -172,6 +174,36 @@ export default function TransactionModal({
           }
         });
       }
+      // v0.11.0: 既存領収書をフェッチ
+      if (supabase) {
+        supabase.from('expense_receipts' as any)
+          .select('*')
+          .eq('transaction_id', editData.id)
+          .order('seq_no', { ascending: true })
+          .then(({ data }: { data: any }) => {
+            if (data && data.length > 0) {
+              const items: ReceiptItem[] = data.map((r: any) => ({
+                clientId: `db_${r.id}`,
+                staged: false,
+                dbId: r.id,
+                fileName: r.original_filename || r.generated_filename || 'receipt',
+                mimeType: r.mime_type || 'application/octet-stream',
+                driveFileId: r.drive_file_id,
+                driveUrl: r.drive_url,
+                generatedFilename: r.generated_filename,
+                label: r.label || '',
+                aiExtractedAmount: r.ai_extracted_amount,
+              }));
+              setReceiptItems(items);
+              setInitialReceiptItems(items);
+            } else {
+              setReceiptItems([]);
+              setInitialReceiptItems([]);
+            }
+          });
+      }
+      setPendingReceiptTrashIds([]);
+      setPendingReceiptDeleteIds([]);
     } else {
       setForm({
         date: new Date().toISOString().split('T')[0],
@@ -199,7 +231,10 @@ export default function TransactionModal({
       setShowTemplateSave(false);
       setTemplateName('');
       setSavedFormSnapshot(null);
-      setDriveUrl(null);  // v0.9.0: 領収書Drive URLもクリア
+      setReceiptItems([]);
+      setInitialReceiptItems(null);
+      setPendingReceiptTrashIds([]);
+      setPendingReceiptDeleteIds([]);
     }
     setError(null);
     setDupWarning(null);
@@ -584,8 +619,8 @@ export default function TransactionModal({
       owner: form.owner,
       description: desc,
       // v0.9.0: 領収書添付あり → source='receipt_ai'・memoにDrive URL保存
-      source: (driveUrl ? 'receipt_ai' : 'manual') as 'receipt_ai' | 'manual',
-      memo: driveUrl || null,
+      source: (receiptItems.length > 0 ? 'receipt_ai' : 'manual') as 'receipt_ai' | 'manual',
+      memo: null,
       confirmed: true,
       status: form.status || 'settled',
       accrual_date: form.date,
@@ -698,6 +733,57 @@ export default function TransactionModal({
         await supabase.from('equipment_items').delete().eq('transaction_id', txId);
       }
 
+      // ═══════════════════════════════════════════════════════════════
+      // v0.11.0: 領収書処理（トランザクション成功後）
+      // 1. 削除された既存領収書を DB削除 → Drive ゴミ箱
+      // 2. ステージング分を Drive アップロード → expense_receipts INSERT
+      // 3. 既存保存済はlabel/seq_no更新（UPDATE）
+      // ※ 往復分割時は往路（txId）に紐付け
+      // ═══════════════════════════════════════════════════════════════
+      if (pendingReceiptDeleteIds.length > 0) {
+        await supabase.from('expense_receipts' as any)
+          .delete()
+          .in('id', pendingReceiptDeleteIds);
+      }
+      if (pendingReceiptTrashIds.length > 0) {
+        await trashReceiptsInDrive(pendingReceiptTrashIds);
+      }
+
+      const commitResult = await commitReceiptsToDrive(receiptItems, {
+        date: form.date,
+        kamokuLabel: KAMOKU[form.kamoku as keyof typeof KAMOKU]?.name || form.kamoku,
+        store: finalStore,
+        owner: form.owner,
+        description: finalDescription,
+        totalAmount: txAmount,
+      });
+
+      for (const r of commitResult.savedReceipts) {
+        if (r.staged) {
+          await supabase.from('expense_receipts' as any).insert({
+            transaction_id: txId,
+            seq_no: r.seqNo,
+            label: r.label,
+            drive_file_id: r.driveFileId,
+            drive_url: r.driveUrl,
+            drive_folder_path: r.driveFolderPath || null,
+            generated_filename: r.generatedFilename,
+            original_filename: r.originalFilename,
+            mime_type: r.mimeType,
+            ai_extracted_amount: r.aiExtractedAmount,
+          });
+        } else if (r.dbId) {
+          await supabase.from('expense_receipts' as any)
+            .update({ seq_no: r.seqNo, label: r.label })
+            .eq('id', r.dbId);
+        }
+      }
+
+      if (commitResult.failed.length > 0) {
+        console.warn('Receipt upload failures:', commitResult.failed);
+        setError(`一部の領収書アップロードに失敗しました（${commitResult.failed.length}件）`);
+      }
+
       onSaved();
       // 新規登録 & テンプレ未使用 → テンプレ保存提案
       if (!editData && !selectedTemplate) {
@@ -742,15 +828,35 @@ export default function TransactionModal({
         </div>
 
         <div className="px-5 py-4 space-y-3">
-          {/* v0.9.0: 領収書アップロード（新規作成時のみ表示） */}
-          {!editData && (
-            <ReceiptUploadSection
-              defaultOwner={form.owner}
-              onExtracted={handleReceiptExtracted}
-              onDriveUrlSet={setDriveUrl}
-              onError={setError}
-            />
-          )}
+          {/* v0.11.0: 領収書アップロード（新規/編集 共通） */}
+          <ReceiptUploadSection
+            defaultOwner={form.owner}
+            formContext={{
+              date: form.date,
+              kamokuLabel: KAMOKU[form.kamoku as keyof typeof KAMOKU]?.name || form.kamoku,
+              store: form.store || null,
+              owner: form.owner,
+              description: form.description || null,
+              totalAmount: parseInt(form.amount || '0', 10) || 0,
+            }}
+            initialItems={initialReceiptItems || undefined}
+            onItemsChange={(items) => {
+              if (initialReceiptItems) {
+                const currentIds = new Set(items.map((it) => it.clientId));
+                const removed = initialReceiptItems.filter((it) => !currentIds.has(it.clientId));
+                const trashIds = removed.filter((it) => it.driveFileId).map((it) => it.driveFileId!);
+                const deleteDbIds = removed.filter((it) => it.dbId).map((it) => it.dbId!);
+                setPendingReceiptTrashIds(trashIds);
+                setPendingReceiptDeleteIds(deleteDbIds);
+              }
+              setReceiptItems(items);
+            }}
+            onExtractedForForm={handleReceiptExtracted}
+            onError={setError}
+            onSetAmountFromReceipts={(amount) => {
+              setForm((prev) => ({ ...prev, amount: String(amount) }));
+            }}
+          />
 
           {/* ① 日付 */}
           <div>

@@ -2975,22 +2975,44 @@ export default function SettingsContent() {
             リリースノート
           </div>
           <div className="space-y-3">
-            {/* v0.10.2 */}
+            {/* v0.11.0 */}
             <div className="bg-white rounded-xl shadow-sm p-4">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.10.2</span>
-                <span className="text-[9px] text-[#999]">2026.04.21</span>
+                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.11.0</span>
+                <span className="text-[9px] text-[#999]">2026.04.22</span>
                 <span className="text-[8px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full font-medium">LATEST</span>
               </div>
               <ul className="space-y-1">
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>領収書AIをClaude Sonnet 4.6にアップグレード（最新世代・OCR精度さらに向上）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>AI会計相談をClaude Opus 4.7にアップグレード（最高位モデル・推論精度大幅向上）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>接待・会議・取材費の領収書から利用人数を自動入力</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>物品購入の領収書から型番を自動抽出し品名に併記</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>サブスク・通信費・ソフトウェアの領収書から請求期間を自動抽出し説明欄に追記</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>合計金額の優先順位を明文化（ご請求金額 &gt; 税込合計 &gt; 合計）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>複数領収書添付機能（1経費に最大10枚・ラベル付与可）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>領収書ファイル名の自動命名ルール（日付_科目_支払先_担当者_摘要_連番_ラベル）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>Drive保存タイミングを「登録ボタン押下時」に変更（孤児ファイルゼロ化）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>経費削除時、紐づく領収書をDriveのゴミ箱に自動移動（30日間復元可）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>領収書合計金額の自動合算＋経費金額セットボタン（差分1円以内=緑）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>経費一覧に領収書件数バッジ（📎N）表示</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>編集モーダルで既存領収書の閲覧・ラベル変更・削除に対応</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>expense_receiptsテーブル新設＋既存データ自動マイグレ・監査ログ連動</li>
               </ul>
             </div>
+
+            {/* v0.10.2 */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.10.2</span>
+                  <span className="text-[9px] text-[#999]">2026.04.21</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
+                <ul className="space-y-1">
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>領収書AIをClaude Sonnet 4.6にアップグレード（最新世代・OCR精度さらに向上）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>AI会計相談をClaude Opus 4.7にアップグレード（最高位モデル・推論精度大幅向上）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>接待・会議・取材費の領収書から利用人数を自動入力</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>物品購入の領収書から型番を自動抽出し品名に併記</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>サブスク・通信費・ソフトウェアの領収書から請求期間を自動抽出し説明欄に追記</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>合計金額の優先順位を明文化（ご請求金額 &gt; 税込合計 &gt; 合計）</li>
+                </ul>
+              </div>
+            </details>
 
             {/* v0.10.1 */}
             <details className="bg-white rounded-xl shadow-sm">
@@ -3248,7 +3270,7 @@ export default function SettingsContent() {
 
         {/* バージョン */}
         <div className="text-center py-8">
-          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.10.2</span>
+          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.11.0</span>
         </div>
 
       </div>{/* end max-w-3xl */}

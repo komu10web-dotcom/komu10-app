@@ -1,13 +1,16 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Check, Loader2, X, Camera } from 'lucide-react';
+import { Check, Loader2, X, Camera, Plus, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
+import { generateReceiptFilename } from '@/lib/receiptFilename';
 
 // ═══════════════════════════════════════════════════════════════
-// ReceiptUploadSection
-// 領収書アップロード（AI抽出 + Google Drive保存）を担うセクション
-// TransactionModal 内に配置して利用する
-// v0.9.0 で Uploader.tsx の機能を統合
+// ReceiptUploadSection（v0.11.0 全面リニューアル）
+// - 1経費に最大10枚
+// - アップロード時は「ステージング」状態（Drive保存しない）
+// - 登録ボタン押下時に commitReceiptsToDrive() を親から呼ぶ
+// - 編集時は initialItems で既存を受け取る
+// - 合計金額チェック＋経費金額セットボタン（1円以内=緑）
 // ═══════════════════════════════════════════════════════════════
 
 export interface ReceiptExtractedData {
@@ -19,238 +22,478 @@ export interface ReceiptExtractedData {
   items?: Array<{ name: string; quantity?: number; price?: number }>;
   payment_method?: string;
   tax?: number;
-  // v0.10.1: 交通費の場合のみ返される追加フィールド
   from_station?: string | null;
   to_station?: string | null;
   round_trip?: 'one_way' | 'round_trip' | null;
   carrier?: string | null;
-  // v0.10.2: 接待・会議・取材の場合の追加フィールド
   guest_count?: number | string | null;
   restaurant_type?: string | null;
-  // v0.10.2: 物品購入の場合の追加フィールド
   model_number?: string | null;
   serial_number?: string | null;
-  // v0.10.2: サブスク・通信費・ソフトウェアの場合の追加フィールド
   billing_period_from?: string | null;
   billing_period_to?: string | null;
   next_billing_date?: string | null;
 }
 
-interface ReceiptUploadSectionProps {
-  defaultOwner: string;
-  onExtracted: (data: ReceiptExtractedData) => void;
-  onDriveUrlSet: (url: string | null) => void;
-  onError?: (message: string) => void;
+export interface ReceiptItem {
+  clientId: string;
+  staged: boolean;
+  fileName: string;
+  mimeType: string;
+  base64?: string;
+  previewUrl?: string;
+  dbId?: string;
+  driveFileId?: string;
+  driveUrl?: string;
+  generatedFilename?: string;
+  label: string;
+  aiExtractedAmount?: number | null;
 }
 
-type UploadState = 'idle' | 'reading' | 'uploading' | 'done' | 'error';
+export interface ReceiptFormContext {
+  date: string;
+  kamokuLabel: string;
+  store: string | null;
+  owner: string;
+  description: string | null;
+  totalAmount: number;
+}
+
+interface ReceiptUploadSectionProps {
+  defaultOwner: string;
+  formContext: ReceiptFormContext;
+  initialItems?: ReceiptItem[];
+  onItemsChange: (items: ReceiptItem[]) => void;
+  onExtractedForForm: (data: ReceiptExtractedData) => void;
+  onError?: (message: string) => void;
+  onSetAmountFromReceipts?: (amount: number) => void;
+}
+
+const MAX_RECEIPTS = 10;
+const AMOUNT_DIFF_THRESHOLD = 1;
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      resolve(result.split(',')[1]);
-    };
+    reader.onload = () => resolve((reader.result as string).split(',')[1]);
     reader.onerror = () => reject(new Error('File read failed'));
     reader.readAsDataURL(file);
   });
 }
 
+function generateClientId(): string {
+  return `local_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+}
+
 export default function ReceiptUploadSection({
   defaultOwner,
-  onExtracted,
-  onDriveUrlSet,
+  formContext,
+  initialItems,
+  onItemsChange,
+  onExtractedForForm,
   onError,
+  onSetAmountFromReceipts,
 }: ReceiptUploadSectionProps) {
-  const [state, setState] = useState<UploadState>('idle');
-  const [fileName, setFileName] = useState<string | null>(null);
-  const [driveUrl, setDriveUrl] = useState<string | null>(null);
+  const [items, setItems] = useState<ReceiptItem[]>(initialItems || []);
+  const [processingFile, setProcessingFile] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [showFilenamePreview, setShowFilenamePreview] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // プレビューURLのクリーンアップ
+  useEffect(() => {
+    if (initialItems) setItems(initialItems);
+  }, [initialItems]);
+
+  const emitChange = useCallback((next: ReceiptItem[]) => {
+    setItems(next);
+    onItemsChange(next);
+  }, [onItemsChange]);
+
   useEffect(() => {
     return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      items.forEach((item) => {
+        if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+      });
     };
-  }, [previewUrl]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const processFile = useCallback(async (file: File) => {
-    // バリデーション
+    if (items.length >= MAX_RECEIPTS) {
+      const msg = `領収書は最大${MAX_RECEIPTS}枚までです`;
+      setErrorMsg(msg); onError?.(msg);
+      setTimeout(() => setErrorMsg(null), 3000);
+      return;
+    }
     if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
       const msg = '画像またはPDFファイルを選択してください';
-      setErrorMsg(msg);
-      setState('error');
-      onError?.(msg);
-      setTimeout(() => { setState('idle'); setErrorMsg(null); }, 3000);
+      setErrorMsg(msg); onError?.(msg);
+      setTimeout(() => setErrorMsg(null), 3000);
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
       const msg = 'ファイルサイズは10MB以下にしてください';
-      setErrorMsg(msg);
-      setState('error');
-      onError?.(msg);
-      setTimeout(() => { setState('idle'); setErrorMsg(null); }, 3000);
+      setErrorMsg(msg); onError?.(msg);
+      setTimeout(() => setErrorMsg(null), 3000);
       return;
     }
 
     setErrorMsg(null);
-    setState('reading');
-    setFileName(file.name);
-
-    // プレビュー用URL
-    if (file.type.startsWith('image/')) {
-      setPreviewUrl(URL.createObjectURL(file));
-    }
+    setProcessingFile(file.name);
 
     try {
       const base64 = await fileToBase64(file);
 
-      // 1. AI抽出（利用日を先に取得）
       let extracted: ReceiptExtractedData = {};
-      let extractedDate = new Date().toISOString().split('T')[0];
-
-      const aiResponse = await fetch('/api/receipts/extract', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          imageBase64: base64,
-          fileUrl: '',
-          mimeType: file.type,
-          fileName: file.name,
-        }),
-      });
-
-      if (aiResponse.ok) {
-        const aiResult = await aiResponse.json();
-        extracted = aiResult.aiExtracted || {};
-        if (extracted.date) extractedDate = extracted.date;
+      try {
+        const aiResponse = await fetch('/api/receipts/extract', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            imageBase64: base64,
+            fileUrl: '',
+            mimeType: file.type,
+            fileName: file.name,
+          }),
+        });
+        if (aiResponse.ok) {
+          const aiResult = await aiResponse.json();
+          extracted = aiResult.aiExtracted || {};
+        }
+      } catch {
+        // AI失敗は致命的ではない
       }
 
-      // 2. Google Drive アップロード（利用日ベースのフォルダ）
-      setState('uploading');
-      const uploadResponse = await fetch('/api/upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          image: base64,
-          filename: file.name,
-          date: extractedDate,
-          mimeType: file.type,
-          owner: defaultOwner,
-        }),
-      });
+      const previewUrl = file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined;
 
-      const uploadResult = await uploadResponse.json();
-      const url = uploadResult.success ? (uploadResult.url || null) : null;
-      setDriveUrl(url);
+      const newItem: ReceiptItem = {
+        clientId: generateClientId(),
+        staged: true,
+        fileName: file.name,
+        mimeType: file.type,
+        base64,
+        previewUrl,
+        label: '',
+        aiExtractedAmount: typeof extracted.amount === 'number' ? extracted.amount : null,
+      };
 
-      // 呼び出し元に結果を返す
-      onExtracted(extracted);
-      onDriveUrlSet(url);
+      const next = [...items, newItem];
+      emitChange(next);
 
-      setState('done');
+      if (items.length === 0) {
+        onExtractedForForm(extracted);
+      }
 
-      // 触覚フィードバック
+      setProcessingFile(null);
       if ('vibrate' in navigator) navigator.vibrate(50);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'アップロードに失敗しました';
-      setErrorMsg(msg);
-      setState('error');
-      onError?.(msg);
-      setTimeout(() => { setState('idle'); setErrorMsg(null); }, 3000);
+      const msg = err instanceof Error ? err.message : '処理に失敗しました';
+      setErrorMsg(msg); onError?.(msg);
+      setProcessingFile(null);
+      setTimeout(() => setErrorMsg(null), 3000);
     }
-  }, [defaultOwner, onExtracted, onDriveUrlSet, onError]);
+  }, [items, emitChange, onExtractedForForm, onError]);
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) processFile(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   }, [processFile]);
 
-  const handleReset = () => {
-    setState('idle');
-    setFileName(null);
-    setDriveUrl(null);
-    setErrorMsg(null);
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(null);
-    }
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    onDriveUrlSet(null);
-  };
+  const handleLabelChange = useCallback((clientId: string, label: string) => {
+    const next = items.map((it) => it.clientId === clientId ? { ...it, label } : it);
+    emitChange(next);
+  }, [items, emitChange]);
 
-  // 添付済み状態
-  if (state === 'done' && fileName) {
-    return (
-      <div className="bg-[#1B4D3E]/5 border border-[#1B4D3E]/20 rounded-lg p-3 space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <Check className="w-4 h-4 text-[#1B4D3E] shrink-0" />
-            <span className="text-[11px] font-medium text-[#1B4D3E] truncate">{fileName}</span>
-            <span className="text-[10px] text-[#1B4D3E]/70 shrink-0">AI抽出済み</span>
-          </div>
-          <button onClick={handleReset} type="button" className="p-1 hover:bg-black/5 rounded">
-            <X className="w-3.5 h-3.5 text-[#666]" />
-          </button>
-        </div>
-        {previewUrl && (
-          <div className="flex justify-center">
-            <img src={previewUrl} alt="領収書" className="max-h-32 rounded border border-gray-200" />
-          </div>
-        )}
-        {driveUrl && (
-          <a href={driveUrl} target="_blank" rel="noopener noreferrer"
-            className="text-[10px] text-[#D4A03A] hover:underline block">
-            Google Driveで開く
-          </a>
-        )}
-      </div>
-    );
-  }
+  const handleRemove = useCallback((clientId: string) => {
+    const target = items.find((it) => it.clientId === clientId);
+    if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl);
+    const next = items.filter((it) => it.clientId !== clientId);
+    emitChange(next);
+  }, [items, emitChange]);
 
-  // 処理中
-  if (state === 'reading' || state === 'uploading') {
-    return (
-      <div className="bg-[#FAFAF8] border border-gray-200 rounded-lg p-4 flex items-center justify-center gap-2">
-        <Loader2 className="w-4 h-4 animate-spin text-[#D4A03A]" />
-        <span className="text-[11px] text-[#666]">
-          {state === 'reading' ? 'AI読み取り中...' : 'Driveにアップロード中...'}
+  const receiptSum = items.reduce((sum, it) => sum + (typeof it.aiExtractedAmount === 'number' ? it.aiExtractedAmount : 0), 0);
+  const hasAnyAiAmount = items.some((it) => typeof it.aiExtractedAmount === 'number' && it.aiExtractedAmount > 0);
+  const diff = formContext.totalAmount - receiptSum;
+  const diffAbs = Math.abs(diff);
+  const inRange = diffAbs <= AMOUNT_DIFF_THRESHOLD;
+
+  const filenamePreviews = items.map((it, idx) => {
+    if (!it.staged) return it.generatedFilename || it.fileName;
+    return generateReceiptFilename({
+      date: formContext.date,
+      kamoku_label: formContext.kamokuLabel,
+      store: formContext.store,
+      owner: formContext.owner,
+      description: formContext.description,
+      seq_no: idx + 1,
+      label: it.label,
+      original_filename: it.fileName,
+    });
+  });
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-medium text-[#666]">
+          📎 領収書（{items.length} / {MAX_RECEIPTS}）
         </span>
       </div>
-    );
-  }
 
-  // エラー
-  if (state === 'error' && errorMsg) {
-    return (
-      <div className="bg-[#C23728]/5 border border-[#C23728]/20 rounded-lg p-3">
-        <span className="text-[11px] text-[#C23728]">{errorMsg}</span>
-      </div>
-    );
-  }
+      {items.length > 0 && (
+        <div className="space-y-2">
+          {items.map((item, idx) => (
+            <div key={item.clientId} className="bg-[#FAFAF8] border border-gray-200 rounded-lg p-3 space-y-2">
+              <div className="flex items-start gap-2">
+                <div className="shrink-0">
+                  {item.previewUrl ? (
+                    <img src={item.previewUrl} alt={`領収書${idx + 1}`} className="w-14 h-14 object-cover rounded border border-gray-200" />
+                  ) : item.driveUrl ? (
+                    <a href={item.driveUrl} target="_blank" rel="noopener noreferrer"
+                       className="w-14 h-14 rounded border border-gray-200 flex items-center justify-center bg-white hover:bg-gray-50">
+                      <ExternalLink className="w-5 h-5 text-[#666]" />
+                    </a>
+                  ) : (
+                    <div className="w-14 h-14 rounded border border-gray-200 flex items-center justify-center bg-white">
+                      <Check className="w-5 h-5 text-[#1B4D3E]" />
+                    </div>
+                  )}
+                </div>
 
-  // 初期状態：アップロードボタン
-  return (
-    <div>
-      <button
-        type="button"
-        onClick={() => fileInputRef.current?.click()}
-        className="w-full bg-[#FAFAF8] border border-dashed border-gray-300 rounded-lg p-4 flex flex-col items-center gap-1.5 hover:border-[#D4A03A] hover:bg-[#FFFBEB] transition-colors"
-      >
-        <Camera className="w-5 h-5 text-[#999]" />
-        <span className="text-[11px] text-[#666] font-medium">領収書を添付（任意）</span>
-        <span className="text-[10px] text-[#999]">AIが金額・日付・店名を自動入力します</span>
-      </button>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*,application/pdf"
-        onChange={handleFileChange}
-        className="hidden"
-      />
+                <div className="flex-1 min-w-0 space-y-1">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-[11px] font-medium text-[#333] truncate">{item.fileName}</span>
+                    {item.staged ? (
+                      <span className="text-[9px] bg-[#FBBF24]/20 text-[#92400E] px-1.5 py-0.5 rounded-full shrink-0 font-medium">未保存</span>
+                    ) : (
+                      <span className="text-[9px] bg-[#1B4D3E]/10 text-[#1B4D3E] px-1.5 py-0.5 rounded-full shrink-0 font-medium">保存済</span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <label className="text-[10px] text-[#999] shrink-0">ラベル:</label>
+                    <input
+                      type="text"
+                      value={item.label}
+                      onChange={(e) => handleLabelChange(item.clientId, e.target.value)}
+                      placeholder="例: トモ分（任意）"
+                      className="flex-1 text-[11px] px-2 py-1 border border-gray-200 rounded bg-white focus:outline-none focus:border-[#D4A03A]"
+                    />
+                  </div>
+
+                  {typeof item.aiExtractedAmount === 'number' && item.aiExtractedAmount > 0 && (
+                    <div className="text-[10px] text-[#666]">AI抽出: ¥{item.aiExtractedAmount.toLocaleString()}</div>
+                  )}
+                </div>
+
+                <button type="button" onClick={() => handleRemove(item.clientId)}
+                        className="p-1 hover:bg-black/5 rounded shrink-0" aria-label="削除">
+                  <X className="w-4 h-4 text-[#999]" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {processingFile && (
+        <div className="bg-[#FAFAF8] border border-gray-200 rounded-lg p-3 flex items-center justify-center gap-2">
+          <Loader2 className="w-4 h-4 animate-spin text-[#D4A03A]" />
+          <span className="text-[11px] text-[#666]">AI読み取り中: {processingFile}</span>
+        </div>
+      )}
+
+      {errorMsg && (
+        <div className="bg-[#C23728]/5 border border-[#C23728]/20 rounded-lg p-3">
+          <span className="text-[11px] text-[#C23728]">{errorMsg}</span>
+        </div>
+      )}
+
+      {items.length < MAX_RECEIPTS && !processingFile && (
+        <button type="button" onClick={() => fileInputRef.current?.click()}
+                className="w-full bg-[#FAFAF8] border border-dashed border-gray-300 rounded-lg p-3 flex items-center justify-center gap-1.5 hover:border-[#D4A03A] hover:bg-[#FFFBEB] transition-colors">
+          {items.length === 0 ? (
+            <>
+              <Camera className="w-4 h-4 text-[#999]" />
+              <span className="text-[11px] text-[#666] font-medium">領収書を添付（任意）</span>
+            </>
+          ) : (
+            <>
+              <Plus className="w-4 h-4 text-[#666]" />
+              <span className="text-[11px] text-[#666] font-medium">領収書を追加</span>
+            </>
+          )}
+        </button>
+      )}
+
+      <input ref={fileInputRef} type="file" accept="image/*,application/pdf"
+             onChange={handleFileChange} className="hidden" />
+
+      {items.length >= 2 && hasAnyAiAmount && (
+        <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-1.5">
+          <div className="flex justify-between text-[11px]">
+            <span className="text-[#666]">領収書合計（AI抽出）</span>
+            <span className="font-medium text-[#333]">¥{receiptSum.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between text-[11px]">
+            <span className="text-[#666]">経費金額</span>
+            <span className="font-medium text-[#333]">¥{formContext.totalAmount.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between text-[11px] pt-1.5 border-t border-gray-100">
+            <span className="text-[#666]">差分</span>
+            <span className={`font-medium ${inRange ? 'text-[#1B4D3E]' : 'text-[#D4A03A]'}`}>
+              {inRange ? '🟢' : '🟡'} ¥{diffAbs.toLocaleString()}{inRange ? '（許容範囲内）' : '（要確認）'}
+            </span>
+          </div>
+          {!inRange && onSetAmountFromReceipts && receiptSum > 0 && (
+            <button type="button" onClick={() => onSetAmountFromReceipts(receiptSum)}
+                    className="w-full mt-1 text-[11px] bg-[#D4A03A] text-white py-1.5 rounded hover:bg-[#B8892D] transition-colors font-medium">
+              領収書合計を経費金額にする（¥{receiptSum.toLocaleString()}）
+            </button>
+          )}
+        </div>
+      )}
+
+      {items.length > 0 && (
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+          <button type="button" onClick={() => setShowFilenamePreview((v) => !v)}
+                  className="w-full px-3 py-2 flex items-center justify-between bg-[#FAFAF8] hover:bg-[#F5F5F0] text-[10px] text-[#666] transition-colors">
+            <span>ファイル名プレビュー</span>
+            {showFilenamePreview ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </button>
+          {showFilenamePreview && (
+            <div className="p-3 bg-white space-y-1">
+              {filenamePreviews.map((name, idx) => (
+                <div key={idx} className="text-[10px] text-[#666] font-mono break-all">{idx + 1}. {name}</div>
+              ))}
+              <div className="text-[9px] text-[#999] pt-1 border-t border-gray-100 mt-2">
+                ※ 登録ボタン押下時にこの名前でGoogle Driveに保存されます
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 公開ユーティリティ
+// ═══════════════════════════════════════════════════════════════
+
+export interface CommitResult {
+  ok: boolean;
+  savedReceipts: Array<{
+    clientId: string;
+    dbId?: string;
+    driveFileId: string;
+    driveUrl: string;
+    driveFolderPath: string;
+    generatedFilename: string;
+    originalFilename: string;
+    mimeType: string;
+    label: string | null;
+    aiExtractedAmount: number | null;
+    seqNo: number;
+    staged: boolean;
+  }>;
+  failed: Array<{ clientId: string; fileName: string; error: string }>;
+}
+
+export async function commitReceiptsToDrive(
+  items: ReceiptItem[],
+  formContext: ReceiptFormContext
+): Promise<CommitResult> {
+  const savedReceipts: CommitResult['savedReceipts'] = [];
+  const failed: CommitResult['failed'] = [];
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const seqNo = i + 1;
+
+    if (!item.staged) {
+      savedReceipts.push({
+        clientId: item.clientId,
+        dbId: item.dbId,
+        driveFileId: item.driveFileId || '',
+        driveUrl: item.driveUrl || '',
+        driveFolderPath: '',
+        generatedFilename: item.generatedFilename || item.fileName,
+        originalFilename: item.fileName,
+        mimeType: item.mimeType,
+        label: item.label || null,
+        aiExtractedAmount: item.aiExtractedAmount ?? null,
+        seqNo,
+        staged: false,
+      });
+      continue;
+    }
+
+    if (!item.base64) {
+      failed.push({ clientId: item.clientId, fileName: item.fileName, error: 'ファイルデータが見つかりません' });
+      continue;
+    }
+
+    const generatedFilename = generateReceiptFilename({
+      date: formContext.date,
+      kamoku_label: formContext.kamokuLabel,
+      store: formContext.store,
+      owner: formContext.owner,
+      description: formContext.description,
+      seq_no: seqNo,
+      label: item.label,
+      original_filename: item.fileName,
+    });
+
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image: item.base64,
+          filename: item.fileName,
+          date: formContext.date,
+          mimeType: item.mimeType,
+          owner: formContext.owner,
+          generatedFilename,
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        failed.push({ clientId: item.clientId, fileName: item.fileName, error: data.error || 'アップロード失敗' });
+        continue;
+      }
+
+      savedReceipts.push({
+        clientId: item.clientId,
+        driveFileId: data.fileId,
+        driveUrl: data.url,
+        driveFolderPath: data.folderPath || data.folder || '',
+        generatedFilename: data.fileName || generatedFilename,
+        originalFilename: item.fileName,
+        mimeType: item.mimeType,
+        label: item.label || null,
+        aiExtractedAmount: item.aiExtractedAmount ?? null,
+        seqNo,
+        staged: true,
+      });
+    } catch (err) {
+      failed.push({ clientId: item.clientId, fileName: item.fileName, error: err instanceof Error ? err.message : String(err) });
+    }
+  }
+
+  return { ok: failed.length === 0, savedReceipts, failed };
+}
+
+export async function trashReceiptsInDrive(driveFileIds: string[]): Promise<void> {
+  if (driveFileIds.length === 0) return;
+  try {
+    await fetch('/api/upload/trash', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fileIds: driveFileIds }),
+    });
+  } catch {
+    // ベストエフォート
+  }
 }
