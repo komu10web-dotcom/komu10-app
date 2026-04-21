@@ -10,7 +10,8 @@ const TRANSPORT_METHODS = [
 ];
 
 const CLASSES = [
-  '普通席', 'エコノミー', 'ビジネス', 'ファースト', 'グリーン', '指定席', '自由席',
+  '普通席', 'エコノミー', 'プレミアムエコノミー', 'ビジネス', 'ファースト',
+  'グリーン', 'クラスJ', '指定席', '自由席',
 ];
 
 const CLASS_REASONS = [
@@ -204,7 +205,7 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
     ? [data.route_legs[0].from, ...data.route_legs.map(l => l.to)].filter(Boolean).join(' → ')
     : '';
 
-  const isUpperClass = data.class_value !== '普通席' && data.class_value !== '自由席' && data.class_value !== '';
+  const isUpperClass = data.class_value !== '普通席' && data.class_value !== '自由席' && data.class_value !== 'クラスJ' && data.class_value !== '';
 
   return (
     <div className="border border-[#D4A03A]/30 rounded-xl p-4 space-y-3 bg-[#D4A03A]/5">
