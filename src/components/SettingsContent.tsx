@@ -10,6 +10,7 @@ import { OWNER_COLOR_PRESETS } from './HeaderControls';
 import TransportFields, { EMPTY_TRANSPORT } from '@/components/TransportFields';
 import type { TransportData } from '@/components/TransportFields';
 import InvoiceTemplateModal from '@/components/InvoiceTemplateModal';
+import RenameReceiptsSection from '@/components/RenameReceiptsSection';
 
 // ============================================================
 // 定数
@@ -2034,6 +2035,9 @@ export default function SettingsContent() {
           </div>
         </section>
 
+        {/* ── 既存領収書ファイル一括リネーム（v0.12.0 Sprint 3） ── */}
+        <RenameReceiptsSection />
+
         {/* ── Q&A ── */}
         <section className="mb-10">
           <div className="flex items-center gap-2 mb-3">
@@ -2975,24 +2979,42 @@ export default function SettingsContent() {
             リリースノート
           </div>
           <div className="space-y-3">
-            {/* v0.11.0 */}
+            {/* v0.12.0 */}
             <div className="bg-white rounded-xl shadow-sm p-4">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.11.0</span>
+                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.12.0</span>
                 <span className="text-[9px] text-[#999]">2026.04.22</span>
                 <span className="text-[8px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full font-medium">LATEST</span>
               </div>
               <ul className="space-y-1">
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>複数領収書添付機能（1経費に最大10枚・ラベル付与可）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>領収書ファイル名の自動命名ルール（日付_科目_支払先_担当者_摘要_連番_ラベル）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>Drive保存タイミングを「登録ボタン押下時」に変更（孤児ファイルゼロ化）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>経費削除時、紐づく領収書をDriveのゴミ箱に自動移動（30日間復元可）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>領収書合計金額の自動合算＋経費金額セットボタン（差分1円以内=緑）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>経費一覧に領収書件数バッジ（📎N）表示</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>編集モーダルで既存領収書の閲覧・ラベル変更・削除に対応</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>expense_receiptsテーブル新設＋既存データ自動マイグレ・監査ログ連動</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>既存領収書ファイル一括リネーム機能（Sprint 3）：過去のlegacy_*.binファイルをv0.11.0命名規則に統一</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>ドライラン機能：変更前に旧名→新名の対応表を画面で確認可能</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>旧ファイル名のDB記録（old_filenameカラム）により復元可能性を担保</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>失敗スキップ続行＋詳細レポート表示（Drive API障害時も全体停止しない）</li>
               </ul>
             </div>
+
+            {/* v0.11.0 */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.11.0</span>
+                  <span className="text-[9px] text-[#999]">2026.04.22</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
+                <ul className="space-y-1">
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>複数領収書添付機能（1経費に最大10枚・ラベル付与可）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>領収書ファイル名の自動命名ルール（日付_科目_支払先_担当者_摘要_連番_ラベル）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>Drive保存タイミングを「登録ボタン押下時」に変更（孤児ファイルゼロ化）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>経費削除時、紐づく領収書をDriveのゴミ箱に自動移動（30日間復元可）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>領収書合計金額の自動合算＋経費金額セットボタン（差分1円以内=緑）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>経費一覧に領収書件数バッジ（📎N）表示</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>編集モーダルで既存領収書の閲覧・ラベル変更・削除に対応</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>expense_receiptsテーブル新設＋既存データ自動マイグレ・監査ログ連動</li>
+                </ul>
+              </div>
+            </details>
 
             {/* v0.10.2 */}
             <details className="bg-white rounded-xl shadow-sm">
@@ -3270,7 +3292,7 @@ export default function SettingsContent() {
 
         {/* バージョン */}
         <div className="text-center py-8">
-          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.11.0</span>
+          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.12.0</span>
         </div>
 
       </div>{/* end max-w-3xl */}

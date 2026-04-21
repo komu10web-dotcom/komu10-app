@@ -471,6 +471,7 @@ export interface Database {
           original_filename: string | null;
           mime_type: string | null;
           ai_extracted_amount: number | null;
+          old_filename: string | null;
           created_at: string;
           updated_at: string;
         };
