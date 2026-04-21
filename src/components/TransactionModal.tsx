@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Loader2, Plus, Trash2 } from 'lucide-react';
+import { X, Loader2, Plus, Trash2, Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { KAMOKU, DIVISIONS, TRANSACTION_STATUS, PROJECT_TAG_REQUIRED_KAMOKU, KAMOKU_INPUT_GUIDE } from '@/types/database';
 import type { Transaction, Project, ExpenseTemplate, RouteTemplate } from '@/types/database';
@@ -13,6 +13,7 @@ import type { EntertainmentData } from '@/components/EntertainmentFields';
 import { entertainmentToDescription } from '@/lib/entertainmentUtils';
 import ReceiptUploadSection from '@/components/ReceiptUploadSection';
 import type { ReceiptExtractedData } from '@/components/ReceiptUploadSection';
+import ConsultationModal from '@/components/ConsultationModal';
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -64,6 +65,8 @@ export default function TransactionModal({
   const [savedFormSnapshot, setSavedFormSnapshot] = useState<any>(null);
   // v0.9.0: 領収書アップロード（Uploader機能を統合）
   const [driveUrl, setDriveUrl] = useState<string | null>(null);
+  // v0.10.0: AI会計相談モーダル表示制御
+  const [showConsultation, setShowConsultation] = useState(false);
 
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -684,7 +687,18 @@ export default function TransactionModal({
           </div>
           {/* ② 勘定科目（日付の直後 — ここで分岐） */}
           <div>
-            <label className="text-xs text-[#999] block mb-1">勘定科目</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs text-[#999]">勘定科目</label>
+              <button
+                type="button"
+                onClick={() => setShowConsultation(true)}
+                className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] text-[#1a1a1a] hover:bg-black/5 transition-colors"
+                title="この経費の科目をAIに相談"
+              >
+                <Sparkles className="w-3 h-3" />
+                <span>AIに相談</span>
+              </button>
+            </div>
             <select value={form.kamoku} onChange={(e) => setForm({ ...form, kamoku: e.target.value })}
               className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
               {EXPENSE_KAMOKU.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
@@ -1131,6 +1145,26 @@ export default function TransactionModal({
           )}
         </div>
       </div>
+
+      {/* v0.10.0: AI会計相談モーダル */}
+      {showConsultation && (
+        <ConsultationModal
+          context={{
+            transaction_id: editData?.id || null,
+            date: form.date,
+            amount: form.amount ? Number(form.amount.replace(/,/g, '')) : undefined,
+            store: form.store || undefined,
+            kamoku: form.kamoku,
+            item_name: form.item_name || undefined,
+            description: form.description || undefined,
+          }}
+          owner={(form.owner === 'tomo' || form.owner === 'toshiki') ? form.owner : 'tomo'}
+          onApplyKamoku={(newKamoku) => {
+            setForm({ ...form, kamoku: newKamoku });
+          }}
+          onClose={() => setShowConsultation(false)}
+        />
+      )}
     </div>
   );
 }

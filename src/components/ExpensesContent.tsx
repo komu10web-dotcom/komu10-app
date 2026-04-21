@@ -12,8 +12,9 @@ const STATUS_STYLES: Record<string, { bg: string; text: string }> = {
   settled:  { bg: 'bg-[#1B4D3E]/10', text: 'text-[#1B4D3E]' },
 };
 import type { Transaction, Project } from '@/types/database';
-import { Plus, Upload, Pencil, Trash2, Search, Loader2 } from 'lucide-react';
+import { Plus, Upload, Pencil, Trash2, Search, Loader2, Sparkles } from 'lucide-react';
 import TransactionModal from './TransactionModal';
+import ConsultationModal from './ConsultationModal';
 import { usePeriodRange } from './HeaderControls';
 
 export default function ExpensesContent() {
@@ -38,6 +39,9 @@ export default function ExpensesContent() {
 
   // 削除確認
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+
+  // v0.10.0: AI会計相談モーダル（一覧行から呼び出し）
+  const [consultTarget, setConsultTarget] = useState<Transaction | null>(null);
 
   // プロジェクト（TransactionModalに渡す）
   const [projects, setProjects] = useState<Project[]>([]);
@@ -285,6 +289,13 @@ export default function ExpensesContent() {
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
                             <button
+                              onClick={() => setConsultTarget(tx)}
+                              className="p-1.5 hover:bg-black/5 rounded-md transition-colors"
+                              title="AIに相談"
+                            >
+                              <Sparkles className="w-3.5 h-3.5 text-[#999]" />
+                            </button>
+                            <button
                               onClick={() => { setEditTarget(tx); setModalOpen(true); }}
                               className="p-1.5 hover:bg-black/5 rounded-md transition-colors"
                               title="編集"
@@ -329,6 +340,34 @@ export default function ExpensesContent() {
         defaultOwner={owner}
         projects={projects}
       />
+
+      {/* ── v0.10.0: AI会計相談モーダル（一覧行から） ── */}
+      {consultTarget && (
+        <ConsultationModal
+          context={{
+            transaction_id: consultTarget.id,
+            date: consultTarget.date,
+            amount: consultTarget.amount,
+            store: consultTarget.store || undefined,
+            kamoku: consultTarget.kamoku,
+            item_name: consultTarget.item_description || undefined,
+            description: consultTarget.description || undefined,
+            project_id: consultTarget.project_id,
+            division: consultTarget.division,
+          }}
+          owner={(consultTarget.owner === 'tomo' || consultTarget.owner === 'toshiki') ? consultTarget.owner : 'tomo'}
+          onUpdateTransaction={async (transactionId, updates) => {
+            if (!supabase) return;
+            const { error } = await supabase
+              .from('transactions')
+              .update(updates)
+              .eq('id', transactionId);
+            if (error) throw error;
+            await fetchTransactions();
+          }}
+          onClose={() => setConsultTarget(null)}
+        />
+      )}
 
       {/* ── 削除確認 ── */}
       {deleteTarget && (
