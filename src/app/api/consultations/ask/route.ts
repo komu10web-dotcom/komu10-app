@@ -180,12 +180,14 @@ ${similarKamokuLines}
     // 5. メッセージ履歴を更新
     const updatedMessages = [...apiMessages, { role: 'assistant' as const, content: assistantText }];
 
-    // 6. AIの回答から「推奨科目」を抽出（kamoku キーが本文に含まれていれば）
+    // 6. AIの回答から「推奨科目」を抽出（本文の最も早い位置に登場した科目を優先）
     let suggestedKamoku: string | null = null;
+    let earliestIdx = Infinity;
     for (const kamokuKey of Object.keys(KAMOKU_DESCRIPTIONS)) {
-      if (assistantText.includes(kamokuKey)) {
+      const idx = assistantText.indexOf(kamokuKey);
+      if (idx >= 0 && idx < earliestIdx) {
+        earliestIdx = idx;
         suggestedKamoku = kamokuKey;
-        break;
       }
     }
 
