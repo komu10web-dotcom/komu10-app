@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import { Upload, Check, AlertCircle, Loader2, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { KAMOKU } from '@/types/database';
+import { KAMOKU, PROJECT_TAG_REQUIRED_KAMOKU } from '@/types/database';
 import TransportFields, { EMPTY_TRANSPORT } from '@/components/TransportFields';
 import type { TransportData } from '@/components/TransportFields';
 import { saveTransportDetails } from '@/lib/transportUtils';
@@ -113,7 +113,11 @@ export function Uploader({ onUploadComplete, defaultOwner = 'tomo' }: UploaderPr
 
       // フォームに初期値をセット
       const validKamoku = extracted.kamoku_hint && (extracted.kamoku_hint in KAMOKU) ? extracted.kamoku_hint : null;
-      const aiKamoku = validKamoku || guessKamokuId(extracted.vendor);
+      let aiKamoku = validKamoku || guessKamokuId(extracted.vendor);
+      // v0.8.2: 取材費・制作費はUploader経由で登録不可のため、miscにフォールバック
+      if ((PROJECT_TAG_REQUIRED_KAMOKU as readonly string[]).includes(aiKamoku)) {
+        aiKamoku = 'misc';
+      }
       setFormData({
         date: extracted.date || new Date().toISOString().split('T')[0],
         amount: extracted.amount?.toString() || '',
@@ -162,6 +166,13 @@ export function Uploader({ onUploadComplete, defaultOwner = 'tomo' }: UploaderPr
     }
     if (formData.kamoku === 'equipment' && !formData.item_name.trim()) {
       setError('消耗品費の品名は必須です');
+      return;
+    }
+    // v0.8.2: 取材費・制作費は案件タグ必須のため、領収書アップロード画面では登録不可
+    // （経費入力画面では案件タグ付きで登録可能。v0.9.0で本画面も統合予定）
+    if ((PROJECT_TAG_REQUIRED_KAMOKU as readonly string[]).includes(formData.kamoku)) {
+      const kamokuName = KAMOKU[formData.kamoku as keyof typeof KAMOKU]?.name || formData.kamoku;
+      setError(`${kamokuName}は案件タグ付きで登録する必要があります。画面上部の「手入力」タブから経費入力画面を開いてご登録ください。`);
       return;
     }
 
@@ -310,8 +321,9 @@ export function Uploader({ onUploadComplete, defaultOwner = 'tomo' }: UploaderPr
   }, [handleFile]);
 
   // 勘定科目のオプション（経費のみ）
+  // v0.8.2: 取材費・制作費は案件タグ必須のため、Uploader画面では除外（手入力画面から登録）
   const kamokuOptions = Object.entries(KAMOKU)
-    .filter(([, v]) => v.type === 'expense')
+    .filter(([id, v]) => v.type === 'expense' && !(PROJECT_TAG_REQUIRED_KAMOKU as readonly string[]).includes(id))
     .map(([id, v]) => ({ id, name: v.name }));
 
   // ===== 確認・編集画面 =====

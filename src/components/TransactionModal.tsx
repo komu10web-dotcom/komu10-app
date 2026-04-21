@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, Loader2, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { KAMOKU, DIVISIONS, TRANSACTION_STATUS } from '@/types/database';
+import { KAMOKU, DIVISIONS, TRANSACTION_STATUS, PROJECT_TAG_REQUIRED_KAMOKU, KAMOKU_INPUT_GUIDE } from '@/types/database';
 import type { Transaction, Project, ExpenseTemplate, RouteTemplate } from '@/types/database';
 import TransportFields, { EMPTY_TRANSPORT } from '@/components/TransportFields';
 import type { TransportData } from '@/components/TransportFields';
@@ -405,6 +405,15 @@ export default function TransactionModal({
     if (form.kamoku === 'equipment' && !form.item_name.trim()) {
       setError('消耗品費の品名は必須です');
       return;
+    }
+    // v0.8.2: 取材費・制作費は案件タグ（project_id）必須
+    if ((PROJECT_TAG_REQUIRED_KAMOKU as readonly string[]).includes(form.kamoku)) {
+      const hasProjectTag = allocRows.some(r => r.project_id);
+      if (!hasProjectTag) {
+        const kamokuName = KAMOKU[form.kamoku as keyof typeof KAMOKU]?.name || form.kamoku;
+        setError(`${kamokuName}は案件タグが必須です。事業・PJ割り当てでPJを選択してください。`);
+        return;
+      }
     }
     // 按分バリデーション
     if (hasAllocRows) {
@@ -943,10 +952,36 @@ export default function TransactionModal({
             )}
           </div>
 
+          {/* v0.8.2: 案件タグ必須科目のヘルプボックス */}
+          {KAMOKU_INPUT_GUIDE[form.kamoku] && (
+            <div className="bg-[#FFFBEB] border border-[#D4A03A]/30 rounded-lg p-3 space-y-1">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px]">💡</span>
+                <span className="text-[11px] font-semibold text-[#1a1a1a]">{KAMOKU_INPUT_GUIDE[form.kamoku].title}</span>
+              </div>
+              <p className="text-[11px] text-[#666] leading-relaxed">{KAMOKU_INPUT_GUIDE[form.kamoku].body}</p>
+              <p className="text-[10px] text-[#999] leading-relaxed">
+                例：{KAMOKU_INPUT_GUIDE[form.kamoku].example}
+              </p>
+              {KAMOKU_INPUT_GUIDE[form.kamoku].requireProject && (
+                <p className="text-[10px] text-[#C23728] font-medium pt-0.5">
+                  ※この科目は案件タグが必須です
+                </p>
+              )}
+            </div>
+          )}
+
           {/* ===== 事業・PJ割り当て（複数行按分） ===== */}
           <div className="pt-3 border-t border-gray-100">
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs text-[#999]">事業・PJ割り当て（任意）</label>
+              <label className="text-xs text-[#999]">
+                事業・PJ割り当て
+                {(PROJECT_TAG_REQUIRED_KAMOKU as readonly string[]).includes(form.kamoku) ? (
+                  <span className="text-[#C23728] ml-1">*必須</span>
+                ) : (
+                  <span className="ml-1">（任意）</span>
+                )}
+              </label>
               {!hasAllocRows && (
                 <button onClick={addAllocRow} className="flex items-center gap-1 text-[10px] text-[#D4A03A] hover:underline">
                   <Plus className="w-3 h-3" />追加
@@ -971,7 +1006,7 @@ export default function TransactionModal({
                         </select>
                         <select value={row.project_id} onChange={e => updateAllocRow(idx, 'project_id', e.target.value)}
                           className="px-2 py-1.5 bg-white rounded text-[11px] border-0 outline-none flex-1 min-w-0">
-                          <option value="">PJ（任意）</option>
+                          <option value="">{(PROJECT_TAG_REQUIRED_KAMOKU as readonly string[]).includes(form.kamoku) ? 'PJを選択（必須）' : 'PJ（任意）'}</option>
                           {filteredPJ.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                         </select>
                       </div>

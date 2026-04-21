@@ -2975,18 +2975,36 @@ export default function SettingsContent() {
             リリースノート
           </div>
           <div className="space-y-3">
-            {/* v0.8.1 */}
+            {/* v0.8.2 */}
             <div className="bg-white rounded-xl shadow-sm p-4">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.8.1</span>
+                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.8.2</span>
                 <span className="text-[9px] text-[#999]">2026.04.21</span>
                 <span className="text-[8px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full font-medium">LATEST</span>
               </div>
               <ul className="space-y-1">
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>勘定科目に「取材費」「制作費」「会議費」「福利厚生費」「研修費」「支払手数料」を追加</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>AI領収書抽出の勘定科目判定を新科目に対応（YT撮影関連の切り分け精度向上）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>取材費・制作費は案件タグ（PJ）必須化。未入力時はバリデーションエラー</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>取材費・制作費を選択した際、記入ポイント説明ボックスを表示</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>領収書アップロード画面では取材費・制作費を選択不可に変更（手入力画面で案件タグ付きで登録）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>次回リリース(v0.9.0)で領収書アップロードを手入力画面に統合予定</li>
               </ul>
             </div>
+
+            {/* v0.8.1 */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.8.1</span>
+                  <span className="text-[9px] text-[#999]">2026.04.21</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
+                <ul className="space-y-1">
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>勘定科目に「取材費」「制作費」「会議費」「福利厚生費」「研修費」「支払手数料」を追加</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>AI領収書抽出の勘定科目判定を新科目に対応（YT撮影関連の切り分け精度向上）</li>
+                </ul>
+              </div>
+            </details>
 
             {/* v0.5.7 */}
             <details className="bg-white rounded-xl shadow-sm">
@@ -3158,7 +3176,7 @@ export default function SettingsContent() {
 
         {/* バージョン */}
         <div className="text-center py-8">
-          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.8.1</span>
+          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.8.2</span>
         </div>
 
       </div>{/* end max-w-3xl */}

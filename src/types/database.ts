@@ -633,6 +633,26 @@ export const KAMOKU = {
   jigyounushi_kashi: { name: '事業主貸', type: 'equity', internal: true },
   bank_deposit: { name: '普通預金', type: 'asset', internal: true },
 } as const;
+
+// v0.8.2: 案件タグ（project_id）必須化対象科目
+// allocations配列のうち最低1行で project_id の選択が必須
+export const PROJECT_TAG_REQUIRED_KAMOKU = ['torizai', 'production'] as const;
+
+// v0.8.2: 科目別の記入ガイドヘルプテキスト（TransactionModal/Uploaderで表示）
+export const KAMOKU_INPUT_GUIDE: Record<string, { title: string; body: string; example: string; requireProject: boolean }> = {
+  torizai: {
+    title: '取材費の記入ポイント',
+    body: '取材対象と目的を簡潔に記載。案件詳細は紐付けた案件タグから参照します。',
+    example: '湯河原温泉旅館○○ 代表インタビュー',
+    requireProject: true,
+  },
+  production: {
+    title: '制作費の記入ポイント',
+    body: '購入物と使用目的を簡潔に記載。',
+    example: 'シャツ2点 出演衣装／撮影題材のホテル代',
+    requireProject: true,
+  },
+};
  
 // 収益タイプ定義
 export const REVENUE_TYPES = {
