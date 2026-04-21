@@ -24,6 +24,16 @@ export interface ReceiptExtractedData {
   to_station?: string | null;
   round_trip?: 'one_way' | 'round_trip' | null;
   carrier?: string | null;
+  // v0.10.2: 接待・会議・取材の場合の追加フィールド
+  guest_count?: number | string | null;
+  restaurant_type?: string | null;
+  // v0.10.2: 物品購入の場合の追加フィールド
+  model_number?: string | null;
+  serial_number?: string | null;
+  // v0.10.2: サブスク・通信費・ソフトウェアの場合の追加フィールド
+  billing_period_from?: string | null;
+  billing_period_to?: string | null;
+  next_billing_date?: string | null;
 }
 
 interface ReceiptUploadSectionProps {

@@ -2975,19 +2975,39 @@ export default function SettingsContent() {
             リリースノート
           </div>
           <div className="space-y-3">
-            {/* v0.10.1 */}
+            {/* v0.10.2 */}
             <div className="bg-white rounded-xl shadow-sm p-4">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.10.1</span>
+                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.10.2</span>
                 <span className="text-[9px] text-[#999]">2026.04.21</span>
                 <span className="text-[8px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full font-medium">LATEST</span>
               </div>
               <ul className="space-y-1">
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>領収書AI読み取りを強化。交通費（JR・新幹線・特急券・飛行機）の場合、出発地・到着地・往復区分・支払方法を自動入力</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>AIモデルをClaude Sonnet 4.5にアップグレード（OCR精度向上）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>プロンプト改善：「お預り・お釣り」と「合計金額」の取り違えを防止／和暦の自動正規化</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>領収書AIをClaude Sonnet 4.6にアップグレード（最新世代・OCR精度さらに向上）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>AI会計相談をClaude Opus 4.7にアップグレード（最高位モデル・推論精度大幅向上）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>接待・会議・取材費の領収書から利用人数を自動入力</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>物品購入の領収書から型番を自動抽出し品名に併記</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>サブスク・通信費・ソフトウェアの領収書から請求期間を自動抽出し説明欄に追記</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>合計金額の優先順位を明文化（ご請求金額 &gt; 税込合計 &gt; 合計）</li>
               </ul>
             </div>
+
+            {/* v0.10.1 */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.10.1</span>
+                  <span className="text-[9px] text-[#999]">2026.04.21</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
+                <ul className="space-y-1">
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>領収書AI読み取りを強化。交通費（JR・新幹線・特急券・飛行機）の場合、出発地・到着地・往復区分・支払方法を自動入力</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>AIモデルをClaude Sonnet 4.5にアップグレード（OCR精度向上）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>プロンプト改善：「お預り・お釣り」と「合計金額」の取り違えを防止／和暦の自動正規化</li>
+                </ul>
+              </div>
+            </details>
 
             {/* v0.10.0 */}
             <details className="bg-white rounded-xl shadow-sm">
@@ -3228,7 +3248,7 @@ export default function SettingsContent() {
 
         {/* バージョン */}
         <div className="text-center py-8">
-          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.10.1</span>
+          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.10.2</span>
         </div>
 
       </div>{/* end max-w-3xl */}

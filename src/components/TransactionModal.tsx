@@ -396,13 +396,34 @@ export default function TransactionModal({
     const validKamoku = data.kamoku_hint && (data.kamoku_hint in KAMOKU) ? data.kamoku_hint : null;
     const inferredKamoku = validKamoku || guessKamokuIdFromVendor(data.vendor);
 
+    // v0.10.2: サブスク・通信費・ソフトウェアの場合、請求期間を description に追記
+    let descSuffix = '';
+    if (
+      (inferredKamoku === 'subscription' || inferredKamoku === 'communication' || inferredKamoku === 'software') &&
+      data.billing_period_from && data.billing_period_to
+    ) {
+      descSuffix = `【請求期間】${data.billing_period_from} 〜 ${data.billing_period_to}`;
+    }
+
+    // v0.10.2: 物品購入の場合、品名に型番を併記
+    let itemNameWithModel = data.item_name || '';
+    if (
+      (inferredKamoku === 'equipment' || inferredKamoku === 'supplies' || inferredKamoku === 'production') &&
+      data.item_name && data.model_number
+    ) {
+      itemNameWithModel = `${data.item_name}（型番: ${data.model_number}）`;
+    }
+
     setForm(prev => ({
       ...prev,
       date: data.date || prev.date,
       amount: data.amount?.toString() || prev.amount,
       store: data.vendor || prev.store,
       kamoku: inferredKamoku,
-      item_name: data.item_name || prev.item_name,
+      item_name: itemNameWithModel || prev.item_name,
+      description: descSuffix
+        ? (prev.description ? `${prev.description}\n${descSuffix}` : descSuffix)
+        : prev.description,
     }));
 
     // v0.10.1: 交通費の場合、ルート・往復・支払方法を transportData に自動流し込み
@@ -438,6 +459,23 @@ export default function TransactionModal({
         }
         return next;
       });
+    }
+
+    // v0.10.2: 接待交際費・会議費・取材費・福利厚生費の場合、人数を流し込み
+    // ※ guest_name(取引先名)はレシートから読み取れないため自動入力しない（手入力必須）
+    if (
+      inferredKamoku === 'entertainment' ||
+      inferredKamoku === 'meeting' ||
+      inferredKamoku === 'torizai' ||
+      inferredKamoku === 'welfare'
+    ) {
+      const guestCountStr = data.guest_count != null ? String(data.guest_count) : '';
+      if (guestCountStr && /^\d+$/.test(guestCountStr)) {
+        setEntertainmentData(prev => ({
+          ...prev,
+          guest_count: prev.guest_count || guestCountStr,
+        }));
+      }
     }
   };
 
