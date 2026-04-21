@@ -404,6 +404,41 @@ export default function TransactionModal({
       kamoku: inferredKamoku,
       item_name: data.item_name || prev.item_name,
     }));
+
+    // v0.10.1: 交通費の場合、ルート・往復・支払方法を transportData に自動流し込み
+    if (inferredKamoku === 'travel') {
+      const validPaymentMethods = ['ic', 'cash', 'credit', 'invoice'];
+      const aiPayment = data.payment_method && validPaymentMethods.includes(data.payment_method)
+        ? data.payment_method
+        : null;
+
+      setTransportData(prev => {
+        const next = { ...prev };
+        // 出発地・到着地が両方とれている場合のみ、最初の区間を上書き
+        if (data.from_station && data.to_station) {
+          const firstLeg = prev.route_legs?.[0] || { from: '', to: '', method: '電車', carrier: '', amount: 0, green: false };
+          next.route_legs = [
+            {
+              ...firstLeg,
+              from: data.from_station,
+              to: data.to_station,
+              carrier: data.carrier || firstLeg.carrier || '',
+              amount: data.amount || firstLeg.amount || 0,
+            },
+            ...prev.route_legs.slice(1),
+          ];
+        }
+        // 往復区分
+        if (data.round_trip === 'one_way' || data.round_trip === 'round_trip') {
+          next.round_trip = data.round_trip;
+        }
+        // 支払方法
+        if (aiPayment) {
+          next.payment_method = aiPayment;
+        }
+        return next;
+      });
+    }
   };
 
   const handleSave = async () => {

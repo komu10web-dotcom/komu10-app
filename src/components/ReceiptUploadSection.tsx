@@ -19,6 +19,11 @@ export interface ReceiptExtractedData {
   items?: Array<{ name: string; quantity?: number; price?: number }>;
   payment_method?: string;
   tax?: number;
+  // v0.10.1: 交通費の場合のみ返される追加フィールド
+  from_station?: string | null;
+  to_station?: string | null;
+  round_trip?: 'one_way' | 'round_trip' | null;
+  carrier?: string | null;
 }
 
 interface ReceiptUploadSectionProps {

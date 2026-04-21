@@ -2975,19 +2975,36 @@ export default function SettingsContent() {
             リリースノート
           </div>
           <div className="space-y-3">
-            {/* v0.10.0 */}
+            {/* v0.10.1 */}
             <div className="bg-white rounded-xl shadow-sm p-4">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.10.0</span>
+                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.10.1</span>
                 <span className="text-[9px] text-[#999]">2026.04.21</span>
                 <span className="text-[8px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full font-medium">LATEST</span>
               </div>
               <ul className="space-y-1">
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>AI会計相談機能を追加。経費入力画面の科目選択横と経費一覧の各行から呼び出し可能</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>相談時に同じ支払先の過去処理を自動参照。「この科目で確定」ワンタップで科目反映</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>相談履歴を経費に紐づけて保存（audit証跡）。再現性のためAIモデルバージョンも記録</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>領収書AI読み取りを強化。交通費（JR・新幹線・特急券・飛行機）の場合、出発地・到着地・往復区分・支払方法を自動入力</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>AIモデルをClaude Sonnet 4.5にアップグレード（OCR精度向上）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>プロンプト改善：「お預り・お釣り」と「合計金額」の取り違えを防止／和暦の自動正規化</li>
               </ul>
             </div>
+
+            {/* v0.10.0 */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.10.0</span>
+                  <span className="text-[9px] text-[#999]">2026.04.21</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
+                <ul className="space-y-1">
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>AI会計相談機能を追加。経費入力画面の科目選択横と経費一覧の各行から呼び出し可能</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>相談時に同じ支払先の過去処理を自動参照。「この科目で確定」ワンタップで科目反映</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>相談履歴を経費に紐づけて保存（audit証跡）。再現性のためAIモデルバージョンも記録</li>
+                </ul>
+              </div>
+            </details>
 
             {/* v0.9.0 */}
             <details className="bg-white rounded-xl shadow-sm">
@@ -3211,7 +3228,7 @@ export default function SettingsContent() {
 
         {/* バージョン */}
         <div className="text-center py-8">
-          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.10.0</span>
+          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.10.1</span>
         </div>
 
       </div>{/* end max-w-3xl */}
