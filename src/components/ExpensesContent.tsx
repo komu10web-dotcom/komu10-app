@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import { KAMOKU, TRANSACTION_STATUS } from '@/types/database';
+import { KAMOKU, TRANSACTION_STATUS, PROJECT_TAG_REQUIRED_KAMOKU } from '@/types/database';
 
 // ステータスバッジの色定義
 const STATUS_STYLES: Record<string, { bg: string; text: string }> = {
@@ -24,6 +24,9 @@ export default function ExpensesContent() {
 
   // フィルター
   const [searchText, setSearchText] = useState('');
+  // v0.9.0: 未紐付けフィルター（取材費・制作費で案件タグなし）
+  const [showOnlyUntagged, setShowOnlyUntagged] = useState(false);
+  const [untaggedIds, setUntaggedIds] = useState<Set<string>>(new Set());
 
   // モーダル
   const [modalOpen, setModalOpen] = useState(false);
@@ -59,7 +62,31 @@ export default function ExpensesContent() {
 
       const { data, error } = await query;
       if (error) throw error;
-      setTransactions((data as Transaction[]) || []);
+      const txList = (data as Transaction[]) || [];
+      setTransactions(txList);
+
+      // v0.9.0: 取材費・制作費で案件タグ未紐付けのtx IDを検出
+      const requiredKamokuSet = new Set(PROJECT_TAG_REQUIRED_KAMOKU as readonly string[]);
+      const targetTxIds = txList
+        .filter(tx => requiredKamokuSet.has(tx.kamoku))
+        .map(tx => tx.id);
+      if (targetTxIds.length > 0) {
+        const { data: allocData } = await supabase
+          .from('transaction_allocations')
+          .select('transaction_id, project_id')
+          .in('transaction_id', targetTxIds);
+        // project_idが紐付いているtx IDのSet
+        const taggedIds = new Set<string>();
+        (allocData as any[] || []).forEach(a => {
+          if (a.project_id) taggedIds.add(a.transaction_id);
+        });
+        // 対象科目のうち、taggedIdsに含まれないものが未紐付け
+        const untagged = new Set<string>();
+        targetTxIds.forEach(id => { if (!taggedIds.has(id)) untagged.add(id); });
+        setUntaggedIds(untagged);
+      } else {
+        setUntaggedIds(new Set());
+      }
 
       // プロジェクト取得
       const { data: pjData } = await supabase.from('projects').select('*').order('name');
@@ -82,6 +109,8 @@ export default function ExpensesContent() {
       const haystack = `${tx.store || ''} ${tx.description || ''}`.toLowerCase();
       if (!haystack.includes(q)) return false;
     }
+    // v0.9.0: 未紐付けフィルター
+    if (showOnlyUntagged && !untaggedIds.has(tx.id)) return false;
     return true;
   });
 
@@ -177,6 +206,19 @@ export default function ExpensesContent() {
               className="pl-8 pr-3 py-2 bg-white rounded-lg text-xs border border-gray-200 outline-none focus:ring-2 focus:ring-[#D4A03A]/50 w-40"
             />
           </div>
+          {/* v0.9.0: 未紐付けフィルタートグル（取材費・制作費で案件タグ未紐付け） */}
+          {untaggedIds.size > 0 && (
+            <button
+              onClick={() => setShowOnlyUntagged(v => !v)}
+              className={`px-3 py-2 rounded-lg text-xs border transition-colors ${
+                showOnlyUntagged
+                  ? 'bg-[#C23728]/10 border-[#C23728]/30 text-[#C23728]'
+                  : 'bg-white border-gray-200 text-[#666] hover:border-[#C23728]/30'
+              }`}
+            >
+              未紐付け {untaggedIds.size}件
+            </button>
+          )}
           <span className="text-xs text-[#999] ml-auto">
             {filtered.length}件
           </span>
@@ -227,7 +269,16 @@ export default function ExpensesContent() {
                             <div className="text-xs text-[#999] mt-0.5">{tx.description}</div>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-xs text-[#6b6b6b]">{kamokuName}</td>
+                        <td className="px-4 py-3 text-xs text-[#6b6b6b]">
+                          <div className="flex items-center gap-1.5">
+                            <span>{kamokuName}</span>
+                            {untaggedIds.has(tx.id) && (
+                              <span className="px-1.5 py-0.5 bg-[#C23728]/10 text-[#C23728] rounded text-[9px] font-medium">
+                                タグ未
+                              </span>
+                            )}
+                          </div>
+                        </td>
                         <td className="px-4 py-3 text-right font-['Saira_Condensed'] tabular-nums text-[#1a1a1a]">
                           {formatAmount(tx.amount)}
                         </td>

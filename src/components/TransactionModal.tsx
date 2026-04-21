@@ -11,6 +11,8 @@ import { saveTransportDetails, updateTransportDetails, loadTransportDetails } fr
 import EntertainmentFields, { EMPTY_ENTERTAINMENT } from '@/components/EntertainmentFields';
 import type { EntertainmentData } from '@/components/EntertainmentFields';
 import { entertainmentToDescription } from '@/lib/entertainmentUtils';
+import ReceiptUploadSection from '@/components/ReceiptUploadSection';
+import type { ReceiptExtractedData } from '@/components/ReceiptUploadSection';
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -60,6 +62,8 @@ export default function TransactionModal({
   const [showTemplateSave, setShowTemplateSave] = useState(false);
   const [templateName, setTemplateName] = useState('');
   const [savedFormSnapshot, setSavedFormSnapshot] = useState<any>(null);
+  // v0.9.0: 領収書アップロード（Uploader機能を統合）
+  const [driveUrl, setDriveUrl] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -192,6 +196,7 @@ export default function TransactionModal({
       setShowTemplateSave(false);
       setTemplateName('');
       setSavedFormSnapshot(null);
+      setDriveUrl(null);  // v0.9.0: 領収書Drive URLもクリア
     }
     setError(null);
     setDupWarning(null);
@@ -382,6 +387,22 @@ export default function TransactionModal({
   const totalPercent = allocRows.reduce((s, r) => s + r.percent, 0);
   const hasAllocRows = allocRows.length > 0;
 
+  // v0.9.0: 領収書AI抽出結果を受け取ってformに反映
+  const handleReceiptExtracted = (data: ReceiptExtractedData) => {
+    // 科目推定（AI抽出 → vendor推定 → misc）
+    const validKamoku = data.kamoku_hint && (data.kamoku_hint in KAMOKU) ? data.kamoku_hint : null;
+    const inferredKamoku = validKamoku || guessKamokuIdFromVendor(data.vendor);
+
+    setForm(prev => ({
+      ...prev,
+      date: data.date || prev.date,
+      amount: data.amount?.toString() || prev.amount,
+      store: data.vendor || prev.store,
+      kamoku: inferredKamoku,
+      item_name: data.item_name || prev.item_name,
+    }));
+  };
+
   const handleSave = async () => {
     if (!form.amount || !form.date) {
       setError('日付と金額は必須です');
@@ -486,7 +507,9 @@ export default function TransactionModal({
       division: 'general',
       owner: form.owner,
       description: desc,
-      source: 'manual' as const,
+      // v0.9.0: 領収書添付あり → source='receipt_ai'・memoにDrive URL保存
+      source: (driveUrl ? 'receipt_ai' : 'manual') as 'receipt_ai' | 'manual',
+      memo: driveUrl || null,
       confirmed: true,
       status: form.status || 'settled',
       accrual_date: form.date,
@@ -635,7 +658,7 @@ export default function TransactionModal({
         style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
         <div className="sticky top-0 bg-white rounded-t-2xl px-5 pt-5 pb-3 border-b border-gray-100 flex items-center justify-between z-10">
           <h3 className="text-sm font-medium text-[#1a1a1a]">
-            {editData ? '経費を編集' : '経費を手入力'}
+            {editData ? '経費を編集' : '経費を追加'}
           </h3>
           <button onClick={onClose} className="p-1 hover:bg-black/5 rounded-full">
             <X className="w-4 h-4 text-[#999]" />
@@ -643,6 +666,16 @@ export default function TransactionModal({
         </div>
 
         <div className="px-5 py-4 space-y-3">
+          {/* v0.9.0: 領収書アップロード（新規作成時のみ表示） */}
+          {!editData && (
+            <ReceiptUploadSection
+              defaultOwner={form.owner}
+              onExtracted={handleReceiptExtracted}
+              onDriveUrlSet={setDriveUrl}
+              onError={setError}
+            />
+          )}
+
           {/* ① 日付 */}
           <div>
             <label className="text-xs text-[#999] block mb-1">日付</label>
@@ -1100,4 +1133,17 @@ export default function TransactionModal({
       </div>
     </div>
   );
+}
+
+
+// v0.9.0: 領収書AI抽出結果からkamokuを推定するユーティリティ（Uploader.tsxから移植）
+function guessKamokuIdFromVendor(vendor?: string): string {
+  if (!vendor) return 'misc';
+  const v = vendor.toLowerCase();
+  if (v.includes('航空') || v.includes('鉄道') || v.includes('jr') || v.includes('タクシー') || v.includes('バス')) return 'travel';
+  if (v.includes('ホテル') || v.includes('旅館') || v.includes('inn') || v.includes('hotel')) return 'travel';
+  if (v.includes('amazon') || v.includes('ヨドバシ') || v.includes('ビック')) return 'equipment';
+  if (v.includes('ntt') || v.includes('docomo') || v.includes('au') || v.includes('softbank')) return 'communication';
+  if (v.includes('スタバ') || v.includes('starbucks') || v.includes('ドトール') || v.includes('タリーズ')) return 'entertainment';
+  return 'misc';
 }

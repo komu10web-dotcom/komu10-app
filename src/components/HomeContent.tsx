@@ -1,11 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Uploader } from '@/components/Uploader';
 import { supabase } from '@/lib/supabase';
 import { KAMOKU } from '@/types/database';
 import type { Project } from '@/types/database';
-import { CheckCircle2, AlertTriangle, ArrowRight, Camera, PenLine } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, ArrowRight, PenLine } from 'lucide-react';
 import Link from 'next/link';
 import { usePeriodRange } from './HeaderControls';
 import TransactionModal from '@/components/TransactionModal';
@@ -30,8 +29,7 @@ export default function HomeContent() {
   const [recentTx, setRecentTx] = useState<TransactionRow[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 撮影 / 手入力 切替
-  const [inputMode, setInputMode] = useState<'camera' | 'manual'>('camera');
+  // v0.9.0: 経費追加モーダル（領収書アップロード統合済）
   const [manualModalOpen, setManualModalOpen] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
 
@@ -149,37 +147,15 @@ export default function HomeContent() {
           )}
         </div>
 
-        {/* ── 入力モード切替 + 入力エリア ── */}
-        <div>
-          <div className="flex bg-white rounded-t-2xl overflow-hidden" style={{ boxShadow: '0 -2px 10px rgba(0,0,0,0.02)' }}>
-            <button
-              onClick={() => setInputMode('camera')}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs transition-colors ${
-                inputMode === 'camera'
-                  ? 'text-[#1a1a1a] font-medium border-b-2 border-[#1a1a1a]'
-                  : 'text-[#999] border-b-2 border-transparent'
-              }`}
-            >
-              <Camera className="w-3.5 h-3.5" />
-              撮影
-            </button>
-            <button
-              onClick={() => { setInputMode('manual'); setManualModalOpen(true); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 text-xs transition-colors ${
-                inputMode === 'manual'
-                  ? 'text-[#1a1a1a] font-medium border-b-2 border-[#1a1a1a]'
-                  : 'text-[#999] border-b-2 border-transparent'
-              }`}
-            >
-              <PenLine className="w-3.5 h-3.5" />
-              手入力
-            </button>
-          </div>
-
-          {inputMode === 'camera' && (
-            <Uploader onUploadComplete={fetchData} defaultOwner={owner === 'all' ? 'tomo' : owner} />
-          )}
-        </div>
+        {/* v0.9.0: 経費追加CTAボタン（領収書・手入力の統合） */}
+        <button
+          onClick={() => setManualModalOpen(true)}
+          className="w-full bg-[#1a1a1a] text-white rounded-2xl py-4 px-5 flex items-center justify-center gap-2 hover:bg-[#333] transition-colors"
+          style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}
+        >
+          <PenLine className="w-4 h-4" />
+          <span className="text-sm font-medium">経費を追加</span>
+        </button>
 
         <TransactionModal
           isOpen={manualModalOpen}

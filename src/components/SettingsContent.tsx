@@ -2975,20 +2975,38 @@ export default function SettingsContent() {
             リリースノート
           </div>
           <div className="space-y-3">
-            {/* v0.8.2 */}
+            {/* v0.9.0 */}
             <div className="bg-white rounded-xl shadow-sm p-4">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.8.2</span>
+                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.9.0</span>
                 <span className="text-[9px] text-[#999]">2026.04.21</span>
                 <span className="text-[8px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full font-medium">LATEST</span>
               </div>
               <ul className="space-y-1">
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>取材費・制作費は案件タグ（PJ）必須化。未入力時はバリデーションエラー</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>取材費・制作費を選択した際、記入ポイント説明ボックスを表示</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>領収書アップロード画面では取材費・制作費を選択不可に変更（手入力画面で案件タグ付きで登録）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>次回リリース(v0.9.0)で領収書アップロードを手入力画面に統合予定</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>領収書アップロードを経費入力画面に統合。ホームの「撮影/手入力」タブを廃止し「経費を追加」ボタンに一本化</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>経費入力画面に領収書添付セクション追加（AI抽出＋Drive保存）。取材費・制作費も領収書経由で登録可能に</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>経費一覧に「未紐付け」フィルター追加。取材費・制作費で案件タグ未付与の行をフラグ表示</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>Uploader画面を廃止（機能はTransactionModalに統合）</li>
               </ul>
             </div>
+
+            {/* v0.8.2 */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.8.2</span>
+                  <span className="text-[9px] text-[#999]">2026.04.21</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
+                <ul className="space-y-1">
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>取材費・制作費は案件タグ（PJ）必須化。未入力時はバリデーションエラー</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>取材費・制作費を選択した際、記入ポイント説明ボックスを表示</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>領収書アップロード画面では取材費・制作費を選択不可に変更（手入力画面で案件タグ付きで登録）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>次回リリース(v0.9.0)で領収書アップロードを手入力画面に統合予定</li>
+                </ul>
+              </div>
+            </details>
 
             {/* v0.8.1 */}
             <details className="bg-white rounded-xl shadow-sm">
@@ -3176,7 +3194,7 @@ export default function SettingsContent() {
 
         {/* バージョン */}
         <div className="text-center py-8">
-          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.8.2</span>
+          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.9.0</span>
         </div>
 
       </div>{/* end max-w-3xl */}
