@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { X, Loader2, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { KAMOKU, DIVISIONS, TRANSACTION_STATUS } from '@/types/database';
-import type { Transaction, Project, ExpenseTemplate } from '@/types/database';
+import type { Transaction, Project, ExpenseTemplate, RouteTemplate } from '@/types/database';
 import TransportFields, { EMPTY_TRANSPORT } from '@/components/TransportFields';
 import type { TransportData } from '@/components/TransportFields';
 import { saveTransportDetails, updateTransportDetails, loadTransportDetails } from '@/lib/transportUtils';
@@ -52,6 +52,10 @@ export default function TransactionModal({
   const [allocRows, setAllocRows] = useState<AllocRow[]>([]);
   const [templates, setTemplates] = useState<ExpenseTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<ExpenseTemplate | null>(null);
+  // v0.7: route_templates (物理経路マスタ)
+  const [routeTemplates, setRouteTemplates] = useState<RouteTemplate[]>([]);
+  const [selectedOutboundRoute, setSelectedOutboundRoute] = useState<RouteTemplate | null>(null);
+  const [selectedReturnRoute, setSelectedReturnRoute] = useState<RouteTemplate | null>(null);
   const [greenMode, setGreenMode] = useState(false);
   const [showTemplateSave, setShowTemplateSave] = useState(false);
   const [templateName, setTemplateName] = useState('');
@@ -86,11 +90,20 @@ export default function TransactionModal({
       .then(({ data }: { data: any }) => {
         if (data) setTemplates(data as ExpenseTemplate[]);
       });
+    // v0.7: route_templates取得
+    supabase
+      .from('route_templates')
+      .select('*')
+      .eq('owner', owner)
+      .order('use_count', { ascending: false })
+      .then(({ data }: { data: any }) => {
+        if (data) setRouteTemplates(data as RouteTemplate[]);
+      });
   }, [isOpen, defaultOwner]);
 
-  // グリーン車モード切替時にamountを更新
+  // グリーン車モード切替時にamountを更新（v0.7: 汎用テンプレのみ対象）
   useEffect(() => {
-    if (!selectedTemplate) return;
+    if (!selectedTemplate || selectedTemplate.template_type !== 'general') return;
     const amt = greenMode && selectedTemplate.green_amount
       ? selectedTemplate.green_amount
       : selectedTemplate.amount || 0;
@@ -173,6 +186,8 @@ export default function TransactionModal({
       setEntertainmentData({ ...EMPTY_ENTERTAINMENT });
       setAllocRows([]);
       setSelectedTemplate(null);
+      setSelectedOutboundRoute(null);
+      setSelectedReturnRoute(null);
       setGreenMode(false);
       setShowTemplateSave(false);
       setTemplateName('');
@@ -240,25 +255,19 @@ export default function TransactionModal({
     onClose();
   };
 
-  // テンプレート適用
+  // テンプレート適用（v0.7: 交通費テンプレは業務メタのみ、区間は別管理）
   const applyTemplate = async (tpl: ExpenseTemplate) => {
     let desc = '';
     let store = '';
     if (tpl.template_type === 'transport') {
-      const legs = (tpl.route_legs || []) as any[];
+      // v0.7: 業務メタのみ流し込み（区間は route_templates で別選択）
       desc = tpl.description || '';
-      // route_legsをTransportDataに流し込み
-      setTransportData({
-        ...EMPTY_TRANSPORT,
-        route_legs: legs.map((l: any) => ({
-          from: l.from || '',
-          to: l.to || '',
-          method: l.method || '電車',
-          carrier: l.carrier || '',
-          amount: l.amount || 0,
-          green: l.green || false,
-        })),
-      });
+      // transport_purpose と payment_method を TransportData へ反映
+      setTransportData(prev => ({
+        ...prev,
+        purpose: tpl.transport_purpose || prev.purpose,
+        payment_method: tpl.payment_method || prev.payment_method,
+      }));
     } else {
       desc = tpl.description || '';
       store = tpl.store || '';
@@ -268,11 +277,11 @@ export default function TransactionModal({
     setGreenMode(false);
     setForm(prev => ({
       ...prev,
-      amount: (tpl.amount || 0).toString(),
+      // v0.7: 交通費テンプレの amount は 0 なので上書きしない
+      ...(tpl.template_type === 'general' ? { amount: (tpl.amount || 0).toString() } : {}),
       description: desc,
       store,
       ...(tpl.template_type === 'general' && tpl.kamoku ? { kamoku: tpl.kamoku } : {}),
-      ...(tpl.payment_method ? { payment_method: tpl.payment_method } : {}),
     }));
 
     // v0.6.4: 保存された事業・PJ割り当てを復元
@@ -294,9 +303,60 @@ export default function TransactionModal({
     }
   };
 
-  const hasGreenLegs = (tpl: ExpenseTemplate) => {
+  // v0.7: 往路ルートテンプレ適用
+  const applyOutboundRoute = async (tpl: RouteTemplate) => {
     const legs = (tpl.route_legs || []) as any[];
-    return legs.some((l: any) => l.green);
+    setTransportData(prev => ({
+      ...prev,
+      route_legs: legs.map((l: any) => ({
+        from: l.from || '',
+        to: l.to || '',
+        method: l.method || '電車',
+        carrier: l.carrier || '',
+        amount: l.amount || 0,
+        green: l.green || false,
+      })),
+    }));
+    setSelectedOutboundRoute(tpl);
+    if (supabase) {
+      await supabase
+        .from('route_templates')
+        .update({ use_count: (tpl.use_count || 0) + 1 })
+        .eq('id', tpl.id);
+    }
+  };
+
+  // v0.7: 復路ルートテンプレ適用（別ルート時）
+  const applyReturnRoute = async (tpl: RouteTemplate) => {
+    const legs = (tpl.route_legs || []) as any[];
+    setTransportData(prev => ({
+      ...prev,
+      same_route: false,
+      return_legs: legs.map((l: any) => ({
+        from: l.from || '',
+        to: l.to || '',
+        method: l.method || '電車',
+        carrier: l.carrier || '',
+        amount: l.amount || 0,
+        green: l.green || false,
+      })),
+    }));
+    setSelectedReturnRoute(tpl);
+    if (supabase) {
+      await supabase
+        .from('route_templates')
+        .update({ use_count: (tpl.use_count || 0) + 1 })
+        .eq('id', tpl.id);
+    }
+  };
+
+  // v0.7: 往路ルート選択解除（手動入力に戻す）
+  const clearOutboundRoute = () => {
+    setSelectedOutboundRoute(null);
+    setTransportData(prev => ({
+      ...prev,
+      route_legs: [{ from: '', to: '', method: '電車', carrier: '', amount: 0, green: false }],
+    }));
   };
 
   
@@ -616,44 +676,96 @@ export default function TransactionModal({
             </>
           )}
 
-          {form.kamoku === 'travel' && templates.filter(t => t.template_type === 'transport').length > 0 && (
-            <div className="space-y-2">
-              <p className="text-xs text-[#999]">テンプレートから入力</p>
-              <div className="flex flex-wrap gap-1.5">
-                {templates.filter(t => t.template_type === 'transport').slice(0, 5).map((tpl) => (
-                  <button
-                    key={tpl.id}
-                    onClick={() => applyTemplate(tpl)}
-                    className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all ${
-                      selectedTemplate?.id === tpl.id
-                        ? 'bg-[#1a1a1a] text-white border-[#1a1a1a]'
-                        : 'bg-[#F5F5F3] text-[#555] border-[#E0E0E0] hover:border-[#D4A03A] hover:text-[#D4A03A]'
-                    }`}
+          {/* v0.7: 交通費テンプレ（業務メタ） + ルートテンプレ（物理経路）の独立選択 */}
+          {form.kamoku === 'travel' && (
+            <div className="space-y-3">
+              {/* 経費テンプレ選択（業務メタ） */}
+              {templates.filter(t => t.template_type === 'transport').length > 0 && (
+                <div>
+                  <label className="text-xs text-[#999] block mb-1">経費テンプレ（業務メタ）</label>
+                  <select
+                    value={selectedTemplate?.id || ''}
+                    onChange={(e) => {
+                      const tpl = templates.find(t => t.id === e.target.value);
+                      if (tpl) {
+                        applyTemplate(tpl);
+                      } else {
+                        setSelectedTemplate(null);
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
                   >
-                    <span>{tpl.name}</span>
-                    <span className="font-['Saira_Condensed'] tabular-nums opacity-70">
-                      ¥{(tpl.amount || 0).toLocaleString()}
-                    </span>
-                  </button>
-                ))}
-              </div>
-              {selectedTemplate && hasGreenLegs(selectedTemplate) && (
-                <label className="flex items-center gap-2 cursor-pointer w-fit">
-                  <div
-                    onClick={() => setGreenMode(prev => !prev)}
-                    className={`relative w-8 h-4 rounded-full transition-colors ${greenMode ? 'bg-[#1B4D3E]' : 'bg-[#DDD]'}`}
+                    <option value="">（手動入力）</option>
+                    {templates
+                      .filter(t => t.template_type === 'transport')
+                      .map((tpl) => (
+                        <option key={tpl.id} value={tpl.id}>
+                          {tpl.name}
+                          {tpl.transport_purpose ? ` / ${tpl.transport_purpose}` : ''}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
+
+              {/* 往路ルート選択（物理経路） */}
+              {routeTemplates.length > 0 && (
+                <div>
+                  <label className="text-xs text-[#999] block mb-1">往路ルート</label>
+                  <select
+                    value={selectedOutboundRoute?.id || ''}
+                    onChange={(e) => {
+                      const tpl = routeTemplates.find(t => t.id === e.target.value);
+                      if (tpl) {
+                        applyOutboundRoute(tpl);
+                      } else {
+                        clearOutboundRoute();
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
                   >
-                    <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${greenMode ? 'translate-x-4' : 'translate-x-0.5'}`} />
-                  </div>
-                  <span className="text-xs text-[#555]">
-                    グリーン車
-                    {greenMode && selectedTemplate.green_amount ? (
-                      <span className="ml-1 font-['Saira_Condensed'] tabular-nums text-[#1B4D3E]">
-                        ¥{selectedTemplate.green_amount.toLocaleString()}
-                      </span>
-                    ) : null}
-                  </span>
-                </label>
+                    <option value="">（手動入力）</option>
+                    {routeTemplates.map((tpl) => (
+                      <option key={tpl.id} value={tpl.id}>
+                        {tpl.name}
+                        {tpl.direction === 'oneway_only' ? ' (片道のみ)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* 往復時の復路ルート選択（別ルート選択時のみ表示） */}
+              {transportData.round_trip === 'round_trip' && !transportData.same_route && routeTemplates.length > 0 && (
+                <div>
+                  <label className="text-xs text-[#999] block mb-1">復路ルート</label>
+                  <select
+                    value={selectedReturnRoute?.id || ''}
+                    onChange={(e) => {
+                      const tpl = routeTemplates.find(t => t.id === e.target.value);
+                      if (tpl) {
+                        applyReturnRoute(tpl);
+                      } else {
+                        setSelectedReturnRoute(null);
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+                  >
+                    <option value="">（手動入力）</option>
+                    {routeTemplates.map((tpl) => (
+                      <option key={tpl.id} value={tpl.id}>
+                        {tpl.name}
+                        {tpl.direction === 'oneway_only' ? ' (片道のみ)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {/* 往路選択中のルートが片道のみの場合、same_routeを選べない旨を警告 */}
+                  {selectedOutboundRoute?.direction === 'oneway_only' && (
+                    <p className="text-[10px] text-[#C23728] mt-1">
+                      ※ 往路ルートが片道のみのため「往路と同じ」は使えません
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           )}
