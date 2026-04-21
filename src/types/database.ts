@@ -5,6 +5,7 @@
 // 2026-04-18 business_domains新設 / transactions.business_domain / projects.business_domain 追加
 // 2026-04-18 contract_types を6区分に再定義（請負/準委任/スポット/継続課金/権利収入/その他）
 // 2026-04-19 projects.invoice_display_name / transactions.item_description 追加（案件名・請求書件名・品名摘要の3層分離）
+// 2026-04-21 v0.7 route_templates 新設（交通費テンプレから区間を分離し独立管理）
  
 export interface Database {
   public: {
@@ -397,6 +398,25 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['transaction_allocations']['Row'], 'id' | 'created_at'>;
         Update: Partial<Database['public']['Tables']['transaction_allocations']['Insert']>;
       };
+
+      // ルートテンプレート（v0.7: 交通費の物理経路を独立管理）
+      // 経費テンプレ（業務メタ）とは分離された「再利用可能な経路マスタ」
+      route_templates: {
+        Row: {
+          id: string;
+          owner: string; // 'tomo' | 'toshiki'
+          name: string; // 例: 東京ルートJR 四ツ谷⇄藤沢
+          direction: 'bidirectional' | 'oneway_only';
+          route_legs: RouteLeg[]; // 区間配列
+          amount: number; // 合計金額（往路のみ/片道額）
+          use_count: number; // 使用回数（よく使う順ソート用）
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['route_templates']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['route_templates']['Insert']>;
+      };
     };
   };
 }
@@ -426,6 +446,7 @@ export type RevenueTypeDivision = Database['public']['Tables']['revenue_type_div
 export type ContractType = Database['public']['Tables']['contract_types']['Row'];
 export type BusinessDomain = Database['public']['Tables']['business_domains']['Row'];
 export type TransactionAllocation = Database['public']['Tables']['transaction_allocations']['Row'];
+export type RouteTemplate = Database['public']['Tables']['route_templates']['Row'];
 export type Client = Database['public']['Tables']['clients']['Row'];
 export type RecurringExpense = Database['public']['Tables']['recurring_expenses']['Row'];
 export type EquipmentItem = Database['public']['Tables']['equipment_items']['Row'];
@@ -507,6 +528,7 @@ export type ExpenseTemplate = {
   green_amount: number;
   allocations: TemplateAllocation[];
   use_count: number;
+  transport_purpose: string | null; // v0.7: 交通費テンプレの目的（業務メタ化）
   created_at: string;
   updated_at: string;
 };

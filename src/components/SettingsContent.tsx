@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { KAMOKU, DIVISIONS, RECURRING_FREQUENCY } from '@/types/database';
-import type { AnbunSetting, Asset, RevenueType, RevenueTypeDivision, ContractType, BusinessDomain, BankAccount, Client, RecurringExpense, Project, EquipmentItem, SyncSource, ExpenseTemplate, RouteLeg, TemplateAllocation } from '@/types/database';
+import type { AnbunSetting, Asset, RevenueType, RevenueTypeDivision, ContractType, BusinessDomain, BankAccount, Client, RecurringExpense, Project, EquipmentItem, SyncSource, ExpenseTemplate, RouteLeg, TemplateAllocation, RouteTemplate } from '@/types/database';
 import { Plus, Pencil, Trash2, Save, X, Loader2, ChevronDown, ChevronUp, HelpCircle, Cloud, CheckCircle2, RefreshCw, FolderOpen, Camera, StickyNote } from 'lucide-react';
 import { OWNER_COLOR_PRESETS } from './HeaderControls';
 import TransportFields, { EMPTY_TRANSPORT } from '@/components/TransportFields';
@@ -252,6 +252,15 @@ export default function SettingsContent() {
   const [editingTemplate, setEditingTemplate] = useState<ExpenseTemplate | null>(null);
   const [templateDeleteTarget, setTemplateDeleteTarget] = useState<string | null>(null);
 
+  // v0.7: ルートテンプレート（交通費の物理経路を独立管理）
+  const [routeTemplates, setRouteTemplates] = useState<RouteTemplate[]>([]);
+  const [routeModalOpen, setRouteModalOpen] = useState(false);
+  const [editingRoute, setEditingRoute] = useState<RouteTemplate | null>(null);
+  const [routeDeleteTarget, setRouteDeleteTarget] = useState<string | null>(null);
+
+  // v0.7: 交通費目的マスタ（テンプレ・経費登録で共通利用）
+  const [transportPurposes, setTransportPurposes] = useState<{ id: string; name: string }[]>([]);
+
   // ============================================================
   // データ取得
   // ============================================================
@@ -350,6 +359,19 @@ export default function SettingsContent() {
         .eq('owner', effectiveOwner)
         .order('use_count', { ascending: false });
 
+      // v0.7: ルートテンプレート
+      const { data: routeData } = await supabase
+        .from('route_templates')
+        .select('*')
+        .eq('owner', effectiveOwner)
+        .order('use_count', { ascending: false });
+
+      // v0.7: 交通費目的マスタ
+      const { data: purposeData } = await supabase
+        .from('transport_purposes')
+        .select('id, name')
+        .order('sort_order');
+
       setAnbunSettings(anbunData || []);
       setAssets(assetData || []);
       if (profileData) {
@@ -376,6 +398,11 @@ export default function SettingsContent() {
         ...t,
         route_legs: Array.isArray(t.route_legs) ? t.route_legs : [],
       })));
+      setRouteTemplates((routeData || []).map((r: any) => ({
+        ...r,
+        route_legs: Array.isArray(r.route_legs) ? r.route_legs : [],
+      })));
+      setTransportPurposes(purposeData || []);
 
       // 按分ドラフト初期化
       const draft: Record<string, { ratio: number; note: string }> = {};
@@ -1100,32 +1127,24 @@ export default function SettingsContent() {
   const saveTemplate = async (form: {
     name: string;
     template_type: 'transport' | 'general';
-    route_legs: RouteLeg[];
     kamoku?: string;
     store?: string;
     description?: string;
     amount?: number;
     payment_method?: string;
+    transport_purpose?: string | null;
     allocations: TemplateAllocation[];
   }) => {
     if (!supabase) return;
     try {
       if (form.template_type === 'transport') {
-        const total = form.route_legs.reduce((s, l) => s + (l.amount || 0), 0);
-        // グリーン合計: 新形式(green: boolean) / 旧形式(green_available + green_surcharge) 両対応
-        const greenTotal = form.route_legs.reduce((s, l: any) => {
-          const base = Number(l.amount) || 0;
-          if (l.green_available && l.green_surcharge) {
-            return s + base + (Number(l.green_surcharge) || 0);
-          }
-          return s + base;
-        }, 0);
+        // v0.7: 業務メタのみ保存（区間は route_templates で独立管理）
         if (editingTemplate) {
           await supabase.from('expense_templates').update({
             name: form.name,
-            route_legs: form.route_legs,
-            amount: total,
-            green_amount: greenTotal,
+            description: form.description || '',
+            payment_method: form.payment_method || 'personal',
+            transport_purpose: form.transport_purpose || null,
             allocations: form.allocations,
             updated_at: new Date().toISOString(),
           }).eq('id', editingTemplate.id);
@@ -1135,10 +1154,12 @@ export default function SettingsContent() {
             name: form.name,
             template_type: 'transport',
             kamoku: 'transport',
-            route_legs: form.route_legs,
-            amount: total,
-            green_amount: greenTotal,
-            payment_method: 'personal',
+            description: form.description || '',
+            route_legs: [],
+            green_amount: 0,
+            amount: 0,
+            payment_method: form.payment_method || 'personal',
+            transport_purpose: form.transport_purpose || null,
             allocations: form.allocations,
             use_count: 0,
           });
@@ -1202,6 +1223,65 @@ export default function SettingsContent() {
         route_legs: Array.isArray(t.route_legs) ? t.route_legs : [],
       })));
     } catch (err) { console.error('テンプレート削除エラー:', err); }
+  };
+
+  // v0.7: ルートテンプレート CRUD
+  const saveRouteTemplate = async (form: {
+    name: string;
+    direction: 'bidirectional' | 'oneway_only';
+    route_legs: RouteLeg[];
+  }) => {
+    if (!supabase) return;
+    try {
+      const total = form.route_legs.reduce((s, l) => s + (l.amount || 0), 0);
+      if (editingRoute) {
+        await supabase.from('route_templates').update({
+          name: form.name,
+          direction: form.direction,
+          route_legs: form.route_legs,
+          amount: total,
+          updated_at: new Date().toISOString(),
+        }).eq('id', editingRoute.id);
+      } else {
+        await supabase.from('route_templates').insert({
+          owner: effectiveOwner,
+          name: form.name,
+          direction: form.direction,
+          route_legs: form.route_legs,
+          amount: total,
+          use_count: 0,
+          sort_order: 0,
+        });
+      }
+      setRouteModalOpen(false);
+      setEditingRoute(null);
+      const { data: routeData } = await supabase
+        .from('route_templates')
+        .select('*')
+        .eq('owner', effectiveOwner)
+        .order('use_count', { ascending: false });
+      setRouteTemplates((routeData || []).map((r: any) => ({
+        ...r,
+        route_legs: Array.isArray(r.route_legs) ? r.route_legs : [],
+      })));
+    } catch (err) { console.error('ルートテンプレート保存エラー:', err); }
+  };
+
+  const deleteRouteTemplate = async (id: string) => {
+    if (!supabase) return;
+    try {
+      await supabase.from('route_templates').delete().eq('id', id);
+      setRouteDeleteTarget(null);
+      const { data: routeData } = await supabase
+        .from('route_templates')
+        .select('*')
+        .eq('owner', effectiveOwner)
+        .order('use_count', { ascending: false });
+      setRouteTemplates((routeData || []).map((r: any) => ({
+        ...r,
+        route_legs: Array.isArray(r.route_legs) ? r.route_legs : [],
+      })));
+    } catch (err) { console.error('ルートテンプレート削除エラー:', err); }
   };
 
   // ============================================================
@@ -2533,12 +2613,12 @@ export default function SettingsContent() {
             経費テンプレート
           </div>
 
-          {/* 交通費テンプレート */}
+          {/* 交通費テンプレート（業務メタ） */}
           <div className="bg-white rounded-xl shadow-sm p-5 mb-4">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-xs font-medium text-[#1a1a1a] mb-0.5">交通費</p>
-                <p className="text-[10px] text-[#999]">よく使うルートを登録→経費入力時に一発入力</p>
+                <p className="text-xs font-medium text-[#1a1a1a] mb-0.5">交通費（業務）</p>
+                <p className="text-[10px] text-[#999]">目的・摘要・事業PJをまとめた業務シーン</p>
               </div>
               <button
                 onClick={() => { setEditingTemplate(null); setTemplateModalOpen('transport'); }}
@@ -2552,29 +2632,23 @@ export default function SettingsContent() {
             ) : (
               <div className="space-y-3">
                 {expenseTemplates.filter(t => t.template_type === 'transport').map(tmpl => {
-                  const total = tmpl.route_legs.reduce((s, l) => s + (l.amount || 0), 0);
-                  const routeLabel = tmpl.route_legs.length > 0
-                    ? tmpl.route_legs.map(l => l.from).join(' → ') + ' → ' + tmpl.route_legs[tmpl.route_legs.length - 1].to
-                    : '';
+                  const purposeLabel = tmpl.transport_purpose || '';
+                  const descLabel = tmpl.description || '';
                   return (
                     <div key={tmpl.id} className="flex items-start justify-between py-3 px-4 bg-[#F5F5F3] rounded-xl">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <span className="text-xs font-medium text-[#1a1a1a]">{tmpl.name}</span>
+                          {purposeLabel && (
+                            <span className="text-[9px] px-1.5 py-0.5 bg-[#1a1a1a]/5 text-[#666] rounded-full">{purposeLabel}</span>
+                          )}
                           {tmpl.use_count > 0 && (
                             <span className="text-[9px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full">{tmpl.use_count}回使用</span>
                           )}
                         </div>
-                        {routeLabel && (
-                          <p className="text-[10px] text-[#999] truncate">{routeLabel}</p>
+                        {descLabel && (
+                          <p className="text-[10px] text-[#999] truncate mt-1">{descLabel}</p>
                         )}
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[11px] font-medium text-[#1a1a1a]">¥{total.toLocaleString()}</span>
-                          {tmpl.green_amount > total && (
-                            <span className="text-[9px] text-[#4a7c59]">グリーン ¥{tmpl.green_amount.toLocaleString()}</span>
-                          )}
-                          <span className="text-[9px] text-[#bbb]">{tmpl.route_legs.length}区間</span>
-                        </div>
                       </div>
                       <div className="flex items-center gap-1 ml-3">
                         <button
@@ -2585,6 +2659,70 @@ export default function SettingsContent() {
                         </button>
                         <button
                           onClick={() => setTemplateDeleteTarget(tmpl.id)}
+                          className="p-1.5 rounded-lg hover:bg-[#fee] transition-colors"
+                        >
+                          <Trash2 className="w-3 h-3 text-[#C23728]" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* v0.7: ルートテンプレート（物理経路） */}
+          <div className="bg-white rounded-xl shadow-sm p-5 mb-4">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-xs font-medium text-[#1a1a1a] mb-0.5">ルート</p>
+                <p className="text-[10px] text-[#999]">区間・金額のみ。経費登録時に往路・復路を独立選択</p>
+              </div>
+              <button
+                onClick={() => { setEditingRoute(null); setRouteModalOpen(true); }}
+                className="flex items-center gap-1 px-3 py-1.5 text-[11px] text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] transition-colors whitespace-nowrap ml-3"
+              >
+                <Plus className="w-3.5 h-3.5" />追加
+              </button>
+            </div>
+            {routeTemplates.length === 0 ? (
+              <p className="text-xs text-[#bbb] text-center py-4">ルートテンプレートがまだありません</p>
+            ) : (
+              <div className="space-y-3">
+                {routeTemplates.map(route => {
+                  const total = (route.route_legs || []).reduce((s, l) => s + (l.amount || 0), 0);
+                  const routeLabel = route.route_legs && route.route_legs.length > 0
+                    ? route.route_legs.map(l => l.from).join(' → ') + ' → ' + route.route_legs[route.route_legs.length - 1].to
+                    : '';
+                  return (
+                    <div key={route.id} className="flex items-start justify-between py-3 px-4 bg-[#F5F5F3] rounded-xl">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <span className="text-xs font-medium text-[#1a1a1a]">{route.name}</span>
+                          <span className="text-[9px] px-1.5 py-0.5 bg-[#1a1a1a]/5 text-[#666] rounded-full">
+                            {route.direction === 'bidirectional' ? '双方向' : '片道のみ'}
+                          </span>
+                          {route.use_count > 0 && (
+                            <span className="text-[9px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full">{route.use_count}回使用</span>
+                          )}
+                        </div>
+                        {routeLabel && (
+                          <p className="text-[10px] text-[#999] truncate">{routeLabel}</p>
+                        )}
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[11px] font-medium text-[#1a1a1a]">¥{total.toLocaleString()}</span>
+                          <span className="text-[9px] text-[#bbb]">{(route.route_legs || []).length}区間</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 ml-3">
+                        <button
+                          onClick={() => { setEditingRoute(route); setRouteModalOpen(true); }}
+                          className="p-1.5 rounded-lg hover:bg-[#eee] transition-colors"
+                        >
+                          <Pencil className="w-3 h-3 text-[#999]" />
+                        </button>
+                        <button
+                          onClick={() => setRouteDeleteTarget(route.id)}
                           className="p-1.5 rounded-lg hover:bg-[#fee] transition-colors"
                         >
                           <Trash2 className="w-3 h-3 text-[#C23728]" />
@@ -2936,6 +3074,7 @@ export default function SettingsContent() {
           template={editingTemplate}
           templateType={templateModalOpen}
           projects={projects}
+          transportPurposes={transportPurposes}
           onSave={saveTemplate}
           onClose={() => { setTemplateModalOpen(false); setEditingTemplate(null); }}
         />
@@ -2953,6 +3092,35 @@ export default function SettingsContent() {
                 キャンセル
               </button>
               <button onClick={() => deleteTemplate(templateDeleteTarget)}
+                className="flex-1 py-2 text-xs text-white bg-[#C23728] rounded-lg hover:bg-[#a82e21] transition-colors">
+                削除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* v0.7: ── ルートテンプレモーダル ── */}
+      {routeModalOpen && (
+        <RouteTemplateModal
+          route={editingRoute}
+          onSave={saveRouteTemplate}
+          onClose={() => { setRouteModalOpen(false); setEditingRoute(null); }}
+        />
+      )}
+
+      {/* v0.7: ── ルートテンプレ削除確認 ── */}
+      {routeDeleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setRouteDeleteTarget(null)} />
+          <div className="relative bg-white rounded-2xl p-6 max-w-sm mx-4" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
+            <p className="text-sm text-[#1a1a1a] mb-4">このルートテンプレートを削除しますか？</p>
+            <div className="flex gap-2">
+              <button onClick={() => setRouteDeleteTarget(null)}
+                className="flex-1 py-2 text-xs text-[#999] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors">
+                キャンセル
+              </button>
+              <button onClick={() => deleteRouteTemplate(routeDeleteTarget)}
                 className="flex-1 py-2 text-xs text-white bg-[#C23728] rounded-lg hover:bg-[#a82e21] transition-colors">
                 削除
               </button>
@@ -4245,21 +4413,23 @@ function TemplateModal({
   template,
   templateType,
   projects,
+  transportPurposes,
   onSave,
   onClose,
 }: {
   template: ExpenseTemplate | null;
   templateType: 'transport' | 'general';
   projects: Project[];
+  transportPurposes: { id: string; name: string }[];
   onSave: (form: {
     name: string;
     template_type: 'transport' | 'general';
-    route_legs: RouteLeg[];
     kamoku?: string;
     store?: string;
     description?: string;
     amount?: number;
     payment_method?: string;
+    transport_purpose?: string | null;
     allocations: TemplateAllocation[];
   }) => Promise<void>;
   onClose: () => void;
@@ -4267,29 +4437,15 @@ function TemplateModal({
   const [name, setName] = useState(template?.name || '');
   const [saving, setSaving] = useState(false);
 
-  // 交通費用: TransportData 形式で管理 (TransportFields と完全同形)
-  // 旧データ形(green_available/green_surcharge)は open 時に新形(green: boolean)へマッピング
-  const [transportData, setTransportData] = useState<TransportData>(() => {
-    if (templateType !== 'transport') return { ...EMPTY_TRANSPORT };
-    const src = template?.route_legs && template.route_legs.length > 0
-      ? template.route_legs.map((l: any) => ({
-          from: l.from || '',
-          to: l.to || '',
-          method: l.method || '電車',
-          carrier: l.carrier || '',
-          amount: Number(l.amount) || 0,
-          green: typeof l.green === 'boolean' ? l.green : !!l.green_available,
-        }))
-      : [{ from: '', to: '', method: '電車', carrier: '', amount: 0, green: false }];
-    return { ...EMPTY_TRANSPORT, route_legs: src };
-  });
-
   // 汎用用
   const [kamoku, setKamoku] = useState(template?.kamoku || 'misc');
   const [store, setStore] = useState(template?.store || '');
   const [description, setDescription] = useState(template?.description || '');
   const [amount, setAmount] = useState(template?.amount?.toString() || '');
   const [paymentMethod, setPaymentMethod] = useState(template?.payment_method || 'personal');
+
+  // v0.7: 交通費テンプレの業務メタ（目的）
+  const [transportPurpose, setTransportPurpose] = useState<string>(template?.transport_purpose || '');
 
   // v0.6.5: 事業・プロジェクト割り当て（経費入力画面と同じUX）
   const [allocRows, setAllocRows] = useState<{ division_id: string; project_id: string; percent: number }[]>(
@@ -4340,25 +4496,20 @@ function TemplateModal({
         percent: r.percent || 0,
       }));
     if (templateType === 'transport') {
-      // TransportData から amount > 0 かつ from/to が入力済の区間のみ保存
-      const validLegs = (transportData.route_legs || [])
-        .filter(l => l.from && l.to && Number(l.amount) > 0)
-        .map(l => ({
-          from: l.from,
-          to: l.to,
-          method: l.method,
-          carrier: l.carrier || '',
-          amount: Number(l.amount) || 0,
-          green: !!l.green,
-        })) as any[];
-      if (validLegs.length === 0) { setSaving(false); return; }
-      await onSave({ name: name.trim(), template_type: 'transport', route_legs: validLegs, allocations: cleanAllocs });
+      // v0.7: 業務メタのみ保存（区間は route_templates で別管理）
+      await onSave({
+        name: name.trim(),
+        template_type: 'transport',
+        description: description.trim(),
+        payment_method: paymentMethod,
+        transport_purpose: transportPurpose || null,
+        allocations: cleanAllocs,
+      });
     } else {
       if (!Number(amount)) { setSaving(false); return; }
       await onSave({
         name: name.trim(),
         template_type: 'general',
-        route_legs: [],
         kamoku,
         store: store.trim(),
         description: description.trim(),
@@ -4397,13 +4548,32 @@ function TemplateModal({
 
         {templateType === 'transport' ? (
           <>
-            {/* ルート区間 — 経費入力画面と同一コンポーネント(Jobs基準③準拠) */}
-            <div className="mb-5">
-              <TransportFields
-                mode="template"
-                data={transportData}
-                onChange={setTransportData}
-              />
+            {/* v0.7: 業務メタUI（目的・摘要・支払方法） */}
+            <div className="space-y-4 mb-5">
+              <div>
+                <label className="text-[10px] font-medium tracking-wider text-[#999] block mb-1.5">目的</label>
+                <select value={transportPurpose} onChange={e => setTransportPurpose(e.target.value)}
+                  className="w-full px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors">
+                  <option value="">（未指定）</option>
+                  {transportPurposes.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-medium tracking-wider text-[#999] block mb-1.5">摘要（任意）</label>
+                <input value={description} onChange={e => setDescription(e.target.value)} placeholder="例: 四ツ谷オフィスでの定例打合せ"
+                  className="w-full px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors" />
+              </div>
+              <div>
+                <label className="text-[10px] font-medium tracking-wider text-[#999] block mb-1.5">支払方法</label>
+                <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}
+                  className="w-full px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors">
+                  <option value="personal">個人（事業主借）</option>
+                  <option value="bank_account">口座</option>
+                </select>
+              </div>
+              <p className="text-[10px] text-[#bbb] leading-relaxed">
+                ※ 区間は「ルート」テンプレで別管理します。経費登録時に業務メタ+ルートを独立選択。
+              </p>
             </div>
           </>
         ) : (
@@ -4510,12 +4680,156 @@ function TemplateModal({
               saving
               || !name.trim()
               || (templateType === 'transport'
-                  ? !(transportData.route_legs || []).some(l => l.from && l.to && Number(l.amount) > 0)
+                  ? false
                   : !Number(amount))
             }
             className="flex-1 py-2.5 text-xs text-white bg-[#1a1a1a] rounded-xl hover:bg-[#333] transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5">
             {saving && <Loader2 className="w-3 h-3 animate-spin" />}
             {template ? '更新する' : '登録する'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// v0.7: RouteTemplateModal — ルートテンプレ作成・編集（物理経路）
+// TransportFields (mode='template') を流用して区間を入力
+// ============================================================
+function RouteTemplateModal({
+  route,
+  onSave,
+  onClose,
+}: {
+  route: RouteTemplate | null;
+  onSave: (form: {
+    name: string;
+    direction: 'bidirectional' | 'oneway_only';
+    route_legs: RouteLeg[];
+  }) => Promise<void>;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState(route?.name || '');
+  const [direction, setDirection] = useState<'bidirectional' | 'oneway_only'>(
+    route?.direction || 'bidirectional'
+  );
+  const [saving, setSaving] = useState(false);
+
+  // TransportFields 互換形式でstate管理
+  const [transportData, setTransportData] = useState<TransportData>(() => {
+    const src = route?.route_legs && route.route_legs.length > 0
+      ? route.route_legs.map((l: any) => ({
+          from: l.from || '',
+          to: l.to || '',
+          method: l.method || '電車',
+          carrier: l.carrier || '',
+          amount: Number(l.amount) || 0,
+          green: typeof l.green === 'boolean' ? l.green : !!l.green_available,
+        }))
+      : [{ from: '', to: '', method: '電車', carrier: '', amount: 0, green: false }];
+    return { ...EMPTY_TRANSPORT, route_legs: src };
+  });
+
+  const handleSave = async () => {
+    if (!name.trim()) return;
+    const validLegs = (transportData.route_legs || [])
+      .filter(l => l.from && l.to && Number(l.amount) > 0)
+      .map(l => ({
+        from: l.from,
+        to: l.to,
+        method: l.method,
+        carrier: l.carrier || '',
+        amount: Number(l.amount) || 0,
+        green: !!l.green,
+      })) as any[];
+    if (validLegs.length === 0) return;
+    setSaving(true);
+    await onSave({ name: name.trim(), direction, route_legs: validLegs });
+    setSaving(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
+      <div className="relative bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl p-6 max-h-[90vh] overflow-y-auto"
+        style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-sm font-medium text-[#1a1a1a]">
+            {route ? 'ルートを編集' : 'ルートを追加'}
+          </h3>
+          <button onClick={onClose} className="p-1 rounded hover:bg-[#F5F5F3]">
+            <X className="w-4 h-4 text-[#999]" />
+          </button>
+        </div>
+
+        {/* ルート名 */}
+        <div className="mb-5">
+          <label className="text-[10px] font-medium tracking-wider text-[#999] block mb-1.5">ルート名</label>
+          <input
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="例: 東京ルートJR 四ツ谷⇄藤沢"
+            className="w-full px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors"
+          />
+        </div>
+
+        {/* 方向 */}
+        <div className="mb-5">
+          <label className="text-[10px] font-medium tracking-wider text-[#999] block mb-1.5">方向</label>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setDirection('bidirectional')}
+              className={`flex-1 py-2.5 text-xs rounded-xl border transition-colors ${
+                direction === 'bidirectional'
+                  ? 'bg-[#1a1a1a] text-white border-[#1a1a1a]'
+                  : 'bg-white text-[#666] border-[#e8e8e8]'
+              }`}
+            >
+              双方向（往復可）
+            </button>
+            <button
+              type="button"
+              onClick={() => setDirection('oneway_only')}
+              className={`flex-1 py-2.5 text-xs rounded-xl border transition-colors ${
+                direction === 'oneway_only'
+                  ? 'bg-[#1a1a1a] text-white border-[#1a1a1a]'
+                  : 'bg-white text-[#666] border-[#e8e8e8]'
+              }`}
+            >
+              片道のみ
+            </button>
+          </div>
+          <p className="text-[10px] text-[#bbb] mt-1.5">
+            ※ 双方向は経費登録時に自動で逆順にして復路として使えます
+          </p>
+        </div>
+
+        {/* ルート区間 — TransportFields 流用 */}
+        <div className="mb-5">
+          <TransportFields
+            mode="template"
+            data={transportData}
+            onChange={setTransportData}
+          />
+        </div>
+
+        <div className="flex gap-2 mt-4">
+          <button onClick={onClose}
+            className="flex-1 py-2.5 text-xs text-[#999] bg-[#F5F5F3] rounded-xl hover:bg-gray-200 transition-colors">
+            キャンセル
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={
+              saving
+              || !name.trim()
+              || !(transportData.route_legs || []).some(l => l.from && l.to && Number(l.amount) > 0)
+            }
+            className="flex-1 py-2.5 text-xs text-white bg-[#1a1a1a] rounded-xl hover:bg-[#333] transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5">
+            {saving && <Loader2 className="w-3 h-3 animate-spin" />}
+            {route ? '更新する' : '登録する'}
           </button>
         </div>
       </div>
