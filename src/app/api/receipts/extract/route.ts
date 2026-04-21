@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
 - items: 品目リスト（あれば）[{name, quantity, price}]
 - item_name: 主要な品名（1つ。最も高額な品目、または主たる購入品の名前。例: "MacBook Pro 14インチ", "SDカード 128GB", "三脚 Manfrotto MT055"）。交通費や飲食の場合はnull。
 - payment_method: 支払方法（現金、クレジットカード等）
-- kamoku_hint: 以下から最も適切な勘定科目を1つ選択。travel（交通・宿泊）, equipment（物品購入）, communication（通信費）, entertainment（飲食・接待）, subscription（月額サービス）, supplies（文房具等）, rent（家賃）, misc（不明）
+- kamoku_hint: 以下から最も適切な勘定科目を1つ選択。travel（出張先等での交通・宿泊）, equipment（物品購入）, communication（通信費）, entertainment（取引先との接待・会食）, torizai（取材先との飲食・取材に伴う費用）, meeting（打合せ時の飲食5000円以下・会議室代）, welfare（社員懇親・福利厚生）, production（YouTube等の制作費・撮影用衣装小物・撮影題材としての宿泊）, advertising（広告宣伝）, subscription（月額サービス）, software（ソフトウェア）, training（セミナー受講料・研修費）, commission（振込手数料・決済手数料・プラットフォーム手数料）, supplies（文房具等）, rent（家賃）, utility（水道光熱費）, misc（不明）
 
 回答はJSONのみ、説明不要。読み取れない項目はnullとしてください。`,
             },

@@ -2975,21 +2975,37 @@ export default function SettingsContent() {
             リリースノート
           </div>
           <div className="space-y-3">
-            {/* v0.5.7 */}
+            {/* v0.8.1 */}
             <div className="bg-white rounded-xl shadow-sm p-4">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.5.7</span>
-                <span className="text-[9px] text-[#999]">2026.04.19</span>
+                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.8.1</span>
+                <span className="text-[9px] text-[#999]">2026.04.21</span>
                 <span className="text-[8px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full font-medium">LATEST</span>
               </div>
               <ul className="space-y-1">
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>請求書作成フロー全面刷新：テンプレスプシをコピーして値を流し込む方式に変更</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>「PDF & シート出力」ボタンを「請求書作成」に変更（デザイン崩れ撲滅）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>明細5行まで対応（6行以上はエラー表示）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>作成後、スプシを自動で新規タブで開く（プレビュー確認→PDFダウンロード運用）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>備考の固定2行（インボイス／振込手数料）はテンプレ側に書き込み、動的備考のみ入力可</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>勘定科目に「取材費」「制作費」「会議費」「福利厚生費」「研修費」「支払手数料」を追加</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>AI領収書抽出の勘定科目判定を新科目に対応（YT撮影関連の切り分け精度向上）</li>
               </ul>
             </div>
+
+            {/* v0.5.7 */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.5.7</span>
+                  <span className="text-[9px] text-[#999]">2026.04.19</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
+                <ul className="space-y-1">
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>請求書作成フロー全面刷新：テンプレスプシをコピーして値を流し込む方式に変更</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>「PDF & シート出力」ボタンを「請求書作成」に変更（デザイン崩れ撲滅）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>明細5行まで対応（6行以上はエラー表示）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>作成後、スプシを自動で新規タブで開く（プレビュー確認→PDFダウンロード運用）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>備考の固定2行（インボイス／振込手数料）はテンプレ側に書き込み、動的備考のみ入力可</li>
+                </ul>
+              </div>
+            </details>
 
             {/* v0.5.6 */}
             <details className="bg-white rounded-xl shadow-sm">
@@ -3142,7 +3158,7 @@ export default function SettingsContent() {
 
         {/* バージョン */}
         <div className="text-center py-8">
-          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.5.7</span>
+          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.8.1</span>
         </div>
 
       </div>{/* end max-w-3xl */}
