@@ -133,6 +133,64 @@ export default function InvoiceTab({ owner, clients, initialTransactionId }: Inv
     }
   };
 
+  // v0.8: 既存請求書をテンプレとして保存
+  const [saveAsTemplateTarget, setSaveAsTemplateTarget] = useState<string | null>(null);
+  const [templateName, setTemplateName] = useState('');
+  const [templateSaving, setTemplateSaving] = useState(false);
+  const [templateSaveSuccess, setTemplateSaveSuccess] = useState(false);
+
+  const handleSaveAsTemplate = async () => {
+    if (!supabase || !saveAsTemplateTarget || !templateName.trim()) return;
+    setTemplateSaving(true);
+    try {
+      const { data: inv } = await supabase
+        .from('invoices').select('*').eq('id', saveAsTemplateTarget).single();
+      if (!inv) throw new Error('請求書が見つかりません');
+      const { data: invItems } = await supabase
+        .from('invoice_items').select('*').eq('invoice_id', saveAsTemplateTarget).order('sort_order');
+
+      const { data: newTpl } = await supabase
+        .from('invoice_templates')
+        .insert({
+          owner: inv.owner,
+          name: templateName.trim(),
+          subject: inv.subject,
+          payment_terms: inv.payment_terms,
+          notes: inv.notes,
+          bank_account_id: inv.bank_account_id,
+          withholding_tax: inv.withholding_tax,
+          withholding_basis: inv.withholding_basis,
+          header_amount_type: inv.header_amount_type,
+          fee_burden: inv.fee_burden,
+        })
+        .select('id')
+        .single();
+
+      if (newTpl?.id && invItems && invItems.length > 0) {
+        const itemsToInsert = invItems.map((it: any, idx: number) => ({
+          template_id: newTpl.id,
+          description: it.description,
+          quantity: it.quantity,
+          unit_price: it.unit_price,
+          tax_rate: 0.10,
+          amount: it.amount,
+          sort_order: idx,
+        }));
+        await supabase.from('invoice_template_items').insert(itemsToInsert);
+      }
+      setTemplateSaveSuccess(true);
+      setTimeout(() => {
+        setSaveAsTemplateTarget(null);
+        setTemplateName('');
+        setTemplateSaveSuccess(false);
+      }, 1200);
+    } catch (err) {
+      console.error('テンプレ保存エラー:', err);
+    } finally {
+      setTemplateSaving(false);
+    }
+  };
+
   // ── フィルター ──
   const filtered = statusFilter === 'all'
     ? invoices
@@ -252,6 +310,10 @@ export default function InvoiceTab({ owner, clients, initialTransactionId }: Inv
                               className="p-1.5 hover:bg-black/5 rounded-md transition-colors" title="編集">
                               <Pencil className="w-3.5 h-3.5 text-[#999]" />
                             </button>
+                            <button onClick={() => { setSaveAsTemplateTarget(inv.id); setTemplateName(inv.subject || ''); }}
+                              className="p-1.5 hover:bg-black/5 rounded-md transition-colors" title="テンプレとして保存">
+                              <Copy className="w-3.5 h-3.5 text-[#999]" />
+                            </button>
                             <button onClick={() => setDeleteTarget(inv.id)}
                               className="p-1.5 hover:bg-[#C23728]/10 rounded-md transition-colors" title="削除">
                               <Trash2 className="w-3.5 h-3.5 text-[#999]" />
@@ -306,6 +368,44 @@ export default function InvoiceTab({ owner, clients, initialTransactionId }: Inv
                   削除する
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* v0.8: テンプレとして保存モーダル */}
+        {saveAsTemplateTarget && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/30" onClick={() => { if (!templateSaving) { setSaveAsTemplateTarget(null); setTemplateName(''); } }} />
+            <div className="relative bg-white rounded-2xl p-6 max-w-sm w-full mx-4" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
+              {templateSaveSuccess ? (
+                <p className="text-sm text-[#1B4D3E] text-center py-3">✓ テンプレとして保存しました</p>
+              ) : (
+                <>
+                  <p className="text-sm text-[#1a1a1a] mb-1">テンプレとして保存</p>
+                  <p className="text-[10px] text-[#999] mb-3">この請求書の内容（明細・備考・支払条件・源泉設定）を汎用テンプレに登録します</p>
+                  <label className="block text-[10px] font-medium tracking-wider text-[#999] mb-1.5">テンプレ名</label>
+                  <input
+                    type="text"
+                    value={templateName}
+                    onChange={(e) => setTemplateName(e.target.value)}
+                    placeholder="例: 月額顧問 / 撮影スポット"
+                    className="w-full px-3 py-2 text-xs bg-[#F5F5F3] rounded-lg border-0 focus:outline-none focus:ring-2 focus:ring-[#1a1a1a]/10 mb-4"
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <button onClick={() => { setSaveAsTemplateTarget(null); setTemplateName(''); }}
+                      disabled={templateSaving}
+                      className="flex-1 py-2 text-xs text-[#999] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50">
+                      キャンセル
+                    </button>
+                    <button onClick={handleSaveAsTemplate}
+                      disabled={templateSaving || !templateName.trim()}
+                      className="flex-1 py-2 text-xs text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] transition-colors disabled:opacity-50">
+                      {templateSaving ? '保存中...' : '保存'}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -401,6 +501,10 @@ function InvoiceEditor({
   const [items, setItems] = useState<ItemForm[]>([
     { description: '', quantity: '1', unit: '式', unit_price: '' },
   ]);
+
+  // v0.8: 請求書汎用テンプレ
+  const [invoiceTemplates, setInvoiceTemplates] = useState<any[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
 
   // 既存データ読み込み
   useEffect(() => {
@@ -524,6 +628,55 @@ function InvoiceEditor({
     const qty = parseFloat(item.quantity) || 0;
     const price = parseFloat(item.unit_price) || 0;
     return Math.round(qty * price);
+  };
+
+  // v0.8: 請求書汎用テンプレ一覧取得（新規作成時のみ）
+  useEffect(() => {
+    if (!isNew || !supabase) return;
+    (async () => {
+      const { data } = await supabase
+        .from('invoice_templates')
+        .select('*')
+        .eq('owner', owner)
+        .order('use_count', { ascending: false });
+      setInvoiceTemplates(data || []);
+    })();
+  }, [isNew, owner]);
+
+  // v0.8: テンプレ適用
+  const applyInvoiceTemplate = async (templateId: string) => {
+    if (!supabase || !templateId) return;
+    try {
+      const { data: tpl } = await supabase
+        .from('invoice_templates').select('*').eq('id', templateId).single();
+      if (!tpl) return;
+      const { data: tplItems } = await supabase
+        .from('invoice_template_items').select('*').eq('template_id', templateId).order('sort_order');
+
+      if (tpl.subject) setSubject(tpl.subject);
+      if (tpl.payment_terms) setPaymentTerms(tpl.payment_terms);
+      if (tpl.notes) setNotes(tpl.notes);
+      if (tpl.bank_account_id) setBankAccountId(tpl.bank_account_id);
+      setOverrideWithholdingTax(!!tpl.withholding_tax);
+      setOverrideWithholdingBasis(tpl.withholding_basis as WithholdingBasis);
+      setOverrideHeaderAmountType(tpl.header_amount_type as HeaderAmountType);
+      setOverrideFeeBurden(tpl.fee_burden as FeeBurden);
+      if (tplItems && tplItems.length > 0) {
+        setItems(tplItems.map((it: any) => ({
+          description: it.description || '',
+          quantity: String(it.quantity || 1),
+          unit: '式',
+          unit_price: String(it.unit_price || 0),
+        })));
+      }
+      // use_count をインクリメント
+      await supabase
+        .from('invoice_templates')
+        .update({ use_count: (tpl.use_count || 0) + 1, updated_at: new Date().toISOString() })
+        .eq('id', templateId);
+    } catch (err) {
+      console.error('テンプレ適用エラー:', err);
+    }
   };
 
   // v0.6.0: 新規作成時のみ、選択されたクライアントのデフォルト値をoverride stateに投入
@@ -812,6 +965,29 @@ function InvoiceEditor({
       </div>
 
       <div className="bg-white rounded-2xl p-6" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
+        {/* v0.8: テンプレから作成（新規時のみ・テンプレあるときのみ） */}
+        {isNew && invoiceTemplates.length > 0 && (
+          <div className="mb-6 pb-4 border-b border-gray-100">
+            <label className="block text-[10px] font-medium tracking-wider text-[#999] mb-1.5">テンプレから作成</label>
+            <select
+              value={selectedTemplateId}
+              onChange={(e) => {
+                const id = e.target.value;
+                setSelectedTemplateId(id);
+                if (id) applyInvoiceTemplate(id);
+              }}
+              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+            >
+              <option value="">（使わない）</option>
+              {invoiceTemplates.map(t => (
+                <option key={t.id} value={t.id}>
+                  {t.name}{t.use_count > 0 ? ` (${t.use_count}回使用)` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* 基本情報 */}
         <div className="grid grid-cols-2 gap-4 mb-6">
           {/* 取引先 */}

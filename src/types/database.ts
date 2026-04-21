@@ -260,6 +260,45 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['invoice_items']['Row'], 'id' | 'created_at'>;
         Update: Partial<Database['public']['Tables']['invoice_items']['Insert']>;
       };
+
+      // v0.8.0: 請求書汎用テンプレ(マスタ)
+      invoice_templates: {
+        Row: {
+          id: string;
+          owner: string; // 'tomo' | 'toshiki'
+          name: string; // テンプレ名（例: 「月額顧問」「撮影スポット」）
+          subject: string | null; // 件名デフォルト
+          payment_terms: string | null; // 支払条件デフォルト
+          notes: string | null; // 備考デフォルト
+          bank_account_id: string | null; // FK→bank_accounts
+          withholding_tax: boolean; // 源泉あり/なし
+          withholding_basis: string; // 'tax_included' | 'tax_excluded'
+          header_amount_type: string; // 'total' | 'net_payment'
+          fee_burden: string; // 'client' | 'self'
+          use_count: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['invoice_templates']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['invoice_templates']['Insert']>;
+      };
+
+      // v0.8.0: 請求書汎用テンプレ明細
+      invoice_template_items: {
+        Row: {
+          id: string;
+          template_id: string; // FK→invoice_templates (CASCADE)
+          description: string;
+          quantity: number;
+          unit_price: number;
+          tax_rate: number; // 0.10 = 10%
+          amount: number;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['invoice_template_items']['Row'], 'id' | 'created_at'>;
+        Update: Partial<Database['public']['Tables']['invoice_template_items']['Insert']>;
+      };
  
       // 収益タイプマスタ
       revenue_types: {
@@ -441,6 +480,8 @@ export type BankBalance = {
 };
 export type Invoice = Database['public']['Tables']['invoices']['Row'];
 export type InvoiceItem = Database['public']['Tables']['invoice_items']['Row'];
+export type InvoiceTemplate = Database['public']['Tables']['invoice_templates']['Row'];
+export type InvoiceTemplateItem = Database['public']['Tables']['invoice_template_items']['Row'];
 export type RevenueType = Database['public']['Tables']['revenue_types']['Row'];
 export type RevenueTypeDivision = Database['public']['Tables']['revenue_type_divisions']['Row'];
 export type ContractType = Database['public']['Tables']['contract_types']['Row'];

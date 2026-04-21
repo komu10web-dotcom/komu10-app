@@ -9,6 +9,7 @@ import { Plus, Pencil, Trash2, Save, X, Loader2, ChevronDown, ChevronUp, HelpCir
 import { OWNER_COLOR_PRESETS } from './HeaderControls';
 import TransportFields, { EMPTY_TRANSPORT } from '@/components/TransportFields';
 import type { TransportData } from '@/components/TransportFields';
+import InvoiceTemplateModal from '@/components/InvoiceTemplateModal';
 
 // ============================================================
 // 定数
@@ -261,6 +262,13 @@ export default function SettingsContent() {
   // v0.7: 交通費目的マスタ（テンプレ・経費登録で共通利用）
   const [transportPurposes, setTransportPurposes] = useState<{ id: string; name: string }[]>([]);
 
+  // v0.8: 請求書汎用テンプレ
+  const [invoiceTemplates, setInvoiceTemplates] = useState<any[]>([]);
+  const [invoiceTemplateItems, setInvoiceTemplateItems] = useState<Record<string, any[]>>({});
+  const [invTplModalOpen, setInvTplModalOpen] = useState(false);
+  const [editingInvTpl, setEditingInvTpl] = useState<any | null>(null);
+  const [invTplDeleteTarget, setInvTplDeleteTarget] = useState<string | null>(null);
+
   // ============================================================
   // データ取得
   // ============================================================
@@ -372,6 +380,26 @@ export default function SettingsContent() {
         .select('id, name')
         .order('sort_order');
 
+      // v0.8: 請求書汎用テンプレ + 明細
+      const { data: invTplData } = await supabase
+        .from('invoice_templates')
+        .select('*')
+        .eq('owner', effectiveOwner)
+        .order('use_count', { ascending: false });
+      const invTplIds = (invTplData || []).map((t: any) => t.id);
+      const { data: invTplItemsData } = invTplIds.length > 0
+        ? await supabase
+            .from('invoice_template_items')
+            .select('*')
+            .in('template_id', invTplIds)
+            .order('sort_order')
+        : { data: [] as any[] };
+      const itemsMap: Record<string, any[]> = {};
+      for (const it of (invTplItemsData || [])) {
+        if (!itemsMap[it.template_id]) itemsMap[it.template_id] = [];
+        itemsMap[it.template_id].push(it);
+      }
+
       setAnbunSettings(anbunData || []);
       setAssets(assetData || []);
       if (profileData) {
@@ -403,6 +431,8 @@ export default function SettingsContent() {
         route_legs: Array.isArray(r.route_legs) ? r.route_legs : [],
       })));
       setTransportPurposes(purposeData || []);
+      setInvoiceTemplates(invTplData || []);
+      setInvoiceTemplateItems(itemsMap);
 
       // 按分ドラフト初期化
       const draft: Record<string, { ratio: number; note: string }> = {};
@@ -1282,6 +1312,80 @@ export default function SettingsContent() {
         route_legs: Array.isArray(r.route_legs) ? r.route_legs : [],
       })));
     } catch (err) { console.error('ルートテンプレート削除エラー:', err); }
+  };
+
+  // v0.8: 請求書汎用テンプレ CRUD
+  const saveInvoiceTemplate = async (form: {
+    id?: string;
+    name: string;
+    subject: string;
+    payment_terms: string;
+    notes: string;
+    bank_account_id: string | null;
+    withholding_tax: boolean;
+    withholding_basis: string;
+    header_amount_type: string;
+    fee_burden: string;
+    items: Array<{ id?: string; description: string; quantity: number; unit_price: number; sort_order: number }>;
+  }) => {
+    if (!supabase || !form.name.trim()) return;
+    try {
+      let templateId = form.id;
+      const payload: any = {
+        owner: effectiveOwner,
+        name: form.name.trim(),
+        subject: form.subject || null,
+        payment_terms: form.payment_terms || null,
+        notes: form.notes || null,
+        bank_account_id: form.bank_account_id || null,
+        withholding_tax: form.withholding_tax,
+        withholding_basis: form.withholding_basis,
+        header_amount_type: form.header_amount_type,
+        fee_burden: form.fee_burden,
+      };
+      if (templateId) {
+        await supabase.from('invoice_templates').update({
+          ...payload,
+          updated_at: new Date().toISOString(),
+        }).eq('id', templateId);
+        await supabase.from('invoice_template_items').delete().eq('template_id', templateId);
+      } else {
+        const { data: inserted } = await supabase
+          .from('invoice_templates')
+          .insert(payload)
+          .select('id')
+          .single();
+        templateId = inserted?.id;
+      }
+      if (templateId) {
+        const itemsToInsert = form.items
+          .filter(it => it.description.trim() || it.unit_price > 0)
+          .map((it, idx) => ({
+            template_id: templateId,
+            description: it.description,
+            quantity: it.quantity || 1,
+            unit_price: it.unit_price || 0,
+            tax_rate: 0.10,
+            amount: Math.round((it.quantity || 1) * (it.unit_price || 0)),
+            sort_order: idx,
+          }));
+        if (itemsToInsert.length > 0) {
+          await supabase.from('invoice_template_items').insert(itemsToInsert);
+        }
+      }
+      setInvTplModalOpen(false);
+      setEditingInvTpl(null);
+      await fetchData();
+    } catch (err) { console.error('請求書テンプレ保存エラー:', err); }
+  };
+
+  const deleteInvoiceTemplate = async (id: string) => {
+    if (!supabase) return;
+    try {
+      await supabase.from('invoice_templates').delete().eq('id', id);
+      setInvTplDeleteTarget(null);
+      await fetchData();
+    } catch (err) { console.error('請求書テンプレ削除エラー:', err); }
   };
 
   // ============================================================
@@ -2795,6 +2899,74 @@ export default function SettingsContent() {
           </div>
         </section>
 
+        {/* ── v0.8: 請求書テンプレ ── */}
+        <section className="mb-10">
+          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+            請求書テンプレ
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-xs font-medium text-[#1a1a1a] mb-0.5">汎用</p>
+                <p className="text-[10px] text-[#999]">請求書新規作成時に呼び出せる雛形（明細・備考・支払条件・源泉設定）</p>
+              </div>
+              <button
+                onClick={() => { setEditingInvTpl(null); setInvTplModalOpen(true); }}
+                className="flex items-center gap-1 px-3 py-1.5 text-[11px] text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] transition-colors whitespace-nowrap ml-3"
+              >
+                <Plus className="w-3.5 h-3.5" />追加
+              </button>
+            </div>
+            {invoiceTemplates.length === 0 ? (
+              <p className="text-xs text-[#bbb] text-center py-4">請求書テンプレがまだありません</p>
+            ) : (
+              <div className="space-y-3">
+                {invoiceTemplates.map(tmpl => {
+                  const items = invoiceTemplateItems[tmpl.id] || [];
+                  const subtotal = items.reduce((s: number, it: any) => s + Number(it.amount || 0), 0);
+                  return (
+                    <div key={tmpl.id} className="flex items-start justify-between py-3 px-4 bg-[#F5F5F3] rounded-xl">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-medium text-[#1a1a1a]">{tmpl.name}</span>
+                          {tmpl.withholding_tax && (
+                            <span className="text-[9px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full">源泉あり</span>
+                          )}
+                          {tmpl.use_count > 0 && (
+                            <span className="text-[9px] px-1.5 py-0.5 bg-[#eee] text-[#999] rounded-full">{tmpl.use_count}回使用</span>
+                          )}
+                        </div>
+                        {tmpl.subject && (
+                          <p className="text-[10px] text-[#999] truncate">{tmpl.subject}</p>
+                        )}
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[11px] font-medium text-[#1a1a1a]">¥{subtotal.toLocaleString()}</span>
+                          <span className="text-[9px] text-[#bbb]">{items.length}明細</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 ml-3">
+                        <button
+                          onClick={() => { setEditingInvTpl(tmpl); setInvTplModalOpen(true); }}
+                          className="p-1.5 rounded-lg hover:bg-[#eee] transition-colors"
+                        >
+                          <Pencil className="w-3 h-3 text-[#999]" />
+                        </button>
+                        <button
+                          onClick={() => setInvTplDeleteTarget(tmpl.id)}
+                          className="p-1.5 rounded-lg hover:bg-[#fee] transition-colors"
+                        >
+                          <Trash2 className="w-3 h-3 text-[#C23728]" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </section>
+
         </>)}
 
         {/* リリースノート */}
@@ -3121,6 +3293,37 @@ export default function SettingsContent() {
                 キャンセル
               </button>
               <button onClick={() => deleteRouteTemplate(routeDeleteTarget)}
+                className="flex-1 py-2 text-xs text-white bg-[#C23728] rounded-lg hover:bg-[#a82e21] transition-colors">
+                削除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* v0.8: 請求書テンプレ編集モーダル */}
+      {invTplModalOpen && (
+        <InvoiceTemplateModal
+          template={editingInvTpl}
+          templateItems={editingInvTpl ? (invoiceTemplateItems[editingInvTpl.id] || []) : []}
+          bankAccounts={bankAccounts.filter((b: any) => b.owner === effectiveOwner)}
+          onSave={saveInvoiceTemplate}
+          onClose={() => { setInvTplModalOpen(false); setEditingInvTpl(null); }}
+        />
+      )}
+
+      {/* v0.8: 請求書テンプレ削除確認 */}
+      {invTplDeleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setInvTplDeleteTarget(null)} />
+          <div className="relative bg-white rounded-2xl p-6 max-w-sm mx-4" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
+            <p className="text-sm text-[#1a1a1a] mb-4">この請求書テンプレを削除しますか？</p>
+            <div className="flex gap-2">
+              <button onClick={() => setInvTplDeleteTarget(null)}
+                className="flex-1 py-2 text-xs text-[#999] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors">
+                キャンセル
+              </button>
+              <button onClick={() => deleteInvoiceTemplate(invTplDeleteTarget)}
                 className="flex-1 py-2 text-xs text-white bg-[#C23728] rounded-lg hover:bg-[#a82e21] transition-colors">
                 削除
               </button>
