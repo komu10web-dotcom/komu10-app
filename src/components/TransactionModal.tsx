@@ -63,6 +63,9 @@ export default function TransactionModal({
   const [showTemplateSave, setShowTemplateSave] = useState(false);
   const [templateName, setTemplateName] = useState('');
   const [savedFormSnapshot, setSavedFormSnapshot] = useState<any>(null);
+  // v0.13.1: ルートも同時にテンプレ化（交通費時のみ）
+  const [alsoSaveRoute, setAlsoSaveRoute] = useState(false);
+  const [routeTemplateName, setRouteTemplateName] = useState('');
   // v0.11.0: 複数領収書（ステージング方式）
   const [receiptItems, setReceiptItems] = useState<ReceiptItem[]>([]);
   const [pendingReceiptTrashIds, setPendingReceiptTrashIds] = useState<string[]>([]);
@@ -245,31 +248,52 @@ export default function TransactionModal({
 
   // テンプレとして保存
   const saveAsTemplate = async () => {
-    if (!supabase || !savedFormSnapshot || !templateName.trim()) return;
+    if (!supabase || !savedFormSnapshot) return;
     const snap = savedFormSnapshot;
+    // v0.13.1: ルートのみ保存モード（経費テンプレ名が空、交通費、alsoSaveRoute=true）
+    const routeOnlyMode = !templateName.trim() && alsoSaveRoute && usesTransportDetail(snap.kamoku) && !!snap.transportData;
+    // 通常モードでは経費テンプレ名は必須
+    if (!routeOnlyMode && !templateName.trim()) return;
     try {
       if (usesTransportDetail(snap.kamoku) && snap.transportData) {
-        // 交通費テンプレ: route_legsをそのまま保存
         const td = snap.transportData;
         const legs = td.route_legs || [];
         const total = legs.reduce((s: number, l: any) => s + (l.amount || 0), 0);
-        await supabase.from('expense_templates').insert({
-          owner: snap.owner,
-          name: templateName.trim(),
-          template_type: 'transport',
-          kamoku: 'transport',
-          description: snap.description || '',
-          route_legs: legs,
-          amount: total,
-          green_amount: 0,
-          payment_method: snap.payment_method || 'personal',
-          allocations: allocRows.filter(r => r.division_id).map(r => ({
-            division_id: r.division_id,
-            project_id: r.project_id || null,
-            percent: r.percent || 0,
-          })),
-          use_count: 0,
-        });
+
+        // 経費テンプレ保存（ルートのみモードではスキップ）
+        if (!routeOnlyMode) {
+          await supabase.from('expense_templates').insert({
+            owner: snap.owner,
+            name: templateName.trim(),
+            template_type: 'transport',
+            kamoku: 'transport',
+            description: snap.description || '',
+            route_legs: legs,
+            amount: total,
+            green_amount: 0,
+            payment_method: snap.payment_method || 'personal',
+            allocations: allocRows.filter(r => r.division_id).map(r => ({
+              division_id: r.division_id,
+              project_id: r.project_id || null,
+              percent: r.percent || 0,
+            })),
+            use_count: 0,
+          });
+        }
+
+        // v0.13.1: 「ルートとしても保存」ONかつ区間が入力済みなら route_templates にも保存
+        if (alsoSaveRoute && routeTemplateName.trim() && legs.length > 0 && legs.some((l: any) => l.from || l.to)) {
+          const isRoundTrip = td.round_trip === 'round_trip';
+          await supabase.from('route_templates').insert({
+            owner: snap.owner,
+            name: routeTemplateName.trim(),
+            direction: isRoundTrip ? 'bidirectional' : 'oneway_only',
+            route_legs: legs,
+            amount: total,
+            use_count: 0,
+            sort_order: 0,
+          });
+        }
       } else {
         // 汎用テンプレ
         await supabase.from('expense_templates').insert({
@@ -296,6 +320,8 @@ export default function TransactionModal({
     }
     setShowTemplateSave(false);
     setTemplateName('');
+    setAlsoSaveRoute(false);
+    setRouteTemplateName('');
     setSavedFormSnapshot(null);
     onClose();
   };
@@ -804,8 +830,32 @@ export default function TransactionModal({
       }
 
       onSaved();
-      // 新規登録 & テンプレ未使用 → テンプレ保存提案
-      if (!editData && !selectedTemplate) {
+      // v0.13.1: テンプレ保存提案の発火条件を拡張
+      // - 新規登録は常に対象
+      // - テンプレ選択済みでも、支払先 or 科目が変わっていれば別物とみなし提案
+      // - 交通費の場合は、区間が既存ルートテンプレと異なっていれば別ルートとみなし提案
+      const shouldSuggestTemplate = (() => {
+        if (editData) return false;
+        if (!selectedTemplate) return true;
+        // 科目が変わっていれば別物
+        if (selectedTemplate.kamoku && selectedTemplate.kamoku !== form.kamoku) return true;
+        // 汎用テンプレの場合、支払先が変わっていれば別物
+        if (selectedTemplate.template_type === 'general' && (selectedTemplate.store || '') !== (form.store || '')) return true;
+        return false;
+      })();
+
+      // v0.13.1: 「ルートとしても保存」の初期値判定
+      // - 交通費かつ新規区間（往路ルートテンプレ未選択）かつ区間が入力済みのときON推奨
+      const shouldSuggestRouteSave = (() => {
+        if (!usesTransportDetail(form.kamoku)) return false;
+        if (selectedOutboundRoute) return false; // 既存ルート選択済みなら不要
+        const legs = transportData.route_legs || [];
+        if (legs.length === 0) return false;
+        const hasContent = legs.some((l: any) => (l.from || '').trim() || (l.to || '').trim());
+        return hasContent;
+      })();
+
+      if (shouldSuggestTemplate) {
         setSavedFormSnapshot({
           kamoku: form.kamoku,
           store: form.store,
@@ -815,6 +865,37 @@ export default function TransactionModal({
           payment_method: usesTransportDetail(form.kamoku) ? transportData.payment_method : 'personal',
           transportData: usesTransportDetail(form.kamoku) ? { ...transportData } : null,
         });
+        setAlsoSaveRoute(shouldSuggestRouteSave);
+        // ルート名のデフォルト候補（起点→終点）
+        if (shouldSuggestRouteSave) {
+          const legs = transportData.route_legs || [];
+          const firstFrom = (legs[0]?.from || '').trim();
+          const lastTo = (legs[legs.length - 1]?.to || '').trim();
+          if (firstFrom && lastTo) {
+            setRouteTemplateName(`${firstFrom}→${lastTo}`);
+          }
+        }
+        setShowTemplateSave(true);
+      } else if (shouldSuggestRouteSave) {
+        // v0.13.1: 経費テンプレ既選択だが、新規ルートを手入力した場合はルートのみ保存提案
+        setSavedFormSnapshot({
+          kamoku: form.kamoku,
+          store: form.store,
+          amount: txAmount,
+          description: finalDescription,
+          owner: form.owner,
+          payment_method: usesTransportDetail(form.kamoku) ? transportData.payment_method : 'personal',
+          transportData: usesTransportDetail(form.kamoku) ? { ...transportData } : null,
+        });
+        setAlsoSaveRoute(true);
+        // ルート名のみ入力してもらうモード（経費テンプレ名は空のまま → UIで分岐）
+        setTemplateName('');
+        const legs = transportData.route_legs || [];
+        const firstFrom = (legs[0]?.from || '').trim();
+        const lastTo = (legs[legs.length - 1]?.to || '').trim();
+        if (firstFrom && lastTo) {
+          setRouteTemplateName(`${firstFrom}→${lastTo}`);
+        }
         setShowTemplateSave(true);
       } else {
         onClose();
@@ -1328,29 +1409,103 @@ export default function TransactionModal({
         </div>
 
         <div className="px-5 pb-5">
-          {showTemplateSave ? (
-            <div className="space-y-3">
-              <p className="text-xs text-[#1a1a1a] font-medium">テンプレートとして保存しますか？</p>
-              <p className="text-[10px] text-[#999]">次回から同じ内容をワンタップで入力できます</p>
-              <input
-                value={templateName}
-                onChange={e => setTemplateName(e.target.value)}
-                placeholder="テンプレ名（例: Adobe CC / 自宅→四ツ谷）"
-                className="w-full px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors"
-                autoFocus
-              />
-              <div className="flex gap-2">
-                <button onClick={() => { setShowTemplateSave(false); setSavedFormSnapshot(null); onClose(); }}
-                  className="flex-1 py-2.5 text-xs text-[#999] bg-[#F5F5F3] rounded-xl hover:bg-gray-200 transition-colors">
-                  スキップ
-                </button>
-                <button onClick={saveAsTemplate} disabled={!templateName.trim()}
-                  className="flex-1 py-2.5 text-xs text-white bg-[#1a1a1a] rounded-xl hover:bg-[#333] disabled:opacity-40 transition-colors">
-                  保存する
-                </button>
+          {showTemplateSave ? (() => {
+            // v0.13.1: モード判定
+            // - routeOnlyMode: 経費テンプレ適用中＋新規ルート手入力 → ルートだけ保存
+            // - combinedMode: 新規登録＋交通費 → 経費テンプレ＋ルート両方保存可能
+            // - normalMode: 経費テンプレのみ（交通費以外 or ルート保存不要時）
+            const isTransport = usesTransportDetail(savedFormSnapshot?.kamoku || form.kamoku);
+            // 起動時にテンプレ選択があり、かつ経費テンプレ名が空のまま提案が出ていればルートのみモード
+            const routeOnlyMode = isTransport && !!selectedTemplate && selectedTemplate.template_type === 'transport';
+            return (
+              <div className="space-y-3">
+                {routeOnlyMode ? (
+                  <>
+                    <p className="text-xs text-[#1a1a1a] font-medium">この区間をルートとして保存しますか？</p>
+                    <p className="text-[10px] text-[#999]">次回の往路/復路選択で使えます</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs text-[#1a1a1a] font-medium">テンプレートとして保存しますか？</p>
+                    <p className="text-[10px] text-[#999]">次回から同じ内容をワンタップで入力できます</p>
+                  </>
+                )}
+
+                {/* 経費テンプレ名入力（ルートのみモード以外） */}
+                {!routeOnlyMode && (
+                  <input
+                    value={templateName}
+                    onChange={e => setTemplateName(e.target.value)}
+                    placeholder={isTransport
+                      ? 'テンプレ名（例: 四ツ谷→羽田 出張用）'
+                      : 'テンプレ名（例: Adobe CC）'}
+                    className="w-full px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors"
+                    autoFocus
+                  />
+                )}
+
+                {/* v0.13.1: 交通費のときのみ「ルートとしても保存」を表示 */}
+                {isTransport && !routeOnlyMode && (
+                  <div className="pt-2 border-t border-[#f0f0f0]">
+                    <label className="flex items-start gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={alsoSaveRoute}
+                        onChange={e => setAlsoSaveRoute(e.target.checked)}
+                        className="mt-0.5 w-4 h-4 accent-[#1a1a1a]"
+                      />
+                      <div className="flex-1">
+                        <p className="text-xs text-[#1a1a1a] font-medium">ルートとしても保存</p>
+                        <p className="text-[10px] text-[#999] mt-0.5">次回の往路/復路選択で使えます</p>
+                      </div>
+                    </label>
+                    {alsoSaveRoute && (
+                      <input
+                        value={routeTemplateName}
+                        onChange={e => setRouteTemplateName(e.target.value)}
+                        placeholder="ルート名（例: 自宅→四ツ谷）"
+                        className="w-full mt-2 px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors"
+                      />
+                    )}
+                  </div>
+                )}
+
+                {/* ルートのみモード：ルート名入力欄のみ表示 */}
+                {routeOnlyMode && (
+                  <input
+                    value={routeTemplateName}
+                    onChange={e => setRouteTemplateName(e.target.value)}
+                    placeholder="ルート名（例: 自宅→四ツ谷）"
+                    className="w-full px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors"
+                    autoFocus
+                  />
+                )}
+
+                <div className="flex gap-2">
+                  <button onClick={() => {
+                    setShowTemplateSave(false);
+                    setSavedFormSnapshot(null);
+                    setAlsoSaveRoute(false);
+                    setRouteTemplateName('');
+                    setTemplateName('');
+                    onClose();
+                  }}
+                    className="flex-1 py-2.5 text-xs text-[#999] bg-[#F5F5F3] rounded-xl hover:bg-gray-200 transition-colors">
+                    スキップ
+                  </button>
+                  <button onClick={saveAsTemplate}
+                    disabled={
+                      routeOnlyMode
+                        ? !routeTemplateName.trim()
+                        : (!templateName.trim() || (alsoSaveRoute && !routeTemplateName.trim()))
+                    }
+                    className="flex-1 py-2.5 text-xs text-white bg-[#1a1a1a] rounded-xl hover:bg-[#333] disabled:opacity-40 transition-colors">
+                    保存する
+                  </button>
+                </div>
               </div>
-            </div>
-          ) : (
+            );
+          })() : (
             <button onClick={handleSave} disabled={saving || !form.amount || !form.date}
               className="w-full py-3 bg-[#1a1a1a] text-white rounded-xl text-sm font-medium hover:bg-[#333] disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2">
               {saving ? (<><Loader2 className="w-4 h-4 animate-spin" />保存中...</>) : editData ? '更新する' : '登録する'}
