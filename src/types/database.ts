@@ -661,19 +661,38 @@ export const KAMOKU = {
 // allocations配列のうち最低1行で project_id の選択が必須
 export const PROJECT_TAG_REQUIRED_KAMOKU = ['torizai', 'production'] as const;
 
+// v0.13.0: 摘要（description）必須化対象科目
+// 取材費・制作費は内容・摘要の記入を必須とする（業務関連性の証跡）
+export const DESCRIPTION_REQUIRED_KAMOKU = ['torizai', 'production'] as const;
+
+// v0.13.0: 交通費詳細フィールドを表示する科目
+// 旅費交通費に加え、制作費・取材費でも交通系領収書を扱うため詳細入力を共通化
+export const TRANSPORT_DETAIL_KAMOKU = ['travel', 'production', 'torizai'] as const;
+export function usesTransportDetail(kamoku: string): boolean {
+  return (TRANSPORT_DETAIL_KAMOKU as readonly string[]).includes(kamoku);
+}
+
+// v0.13.0: 「PJ未登録案件」を表すフロント専用識別子
+// 企画段階で正式PJ化前の制作費・取材費でPJ必須をクリアするために使用
+// DB保存時は project_id = null に変換される
+export const UNASSIGNED_PROJECT_VALUE = '__unassigned__';
+export const UNASSIGNED_PROJECT_LABEL = '（PJ未登録案件）';
+
 // v0.8.2: 科目別の記入ガイドヘルプテキスト（TransactionModal/Uploaderで表示）
-export const KAMOKU_INPUT_GUIDE: Record<string, { title: string; body: string; example: string; requireProject: boolean }> = {
+export const KAMOKU_INPUT_GUIDE: Record<string, { title: string; body: string; example: string; requireProject: boolean; requireDescription?: boolean }> = {
   torizai: {
     title: '取材費の記入ポイント',
     body: '取材対象と目的を簡潔に記載。案件詳細は紐付けた案件タグから参照します。',
     example: '湯河原温泉旅館○○ 代表インタビュー',
     requireProject: true,
+    requireDescription: true,
   },
   production: {
     title: '制作費の記入ポイント',
     body: '購入物と使用目的を簡潔に記載。',
     example: 'シャツ2点 出演衣装／撮影題材のホテル代',
     requireProject: true,
+    requireDescription: true,
   },
 };
  

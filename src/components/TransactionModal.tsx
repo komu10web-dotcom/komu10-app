@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, Loader2, Plus, Trash2, Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { KAMOKU, DIVISIONS, TRANSACTION_STATUS, PROJECT_TAG_REQUIRED_KAMOKU, KAMOKU_INPUT_GUIDE } from '@/types/database';
+import { KAMOKU, DIVISIONS, TRANSACTION_STATUS, PROJECT_TAG_REQUIRED_KAMOKU, KAMOKU_INPUT_GUIDE, DESCRIPTION_REQUIRED_KAMOKU, usesTransportDetail, UNASSIGNED_PROJECT_VALUE, UNASSIGNED_PROJECT_LABEL } from '@/types/database';
 import type { Transaction, Project, ExpenseTemplate, RouteTemplate } from '@/types/database';
 import TransportFields, { EMPTY_TRANSPORT } from '@/components/TransportFields';
 import type { TransportData } from '@/components/TransportFields';
@@ -153,7 +153,7 @@ export default function TransactionModal({
           }
         });
       }
-      if (editData.kamoku === 'travel') {
+      if (usesTransportDetail(editData.kamoku)) {
         loadTransportDetails(editData.id).then((td) => {
           setTransportData(td || { ...EMPTY_TRANSPORT });
         });
@@ -164,9 +164,11 @@ export default function TransactionModal({
       if (supabase) {
         supabase.from('transaction_allocations').select('*').eq('transaction_id', editData.id).then(({ data }: { data: any }) => {
           if (data && data.length > 0) {
+            const isPjRequired = (PROJECT_TAG_REQUIRED_KAMOKU as readonly string[]).includes(editData.kamoku);
             setAllocRows(data.map((a: any) => ({
               division_id: a.division_id || '',
-              project_id: a.project_id || '',
+              // v0.13.0: PJ必須科目で保存済のproject_id=null → 「未登録案件」として復元
+              project_id: a.project_id || (isPjRequired ? UNASSIGNED_PROJECT_VALUE : ''),
               percent: a.percent || 0,
             })));
           } else {
@@ -246,7 +248,7 @@ export default function TransactionModal({
     if (!supabase || !savedFormSnapshot || !templateName.trim()) return;
     const snap = savedFormSnapshot;
     try {
-      if (snap.kamoku === 'travel' && snap.transportData) {
+      if (usesTransportDetail(snap.kamoku) && snap.transportData) {
         // 交通費テンプレ: route_legsをそのまま保存
         const td = snap.transportData;
         const legs = td.route_legs || [];
@@ -519,6 +521,7 @@ export default function TransactionModal({
       setError('日付と金額は必須です');
       return;
     }
+    // v0.13.0: travel は必ず区間必須。production/torizai は区間が入力されていたら整合チェック
     if (form.kamoku === 'travel') {
       const legs = transportData.route_legs || [];
       if (legs.length === 0 || !legs[0].from || !legs[legs.length - 1].to) {
@@ -527,6 +530,14 @@ export default function TransactionModal({
       }
       if (legs.some(l => !l.from || !l.to)) {
         setError('すべての区間の出発地・到着地を入力してください');
+        return;
+      }
+    } else if (usesTransportDetail(form.kamoku)) {
+      // 制作費・取材費: 区間入力がある場合のみ整合チェック
+      const legs = transportData.route_legs || [];
+      const hasAnyInput = legs.some(l => l.from || l.to || l.amount);
+      if (hasAnyInput && legs.some(l => !l.from || !l.to)) {
+        setError('交通費詳細を入力する場合はすべての区間の出発地・到着地を入力してください');
         return;
       }
     }
@@ -544,6 +555,14 @@ export default function TransactionModal({
       if (!hasProjectTag) {
         const kamokuName = KAMOKU[form.kamoku as keyof typeof KAMOKU]?.name || form.kamoku;
         setError(`${kamokuName}は案件タグが必須です。事業・PJ割り当てでPJを選択してください。`);
+        return;
+      }
+    }
+    // v0.13.0: 取材費・制作費は内容・摘要必須
+    if ((DESCRIPTION_REQUIRED_KAMOKU as readonly string[]).includes(form.kamoku)) {
+      if (!form.description || !form.description.trim()) {
+        const kamokuName = KAMOKU[form.kamoku as keyof typeof KAMOKU]?.name || form.kamoku;
+        setError(`${kamokuName}は内容・摘要の記入が必須です`);
         return;
       }
     }
@@ -603,8 +622,8 @@ export default function TransactionModal({
 
     const txAmount = parseInt(form.amount.replace(/,/g, '')) || 0;
 
-    // 往復別金額 → 2レコード分割判定
-    const isRoundTripSplit = form.kamoku === 'travel'
+    // 往復別金額 → 2レコード分割判定（v0.13.0: travel/production/torizai 共通）
+    const isRoundTripSplit = usesTransportDetail(form.kamoku)
       && transportData.round_trip === 'round_trip'
       && !transportData.same_amount
       && !editData;
@@ -672,7 +691,7 @@ export default function TransactionModal({
             .eq('id', editData.id);
           if (dbErr) throw dbErr;
 
-          if (form.kamoku === 'travel') {
+          if (usesTransportDetail(form.kamoku)) {
             await updateTransportDetails(editData.id, transportData);
           }
         } else {
@@ -684,7 +703,7 @@ export default function TransactionModal({
           if (dbErr) throw dbErr;
           txId = (inserted as any).id;
 
-          if (form.kamoku === 'travel' && inserted) {
+          if (usesTransportDetail(form.kamoku) && inserted) {
             await saveTransportDetails((inserted as any).id, transportData);
           }
         }
@@ -698,7 +717,7 @@ export default function TransactionModal({
         const inserts = allocRows.map(r => ({
           transaction_id: txId,
           division_id: r.division_id,
-          project_id: r.project_id || null,
+          project_id: (r.project_id && r.project_id !== UNASSIGNED_PROJECT_VALUE) ? r.project_id : null,
           percent: r.percent,
           amount: Math.round(txAmount * r.percent / 100),
         }));
@@ -793,8 +812,8 @@ export default function TransactionModal({
           amount: txAmount,
           description: finalDescription,
           owner: form.owner,
-          payment_method: form.kamoku === 'travel' ? transportData.payment_method : 'personal',
-          transportData: form.kamoku === 'travel' ? { ...transportData } : null,
+          payment_method: usesTransportDetail(form.kamoku) ? transportData.payment_method : 'personal',
+          transportData: usesTransportDetail(form.kamoku) ? { ...transportData } : null,
         });
         setShowTemplateSave(true);
       } else {
@@ -1033,7 +1052,7 @@ export default function TransactionModal({
             ) : null;
           })()}
 
-          {form.kamoku === 'travel' && (
+          {usesTransportDetail(form.kamoku) && (
             <TransportFields
               data={transportData}
               onChange={setTransportData}
@@ -1131,11 +1150,18 @@ export default function TransactionModal({
             </select>
           </div>
           <div>
-            <label className="text-xs text-[#999] block mb-1">内容・摘要</label>
+            <label className="text-xs text-[#999] block mb-1">
+              内容・摘要
+              {(DESCRIPTION_REQUIRED_KAMOKU as readonly string[]).includes(form.kamoku) && (
+                <span className="text-[#C23728] ml-1">*必須</span>
+              )}
+            </label>
             <input type="text" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
               className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
               placeholder={
                 form.kamoku === 'travel' ? '撮影移動 / ロケハン等' :
+                form.kamoku === 'production' ? 'シャツ2点 出演衣装 / YT〇〇編ロケのホテル代 等' :
+                form.kamoku === 'torizai' ? '湯河原温泉旅館○○ 代表インタビュー 等' :
                 form.kamoku === 'entertainment' ? '打合せ後の会食等' :
                 form.kamoku === 'equipment' ? '動画編集用に購入 等' :
                 form.kamoku === 'outsource' ? '動画編集委託 / ナレーション収録等' :
@@ -1191,7 +1217,12 @@ export default function TransactionModal({
               </p>
               {KAMOKU_INPUT_GUIDE[form.kamoku].requireProject && (
                 <p className="text-[10px] text-[#C23728] font-medium pt-0.5">
-                  ※この科目は案件タグが必須です
+                  ※この科目は案件タグが必須です（未登録案件の場合は「{UNASSIGNED_PROJECT_LABEL}」を選択）
+                </p>
+              )}
+              {KAMOKU_INPUT_GUIDE[form.kamoku].requireDescription && (
+                <p className="text-[10px] text-[#C23728] font-medium">
+                  ※内容・摘要の記入も必須です
                 </p>
               )}
             </div>
@@ -1234,6 +1265,9 @@ export default function TransactionModal({
                           className="px-2 py-1.5 bg-white rounded text-[11px] border-0 outline-none flex-1 min-w-0">
                           <option value="">{(PROJECT_TAG_REQUIRED_KAMOKU as readonly string[]).includes(form.kamoku) ? 'PJを選択（必須）' : 'PJ（任意）'}</option>
                           {filteredPJ.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          {(PROJECT_TAG_REQUIRED_KAMOKU as readonly string[]).includes(form.kamoku) && (
+                            <option value={UNASSIGNED_PROJECT_VALUE}>{UNASSIGNED_PROJECT_LABEL}</option>
+                          )}
                         </select>
                       </div>
                       {/* 2段目: %・金額・削除 */}

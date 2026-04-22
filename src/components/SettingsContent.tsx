@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { KAMOKU, DIVISIONS, RECURRING_FREQUENCY } from '@/types/database';
+import { KAMOKU, DIVISIONS, RECURRING_FREQUENCY, UNASSIGNED_PROJECT_LABEL } from '@/types/database';
 import type { AnbunSetting, Asset, RevenueType, RevenueTypeDivision, ContractType, BusinessDomain, BankAccount, Client, RecurringExpense, Project, EquipmentItem, SyncSource, ExpenseTemplate, RouteLeg, TemplateAllocation, RouteTemplate } from '@/types/database';
 import { Plus, Pencil, Trash2, Save, X, Loader2, ChevronDown, ChevronUp, HelpCircle, Cloud, CheckCircle2, RefreshCw, FolderOpen, Camera, StickyNote } from 'lucide-react';
 import { OWNER_COLOR_PRESETS } from './HeaderControls';
@@ -2979,18 +2979,36 @@ export default function SettingsContent() {
             リリースノート
           </div>
           <div className="space-y-3">
-            {/* v0.12.1 */}
+            {/* v0.13.0 */}
             <div className="bg-white rounded-xl shadow-sm p-4">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.12.1</span>
+                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.13.0</span>
                 <span className="text-[9px] text-[#999]">2026.04.22</span>
                 <span className="text-[8px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full font-medium">LATEST</span>
               </div>
               <ul className="space-y-1">
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>制作費・取材費でも交通費詳細フィールドを入力可能に（YouTube撮影移動・取材移動の証跡強化）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>制作費・取材費で内容・摘要を必須化（業務関連性の証跡担保）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>PJ選択に「{UNASSIGNED_PROJECT_LABEL}」選択肢を追加（企画段階の制作費・取材費でもPJ必須をクリア可能）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>記入ポイントガイドボックスに摘要必須アナウンス追加</li>
+              </ul>
+            </div>
+
+            {/* v0.12.1 */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.12.1</span>
+                  <span className="text-[9px] text-[#999]">2026.04.22</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
+              <ul className="space-y-1">
                 <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>座席クラスに「プレミアムエコノミー」「クラスJ」を追加（旅費交通費）</li>
                 <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>クラスJは国内線準上位席のため上位クラス理由入力を不要化</li>
               </ul>
-            </div>
+              </div>
+            </details>
 
             {/* v0.12.0 */}
             <details className="bg-white rounded-xl shadow-sm">
@@ -3308,7 +3326,7 @@ export default function SettingsContent() {
 
         {/* バージョン */}
         <div className="text-center py-8">
-          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.12.1</span>
+          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.13.0</span>
         </div>
 
       </div>{/* end max-w-3xl */}
