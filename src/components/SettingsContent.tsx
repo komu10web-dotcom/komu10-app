@@ -1278,6 +1278,29 @@ export default function SettingsContent() {
           amount: total, // DEPRECATED だが互換のため保持
           updated_at: new Date().toISOString(),
         }).eq('id', editingRoute.id);
+
+        // v0.14.0 Phase 5-D: ペア同期ロジック
+        // 片道テンプレ編集時、paired_reverse_id で紐づくペアBの legs を自動逆順同期
+        // （名前は独立・同期しない —— session36 仕様）
+        if (editingRoute.template_kind !== 'roundtrip_package' && editingRoute.paired_reverse_id) {
+          const reversedLegs = form.route_legs
+            .slice()
+            .reverse()
+            .map((l: any) => ({
+              from: l.to || '',
+              to: l.from || '',
+              method: l.method || '電車',
+              carrier: l.carrier || '',
+              amount: Number(l.amount) || 0,
+              green: !!l.green,
+            }));
+          const reverseTotal = reversedLegs.reduce((s: number, l: any) => s + (l.amount || 0), 0);
+          await supabase.from('route_templates').update({
+            route_legs: reversedLegs,
+            amount: reverseTotal, // DEPRECATED
+            updated_at: new Date().toISOString(),
+          }).eq('id', editingRoute.paired_reverse_id);
+        }
       } else {
         // 新規作成: v0.14.0 仕様D で template_kind='oneway' 明示
         await supabase.from('route_templates').insert({
@@ -5431,9 +5454,14 @@ function RouteTemplateModal({
         {route && (
           <div className="mb-5 px-3 py-2.5 bg-[#F5F5F3] rounded-xl">
             {pair ? (
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] px-1.5 py-0.5 bg-[#1B4D3E]/10 text-[#1B4D3E] rounded-full">⇔ ペアあり</span>
-                <span className="text-[11px] text-[#666] truncate">{pair.name}</span>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] px-1.5 py-0.5 bg-[#1B4D3E]/10 text-[#1B4D3E] rounded-full">⇔ ペアあり</span>
+                  <span className="text-[11px] text-[#666] truncate">{pair.name}</span>
+                </div>
+                <p className="text-[10px] text-[#999]">
+                  ※ 区間を編集するとペアも自動で逆順同期されます（名前は独立）
+                </p>
               </div>
             ) : route.template_kind === 'roundtrip_package' ? (
               <p className="text-[10px] text-[#999]">往復パッケージ（参照型）</p>
