@@ -1268,22 +1268,25 @@ export default function SettingsContent() {
     try {
       const total = form.route_legs.reduce((s, l) => s + (l.amount || 0), 0);
       if (editingRoute) {
+        // 編集時: 既存の template_kind / paired_reverse_id を維持
         await supabase.from('route_templates').update({
           name: form.name,
-          direction: form.direction,
+          direction: form.direction, // DEPRECATED だが互換のため保持
           route_legs: form.route_legs,
-          amount: total,
+          amount: total, // DEPRECATED だが互換のため保持
           updated_at: new Date().toISOString(),
         }).eq('id', editingRoute.id);
       } else {
+        // 新規作成: v0.14.0 仕様D で template_kind='oneway' 明示
         await supabase.from('route_templates').insert({
           owner: effectiveOwner,
           name: form.name,
-          direction: form.direction,
+          direction: form.direction, // DEPRECATED
           route_legs: form.route_legs,
-          amount: total,
+          amount: total, // DEPRECATED
           use_count: 0,
           sort_order: 0,
+          template_kind: 'oneway',
         });
       }
       setRouteModalOpen(false);
@@ -1299,6 +1302,83 @@ export default function SettingsContent() {
         route_legs: Array.isArray(r.route_legs) ? r.route_legs : [],
       })));
     } catch (err) { console.error('ルートテンプレート保存エラー:', err); }
+  };
+
+  // v0.14.0 Phase 5-B: 既存片道テンプレに逆順ペアを作成（救済ボタン）
+  const createReversePair = async (route: RouteTemplate) => {
+    if (!supabase || route.template_kind === 'roundtrip_package') return;
+    if (route.paired_reverse_id) {
+      // 既にペアあり → スキップ
+      console.warn('このテンプレは既にペアを持っています:', route.id);
+      return;
+    }
+    try {
+      // 逆順legs生成
+      const reversedLegs = (route.route_legs || [])
+        .slice()
+        .reverse()
+        .map((l: any) => ({
+          from: l.to || '',
+          to: l.from || '',
+          method: l.method || '電車',
+          carrier: l.carrier || '',
+          amount: Number(l.amount) || 0,
+          green: !!l.green,
+        }));
+      // 逆順名生成（A→B → B→A、括弧補足保持）
+      const generateReverseName = (name: string): string => {
+        const match = name.match(/^(.+?)([\s　]*[（(].+[）)])?$/);
+        const base = match?.[1] || name;
+        const suffix = match?.[2] || '';
+        const separators = /(→|->|⇒|⇄|⇔)/;
+        const parts = base.split(separators);
+        if (parts.length === 3) {
+          const [from, sep, to] = parts;
+          return `${to.trim()}${sep}${from.trim()}${suffix}`;
+        }
+        return `逆順 ${name}`;
+      };
+      const reverseName = generateReverseName(route.name);
+      const reverseTotal = reversedLegs.reduce((s: number, l: any) => s + (l.amount || 0), 0);
+
+      // ペアBを insert
+      const { data: bData, error: bErr } = await supabase
+        .from('route_templates')
+        .insert({
+          owner: route.owner,
+          name: reverseName,
+          direction: 'oneway_only',
+          route_legs: reversedLegs,
+          amount: reverseTotal,
+          use_count: 0,
+          sort_order: 0,
+          template_kind: 'oneway',
+          paired_reverse_id: route.id,
+        })
+        .select('id')
+        .single();
+      if (bErr || !bData) {
+        console.error('逆順ペア作成エラー:', bErr);
+        return;
+      }
+      // A の paired_reverse_id も更新
+      await supabase
+        .from('route_templates')
+        .update({ paired_reverse_id: bData.id })
+        .eq('id', route.id);
+
+      // 一覧再取得
+      const { data: routeData } = await supabase
+        .from('route_templates')
+        .select('*')
+        .eq('owner', effectiveOwner)
+        .is('archived_at', null)
+        .order('use_count', { ascending: false });
+      setRouteTemplates((routeData || []).map((r: any) => ({
+        ...r,
+        route_legs: Array.isArray(r.route_legs) ? r.route_legs : [],
+      })));
+    } catch (err) { console.error('逆順ペア作成エラー:', err); }
   };
 
   const deleteRouteTemplate = async (id: string) => {
@@ -2898,7 +2978,13 @@ export default function SettingsContent() {
                                   {pair ? (
                                     <span className="text-[9px] px-1.5 py-0.5 bg-[#1B4D3E]/10 text-[#1B4D3E] rounded-full">⇔ ペアあり</span>
                                   ) : (
-                                    <span className="text-[9px] px-1.5 py-0.5 bg-[#999]/10 text-[#999] rounded-full">ペア未作成</span>
+                                    <button
+                                      onClick={() => createReversePair(route)}
+                                      className="text-[9px] px-1.5 py-0.5 bg-[#999]/10 text-[#666] rounded-full hover:bg-[#D4A03A]/20 hover:text-[#D4A03A] transition-colors"
+                                      title="逆順ペアを作成"
+                                    >
+                                      ＋ ペアを作成
+                                    </button>
                                   )}
                                   {route.use_count > 0 && (
                                     <span className="text-[9px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full">{route.use_count}回使用</span>
@@ -3557,6 +3643,7 @@ export default function SettingsContent() {
       {routeModalOpen && (
         <RouteTemplateModal
           route={editingRoute}
+          allRoutes={routeTemplates}
           onSave={saveRouteTemplate}
           onClose={() => { setRouteModalOpen(false); setEditingRoute(null); }}
         />
@@ -5183,10 +5270,12 @@ function TemplateModal({
 // ============================================================
 function RouteTemplateModal({
   route,
+  allRoutes,
   onSave,
   onClose,
 }: {
   route: RouteTemplate | null;
+  allRoutes: RouteTemplate[];
   onSave: (form: {
     name: string;
     direction: 'bidirectional' | 'oneway_only';
@@ -5195,10 +5284,16 @@ function RouteTemplateModal({
   onClose: () => void;
 }) {
   const [name, setName] = useState(route?.name || '');
-  const [direction, setDirection] = useState<'bidirectional' | 'oneway_only'>(
-    route?.direction || 'bidirectional'
+  // v0.14.0 仕様D: direction は DEPRECATED、ここでは既存値維持のみ（UIで操作しない）
+  const [direction] = useState<'bidirectional' | 'oneway_only'>(
+    route?.direction || 'oneway_only'
   );
   const [saving, setSaving] = useState(false);
+
+  // ペア情報を解決
+  const pair = route?.paired_reverse_id
+    ? allRoutes.find(r => r.id === route.paired_reverse_id) || null
+    : null;
 
   // TransportFields 互換形式でstate管理
   const [transportData, setTransportData] = useState<TransportData>(() => {
@@ -5258,37 +5353,21 @@ function RouteTemplateModal({
           />
         </div>
 
-        {/* 方向 */}
-        <div className="mb-5">
-          <label className="text-[10px] font-medium tracking-wider text-[#999] block mb-1.5">方向</label>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setDirection('bidirectional')}
-              className={`flex-1 py-2.5 text-xs rounded-xl border transition-colors ${
-                direction === 'bidirectional'
-                  ? 'bg-[#1a1a1a] text-white border-[#1a1a1a]'
-                  : 'bg-white text-[#666] border-[#e8e8e8]'
-              }`}
-            >
-              双方向（往復可）
-            </button>
-            <button
-              type="button"
-              onClick={() => setDirection('oneway_only')}
-              className={`flex-1 py-2.5 text-xs rounded-xl border transition-colors ${
-                direction === 'oneway_only'
-                  ? 'bg-[#1a1a1a] text-white border-[#1a1a1a]'
-                  : 'bg-white text-[#666] border-[#e8e8e8]'
-              }`}
-            >
-              片道のみ
-            </button>
+        {/* v0.14.0 仕様D: ペア情報表示（編集時のみ）— 方向UIは廃止 */}
+        {route && (
+          <div className="mb-5 px-3 py-2.5 bg-[#F5F5F3] rounded-xl">
+            {pair ? (
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] px-1.5 py-0.5 bg-[#1B4D3E]/10 text-[#1B4D3E] rounded-full">⇔ ペアあり</span>
+                <span className="text-[11px] text-[#666] truncate">{pair.name}</span>
+              </div>
+            ) : route.template_kind === 'roundtrip_package' ? (
+              <p className="text-[10px] text-[#999]">往復パッケージ（参照型）</p>
+            ) : (
+              <p className="text-[10px] text-[#999]">ペア未作成 — 一覧から「＋ ペアを作成」ボタンで生成できます</p>
+            )}
           </div>
-          <p className="text-[10px] text-[#bbb] mt-1.5">
-            ※ 双方向は経費登録時に自動で逆順にして復路として使えます
-          </p>
-        </div>
+        )}
 
         {/* ルート区間 — TransportFields 流用 */}
         <div className="mb-5">
