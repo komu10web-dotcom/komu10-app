@@ -2805,52 +2805,139 @@ export default function SettingsContent() {
             </div>
             {routeTemplates.length === 0 ? (
               <p className="text-xs text-[#bbb] text-center py-4">ルートテンプレートがまだありません</p>
-            ) : (
-              <div className="space-y-3">
-                {routeTemplates.map(route => {
-                  const total = (route.route_legs || []).reduce((s, l) => s + (l.amount || 0), 0);
-                  const routeLabel = route.route_legs && route.route_legs.length > 0
-                    ? route.route_legs.map(l => l.from).join(' → ') + ' → ' + route.route_legs[route.route_legs.length - 1].to
-                    : '';
-                  return (
-                    <div key={route.id} className="flex items-start justify-between py-3 px-4 bg-[#F5F5F3] rounded-xl">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <span className="text-xs font-medium text-[#1a1a1a]">{route.name}</span>
-                          <span className="text-[9px] px-1.5 py-0.5 bg-[#1a1a1a]/5 text-[#666] rounded-full">
-                            {route.direction === 'bidirectional' ? '双方向' : '片道のみ'}
-                          </span>
-                          {route.use_count > 0 && (
-                            <span className="text-[9px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full">{route.use_count}回使用</span>
-                          )}
-                        </div>
-                        {routeLabel && (
-                          <p className="text-[10px] text-[#999] truncate">{routeLabel}</p>
-                        )}
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[11px] font-medium text-[#1a1a1a]">¥{total.toLocaleString()}</span>
-                          <span className="text-[9px] text-[#bbb]">{(route.route_legs || []).length}区間</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1 ml-3">
-                        <button
-                          onClick={() => { setEditingRoute(route); setRouteModalOpen(true); }}
-                          className="p-1.5 rounded-lg hover:bg-[#eee] transition-colors"
-                        >
-                          <Pencil className="w-3 h-3 text-[#999]" />
-                        </button>
-                        <button
-                          onClick={() => setRouteDeleteTarget(route.id)}
-                          className="p-1.5 rounded-lg hover:bg-[#fee] transition-colors"
-                        >
-                          <Trash2 className="w-3 h-3 text-[#C23728]" />
-                        </button>
+            ) : (() => {
+              // v0.14.0 Phase 5-A: パッケージと片道を分離表示
+              const packages = routeTemplates.filter(r => r.template_kind === 'roundtrip_package');
+              const oneways = routeTemplates.filter(r => r.template_kind !== 'roundtrip_package');
+              const onewayById = new Map(oneways.map(r => [r.id, r]));
+              return (
+                <div className="space-y-5">
+                  {/* ── 往復パッケージ ── */}
+                  {packages.length > 0 && (
+                    <div>
+                      <p className="text-[10px] text-[#999] font-medium tracking-wide uppercase mb-2">往復パッケージ</p>
+                      <div className="space-y-3">
+                        {packages.map(pkg => {
+                          const outbound = pkg.outbound_route_id ? onewayById.get(pkg.outbound_route_id) : null;
+                          const ret = pkg.return_route_id ? onewayById.get(pkg.return_route_id) : null;
+                          const outboundTotal = outbound ? (outbound.route_legs || []).reduce((s, l) => s + (l.amount || 0), 0) : 0;
+                          const returnTotal = ret ? (ret.route_legs || []).reduce((s, l) => s + (l.amount || 0), 0) : 0;
+                          const total = outboundTotal + returnTotal;
+                          const outboundLabel = outbound ? (outbound.route_legs || []).map(l => l.from).concat((outbound.route_legs || []).slice(-1).map(l => l.to)).filter(Boolean).join(' → ') : '';
+                          const returnLabel = ret ? (ret.route_legs || []).map(l => l.from).concat((ret.route_legs || []).slice(-1).map(l => l.to)).filter(Boolean).join(' → ') : '';
+                          const brokenRef = !outbound || !ret;
+                          return (
+                            <div key={pkg.id} className={`flex items-start justify-between py-3 px-4 rounded-xl ${brokenRef ? 'bg-[#FEF5E7]' : 'bg-[#F5F5F3]'}`}>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                  <span className="text-xs font-medium text-[#1a1a1a]">{pkg.name}</span>
+                                  <span className="text-[9px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full">往復パッケージ</span>
+                                  {pkg.use_count > 0 && (
+                                    <span className="text-[9px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full">{pkg.use_count}回使用</span>
+                                  )}
+                                  {brokenRef && (
+                                    <span className="text-[9px] px-1.5 py-0.5 bg-[#C23728]/10 text-[#C23728] rounded-full">参照先アーカイブ</span>
+                                  )}
+                                </div>
+                                {outbound && outboundLabel && (
+                                  <p className="text-[10px] text-[#999] truncate">往路: {outboundLabel}</p>
+                                )}
+                                {ret && returnLabel && (
+                                  <p className="text-[10px] text-[#999] truncate">復路: {returnLabel}</p>
+                                )}
+                                {!outbound && (
+                                  <p className="text-[10px] text-[#C23728]">往路テンプレが見つかりません</p>
+                                )}
+                                {!ret && (
+                                  <p className="text-[10px] text-[#C23728]">復路テンプレが見つかりません</p>
+                                )}
+                                {!brokenRef && (
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-[11px] font-medium text-[#1a1a1a]">¥{total.toLocaleString()}</span>
+                                    <span className="text-[9px] text-[#bbb]">往復合計</span>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1 ml-3">
+                                <button
+                                  onClick={() => { setEditingRoute(pkg); setRouteModalOpen(true); }}
+                                  className="p-1.5 rounded-lg hover:bg-[#eee] transition-colors"
+                                >
+                                  <Pencil className="w-3 h-3 text-[#999]" />
+                                </button>
+                                <button
+                                  onClick={() => setRouteDeleteTarget(pkg.id)}
+                                  className="p-1.5 rounded-lg hover:bg-[#fee] transition-colors"
+                                >
+                                  <Trash2 className="w-3 h-3 text-[#C23728]" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                  )}
+
+                  {/* ── 片道 ── */}
+                  {oneways.length > 0 && (
+                    <div>
+                      <p className="text-[10px] text-[#999] font-medium tracking-wide uppercase mb-2">片道</p>
+                      <div className="space-y-3">
+                        {oneways.map(route => {
+                          const total = (route.route_legs || []).reduce((s, l) => s + (l.amount || 0), 0);
+                          const routeLabel = route.route_legs && route.route_legs.length > 0
+                            ? (route.route_legs[0]?.from || '') + ' → ' + (route.route_legs[route.route_legs.length - 1]?.to || '')
+                            : '';
+                          const pair = route.paired_reverse_id ? onewayById.get(route.paired_reverse_id) : null;
+                          return (
+                            <div key={route.id} className="flex items-start justify-between py-3 px-4 bg-[#F5F5F3] rounded-xl">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                  <span className="text-xs font-medium text-[#1a1a1a]">{route.name}</span>
+                                  {pair ? (
+                                    <span className="text-[9px] px-1.5 py-0.5 bg-[#1B4D3E]/10 text-[#1B4D3E] rounded-full">⇔ ペアあり</span>
+                                  ) : (
+                                    <span className="text-[9px] px-1.5 py-0.5 bg-[#999]/10 text-[#999] rounded-full">ペア未作成</span>
+                                  )}
+                                  {route.use_count > 0 && (
+                                    <span className="text-[9px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full">{route.use_count}回使用</span>
+                                  )}
+                                </div>
+                                {routeLabel && (
+                                  <p className="text-[10px] text-[#999] truncate">{routeLabel}</p>
+                                )}
+                                {pair && (
+                                  <p className="text-[10px] text-[#1B4D3E]/70 truncate">ペア: {pair.name}</p>
+                                )}
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="text-[11px] font-medium text-[#1a1a1a]">¥{total.toLocaleString()}</span>
+                                  <span className="text-[9px] text-[#bbb]">{(route.route_legs || []).length}区間</span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1 ml-3">
+                                <button
+                                  onClick={() => { setEditingRoute(route); setRouteModalOpen(true); }}
+                                  className="p-1.5 rounded-lg hover:bg-[#eee] transition-colors"
+                                >
+                                  <Pencil className="w-3 h-3 text-[#999]" />
+                                </button>
+                                <button
+                                  onClick={() => setRouteDeleteTarget(route.id)}
+                                  className="p-1.5 rounded-lg hover:bg-[#fee] transition-colors"
+                                >
+                                  <Trash2 className="w-3 h-3 text-[#C23728]" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {/* 汎用テンプレート */}
