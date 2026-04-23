@@ -259,6 +259,8 @@ export default function SettingsContent() {
   const [routeModalOpen, setRouteModalOpen] = useState(false);
   const [editingRoute, setEditingRoute] = useState<RouteTemplate | null>(null);
   const [routeDeleteTarget, setRouteDeleteTarget] = useState<string | null>(null);
+  // v0.14.0 Phase 5-C: パッケージ専用モーダル
+  const [packageModalOpen, setPackageModalOpen] = useState(false);
 
   // v0.7: 交通費目的マスタ（テンプレ・経費登録で共通利用）
   const [transportPurposes, setTransportPurposes] = useState<{ id: string; name: string }[]>([]);
@@ -1379,6 +1381,57 @@ export default function SettingsContent() {
         route_legs: Array.isArray(r.route_legs) ? r.route_legs : [],
       })));
     } catch (err) { console.error('逆順ペア作成エラー:', err); }
+  };
+
+  // v0.14.0 Phase 5-C: パッケージテンプレ保存（新規 or 編集）
+  const savePackageTemplate = async (form: {
+    name: string;
+    outbound_route_id: string;
+    return_route_id: string;
+  }): Promise<boolean> => {
+    if (!supabase) return false;
+    if (!form.name.trim() || !form.outbound_route_id || !form.return_route_id) return false;
+    try {
+      if (editingRoute && editingRoute.template_kind === 'roundtrip_package') {
+        // 編集
+        await supabase.from('route_templates').update({
+          name: form.name.trim(),
+          outbound_route_id: form.outbound_route_id,
+          return_route_id: form.return_route_id,
+          updated_at: new Date().toISOString(),
+        }).eq('id', editingRoute.id);
+      } else {
+        // 新規
+        await supabase.from('route_templates').insert({
+          owner: effectiveOwner,
+          name: form.name.trim(),
+          direction: 'bidirectional', // DEPRECATED
+          route_legs: [],
+          amount: 0, // DEPRECATED
+          use_count: 0,
+          sort_order: 0,
+          template_kind: 'roundtrip_package',
+          outbound_route_id: form.outbound_route_id,
+          return_route_id: form.return_route_id,
+        });
+      }
+      setRouteModalOpen(false);
+      setEditingRoute(null);
+      const { data: routeData } = await supabase
+        .from('route_templates')
+        .select('*')
+        .eq('owner', effectiveOwner)
+        .is('archived_at', null)
+        .order('use_count', { ascending: false });
+      setRouteTemplates((routeData || []).map((r: any) => ({
+        ...r,
+        route_legs: Array.isArray(r.route_legs) ? r.route_legs : [],
+      })));
+      return true;
+    } catch (err) {
+      console.error('パッケージテンプレ保存エラー:', err);
+      return false;
+    }
   };
 
   const deleteRouteTemplate = async (id: string) => {
@@ -2871,17 +2924,28 @@ export default function SettingsContent() {
 
           {/* v0.7: ルートテンプレート（物理経路） */}
           <div className="bg-white rounded-xl shadow-sm p-5 mb-4">
-            <div className="flex items-center justify-between mb-4">
-              <div>
+            <div className="flex items-start justify-between mb-4 gap-3">
+              <div className="min-w-0 flex-1">
                 <p className="text-xs font-medium text-[#1a1a1a] mb-0.5">ルート</p>
-                <p className="text-[10px] text-[#999]">区間・金額のみ。経費登録時に往路・復路を独立選択</p>
+                <p className="text-[10px] text-[#999]">片道＋逆順ペアの基本単位、または往復パッケージ</p>
               </div>
-              <button
-                onClick={() => { setEditingRoute(null); setRouteModalOpen(true); }}
-                className="flex items-center gap-1 px-3 py-1.5 text-[11px] text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] transition-colors whitespace-nowrap ml-3"
-              >
-                <Plus className="w-3.5 h-3.5" />追加
-              </button>
+              <div className="flex gap-1.5 shrink-0">
+                <button
+                  onClick={() => { setEditingRoute(null); setRouteModalOpen(true); }}
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] transition-colors whitespace-nowrap"
+                  title="片道テンプレを追加"
+                >
+                  <Plus className="w-3 h-3" />片道
+                </button>
+                <button
+                  onClick={() => { setEditingRoute(null); setPackageModalOpen(true); }}
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] text-[#1a1a1a] bg-[#D4A03A]/15 border border-[#D4A03A]/30 rounded-lg hover:bg-[#D4A03A]/25 transition-colors whitespace-nowrap"
+                  title="往復パッケージを追加"
+                  disabled={routeTemplates.filter(r => r.template_kind !== 'roundtrip_package').length < 2}
+                >
+                  <Plus className="w-3 h-3" />パッケージ
+                </button>
+              </div>
             </div>
             {routeTemplates.length === 0 ? (
               <p className="text-xs text-[#bbb] text-center py-4">ルートテンプレートがまだありません</p>
@@ -2940,7 +3004,7 @@ export default function SettingsContent() {
                               </div>
                               <div className="flex items-center gap-1 ml-3">
                                 <button
-                                  onClick={() => { setEditingRoute(pkg); setRouteModalOpen(true); }}
+                                  onClick={() => { setEditingRoute(pkg); setPackageModalOpen(true); }}
                                   className="p-1.5 rounded-lg hover:bg-[#eee] transition-colors"
                                 >
                                   <Pencil className="w-3 h-3 text-[#999]" />
@@ -3646,6 +3710,16 @@ export default function SettingsContent() {
           allRoutes={routeTemplates}
           onSave={saveRouteTemplate}
           onClose={() => { setRouteModalOpen(false); setEditingRoute(null); }}
+        />
+      )}
+
+      {/* v0.14.0 Phase 5-C: ── パッケージテンプレモーダル ── */}
+      {packageModalOpen && (
+        <PackageTemplateModal
+          pkg={editingRoute && editingRoute.template_kind === 'roundtrip_package' ? editingRoute : null}
+          allRoutes={routeTemplates}
+          onSave={savePackageTemplate}
+          onClose={() => { setPackageModalOpen(false); setEditingRoute(null); }}
         />
       )}
 
@@ -5393,6 +5467,207 @@ function RouteTemplateModal({
             className="flex-1 py-2.5 text-xs text-white bg-[#1a1a1a] rounded-xl hover:bg-[#333] transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5">
             {saving && <Loader2 className="w-3 h-3 animate-spin" />}
             {route ? '更新する' : '登録する'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// v0.14.0 Phase 5-C: PackageTemplateModal — 往復パッケージの作成・編集
+// 片道テンプレ2つ（往路・復路）を選んで組み合わせる
+// ============================================================
+function PackageTemplateModal({
+  pkg,
+  allRoutes,
+  onSave,
+  onClose,
+}: {
+  pkg: RouteTemplate | null;
+  allRoutes: RouteTemplate[];
+  onSave: (form: {
+    name: string;
+    outbound_route_id: string;
+    return_route_id: string;
+  }) => Promise<boolean>;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState(pkg?.name || '');
+  const [outboundId, setOutboundId] = useState(pkg?.outbound_route_id || '');
+  const [returnId, setReturnId] = useState(pkg?.return_route_id || '');
+  const [saving, setSaving] = useState(false);
+
+  // 片道テンプレのみ選択肢に（パッケージ自体は除外、アーカイブ済みも除外）
+  const onewayOptions = allRoutes.filter(
+    (r) => r.template_kind !== 'roundtrip_package' && !r.archived_at
+  );
+
+  // 参照先が見つからない場合の警告（編集時）
+  const outboundExists = !outboundId || onewayOptions.some((r) => r.id === outboundId);
+  const returnExists = !returnId || onewayOptions.some((r) => r.id === returnId);
+
+  // プレビュー用情報
+  const outboundTpl = outboundId ? onewayOptions.find((r) => r.id === outboundId) : null;
+  const returnTpl = returnId ? onewayOptions.find((r) => r.id === returnId) : null;
+  const outboundTotal = outboundTpl
+    ? (outboundTpl.route_legs || []).reduce((s, l) => s + (l.amount || 0), 0)
+    : 0;
+  const returnTotal = returnTpl
+    ? (returnTpl.route_legs || []).reduce((s, l) => s + (l.amount || 0), 0)
+    : 0;
+
+  const handleSave = async () => {
+    if (!name.trim() || !outboundId || !returnId) return;
+    if (outboundId === returnId) return; // 往路と復路が同じテンプレは禁止
+    setSaving(true);
+    const ok = await onSave({
+      name: name.trim(),
+      outbound_route_id: outboundId,
+      return_route_id: returnId,
+    });
+    setSaving(false);
+    if (!ok) {
+      console.error('パッケージ保存失敗');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      <div className="absolute inset-0 bg-black/30" onClick={onClose} />
+      <div
+        className="relative bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl p-6 max-h-[90vh] overflow-y-auto"
+        style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}
+      >
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-sm font-medium text-[#1a1a1a]">
+            {pkg ? '往復パッケージを編集' : '往復パッケージを追加'}
+          </h3>
+          <button onClick={onClose} className="p-1 rounded hover:bg-[#F5F5F3]">
+            <X className="w-4 h-4 text-[#999]" />
+          </button>
+        </div>
+
+        {onewayOptions.length < 2 ? (
+          <div className="mb-5 px-3 py-4 bg-[#FEF5E7] border border-[#D4A03A]/30 rounded-xl text-center">
+            <p className="text-xs text-[#1a1a1a] mb-1">片道テンプレが2つ以上必要です</p>
+            <p className="text-[10px] text-[#999]">先に片道テンプレを作成してください</p>
+          </div>
+        ) : (
+          <>
+            {/* パッケージ名 */}
+            <div className="mb-5">
+              <label className="text-[10px] font-medium tracking-wider text-[#999] block mb-1.5">
+                パッケージ名
+              </label>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="例: 実家⇔自宅（新宿経由）"
+                className="w-full px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors"
+              />
+            </div>
+
+            {/* 往路 */}
+            <div className="mb-4">
+              <label className="text-[10px] font-medium tracking-wider text-[#999] block mb-1.5">
+                往路
+              </label>
+              <select
+                value={outboundId}
+                onChange={(e) => setOutboundId(e.target.value)}
+                className="w-full px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors bg-white"
+              >
+                <option value="">（選択してください）</option>
+                {onewayOptions.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name}
+                  </option>
+                ))}
+              </select>
+              {!outboundExists && (
+                <p className="text-[10px] text-[#C23728] mt-1">
+                  ※ 往路に指定されていたテンプレが見つかりません（アーカイブされた可能性）
+                </p>
+              )}
+              {outboundTpl && (outboundTpl.route_legs || []).length > 0 && (
+                <p className="text-[10px] text-[#999] mt-1.5 truncate">
+                  {(outboundTpl.route_legs || [])[0]?.from || ''}
+                  {' → '}
+                  {(outboundTpl.route_legs || [])[outboundTpl.route_legs!.length - 1]?.to || ''}
+                  {' / ¥'}
+                  {outboundTotal.toLocaleString()}
+                </p>
+              )}
+            </div>
+
+            {/* 復路 */}
+            <div className="mb-5">
+              <label className="text-[10px] font-medium tracking-wider text-[#999] block mb-1.5">
+                復路
+              </label>
+              <select
+                value={returnId}
+                onChange={(e) => setReturnId(e.target.value)}
+                className="w-full px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors bg-white"
+              >
+                <option value="">（選択してください）</option>
+                {onewayOptions.map((r) => (
+                  <option key={r.id} value={r.id} disabled={r.id === outboundId}>
+                    {r.name}
+                    {r.id === outboundId ? '（往路と同じ）' : ''}
+                  </option>
+                ))}
+              </select>
+              {!returnExists && (
+                <p className="text-[10px] text-[#C23728] mt-1">
+                  ※ 復路に指定されていたテンプレが見つかりません（アーカイブされた可能性）
+                </p>
+              )}
+              {returnTpl && (returnTpl.route_legs || []).length > 0 && (
+                <p className="text-[10px] text-[#999] mt-1.5 truncate">
+                  {(returnTpl.route_legs || [])[0]?.from || ''}
+                  {' → '}
+                  {(returnTpl.route_legs || [])[returnTpl.route_legs!.length - 1]?.to || ''}
+                  {' / ¥'}
+                  {returnTotal.toLocaleString()}
+                </p>
+              )}
+            </div>
+
+            {/* 往復合計プレビュー */}
+            {outboundTpl && returnTpl && (
+              <div className="mb-5 px-3 py-2.5 bg-[#F5F5F3] rounded-xl">
+                <p className="text-[10px] text-[#999] mb-0.5">往復合計</p>
+                <p className="text-sm font-medium text-[#1a1a1a] font-['Saira_Condensed'] tabular-nums">
+                  ¥{(outboundTotal + returnTotal).toLocaleString()}
+                </p>
+              </div>
+            )}
+          </>
+        )}
+
+        <div className="flex gap-2 mt-4">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 text-xs text-[#999] bg-[#F5F5F3] rounded-xl hover:bg-gray-200 transition-colors"
+          >
+            キャンセル
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={
+              saving ||
+              !name.trim() ||
+              !outboundId ||
+              !returnId ||
+              outboundId === returnId ||
+              onewayOptions.length < 2
+            }
+            className="flex-1 py-2.5 text-xs text-white bg-[#1a1a1a] rounded-xl hover:bg-[#333] transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5"
+          >
+            {saving && <Loader2 className="w-3 h-3 animate-spin" />}
+            {pkg ? '更新する' : '登録する'}
           </button>
         </div>
       </div>
