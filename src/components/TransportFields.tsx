@@ -42,6 +42,9 @@ export interface TransportData {
   purpose: string;
   route_legs: RouteLeg[];
   round_trip: 'one_way' | 'round_trip';
+  // v0.14.0: 復路モード3択（auto_reverse=往路の逆順 / different_route=別ルート / manual=手入力）
+  // 既存 same_route / same_amount は互換用に残すが、return_mode から派生する
+  return_mode?: 'auto_reverse' | 'different_route' | 'manual';
   same_route: boolean;
   same_amount: boolean;
   return_legs: RouteLeg[];
@@ -67,6 +70,7 @@ export const EMPTY_TRANSPORT: TransportData = {
   purpose: '商談',
   route_legs: [{ ...EMPTY_LEG }],
   round_trip: 'one_way',
+  return_mode: 'auto_reverse',
   same_route: true,
   same_amount: true,
   return_legs: [],
@@ -79,6 +83,23 @@ export const EMPTY_TRANSPORT: TransportData = {
   route_note: '',
 };
 
+// v0.14.0: 往路 legs を復路用に逆順化するヘルパー
+// 配列順を反転し、各 leg の from/to を swap
+// method/carrier/amount/green は保持（逆方向でも同じ路線・金額のケースが多いため）
+export function reverseRouteLegs(legs: RouteLeg[]): RouteLeg[] {
+  return legs
+    .slice()
+    .reverse()
+    .map((leg) => ({
+      from: leg.to,
+      to: leg.from,
+      method: leg.method,
+      carrier: leg.carrier,
+      amount: leg.amount,
+      green: leg.green,
+    }));
+}
+
 // ── Props ──────────────────────────────────────────────
 interface TransportFieldsProps {
   data: TransportData;
@@ -87,13 +108,15 @@ interface TransportFieldsProps {
   // v0.6.6: テンプレ編集時は区間リストとグリーン車トグルのみ表示
   // デフォルト 'entry' = 経費入力画面(全要素表示)
   mode?: 'entry' | 'template';
+  // v0.14.0: 「別の片道テンプレを選ぶ」モード時に表示する復路テンプレセレクタ（親から注入）
+  returnRouteSelector?: React.ReactNode;
 }
 
 // スマホ最適化: 16px以上でiOSのズーム防止、タッチターゲット44px以上
 const inputClass = "w-full px-3 py-2.5 bg-[#F5F5F3] rounded-lg text-[16px] sm:text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50";
 
 // ── コンポーネント ──────────────────────────────────────────
-export default function TransportFields({ data, onChange, onAmountChange, mode = 'entry' }: TransportFieldsProps) {
+export default function TransportFields({ data, onChange, onAmountChange, mode = 'entry', returnRouteSelector }: TransportFieldsProps) {
   const [showDetail, setShowDetail] = useState(false);
   const [purposes, setPurposes] = useState<{ id: string; name: string }[]>(DEFAULT_PURPOSES);
   const isTemplate = mode === 'template';
@@ -113,17 +136,20 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
   }, []);
 
   // 合計金額を親に通知（往復対応）
+  // v0.14.0: return_mode ベースに更新、既存データ互換のため same_route/same_amount もフォールバック
   const prevTotalRef = useRef<number>(0);
   useEffect(() => {
     const oneWayTotal = data.route_legs.reduce((s, l) => s + (l.amount || 0), 0);
     let total = oneWayTotal;
     if (data.round_trip === 'round_trip') {
-      if (data.same_amount) {
+      // return_mode が未設定なら same_route/same_amount から推定（既存データ互換）
+      const mode = data.return_mode ?? (data.same_route ? (data.same_amount ? 'auto_reverse' : 'auto_reverse') : 'different_route');
+      if (mode === 'auto_reverse') {
+        // 往路の逆順 = 同ルート・同額
         total = oneWayTotal * 2;
       } else {
-        const returnTotal = data.same_route
-          ? (data.return_amount || 0)
-          : data.return_legs.reduce((s, l) => s + (l.amount || 0), 0);
+        // different_route / manual = return_legs の合計
+        const returnTotal = data.return_legs.reduce((s, l) => s + (l.amount || 0), 0);
         total = oneWayTotal + returnTotal;
       }
     }
@@ -131,7 +157,7 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
       prevTotalRef.current = total;
       onAmountChange?.(total);
     }
-  }, [data.route_legs, data.round_trip, data.same_amount, data.same_route, data.return_amount, data.return_legs, onAmountChange]);
+  }, [data.route_legs, data.round_trip, data.return_mode, data.same_amount, data.same_route, data.return_amount, data.return_legs, onAmountChange]);
 
   const setField = <K extends keyof TransportData>(key: K, value: TransportData[K]) => {
     onChange({ ...data, [key]: value });
@@ -355,6 +381,7 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
               onClick={() => {
                 const updated: Partial<TransportData> = { round_trip: v };
                 if (v === 'one_way') {
+                  updated.return_mode = 'auto_reverse';
                   updated.same_route = true;
                   updated.same_amount = true;
                   updated.return_legs = [];
@@ -375,144 +402,190 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
       </div>
       )}
 
-      {/* ⑧ 往復の場合の分岐 */}
-      {!isTemplate && data.round_trip === 'round_trip' && (
-        <div className="space-y-3 pl-3 border-l-2 border-[#D4A03A]/20">
-          {/* 同じルート？ */}
-          <div>
-            <label className="text-xs text-[#999] block mb-1">帰りのルート</label>
-            <div className="flex gap-2">
-              <button type="button" onClick={() => onChange({ ...data, same_route: true, return_legs: [] })}
-                className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${data.same_route ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#999]'}`}>
-                同じルート
-              </button>
-              <button type="button" onClick={() => {
-                const legs = data.route_legs;
-                const reversedLegs: RouteLeg[] = [{
-                  ...EMPTY_LEG,
-                  from: legs[legs.length - 1]?.to || '',
-                  to: legs[0]?.from || '',
-                }];
-                onChange({ ...data, same_route: false, return_legs: reversedLegs });
-              }}
-                className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${!data.same_route ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#999]'}`}>
-                別ルート
-              </button>
-            </div>
-          </div>
+      {/* ⑧ 往復の場合の分岐 — v0.14.0: 3択ラジオ化 */}
+      {!isTemplate && data.round_trip === 'round_trip' && (() => {
+        // return_mode が未設定の既存データは same_route/same_amount から推定
+        const mode: 'auto_reverse' | 'different_route' | 'manual' =
+          data.return_mode ?? (data.same_route ? 'auto_reverse' : 'different_route');
+        const setMode = (nextMode: 'auto_reverse' | 'different_route' | 'manual') => {
+          if (nextMode === 'auto_reverse') {
+            // 往路の逆順モード — return_legs はクリア（保存時に動的逆順化）
+            onChange({
+              ...data,
+              return_mode: 'auto_reverse',
+              same_route: true,
+              same_amount: true,
+              return_legs: [],
+              return_amount: 0,
+            });
+          } else if (nextMode === 'different_route') {
+            // 別の片道テンプレを選ぶモード — 親から注入されるセレクタで選択
+            // ここでは return_legs は空のまま（セレクト選択時に親が埋める）
+            onChange({
+              ...data,
+              return_mode: 'different_route',
+              same_route: false,
+              same_amount: false,
+              return_legs: [],
+            });
+          } else {
+            // 手入力モード — 空の leg を1つ用意
+            const initialReturnLeg: RouteLeg = {
+              ...EMPTY_LEG,
+              from: data.route_legs[data.route_legs.length - 1]?.to || '',
+              to: data.route_legs[0]?.from || '',
+            };
+            onChange({
+              ...data,
+              return_mode: 'manual',
+              same_route: false,
+              same_amount: false,
+              return_legs: [initialReturnLeg],
+            });
+          }
+        };
+        return (
+          <div className="rounded-xl border-2 border-[#D4A03A]/50 bg-[#D4A03A]/5 p-4 space-y-3">
+            <p className="text-sm font-semibold text-[#1a1a1a]">帰りのルート</p>
 
-          {/* 同じ金額？ */}
-          <div>
-            <label className="text-xs text-[#999] block mb-1">帰りの金額</label>
-            <div className="flex gap-2">
-              <button type="button" onClick={() => onChange({ ...data, same_amount: true, return_amount: 0 })}
-                className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${data.same_amount ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#999]'}`}>
-                同じ金額
-              </button>
-              <button type="button" onClick={() => onChange({ ...data, same_amount: false })}
-                className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${!data.same_amount ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#999]'}`}>
-                別の金額
-              </button>
-            </div>
-          </div>
-
-          {/* 別ルートの場合：帰り区間入力 — v0.6.6: 往路と同等UI */}
-          {!data.same_route && (
+            {/* 3択ラジオ */}
             <div className="space-y-2">
-              <p className="text-[10px] text-[#999] font-medium tracking-wide">帰りの区間</p>
-              {(data.return_legs || []).map((leg, idx) => (
-                <div key={idx} className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-[#999] font-medium tracking-wide">区間 {idx + 1}</span>
-                    {idx > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => removeReturnLeg(idx)}
-                        className="p-1.5 hover:bg-red-50 rounded-full transition-colors"
-                      >
-                        <X className="w-3.5 h-3.5 text-red-400" />
-                      </button>
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <input
+                  type="radio"
+                  name="return_mode"
+                  checked={mode === 'auto_reverse'}
+                  onChange={() => setMode('auto_reverse')}
+                  className="w-4 h-4 accent-[#D4A03A]"
+                />
+                <span className="text-sm text-[#1a1a1a]">往路の逆順（自動生成）</span>
+              </label>
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <input
+                  type="radio"
+                  name="return_mode"
+                  checked={mode === 'different_route'}
+                  onChange={() => setMode('different_route')}
+                  className="w-4 h-4 accent-[#D4A03A]"
+                />
+                <span className="text-sm text-[#1a1a1a]">別の片道テンプレを選ぶ</span>
+              </label>
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <input
+                  type="radio"
+                  name="return_mode"
+                  checked={mode === 'manual'}
+                  onChange={() => setMode('manual')}
+                  className="w-4 h-4 accent-[#D4A03A]"
+                />
+                <span className="text-sm text-[#1a1a1a]">手入力</span>
+              </label>
+            </div>
+
+            {/* different_route モード: 親から注入されるセレクタ */}
+            {mode === 'different_route' && returnRouteSelector && (
+              <div className="pt-2 border-t border-[#D4A03A]/20">
+                {returnRouteSelector}
+              </div>
+            )}
+
+            {/* manual モード: 区間入力UI */}
+            {mode === 'manual' && (
+              <div className="space-y-2 pt-2 border-t border-[#D4A03A]/20">
+                <p className="text-[10px] text-[#999] font-medium tracking-wide">帰りの区間</p>
+                {(data.return_legs || []).map((leg, idx) => (
+                  <div key={idx} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-[#999] font-medium tracking-wide">区間 {idx + 1}</span>
+                      {idx > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => removeReturnLeg(idx)}
+                          className="p-1.5 hover:bg-red-50 rounded-full transition-colors"
+                        >
+                          <X className="w-3.5 h-3.5 text-red-400" />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex gap-2 items-center">
+                      <div className="flex-1">
+                        <input type="text" value={leg.from}
+                          onChange={(e) => updateReturnLeg(idx, 'from', e.target.value)}
+                          className={`${inputClass} ${idx > 0 ? 'bg-[#EDEDEB] text-[#999]' : ''}`}
+                          placeholder="出発地" readOnly={idx > 0} />
+                      </div>
+                      <span className="text-xs text-[#999] shrink-0">→</span>
+                      <div className="flex-1">
+                        <input type="text" value={leg.to}
+                          onChange={(e) => updateReturnLeg(idx, 'to', e.target.value)}
+                          className={inputClass} placeholder="到着地" />
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <div className="w-[100px] shrink-0">
+                        <select value={leg.method}
+                          onChange={(e) => updateReturnLeg(idx, 'method', e.target.value)}
+                          className={inputClass}>
+                          {TRANSPORT_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
+                        </select>
+                      </div>
+                      <div className="flex-1">
+                        <input type="text" value={leg.carrier}
+                          onChange={(e) => updateReturnLeg(idx, 'carrier', e.target.value)}
+                          className={inputClass} placeholder="利用会社" />
+                      </div>
+                    </div>
+                    <input type="text" inputMode="numeric"
+                      value={leg.amount ? `¥${leg.amount.toLocaleString()}` : ''}
+                      onChange={(e) => {
+                        const v = e.target.value.replace(/[¥,]/g, '');
+                        if (/^\d*$/.test(v)) updateReturnLeg(idx, 'amount', parseInt(v) || 0);
+                      }}
+                      className={`${inputClass} font-['Saira_Condensed'] tabular-nums`} placeholder="¥ 金額" />
+
+                    {/* グリーン車トグル(往路と同等) */}
+                    {(leg.method === '新幹線' || leg.method === '電車') && (
+                      <label className="flex items-center gap-2.5 cursor-pointer py-1">
+                        <div
+                          onClick={() => updateReturnLeg(idx, 'green', !leg.green)}
+                          className={`relative w-9 h-5 rounded-full transition-colors ${leg.green ? 'bg-[#1B4D3E]' : 'bg-[#DDD]'}`}
+                        >
+                          <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${leg.green ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                        </div>
+                        <span className="text-sm text-[#555]">グリーン車</span>
+                      </label>
                     )}
                   </div>
+                ))}
 
-                  <div className="flex gap-2 items-center">
-                    <div className="flex-1">
-                      <input type="text" value={leg.from}
-                        onChange={(e) => updateReturnLeg(idx, 'from', e.target.value)}
-                        className={`${inputClass} ${idx > 0 ? 'bg-[#EDEDEB] text-[#999]' : ''}`}
-                        placeholder="出発地" readOnly={idx > 0} />
-                    </div>
-                    <span className="text-xs text-[#999] shrink-0">→</span>
-                    <div className="flex-1">
-                      <input type="text" value={leg.to}
-                        onChange={(e) => updateReturnLeg(idx, 'to', e.target.value)}
-                        className={inputClass} placeholder="到着地" />
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <div className="w-[100px] shrink-0">
-                      <select value={leg.method}
-                        onChange={(e) => updateReturnLeg(idx, 'method', e.target.value)}
-                        className={inputClass}>
-                        {TRANSPORT_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
-                      </select>
-                    </div>
-                    <div className="flex-1">
-                      <input type="text" value={leg.carrier}
-                        onChange={(e) => updateReturnLeg(idx, 'carrier', e.target.value)}
-                        className={inputClass} placeholder="利用会社" />
-                    </div>
-                  </div>
-                  <input type="text" inputMode="numeric"
-                    value={leg.amount ? `¥${leg.amount.toLocaleString()}` : ''}
-                    onChange={(e) => {
-                      const v = e.target.value.replace(/[¥,]/g, '');
-                      if (/^\d*$/.test(v)) updateReturnLeg(idx, 'amount', parseInt(v) || 0);
-                    }}
-                    className={`${inputClass} font-['Saira_Condensed'] tabular-nums`} placeholder="¥ 金額" />
+                <button
+                  type="button"
+                  onClick={addReturnLeg}
+                  className="flex items-center gap-1.5 text-sm text-[#D4A03A] hover:text-[#B8862D] transition-colors py-1"
+                >
+                  <Plus className="w-4 h-4" />
+                  区間を追加
+                </button>
+              </div>
+            )}
 
-                  {/* グリーン車トグル(往路と同等) */}
-                  {(leg.method === '新幹線' || leg.method === '電車') && (
-                    <label className="flex items-center gap-2.5 cursor-pointer py-1">
-                      <div
-                        onClick={() => updateReturnLeg(idx, 'green', !leg.green)}
-                        className={`relative w-9 h-5 rounded-full transition-colors ${leg.green ? 'bg-[#1B4D3E]' : 'bg-[#DDD]'}`}
-                      >
-                        <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${leg.green ? 'translate-x-4' : 'translate-x-0.5'}`} />
-                      </div>
-                      <span className="text-sm text-[#555]">グリーン車</span>
-                    </label>
-                  )}
-                </div>
-              ))}
-
-              {/* 復路 区間追加ボタン(往路と同等) */}
-              <button
-                type="button"
-                onClick={addReturnLeg}
-                className="flex items-center gap-1.5 text-sm text-[#D4A03A] hover:text-[#B8862D] transition-colors py-1"
-              >
-                <Plus className="w-4 h-4" />
-                区間を追加
-              </button>
-            </div>
-          )}
-
-          {/* 同ルート・別金額の場合：帰りの金額入力 */}
-          {data.same_route && !data.same_amount && (
-            <div>
-              <label className="text-xs text-[#999] block mb-1">帰りの金額</label>
-              <input type="text" inputMode="numeric"
-                value={data.return_amount ? `¥${data.return_amount.toLocaleString()}` : ''}
-                onChange={(e) => {
-                  const v = e.target.value.replace(/[¥,]/g, '');
-                  if (/^\d*$/.test(v)) onChange({ ...data, return_amount: parseInt(v) || 0 });
-                }}
-                className={`${inputClass} font-['Saira_Condensed'] tabular-nums`} placeholder="¥ 帰りの金額" />
-            </div>
-          )}
-        </div>
-      )}
+            {/* different_route モード: テンプレ選択後の legs プレビュー（編集不可） */}
+            {mode === 'different_route' && data.return_legs.length > 0 && (
+              <div className="pt-2 border-t border-[#D4A03A]/20 space-y-1">
+                <p className="text-[10px] text-[#999] font-medium tracking-wide">選択中の復路区間</p>
+                {data.return_legs.map((leg, idx) => (
+                  <p key={idx} className="text-xs text-[#555]">
+                    {leg.from} → {leg.to}
+                    {leg.method && leg.method !== '電車' && ` (${leg.method})`}
+                    {leg.amount > 0 && ` / ¥${leg.amount.toLocaleString()}`}
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ⑩ 支払方法 */}
       {!isTemplate && (
@@ -535,7 +608,7 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
             {routePreview}
             {data.round_trip === 'round_trip' && ' (往復)'}
           </p>
-          {data.round_trip === 'round_trip' && !data.same_amount && (
+          {data.round_trip === 'round_trip' && (data.return_mode === 'different_route' || data.return_mode === 'manual' || (!data.return_mode && !data.same_amount)) && (
             <p className="text-[10px] text-[#999]">
               往路 ¥{oneWayTotal.toLocaleString()} + 復路 ¥{returnTotal.toLocaleString()}
             </p>

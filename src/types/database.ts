@@ -440,20 +440,34 @@ export interface Database {
 
       // ルートテンプレート（v0.7: 交通費の物理経路を独立管理）
       // 経費テンプレ（業務メタ）とは分離された「再利用可能な経路マスタ」
+      // v0.14.0: 仕様D — 片道テンプレ＋逆順ペア＋往復パッケージの3階層構造に拡張
+      //   既存 direction/route_legs/amount は Phase 5 完了まで温存（削除は後続 migration）
       route_templates: {
         Row: {
           id: string;
           owner: string; // 'tomo' | 'toshiki'
           name: string; // 例: 東京ルートJR 四ツ谷⇄藤沢
-          direction: 'bidirectional' | 'oneway_only';
-          route_legs: RouteLeg[]; // 区間配列
-          amount: number; // 合計金額（往路のみ/片道額）
+          direction: 'bidirectional' | 'oneway_only'; // [DEPRECATED v0.14.0] Phase 5 後に削除予定
+          route_legs: RouteLeg[]; // 区間配列（仕様Dでは oneway 時のみ使用）
+          amount: number; // [DEPRECATED v0.14.0] legs から動的計算に移行予定
           use_count: number; // 使用回数（よく使う順ソート用）
           sort_order: number;
           created_at: string;
           updated_at: string;
+          // === v0.14.0 仕様D 追加カラム ===
+          template_kind: 'oneway' | 'roundtrip_package'; // テンプレ種別
+          paired_reverse_id: string | null; // 片道テンプレの逆順ペアID（oneway 時のみ設定）
+          outbound_route_id: string | null; // パッケージの往路片道テンプレID（roundtrip_package 時のみ必須）
+          return_route_id: string | null;   // パッケージの復路片道テンプレID（roundtrip_package 時のみ必須）
+          archived_at: string | null; // 論理削除タイムスタンプ（v0.14.0 Phase 1.5）
         };
-        Insert: Omit<Database['public']['Tables']['route_templates']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Insert: Omit<Database['public']['Tables']['route_templates']['Row'], 'id' | 'created_at' | 'updated_at' | 'template_kind' | 'paired_reverse_id' | 'outbound_route_id' | 'return_route_id' | 'archived_at'> & {
+          template_kind?: 'oneway' | 'roundtrip_package'; // 省略時は DB default 'oneway'
+          paired_reverse_id?: string | null;
+          outbound_route_id?: string | null;
+          return_route_id?: string | null;
+          archived_at?: string | null;
+        };
         Update: Partial<Database['public']['Tables']['route_templates']['Insert']>;
       };
 

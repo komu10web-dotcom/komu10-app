@@ -104,10 +104,12 @@ export default function TransactionModal({
         if (data) setTemplates(data as ExpenseTemplate[]);
       });
     // v0.7: route_templates取得
+    // v0.14.0: archived_at IS NULL のみ取得（論理削除済みは非表示）
     supabase
       .from('route_templates')
       .select('*')
       .eq('owner', owner)
+      .is('archived_at', null)
       .order('use_count', { ascending: false })
       .then(({ data }: { data: any }) => {
         if (data) setRouteTemplates(data as RouteTemplate[]);
@@ -158,7 +160,42 @@ export default function TransactionModal({
       }
       if (usesTransportDetail(editData.kamoku)) {
         loadTransportDetails(editData.id).then((td) => {
-          setTransportData(td || { ...EMPTY_TRANSPORT });
+          if (!td) {
+            setTransportData({ ...EMPTY_TRANSPORT });
+            return;
+          }
+          // v0.14.0: 旧データの return_mode 互換変換
+          // 旧: same_route / same_amount の組み合わせ → 新: return_mode
+          if (!td.return_mode && td.round_trip === 'round_trip') {
+            if (td.same_route && td.same_amount) {
+              td.return_mode = 'auto_reverse';
+            } else if (td.same_route && !td.same_amount) {
+              // 同ルート・別金額: return_amount で金額差を表現していた旧パターン
+              // → 新UIでは manual モードとして、逆順化した区間に return_amount を第1 legの金額として載せる
+              const reversedLegs = td.route_legs
+                .slice()
+                .reverse()
+                .map((l) => ({
+                  from: l.to,
+                  to: l.from,
+                  method: l.method,
+                  carrier: l.carrier,
+                  amount: 0,
+                  green: l.green,
+                }));
+              if (reversedLegs.length > 0) {
+                reversedLegs[0].amount = td.return_amount || 0;
+              }
+              td.return_mode = 'manual';
+              td.return_legs = reversedLegs;
+            } else {
+              // 別ルート: return_legs がそのまま利用可能
+              td.return_mode = td.return_legs.length > 0 ? 'manual' : 'different_route';
+            }
+          } else if (!td.return_mode) {
+            td.return_mode = 'auto_reverse';
+          }
+          setTransportData(td);
         });
       } else {
         setTransportData({ ...EMPTY_TRANSPORT });
@@ -282,16 +319,18 @@ export default function TransactionModal({
         }
 
         // v0.13.1: 「ルートとしても保存」ONかつ区間が入力済みなら route_templates にも保存
+        // v0.14.0: template_kind を明示（Phase 4 で逆順ペア自動生成を追加予定）
         if (alsoSaveRoute && routeTemplateName.trim() && legs.length > 0 && legs.some((l: any) => l.from || l.to)) {
           const isRoundTrip = td.round_trip === 'round_trip';
           await supabase.from('route_templates').insert({
             owner: snap.owner,
             name: routeTemplateName.trim(),
-            direction: isRoundTrip ? 'bidirectional' : 'oneway_only',
+            direction: isRoundTrip ? 'bidirectional' : 'oneway_only', // DEPRECATED
             route_legs: legs,
-            amount: total,
+            amount: total, // DEPRECATED
             use_count: 0,
             sort_order: 0,
+            template_kind: 'oneway',
           });
         }
       } else {
@@ -428,6 +467,95 @@ export default function TransactionModal({
       ...prev,
       route_legs: [{ from: '', to: '', method: '電車', carrier: '', amount: 0, green: false }],
     }));
+  };
+
+  // v0.14.0: 統合ルート適用関数（片道テンプレ or パッケージテンプレ）
+  // パッケージなら往路+復路を一括適用、片道なら往路のみ適用
+  const applyRoute = async (tpl: RouteTemplate) => {
+    if (!supabase) return;
+    if (tpl.template_kind === 'roundtrip_package') {
+      // パッケージ: outbound_route_id と return_route_id を fetch して適用
+      if (!tpl.outbound_route_id || !tpl.return_route_id) {
+        console.warn('パッケージに outbound/return が設定されていません:', tpl.id);
+        return;
+      }
+      const { data: pair } = await supabase
+        .from('route_templates')
+        .select('*')
+        .in('id', [tpl.outbound_route_id, tpl.return_route_id]);
+      const outbound = (pair || []).find((r: any) => r.id === tpl.outbound_route_id) as RouteTemplate | undefined;
+      const ret = (pair || []).find((r: any) => r.id === tpl.return_route_id) as RouteTemplate | undefined;
+      if (!outbound || !ret) {
+        console.warn('パッケージの参照先片道が見つかりません');
+        return;
+      }
+      const outLegs = (outbound.route_legs || []) as any[];
+      const retLegs = (ret.route_legs || []) as any[];
+      setTransportData(prev => ({
+        ...prev,
+        round_trip: 'round_trip',
+        return_mode: 'different_route',
+        same_route: false,
+        same_amount: false,
+        route_legs: outLegs.map((l: any) => ({
+          from: l.from || '', to: l.to || '',
+          method: l.method || '電車', carrier: l.carrier || '',
+          amount: l.amount || 0, green: l.green || false,
+        })),
+        return_legs: retLegs.map((l: any) => ({
+          from: l.from || '', to: l.to || '',
+          method: l.method || '電車', carrier: l.carrier || '',
+          amount: l.amount || 0, green: l.green || false,
+        })),
+      }));
+      setSelectedOutboundRoute(outbound);
+      setSelectedReturnRoute(ret);
+      // use_count インクリメント（パッケージと参照先両方）
+      await supabase.from('route_templates').update({ use_count: (tpl.use_count || 0) + 1 }).eq('id', tpl.id);
+    } else {
+      // 片道: 往路のみ適用（round_trip は現在値を維持）
+      const legs = (tpl.route_legs || []) as any[];
+      setTransportData(prev => ({
+        ...prev,
+        route_legs: legs.map((l: any) => ({
+          from: l.from || '', to: l.to || '',
+          method: l.method || '電車', carrier: l.carrier || '',
+          amount: l.amount || 0, green: l.green || false,
+        })),
+      }));
+      setSelectedOutboundRoute(tpl);
+      await supabase.from('route_templates').update({ use_count: (tpl.use_count || 0) + 1 }).eq('id', tpl.id);
+    }
+  };
+
+  // v0.14.0: ルート選択解除（統合）
+  const clearRoute = () => {
+    setSelectedOutboundRoute(null);
+    setSelectedReturnRoute(null);
+    setTransportData(prev => ({
+      ...prev,
+      route_legs: [{ from: '', to: '', method: '電車', carrier: '', amount: 0, green: false }],
+      return_legs: prev.round_trip === 'round_trip' ? prev.return_legs : [],
+    }));
+  };
+
+  // v0.14.0: 復路のみ片道テンプレ適用（「別の片道テンプレを選ぶ」モード用）
+  const applyReturnRouteOnly = async (tpl: RouteTemplate) => {
+    if (!supabase || tpl.template_kind !== 'oneway') return;
+    const legs = (tpl.route_legs || []) as any[];
+    setTransportData(prev => ({
+      ...prev,
+      return_mode: 'different_route',
+      same_route: false,
+      same_amount: false,
+      return_legs: legs.map((l: any) => ({
+        from: l.from || '', to: l.to || '',
+        method: l.method || '電車', carrier: l.carrier || '',
+        amount: l.amount || 0, green: l.green || false,
+      })),
+    }));
+    setSelectedReturnRoute(tpl);
+    await supabase.from('route_templates').update({ use_count: (tpl.use_count || 0) + 1 }).eq('id', tpl.id);
   };
 
   
@@ -1043,65 +1171,64 @@ export default function TransactionModal({
                 </div>
               )}
 
-              {/* 往路ルート選択（物理経路） */}
-              {routeTemplates.length > 0 && (
-                <div>
-                  <label className="text-xs text-[#999] block mb-1">往路ルート</label>
-                  <select
-                    value={selectedOutboundRoute?.id || ''}
-                    onChange={(e) => {
-                      const tpl = routeTemplates.find(t => t.id === e.target.value);
-                      if (tpl) {
-                        applyOutboundRoute(tpl);
-                      } else {
-                        clearOutboundRoute();
-                      }
-                    }}
-                    className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
-                  >
-                    <option value="">（手動入力）</option>
-                    {routeTemplates.map((tpl) => (
-                      <option key={tpl.id} value={tpl.id}>
-                        {tpl.name}
-                        {tpl.direction === 'oneway_only' ? ' (片道のみ)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* 往復時の復路ルート選択（別ルート選択時のみ表示） */}
-              {transportData.round_trip === 'round_trip' && !transportData.same_route && routeTemplates.length > 0 && (
-                <div>
-                  <label className="text-xs text-[#999] block mb-1">復路ルート</label>
-                  <select
-                    value={selectedReturnRoute?.id || ''}
-                    onChange={(e) => {
-                      const tpl = routeTemplates.find(t => t.id === e.target.value);
-                      if (tpl) {
-                        applyReturnRoute(tpl);
-                      } else {
-                        setSelectedReturnRoute(null);
-                      }
-                    }}
-                    className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
-                  >
-                    <option value="">（手動入力）</option>
-                    {routeTemplates.map((tpl) => (
-                      <option key={tpl.id} value={tpl.id}>
-                        {tpl.name}
-                        {tpl.direction === 'oneway_only' ? ' (片道のみ)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                  {/* 往路選択中のルートが片道のみの場合、same_routeを選べない旨を警告 */}
-                  {selectedOutboundRoute?.direction === 'oneway_only' && (
-                    <p className="text-[10px] text-[#C23728] mt-1">
-                      ※ 往路ルートが片道のみのため「往路と同じ」は使えません
-                    </p>
-                  )}
-                </div>
-              )}
+              {/* ルート選択（v0.14.0: 仕様D — パッケージと片道を統合表示） */}
+              {routeTemplates.length > 0 && (() => {
+                // アーカイブ除外 + 種別で分類
+                const active = routeTemplates.filter((t) => !t.archived_at);
+                const packages = active.filter((t) => t.template_kind === 'roundtrip_package');
+                const oneways = active.filter((t) => t.template_kind !== 'roundtrip_package');
+                // 現在選択中のIDを決定
+                // - パッケージ適用中: selectedOutboundRoute.id ではなく、パッケージIDを示す state がないため、
+                //   outbound/return 両方が同じパッケージ参照なら該当パッケージIDとみなす
+                const activePackage = packages.find(
+                  (p) =>
+                    selectedOutboundRoute &&
+                    selectedReturnRoute &&
+                    p.outbound_route_id === selectedOutboundRoute.id &&
+                    p.return_route_id === selectedReturnRoute.id
+                );
+                const selectedValue = activePackage
+                  ? activePackage.id
+                  : selectedOutboundRoute?.id || '';
+                return (
+                  <div>
+                    <label className="text-xs text-[#999] block mb-1">ルート</label>
+                    <select
+                      value={selectedValue}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (!val) {
+                          clearRoute();
+                          return;
+                        }
+                        const tpl = active.find((t) => t.id === val);
+                        if (tpl) applyRoute(tpl);
+                      }}
+                      className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+                    >
+                      <option value="">（手動入力）</option>
+                      {packages.length > 0 && (
+                        <optgroup label="── 往復パッケージ ──">
+                          {packages.map((tpl) => (
+                            <option key={tpl.id} value={tpl.id}>
+                              {tpl.name}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {oneways.length > 0 && (
+                        <optgroup label="── 片道 ──">
+                          {oneways.map((tpl) => (
+                            <option key={tpl.id} value={tpl.id}>
+                              {tpl.name}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                    </select>
+                  </div>
+                );
+              })()}
             </div>
           )}
 
@@ -1140,6 +1267,45 @@ export default function TransactionModal({
               onAmountChange={(total) => {
                 if (total > 0) setForm(prev => ({ ...prev, amount: total.toString() }));
               }}
+              returnRouteSelector={(() => {
+                // v0.14.0: 「別の片道テンプレを選ぶ」モード時に表示する片道テンプレセレクタ
+                // アーカイブ除外 + 片道のみ（パッケージは除外）
+                const onewayActives = routeTemplates.filter(
+                  (t) => !t.archived_at && t.template_kind !== 'roundtrip_package'
+                );
+                if (onewayActives.length === 0) {
+                  return (
+                    <p className="text-[11px] text-[#999]">
+                      片道テンプレがまだありません。「手入力」を選んでください。
+                    </p>
+                  );
+                }
+                return (
+                  <div>
+                    <label className="text-xs text-[#999] block mb-1">復路に使う片道テンプレ</label>
+                    <select
+                      value={selectedReturnRoute?.id || ''}
+                      onChange={(e) => {
+                        const tpl = onewayActives.find((t) => t.id === e.target.value);
+                        if (tpl) {
+                          applyReturnRouteOnly(tpl);
+                        } else {
+                          setSelectedReturnRoute(null);
+                          setTransportData((prev) => ({ ...prev, return_legs: [] }));
+                        }
+                      }}
+                      className="w-full px-3 py-2 bg-white rounded-lg text-sm border border-[#D4A03A]/30 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+                    >
+                      <option value="">（選択してください）</option>
+                      {onewayActives.map((tpl) => (
+                        <option key={tpl.id} value={tpl.id}>
+                          {tpl.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              })()}
             />
           )}
           {form.kamoku === 'entertainment' && <EntertainmentFields data={entertainmentData} onChange={setEntertainmentData} />}

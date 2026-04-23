@@ -369,10 +369,12 @@ export default function SettingsContent() {
         .order('use_count', { ascending: false });
 
       // v0.7: ルートテンプレート
+      // v0.14.0: archived_at IS NULL のみ取得（Phase 5 でアーカイブ表示トグル実装予定）
       const { data: routeData } = await supabase
         .from('route_templates')
         .select('*')
         .eq('owner', effectiveOwner)
+        .is('archived_at', null)
         .order('use_count', { ascending: false });
 
       // v0.7: 交通費目的マスタ
@@ -1290,6 +1292,7 @@ export default function SettingsContent() {
         .from('route_templates')
         .select('*')
         .eq('owner', effectiveOwner)
+        .is('archived_at', null)
         .order('use_count', { ascending: false });
       setRouteTemplates((routeData || []).map((r: any) => ({
         ...r,
@@ -1301,18 +1304,25 @@ export default function SettingsContent() {
   const deleteRouteTemplate = async (id: string) => {
     if (!supabase) return;
     try {
-      await supabase.from('route_templates').delete().eq('id', id);
+      // v0.14.0: 物理削除から論理削除（アーカイブ）に変更
+      // archived_at に現在時刻をセットすることで一覧・セレクトから非表示
+      // パッケージで参照中でも問題なし（参照先がアーカイブ済みの場合、パッケージ編集時に警告表示される：Phase 5）
+      await supabase
+        .from('route_templates')
+        .update({ archived_at: new Date().toISOString() })
+        .eq('id', id);
       setRouteDeleteTarget(null);
       const { data: routeData } = await supabase
         .from('route_templates')
         .select('*')
         .eq('owner', effectiveOwner)
+        .is('archived_at', null)
         .order('use_count', { ascending: false });
       setRouteTemplates((routeData || []).map((r: any) => ({
         ...r,
         route_legs: Array.isArray(r.route_legs) ? r.route_legs : [],
       })));
-    } catch (err) { console.error('ルートテンプレート削除エラー:', err); }
+    } catch (err) { console.error('ルートテンプレートアーカイブエラー:', err); }
   };
 
   // v0.8: 請求書汎用テンプレ CRUD
