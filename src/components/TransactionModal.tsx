@@ -1131,6 +1131,9 @@ export default function TransactionModal({
 
       // v0.14.0 Phase 4: multiMode の発火判定
       // - 往復 + different_route/manual + 往路・復路いずれか新規入力あり
+      // v0.14.6: 既存パッケージ/既存片道2つを選択済みの場合は提案しない
+      //   ボス指摘: パッケージ適用後に『この往復セットをパッケージ保存しますか？』と
+      //   聞くのは不必要。既存の参照を使っただけで、DB に新規保存する必要はない。
       const shouldSuggestMultiMode = (() => {
         if (!usesTransportDetail(form.kamoku)) return false;
         if (transportData.round_trip !== 'round_trip') return false;
@@ -1141,6 +1144,9 @@ export default function TransactionModal({
         if (rLegs.length === 0) return false;
         const hasReturnContent = rLegs.some((l: any) => (l.from || '').trim() || (l.to || '').trim());
         if (!hasReturnContent) return false;
+        // v0.14.6: 往路と復路の両方とも既存テンプレ選択済みなら提案不要
+        //   （パッケージ適用時 or 片道を往路・復路両方に選んだケース）
+        if (selectedOutboundRoute && selectedReturnRoute) return false;
         // 往路・復路のいずれかがテンプレ未選択（新規）なら提案対象
         const outboundIsNew = !selectedOutboundRoute;
         const returnIsNew = !selectedReturnRoute;
