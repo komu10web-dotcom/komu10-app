@@ -3021,8 +3021,7 @@ export default function SettingsContent() {
                 <button
                   onClick={() => { setEditingRoute(null); setPackageModalOpen(true); }}
                   className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] text-[#1a1a1a] bg-[#D4A03A]/15 border border-[#D4A03A]/30 rounded-lg hover:bg-[#D4A03A]/25 transition-colors whitespace-nowrap"
-                  title="往復パッケージを追加"
-                  disabled={routeTemplates.filter(r => r.template_kind !== 'roundtrip_package').length < 2}
+                  title="往復パッケージを追加（片道テンプレを2つ組み合わせ）"
                 >
                   <Plus className="w-3 h-3" />パッケージ
                 </button>
