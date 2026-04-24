@@ -261,6 +261,9 @@ export default function SettingsContent() {
   const [routeDeleteTarget, setRouteDeleteTarget] = useState<string | null>(null);
   // v0.14.0 Phase 5-C: パッケージ専用モーダル
   const [packageModalOpen, setPackageModalOpen] = useState(false);
+  // v0.14.0 Phase 5-E: アーカイブ済みルートテンプレの表示・復元
+  const [showArchivedRoutes, setShowArchivedRoutes] = useState(false);
+  const [archivedRouteTemplates, setArchivedRouteTemplates] = useState<RouteTemplate[]>([]);
 
   // v0.7: 交通費目的マスタ（テンプレ・経費登録で共通利用）
   const [transportPurposes, setTransportPurposes] = useState<{ id: string; name: string }[]>([]);
@@ -459,6 +462,16 @@ export default function SettingsContent() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // v0.14.0 Phase 5-E: アーカイブ表示ON時、またはオーナー切替時にアーカイブ一覧を取得
+  useEffect(() => {
+    if (showArchivedRoutes) {
+      fetchArchivedRoutes();
+    } else {
+      setArchivedRouteTemplates([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showArchivedRoutes, effectiveOwner]);
 
   // ============================================================
   // 按分設定の保存
@@ -1478,7 +1491,52 @@ export default function SettingsContent() {
         ...r,
         route_legs: Array.isArray(r.route_legs) ? r.route_legs : [],
       })));
+      // v0.14.0 Phase 5-E: アーカイブ一覧が開いていれば再取得
+      if (showArchivedRoutes) {
+        await fetchArchivedRoutes();
+      }
     } catch (err) { console.error('ルートテンプレートアーカイブエラー:', err); }
+  };
+
+  // v0.14.0 Phase 5-E: アーカイブ済みルートテンプレの取得
+  const fetchArchivedRoutes = async () => {
+    if (!supabase) return;
+    try {
+      const { data } = await supabase
+        .from('route_templates')
+        .select('*')
+        .eq('owner', effectiveOwner)
+        .not('archived_at', 'is', null)
+        .order('archived_at', { ascending: false });
+      setArchivedRouteTemplates((data || []).map((r: any) => ({
+        ...r,
+        route_legs: Array.isArray(r.route_legs) ? r.route_legs : [],
+      })));
+    } catch (err) { console.error('アーカイブ取得エラー:', err); }
+  };
+
+  // v0.14.0 Phase 5-E: アーカイブ済みルートテンプレを復元（archived_at を NULL に戻す）
+  const restoreRouteTemplate = async (id: string) => {
+    if (!supabase) return;
+    try {
+      await supabase
+        .from('route_templates')
+        .update({ archived_at: null })
+        .eq('id', id);
+      // アクティブ一覧を再取得
+      const { data: routeData } = await supabase
+        .from('route_templates')
+        .select('*')
+        .eq('owner', effectiveOwner)
+        .is('archived_at', null)
+        .order('use_count', { ascending: false });
+      setRouteTemplates((routeData || []).map((r: any) => ({
+        ...r,
+        route_legs: Array.isArray(r.route_legs) ? r.route_legs : [],
+      })));
+      // アーカイブ一覧も再取得
+      await fetchArchivedRoutes();
+    } catch (err) { console.error('ルートテンプレート復元エラー:', err); }
   };
 
   // v0.8: 請求書汎用テンプレ CRUD
@@ -3108,6 +3166,58 @@ export default function SettingsContent() {
                       </div>
                     </div>
                   )}
+
+                  {/* v0.14.0 Phase 5-E: アーカイブ済みテンプレの表示・復元 */}
+                  <div className="mt-5 pt-4 border-t border-[#f0f0f0]">
+                    <button
+                      onClick={() => setShowArchivedRoutes(!showArchivedRoutes)}
+                      className="text-[10px] text-[#999] hover:text-[#1a1a1a] transition-colors"
+                    >
+                      {showArchivedRoutes ? '▼' : '▶'} アーカイブ済みを表示
+                      {showArchivedRoutes && archivedRouteTemplates.length > 0 && (
+                        <span className="ml-1 text-[#bbb]">({archivedRouteTemplates.length})</span>
+                      )}
+                    </button>
+                    {showArchivedRoutes && (
+                      <div className="mt-3 space-y-2">
+                        {archivedRouteTemplates.length === 0 ? (
+                          <p className="text-[10px] text-[#bbb] text-center py-3">アーカイブ済みのルートテンプレはありません</p>
+                        ) : (
+                          archivedRouteTemplates.map(route => {
+                            const isPackage = route.template_kind === 'roundtrip_package';
+                            const total = (route.route_legs || []).reduce((s, l) => s + (l.amount || 0), 0);
+                            const routeLabel = route.route_legs && route.route_legs.length > 0
+                              ? (route.route_legs[0]?.from || '') + ' → ' + (route.route_legs[route.route_legs.length - 1]?.to || '')
+                              : '';
+                            return (
+                              <div key={route.id} className="flex items-start justify-between py-2.5 px-3 bg-[#F5F5F3]/60 rounded-lg opacity-60">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                                    <span className="text-[11px] text-[#999] line-through">{route.name}</span>
+                                    <span className="text-[9px] px-1.5 py-0.5 bg-[#999]/10 text-[#666] rounded-full">
+                                      {isPackage ? 'パッケージ' : '片道'}
+                                    </span>
+                                  </div>
+                                  {!isPackage && routeLabel && (
+                                    <p className="text-[10px] text-[#bbb] truncate line-through">{routeLabel}</p>
+                                  )}
+                                  {!isPackage && total > 0 && (
+                                    <span className="text-[10px] text-[#bbb]">¥{total.toLocaleString()}</span>
+                                  )}
+                                </div>
+                                <button
+                                  onClick={() => restoreRouteTemplate(route.id)}
+                                  className="ml-3 px-2.5 py-1 text-[10px] text-[#1a1a1a] bg-white border border-[#e8e8e8] rounded-lg hover:bg-[#F5F5F3] transition-colors whitespace-nowrap"
+                                >
+                                  復元
+                                </button>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             })()}
