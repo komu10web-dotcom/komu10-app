@@ -34,6 +34,12 @@ const EXPENSE_KAMOKU = Object.entries(KAMOKU)
   .filter(([, v]) => v.type === 'expense')
   .map(([id, v]) => ({ id, name: v.name }));
 
+// v0.14.7: owner日本語ラベル（「{owner}の定番」セクション表示用）
+const OWNER_LABEL: Record<string, string> = {
+  tomo: 'トモ',
+  toshiki: 'トシキ',
+};
+
 const DIV_OPTIONS = Object.entries(DIVISIONS)
   .filter(([id]) => id !== 'general')
   .map(([id, v]) => ({ id, name: v.name, label: v.label }));
@@ -82,12 +88,14 @@ export default function TransactionModal({
   const [initialReceiptItems, setInitialReceiptItems] = useState<ReceiptItem[] | null>(null);
   // v0.10.0: AI会計相談モーダル表示制御
   const [showConsultation, setShowConsultation] = useState(false);
+  // v0.14.7: 勘定科目パーソナライズ（ownerごとの使用頻度上位3件）
+  const [topKamoku, setTopKamoku] = useState<string[]>([]);
 
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
     amount: '',
     store: '',
-    kamoku: 'misc',
+    kamoku: '',
     owner: defaultOwner === 'all' ? 'tomo' : defaultOwner,
     description: '',
     status: 'settled',
@@ -124,6 +132,34 @@ export default function TransactionModal({
         if (data) setRouteTemplates(data as RouteTemplate[]);
       });
   }, [isOpen, defaultOwner]);
+
+  // v0.14.7: 勘定科目パーソナライズ（form.owner の直近3ヶ月の使用頻度上位3件を取得）
+  useEffect(() => {
+    if (!isOpen || !supabase || !form.owner) return;
+    const threeMonthsAgo = new Date();
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+    const fromDate = threeMonthsAgo.toISOString().split('T')[0];
+    supabase
+      .from('transactions')
+      .select('kamoku')
+      .eq('owner', form.owner)
+      .eq('type', 'expense')
+      .eq('status', 'settled')
+      .gte('date', fromDate)
+      .then(({ data }: { data: any }) => {
+        if (!data) { setTopKamoku([]); return; }
+        const freq: Record<string, number> = {};
+        (data as Array<{ kamoku: string }>).forEach((tx) => {
+          if (tx.kamoku) freq[tx.kamoku] = (freq[tx.kamoku] || 0) + 1;
+        });
+        const top = Object.entries(freq)
+          .sort(([, a], [, b]) => b - a)
+          .slice(0, 3)
+          .map(([k]) => k)
+          .filter((k) => k in KAMOKU);
+        setTopKamoku(top);
+      });
+  }, [isOpen, form.owner]);
 
   // グリーン車モード切替時にamountを更新（v0.7: 汎用テンプレのみ対象）
   useEffect(() => {
@@ -260,7 +296,7 @@ export default function TransactionModal({
         date: new Date().toISOString().split('T')[0],
         amount: '',
         store: '',
-        kamoku: 'misc',
+        kamoku: '',
         owner: defaultOwner === 'all' ? 'tomo' : defaultOwner,
         description: '',
         status: 'settled',
@@ -417,10 +453,11 @@ export default function TransactionModal({
     // 経費テンプレが入力されているかどうか
     const wantsExpenseTemplate = templateName.trim().length > 0;
 
-    // 交通費の往復・different_route|manual モードでは3チェックボックス方式
-    const useMultiRouteMode = isTransport && isRoundTrip && td &&
-      (returnMode === 'different_route' || returnMode === 'manual') &&
-      td.return_legs.length > 0;
+    // 交通費の往復モードでは multi UI 方式（v0.14.7: auto_reverse も含む）
+    const useMultiRouteMode = isTransport && isRoundTrip && td && (
+      ((returnMode === 'different_route' || returnMode === 'manual') && td.return_legs.length > 0) ||
+      (returnMode === 'auto_reverse')
+    );
 
     // モード判定
     // - multiMode: 往路・復路・パッケージの3択
@@ -476,34 +513,98 @@ export default function TransactionModal({
         const outboundLegs = td.route_legs || [];
 
         if (useMultiRouteMode) {
-          // 3チェックボックス方式（往復・different_route or manual）
           let outboundId: string | null = selectedOutboundRoute?.id || null;
           let returnId: string | null = selectedReturnRoute?.id || null;
 
-          // 往路保存
-          if (saveOutboundEnabled && outboundTemplateName.trim() && outboundLegs.length > 0) {
-            outboundId = await saveOnewayWithPair({
-              owner: snap.owner,
-              name: outboundTemplateName.trim(),
-              legs: outboundLegs,
-            });
-          }
-          // 復路保存
-          if (saveReturnEnabled && returnTemplateName.trim() && td.return_legs.length > 0) {
-            returnId = await saveOnewayWithPair({
-              owner: snap.owner,
-              name: returnTemplateName.trim(),
-              legs: td.return_legs,
-            });
-          }
-          // パッケージ保存（往復IDが両方揃っているときのみ）
-          if (savePackageEnabled && packageTemplateName.trim() && outboundId && returnId) {
-            await savePackage({
-              owner: snap.owner,
-              name: packageTemplateName.trim(),
-              outboundId,
-              returnId,
-            });
+          if (returnMode === 'auto_reverse') {
+            // v0.14.7: auto_reverse モードでの2段構え保存
+            //   第1段: 逆順片道テンプレ保存（往路新規 or 往路既存+paired_reverse_idなし）
+            //   第2段: パッケージ保存
+            if (saveOutboundEnabled && outboundTemplateName.trim() && outboundLegs.length > 0) {
+              // 往路新規入力ケース: saveOnewayWithPair で往路A + 逆順B を一気に作成
+              const newOutboundId = await saveOnewayWithPair({
+                owner: snap.owner,
+                name: outboundTemplateName.trim(),
+                legs: outboundLegs,
+              });
+              if (newOutboundId) {
+                outboundId = newOutboundId;
+                // 自動生成された paired_reverse_id を fetch して returnId に使う
+                const { data: pair } = await supabase
+                  .from('route_templates')
+                  .select('paired_reverse_id')
+                  .eq('id', newOutboundId)
+                  .single();
+                returnId = (pair as any)?.paired_reverse_id || null;
+              }
+            } else if (saveReturnEnabled && returnTemplateName.trim() && selectedOutboundRoute) {
+              // 往路既存 + paired_reverse_id なしケース: 逆順片道を新規保存して往路にリンク
+              const reversedLegs = reverseRouteLegs(outboundLegs);
+              if (reversedLegs.length > 0) {
+                const { data: bData } = await supabase
+                  .from('route_templates')
+                  .insert({
+                    owner: snap.owner,
+                    name: returnTemplateName.trim(),
+                    direction: 'oneway_only',
+                    route_legs: reversedLegs,
+                    amount: reversedLegs.reduce((s: number, l: any) => s + (l.amount || 0), 0),
+                    use_count: 0,
+                    sort_order: 0,
+                    template_kind: 'oneway',
+                    paired_reverse_id: selectedOutboundRoute.id,
+                  })
+                  .select('id')
+                  .single();
+                if (bData) {
+                  returnId = (bData as any).id;
+                  // 往路側にも相互リンク
+                  await supabase
+                    .from('route_templates')
+                    .update({ paired_reverse_id: returnId })
+                    .eq('id', selectedOutboundRoute.id);
+                }
+              }
+            } else if (selectedOutboundRoute?.paired_reverse_id) {
+              // 往路既存 + paired_reverse_id あり → 既存の逆順を参照
+              returnId = selectedOutboundRoute.paired_reverse_id;
+            }
+            // パッケージ保存
+            if (savePackageEnabled && packageTemplateName.trim() && outboundId && returnId) {
+              await savePackage({
+                owner: snap.owner,
+                name: packageTemplateName.trim(),
+                outboundId,
+                returnId,
+              });
+            }
+          } else {
+            // different_route / manual モード（従来通り）
+            // 往路保存
+            if (saveOutboundEnabled && outboundTemplateName.trim() && outboundLegs.length > 0) {
+              outboundId = await saveOnewayWithPair({
+                owner: snap.owner,
+                name: outboundTemplateName.trim(),
+                legs: outboundLegs,
+              });
+            }
+            // 復路保存
+            if (saveReturnEnabled && returnTemplateName.trim() && td.return_legs.length > 0) {
+              returnId = await saveOnewayWithPair({
+                owner: snap.owner,
+                name: returnTemplateName.trim(),
+                legs: td.return_legs,
+              });
+            }
+            // パッケージ保存（往復IDが両方揃っているときのみ）
+            if (savePackageEnabled && packageTemplateName.trim() && outboundId && returnId) {
+              await savePackage({
+                owner: snap.owner,
+                name: packageTemplateName.trim(),
+                outboundId,
+                returnId,
+              });
+            }
           }
         } else {
           // 片道 or 往復auto_reverse モード → 片道テンプレ1個 + 逆順ペアを自動生成
@@ -851,6 +952,11 @@ export default function TransactionModal({
       setError('日付と金額は必須です');
       return;
     }
+    // v0.14.7: 勘定科目必須
+    if (!form.kamoku) {
+      setError('勘定科目を選択してください');
+      return;
+    }
     // v0.13.0: travel は必ず区間必須。production/torizai は区間が入力されていたら整合チェック
     if (form.kamoku === 'travel') {
       const legs = transportData.route_legs || [];
@@ -1134,19 +1240,29 @@ export default function TransactionModal({
       // v0.14.6: 既存パッケージ/既存片道2つを選択済みの場合は提案しない
       //   ボス指摘: パッケージ適用後に『この往復セットをパッケージ保存しますか？』と
       //   聞くのは不必要。既存の参照を使っただけで、DB に新規保存する必要はない。
+      // v0.14.7: auto_reverse も対象に追加（2段構え: 逆順片道保存 + パッケージ保存）
       const shouldSuggestMultiMode = (() => {
         if (!usesTransportDetail(form.kamoku)) return false;
         if (transportData.round_trip !== 'round_trip') return false;
+        // 既存ルートで往路・復路両方埋まっていて、かつ既にパッケージ化済なら提案不要
+        // （※ パッケージ適用時は selectedOutboundRoute/selectedReturnRoute が両方セット）
+        if (selectedOutboundRoute && selectedReturnRoute) return false;
         const rm = transportData.return_mode || 'auto_reverse';
+
+        if (rm === 'auto_reverse') {
+          // auto_reverse: 往路に何らかの入力/選択があればパッケージ提案対象
+          const oLegs = transportData.route_legs || [];
+          const hasOutbound = !!selectedOutboundRoute ||
+            oLegs.some((l: any) => (l.from || '').trim() || (l.to || '').trim());
+          return hasOutbound;
+        }
+
         if (rm !== 'different_route' && rm !== 'manual') return false;
         // 復路に何らかの入力があるか
         const rLegs = transportData.return_legs || [];
         if (rLegs.length === 0) return false;
         const hasReturnContent = rLegs.some((l: any) => (l.from || '').trim() || (l.to || '').trim());
         if (!hasReturnContent) return false;
-        // v0.14.6: 往路と復路の両方とも既存テンプレ選択済みなら提案不要
-        //   （パッケージ適用時 or 片道を往路・復路両方に選んだケース）
-        if (selectedOutboundRoute && selectedReturnRoute) return false;
         // 往路・復路のいずれかがテンプレ未選択（新規）なら提案対象
         const outboundIsNew = !selectedOutboundRoute;
         const returnIsNew = !selectedReturnRoute;
@@ -1294,7 +1410,19 @@ export default function TransactionModal({
             </div>
             <select value={form.kamoku} onChange={(e) => setForm({ ...form, kamoku: e.target.value })}
               className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
-              {EXPENSE_KAMOKU.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
+              <option value="" disabled>科目を選択してください</option>
+              {topKamoku.length > 0 && (
+                <optgroup label={`${OWNER_LABEL[form.owner] || ''}の定番`}>
+                  {topKamoku.map((kid) => {
+                    const k = EXPENSE_KAMOKU.find((e) => e.id === kid);
+                    if (!k) return null;
+                    return <option key={`top-${k.id}`} value={k.id}>{k.name}</option>;
+                  })}
+                </optgroup>
+              )}
+              <optgroup label={topKamoku.length > 0 ? 'すべての科目' : ''}>
+                {EXPENSE_KAMOKU.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
+              </optgroup>
             </select>
           </div>
           {/* 金額・支払先（交通費以外） — 交通費は専用UI内で完結 */}
@@ -1768,16 +1896,21 @@ export default function TransactionModal({
             const td = snap?.transportData || transportData;
             const isRoundTrip = td?.round_trip === 'round_trip';
             const returnMode = td?.return_mode || 'auto_reverse';
-            // multiMode: 往復 + different_route or manual で復路区間あり → 3チェックボックス
-            const multiMode = isTransport && isRoundTrip && td &&
-              (returnMode === 'different_route' || returnMode === 'manual') &&
-              td.return_legs && td.return_legs.length > 0;
+            // v0.14.7: multiMode = 往復全般（different_route/manual + auto_reverse）
+            const multiMode = isTransport && isRoundTrip && td && (
+              ((returnMode === 'different_route' || returnMode === 'manual') &&
+                td.return_legs && td.return_legs.length > 0) ||
+              (returnMode === 'auto_reverse')
+            );
+            const isAutoReverse = isTransport && isRoundTrip && returnMode === 'auto_reverse';
             // routeOnlyMode: 経費テンプレ適用中で新規ルートを手入力した場合
             const routeOnlyMode = isTransport && !!selectedTemplate && selectedTemplate.template_type === 'transport';
             // 既存片道テンプレを往路/復路に適用中かどうか（二重保存防止）
             const outboundAlreadyLinked = !!selectedOutboundRoute;
             const returnAlreadyLinked = !!selectedReturnRoute;
-
+            // v0.14.7 auto_reverse: 往路既存テンプレに既に逆順ペアが存在するか
+            const reverseAlreadyExists = isAutoReverse && outboundAlreadyLinked &&
+              !!selectedOutboundRoute?.paired_reverse_id;
             // 既定値セットアップ（モーダル初回表示時）
             const routeStr = td?.route_legs?.length > 0
               ? `${td.route_legs[0].from || ''}→${td.route_legs[td.route_legs.length - 1].to || ''}`
@@ -1785,6 +1918,50 @@ export default function TransactionModal({
             const returnRouteStr = td?.return_legs?.length > 0
               ? `${td.return_legs[0].from || ''}→${td.return_legs[td.return_legs.length - 1].to || ''}`
               : '';
+            // v0.14.7 auto_reverse: 逆順名（復路方向の起点→終点）
+            const autoReverseStr = td?.route_legs?.length > 0
+              ? `${td.route_legs[td.route_legs.length - 1].to || ''}→${td.route_legs[0].from || ''}`
+              : '';
+            // v0.14.7 auto_reverse: パッケージ名のデフォルト
+            const autoPackageDefault = routeStr ? `${routeStr}（往復）` : '';
+
+            // v0.14.7 auto_reverse の表示条件
+            //   第1段（逆順片道保存）: 往路既存 + paired_reverse_idなし → 表示
+            //                          往路新規入力 → 表示（往路+逆順を同時保存）
+            //                          往路既存 + paired_reverse_idあり → 非表示
+            //   第2段（パッケージ保存）: 逆順の存在が確定できる場合に表示
+            const showAutoReverseReturnBlock = isAutoReverse && !reverseAlreadyExists;
+            const showAutoReversePackageBlock = isAutoReverse; // 実際の可否は下の disabled 判定で
+            // Yes/No ラジオの汎用コンポーネント表現用ヘルパー
+            const radioYesNo = (
+              name: string,
+              value: boolean,
+              onYes: () => void,
+              onNo: () => void,
+            ) => (
+              <div className="flex gap-4 mt-2">
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name={name}
+                    checked={value === true}
+                    onChange={onYes}
+                    className="w-4 h-4 accent-[#1a1a1a]"
+                  />
+                  <span className="text-xs text-[#1a1a1a]">はい</span>
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name={name}
+                    checked={value === false}
+                    onChange={onNo}
+                    className="w-4 h-4 accent-[#1a1a1a]"
+                  />
+                  <span className="text-xs text-[#1a1a1a]">いいえ</span>
+                </label>
+              </div>
+            );
 
             return (
               <div className="space-y-3">
@@ -1795,8 +1972,8 @@ export default function TransactionModal({
                   </>
                 ) : multiMode ? (
                   <>
-                    <p className="text-xs text-[#1a1a1a] font-medium">テンプレートとして保存しますか？</p>
-                    <p className="text-[10px] text-[#999]">往路・復路・往復セットから選んで保存できます</p>
+                    <p className="text-xs text-[#1a1a1a] font-medium">保存提案</p>
+                    <p className="text-[10px] text-[#999]">各項目で保存するか選んでください</p>
                   </>
                 ) : (
                   <>
@@ -1806,7 +1983,7 @@ export default function TransactionModal({
                 )}
 
                 {/* 経費テンプレ名入力（ルートのみモード以外） */}
-                {!routeOnlyMode && (
+                {!routeOnlyMode && !isAutoReverse && (
                   <input
                     value={templateName}
                     onChange={e => setTemplateName(e.target.value)}
@@ -1818,29 +1995,23 @@ export default function TransactionModal({
                   />
                 )}
 
-                {/* v0.14.0 Phase 4: multiMode（往復・different_route/manual）は3チェックボックス */}
-                {multiMode && (
+                {/* v0.14.7: multiMode (different_route/manual) — Yes/No ラジオ方式 */}
+                {multiMode && !isAutoReverse && (
                   <div className="space-y-3 pt-2 border-t border-[#f0f0f0]">
-                    {/* 往路チェックボックス — 既存テンプレ適用中は非表示 */}
+                    {/* 往路 Yes/No — 既存テンプレ適用中は非表示 */}
                     {!outboundAlreadyLinked && (
                       <div>
-                        <label className="flex items-start gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={saveOutboundEnabled}
-                            onChange={e => {
-                              setSaveOutboundEnabled(e.target.checked);
-                              if (e.target.checked && !outboundTemplateName) {
-                                setOutboundTemplateName(routeStr);
-                              }
-                            }}
-                            className="mt-0.5 w-4 h-4 accent-[#1a1a1a]"
-                          />
-                          <div className="flex-1">
-                            <p className="text-xs text-[#1a1a1a] font-medium">往路を片道テンプレ保存</p>
-                            <p className="text-[10px] text-[#999] mt-0.5">逆順ペアも自動で保存されます</p>
-                          </div>
-                        </label>
+                        <p className="text-xs text-[#1a1a1a] font-medium">往路「{routeStr}」を片道テンプレ保存?</p>
+                        <p className="text-[10px] text-[#999] mt-0.5">逆順ペアも自動で保存されます</p>
+                        {radioYesNo(
+                          'saveOutbound',
+                          saveOutboundEnabled,
+                          () => {
+                            setSaveOutboundEnabled(true);
+                            if (!outboundTemplateName) setOutboundTemplateName(routeStr);
+                          },
+                          () => setSaveOutboundEnabled(false),
+                        )}
                         {saveOutboundEnabled && (
                           <input
                             value={outboundTemplateName}
@@ -1852,26 +2023,20 @@ export default function TransactionModal({
                       </div>
                     )}
 
-                    {/* 復路チェックボックス — 既存テンプレ適用中は非表示 */}
+                    {/* 復路 Yes/No — 既存テンプレ適用中は非表示 */}
                     {!returnAlreadyLinked && (
                       <div>
-                        <label className="flex items-start gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={saveReturnEnabled}
-                            onChange={e => {
-                              setSaveReturnEnabled(e.target.checked);
-                              if (e.target.checked && !returnTemplateName) {
-                                setReturnTemplateName(returnRouteStr);
-                              }
-                            }}
-                            className="mt-0.5 w-4 h-4 accent-[#1a1a1a]"
-                          />
-                          <div className="flex-1">
-                            <p className="text-xs text-[#1a1a1a] font-medium">復路を片道テンプレ保存</p>
-                            <p className="text-[10px] text-[#999] mt-0.5">逆順ペアも自動で保存されます</p>
-                          </div>
-                        </label>
+                        <p className="text-xs text-[#1a1a1a] font-medium">復路「{returnRouteStr}」を片道テンプレ保存?</p>
+                        <p className="text-[10px] text-[#999] mt-0.5">逆順ペアも自動で保存されます</p>
+                        {radioYesNo(
+                          'saveReturn',
+                          saveReturnEnabled,
+                          () => {
+                            setSaveReturnEnabled(true);
+                            if (!returnTemplateName) setReturnTemplateName(returnRouteStr);
+                          },
+                          () => setSaveReturnEnabled(false),
+                        )}
                         {saveReturnEnabled && (
                           <input
                             value={returnTemplateName}
@@ -1883,7 +2048,7 @@ export default function TransactionModal({
                       </div>
                     )}
 
-                    {/* パッケージチェックボックス — 往路・復路のIDが揃う場合のみ有効 */}
+                    {/* パッケージ Yes/No */}
                     <div>
                       {(() => {
                         const outboundAvailable = outboundAlreadyLinked || saveOutboundEnabled;
@@ -1891,33 +2056,28 @@ export default function TransactionModal({
                         const packageEnabled = outboundAvailable && returnAvailable;
                         return (
                           <>
-                            <label className={`flex items-start gap-2 ${packageEnabled ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
-                              <input
-                                type="checkbox"
-                                checked={savePackageEnabled && packageEnabled}
-                                disabled={!packageEnabled}
-                                onChange={e => {
-                                  setSavePackageEnabled(e.target.checked);
-                                  if (e.target.checked && !packageTemplateName) {
-                                    setPackageTemplateName(`${routeStr}（往復）`);
-                                  }
-                                }}
-                                className="mt-0.5 w-4 h-4 accent-[#1a1a1a]"
-                              />
-                              <div className="flex-1">
-                                <p className="text-xs text-[#1a1a1a] font-medium">この往復セットをパッケージ保存</p>
-                                <p className="text-[10px] text-[#999] mt-0.5">
-                                  {packageEnabled
-                                    ? '次回ルート選択時に1クリックで適用できます'
-                                    : '往路・復路の両方をチェックまたは選択してください'}
-                                </p>
-                              </div>
-                            </label>
+                            <p className={`text-xs font-medium ${packageEnabled ? 'text-[#1a1a1a]' : 'text-[#999]'}`}>
+                              この往復セットをパッケージ保存?
+                            </p>
+                            <p className="text-[10px] text-[#999] mt-0.5">
+                              {packageEnabled
+                                ? '次回ルート選択時に1クリックで適用できます'
+                                : '往路・復路の両方を「はい」または既存選択してください'}
+                            </p>
+                            {packageEnabled && radioYesNo(
+                              'savePackage',
+                              savePackageEnabled,
+                              () => {
+                                setSavePackageEnabled(true);
+                                if (!packageTemplateName) setPackageTemplateName(`${routeStr}（往復）`);
+                              },
+                              () => setSavePackageEnabled(false),
+                            )}
                             {savePackageEnabled && packageEnabled && (
                               <input
                                 value={packageTemplateName}
                                 onChange={e => setPackageTemplateName(e.target.value)}
-                                placeholder="パッケージ名（例: 実家⇔自宅 往復）"
+                                placeholder="パッケージ名（例: 自宅⇔四ツ谷）"
                                 className="w-full mt-2 px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors"
                               />
                             )}
@@ -1928,7 +2088,110 @@ export default function TransactionModal({
                   </div>
                 )}
 
-                {/* 片道 or 往復auto_reverse モード — 従来UI（片道1個 + 自動逆順） */}
+                {/* v0.14.7: auto_reverse — 2段構え Yes/No */}
+                {isAutoReverse && (
+                  <div className="space-y-3 pt-2 border-t border-[#f0f0f0]">
+                    {/* 第1段: 逆順片道テンプレ保存 */}
+                    {showAutoReverseReturnBlock && (
+                      <div>
+                        {outboundAlreadyLinked ? (
+                          <>
+                            <p className="text-xs text-[#1a1a1a] font-medium">復路「{autoReverseStr}」を片道テンプレ保存?</p>
+                            <p className="text-[10px] text-[#999] mt-0.5">
+                              次回、復路として選べるようになります
+                            </p>
+                            {radioYesNo(
+                              'saveReverse',
+                              saveReturnEnabled,
+                              () => {
+                                setSaveReturnEnabled(true);
+                                if (!returnTemplateName) setReturnTemplateName(autoReverseStr);
+                              },
+                              () => setSaveReturnEnabled(false),
+                            )}
+                            {saveReturnEnabled && (
+                              <input
+                                value={returnTemplateName}
+                                onChange={e => setReturnTemplateName(e.target.value)}
+                                placeholder="復路テンプレ名（例: 四ツ谷→自宅）"
+                                className="w-full mt-2 px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors"
+                              />
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-xs text-[#1a1a1a] font-medium">往路「{routeStr}」を片道テンプレ保存?</p>
+                            <p className="text-[10px] text-[#999] mt-0.5">
+                              逆順ペアも自動で保存されます
+                            </p>
+                            {radioYesNo(
+                              'saveOutboundNew',
+                              saveOutboundEnabled,
+                              () => {
+                                setSaveOutboundEnabled(true);
+                                if (!outboundTemplateName) setOutboundTemplateName(routeStr);
+                              },
+                              () => setSaveOutboundEnabled(false),
+                            )}
+                            {saveOutboundEnabled && (
+                              <input
+                                value={outboundTemplateName}
+                                onChange={e => setOutboundTemplateName(e.target.value)}
+                                placeholder="往路名（例: 自宅→四ツ谷）"
+                                className="w-full mt-2 px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors"
+                              />
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {/* 第2段: パッケージ保存 */}
+                    {showAutoReversePackageBlock && (() => {
+                      // パッケージ化可能条件:
+                      //   a) 往路既存 + 逆順既存（reverseAlreadyExists）
+                      //   b) 往路既存 + 逆順新規保存（saveReturnEnabled + 名前入力済）
+                      //   c) 往路新規保存（saveOutboundEnabled + 名前入力済）→ 逆順自動生成
+                      const packageEnabled =
+                        reverseAlreadyExists ||
+                        (outboundAlreadyLinked && saveReturnEnabled && returnTemplateName.trim().length > 0) ||
+                        (!outboundAlreadyLinked && saveOutboundEnabled && outboundTemplateName.trim().length > 0);
+                      return (
+                        <div>
+                          <p className={`text-xs font-medium ${packageEnabled ? 'text-[#1a1a1a]' : 'text-[#999]'}`}>
+                            この往復をパッケージ保存?
+                          </p>
+                          <p className="text-[10px] text-[#999] mt-0.5">
+                            {packageEnabled
+                              ? '次回ルート選択時に1クリックで適用できます'
+                              : reverseAlreadyExists
+                                ? '逆順ペアは既に存在します'
+                                : '先に往路または復路の保存を選んでください'}
+                          </p>
+                          {packageEnabled && radioYesNo(
+                            'savePackageAuto',
+                            savePackageEnabled,
+                            () => {
+                              setSavePackageEnabled(true);
+                              if (!packageTemplateName) setPackageTemplateName(autoPackageDefault);
+                            },
+                            () => setSavePackageEnabled(false),
+                          )}
+                          {savePackageEnabled && packageEnabled && (
+                            <input
+                              value={packageTemplateName}
+                              onChange={e => setPackageTemplateName(e.target.value)}
+                              placeholder="パッケージ名（例: 自宅⇔四ツ谷）"
+                              className="w-full mt-2 px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors"
+                            />
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+
+                {/* 片道 モード — 従来UI（片道1個 + 自動逆順） */}
                 {isTransport && !multiMode && !routeOnlyMode && (
                   <div className="pt-2 border-t border-[#f0f0f0]">
                     <label className="flex items-start gap-2 cursor-pointer">
@@ -1981,17 +2244,16 @@ export default function TransactionModal({
                     onClose();
                   }}
                     className="flex-1 py-2.5 text-xs text-[#999] bg-[#F5F5F3] rounded-xl hover:bg-gray-200 transition-colors">
-                    スキップ
+                    キャンセル
                   </button>
                   <button onClick={saveAsTemplate}
                     disabled={(() => {
                       if (multiMode) {
-                        // multiMode: 少なくとも1つのチェックがONで、対応する名前が入力されている必要あり
+                        // Yes側なら名前必須、各段独立評価
                         const outboundValid = !saveOutboundEnabled || outboundTemplateName.trim().length > 0;
                         const returnValid = !saveReturnEnabled || returnTemplateName.trim().length > 0;
                         const packageValid = !savePackageEnabled || packageTemplateName.trim().length > 0;
-                        const anyChecked = saveOutboundEnabled || saveReturnEnabled || savePackageEnabled || templateName.trim().length > 0;
-                        return !anyChecked || !outboundValid || !returnValid || !packageValid;
+                        return !outboundValid || !returnValid || !packageValid;
                       }
                       if (routeOnlyMode) {
                         return !routeTemplateName.trim();
@@ -2000,7 +2262,7 @@ export default function TransactionModal({
                       return !templateName.trim() || (alsoSaveRoute && !routeTemplateName.trim());
                     })()}
                     className="flex-1 py-2.5 text-xs text-white bg-[#1a1a1a] rounded-xl hover:bg-[#333] disabled:opacity-40 transition-colors">
-                    保存する
+                    登録を確定
                   </button>
                 </div>
               </div>
