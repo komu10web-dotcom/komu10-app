@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { X, Loader2, Plus, Trash2, Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { KAMOKU, DIVISIONS, TRANSACTION_STATUS, PROJECT_TAG_REQUIRED_KAMOKU, KAMOKU_INPUT_GUIDE, DESCRIPTION_REQUIRED_KAMOKU, usesTransportDetail, UNASSIGNED_PROJECT_VALUE, UNASSIGNED_PROJECT_LABEL } from '@/types/database';
@@ -48,6 +48,8 @@ export default function TransactionModal({
 }: TransactionModalProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // v0.14.4: 連打ガード（state更新遅延の隙間を埋める・モバイル二重タップ対策）
+  const saveInProgressRef = useRef(false);
   const [dupWarning, setDupWarning] = useState<string | null>(null);
   const [dupConfirmed, setDupConfirmed] = useState(false);
   const [transportData, setTransportData] = useState<TransportData>({ ...EMPTY_TRANSPORT });
@@ -842,6 +844,9 @@ export default function TransactionModal({
   };
 
   const handleSave = async () => {
+    // v0.14.4: 連打ガード（state更新遅延の隙間を埋める・モバイル二重タップ対策）
+    // state の saving だと useState の非同期反映で隙間が生まれるため useRef で同期的に阻止
+    if (saveInProgressRef.current) return;
     if (!form.amount || !form.date) {
       setError('日付と金額は必須です');
       return;
@@ -923,6 +928,8 @@ export default function TransactionModal({
 
     setSaving(true);
     setError(null);
+    // v0.14.4: ガードをセット（ここ以降は2回目以降の呼び出しを完全ブロック）
+    saveInProgressRef.current = true;
 
     let finalDescription = form.description || null;
     let finalStore = form.store || null;
@@ -1204,6 +1211,8 @@ export default function TransactionModal({
       setError('保存に失敗しました');
     } finally {
       setSaving(false);
+      // v0.14.4: ガード解除（成功/失敗問わず必ず解除）
+      saveInProgressRef.current = false;
     }
   };
 
