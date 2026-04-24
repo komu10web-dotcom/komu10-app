@@ -22,6 +22,13 @@ export async function saveTransportDetails(
       route_note: data.route_note || null,
       daily_allowance: 0,
       hotel_allowance: 0,
+      // v0.14.3: 復路情報を保存（往復1レコード化対応）
+      return_legs: data.return_legs || [],
+      same_route: data.same_route !== undefined ? data.same_route : true,
+      same_amount: data.same_amount !== undefined ? data.same_amount : true,
+      return_amount: data.return_amount || 0,
+      return_mode: data.return_mode || 'auto_reverse',
+      payment_method: data.payment_method || 'ic',
     } as any);
 
   if (error) throw error;
@@ -71,11 +78,22 @@ export async function loadTransportDetails(
     purpose: row.purpose || '撮影',
     route_legs: legs,
     round_trip: row.round_trip || 'one_way',
-    same_route: true,
-    same_amount: true,
-    return_legs: [],
-    return_amount: 0,
-    payment_method: 'ic',
+    // v0.14.3: 復路情報を復元（既存データは DEFAULT 値で読み込み後方互換）
+    same_route: row.same_route !== undefined ? row.same_route : true,
+    same_amount: row.same_amount !== undefined ? row.same_amount : true,
+    return_legs: Array.isArray(row.return_legs) && row.return_legs.length > 0
+      ? row.return_legs.map((l: any) => ({
+          from: l.from || '',
+          to: l.to || '',
+          method: l.method || '電車',
+          carrier: l.carrier || '',
+          amount: l.amount || 0,
+          green: l.green || false,
+        }))
+      : [],
+    return_amount: row.return_amount || 0,
+    return_mode: row.return_mode || 'auto_reverse',
+    payment_method: row.payment_method || 'ic',
     class_value: row.class || '普通席',
     class_reason: row.class_reason || '',
     companion: row.companion || '',

@@ -947,11 +947,10 @@ export default function TransactionModal({
 
     const txAmount = parseInt(form.amount.replace(/,/g, '')) || 0;
 
-    // 往復別金額 → 2レコード分割判定（v0.13.0: travel/production/torizai 共通）
-    const isRoundTripSplit = usesTransportDetail(form.kamoku)
-      && transportData.round_trip === 'round_trip'
-      && !transportData.same_amount
-      && !editData;
+    // v0.14.3: 往復も常に1レコードで保存（登録意図 = 1取引）
+    // transport_details テーブルが return_legs / same_route / same_amount / return_amount / return_mode を
+    // 保持するようになったため、往路/復路の詳細は transport_details 側で完全に再現可能。
+    // 旧 isRoundTripSplit による2レコード分割は廃止（ハンドオフ: session38 で v0.14.3 として修正）
 
     const buildPayload = (amount: number, desc: string | null) => ({
       tx_type: 'expense' as const,
@@ -974,63 +973,31 @@ export default function TransactionModal({
     try {
       let txId: string;
 
-      if (isRoundTripSplit) {
-        // 往路
-        const oneWayAmount = transportData.route_legs.reduce((s, l) => s + (l.amount || 0), 0);
-        const returnAmount = transportData.same_route
-          ? (transportData.return_amount || 0)
-          : transportData.return_legs.reduce((s, l) => s + (l.amount || 0), 0);
+      // v0.14.3: 往復・片道問わず単一レコード保存パスに統一
+      const payload = buildPayload(txAmount, finalDescription);
 
-        const outDesc = finalDescription ? `${finalDescription}（往路）` : '（往路）';
-        const retDesc = finalDescription ? `${finalDescription}（復路）` : '（復路）';
-
-        const { data: ins1, error: err1 } = await supabase
+      if (editData) {
+        txId = editData.id;
+        const { error: dbErr } = await supabase
           .from('transactions')
-          .insert(buildPayload(oneWayAmount, outDesc) as any)
-          .select('id').single();
-        if (err1) throw err1;
-        txId = (ins1 as any).id;
-        await saveTransportDetails(txId, transportData);
+          .update(payload as any)
+          .eq('id', editData.id);
+        if (dbErr) throw dbErr;
 
-        // 復路
-        const { data: ins2, error: err2 } = await supabase
-          .from('transactions')
-          .insert(buildPayload(returnAmount, retDesc) as any)
-          .select('id').single();
-        if (err2) throw err2;
-        const returnTransportData = {
-          ...transportData,
-          route_legs: transportData.same_route
-            ? transportData.route_legs.map(l => ({ ...l })).reverse()
-            : transportData.return_legs,
-        };
-        await saveTransportDetails((ins2 as any).id, returnTransportData);
+        if (usesTransportDetail(form.kamoku)) {
+          await updateTransportDetails(editData.id, transportData);
+        }
       } else {
-        const payload = buildPayload(txAmount, finalDescription);
+        const { data: inserted, error: dbErr } = await supabase
+          .from('transactions')
+          .insert(payload as any)
+          .select('id')
+          .single();
+        if (dbErr) throw dbErr;
+        txId = (inserted as any).id;
 
-        if (editData) {
-          txId = editData.id;
-          const { error: dbErr } = await supabase
-            .from('transactions')
-            .update(payload as any)
-            .eq('id', editData.id);
-          if (dbErr) throw dbErr;
-
-          if (usesTransportDetail(form.kamoku)) {
-            await updateTransportDetails(editData.id, transportData);
-          }
-        } else {
-          const { data: inserted, error: dbErr } = await supabase
-            .from('transactions')
-            .insert(payload as any)
-            .select('id')
-            .single();
-          if (dbErr) throw dbErr;
-          txId = (inserted as any).id;
-
-          if (usesTransportDetail(form.kamoku) && inserted) {
-            await saveTransportDetails((inserted as any).id, transportData);
-          }
+        if (usesTransportDetail(form.kamoku) && inserted) {
+          await saveTransportDetails((inserted as any).id, transportData);
         }
       }
 
