@@ -143,8 +143,7 @@ export default function TransactionModal({
       .from('transactions')
       .select('kamoku')
       .eq('owner', form.owner)
-      .eq('type', 'expense')
-      .eq('status', 'settled')
+      .eq('tx_type', 'expense')
       .gte('date', fromDate)
       .then(({ data }: { data: any }) => {
         if (!data) { setTopKamoku([]); return; }
