@@ -3447,20 +3447,153 @@ export default function SettingsContent() {
             リリースノート
           </div>
           <div className="space-y-3">
-            {/* v0.13.0 */}
+            {/* v0.14.7 */}
             <div className="bg-white rounded-xl shadow-sm p-4">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.13.0</span>
-                <span className="text-[9px] text-[#999]">2026.04.22</span>
+                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.14.7</span>
+                <span className="text-[9px] text-[#999]">2026.04.24</span>
                 <span className="text-[8px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full font-medium">LATEST</span>
               </div>
+              <ul className="space-y-1">
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>勘定科目のデフォルトを空に変更（雑費の誤保存防止・プレースホルダ表示）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>「トシキの定番」「トモの定番」セクションを追加（直近3ヶ月の使用頻度上位3件を自動表示）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>往路既存テンプレ＋自動逆順モードで「この往復をパッケージ保存?」を提案（2段構え）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>逆順片道テンプレがない場合、保存提案モーダル第1段で片道として保存可能に</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>保存提案モーダル全体を Yes/No ラジオボタンに統一（各項目を独立判断可能に）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>下部ボタン文言を「キャンセル / 登録を確定」に変更</li>
+              </ul>
+            </div>
+
+            {/* v0.14.6 */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.14.6</span>
+                  <span className="text-[9px] text-[#999]">2026.04.24</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
+                <ul className="space-y-1">
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>既存パッケージ適用時の無駄な「この往復セットをパッケージ保存?」提案を削除</li>
+                </ul>
+              </div>
+            </details>
+
+            {/* v0.14.5 */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.14.5</span>
+                  <span className="text-[9px] text-[#999]">2026.04.24</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
+                <ul className="space-y-1">
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#C23728]">!</span>Vercel本番ビルド失敗を修復（RouteLeg型の二重定義問題を解消）</li>
+                </ul>
+              </div>
+            </details>
+
+            {/* v0.14.4 */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.14.4</span>
+                  <span className="text-[9px] text-[#999]">2026.04.24</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
+                <ul className="space-y-1">
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>TransactionModalに useRef 連打ガードを追加（モバイル二重タップ対策）</li>
+                </ul>
+              </div>
+            </details>
+
+            {/* v0.14.3 */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.14.3</span>
+                  <span className="text-[9px] text-[#999]">2026.04.24</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
+                <ul className="space-y-1">
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>往復交通費を1レコード保存に統一（これまで往復別金額は2行に分かれていたが、1取引として合計金額表示に）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>transport_details テーブルに return_legs・return_amount 等の復路カラムを追加</li>
+                </ul>
+              </div>
+            </details>
+
+            {/* v0.14.2 */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.14.2</span>
+                  <span className="text-[9px] text-[#999]">2026.04.24</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
+                <ul className="space-y-1">
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>ルート・パッケージ保存の連打による二重登録を防止（useRefベース連打ガード）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>同名・同内容のルートテンプレ重複作成をブロック（正規化チェック）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>フラッシュメッセージUI追加（保存成功=緑・警告=黄・エラー=赤、2.5秒自動消滅）</li>
+                </ul>
+              </div>
+            </details>
+
+            {/* v0.14.1 */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.14.1</span>
+                  <span className="text-[9px] text-[#999]">2026.04.24</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
+                <ul className="space-y-1">
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>パッケージ追加ボタンを常時押下可能に(モーダル内で片道不足警告を表示)</li>
+                </ul>
+              </div>
+            </details>
+
+            {/* v0.14.0 */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.14.0</span>
+                  <span className="text-[9px] text-[#999]">2026.04.24</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
+                <ul className="space-y-1">
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>ルートテンプレ体系を刷新：片道テンプレ＋往復パッケージの2層構造に</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>片道テンプレ保存時に逆順ペアを自動生成（次回復路として1タップ選択可能）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>往復パッケージ機能（往路＋復路の組合せを保存し、1クリックで適用）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>往復時の復路モード選択UI：自動逆順／別ルート／手入力の3択</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>保存提案モーダルで「往路・復路・パッケージ」を独立に保存可能</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>設定画面にアーカイブ復元UI追加（論理削除されたテンプレを薄字で表示・1タップ復元）</li>
+                </ul>
+              </div>
+            </details>
+
+            {/* v0.13.0 */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.13.0</span>
+                  <span className="text-[9px] text-[#999]">2026.04.22</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
               <ul className="space-y-1">
                 <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>制作費・取材費でも交通費詳細フィールドを入力可能に（YouTube撮影移動・取材移動の証跡強化）</li>
                 <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>制作費・取材費で内容・摘要を必須化（業務関連性の証跡担保）</li>
                 <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>PJ選択に「{UNASSIGNED_PROJECT_LABEL}」選択肢を追加（企画段階の制作費・取材費でもPJ必須をクリア可能）</li>
                 <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>記入ポイントガイドボックスに摘要必須アナウンス追加</li>
               </ul>
-            </div>
+              </div>
+            </details>
 
             {/* v0.12.1 */}
             <details className="bg-white rounded-xl shadow-sm">
