@@ -1297,8 +1297,10 @@ export default function SettingsContent() {
       const total = form.route_legs.reduce((s, l) => s + (l.amount || 0), 0);
       // v0.14.1: 中身が同じレコードの重複チェック（新規作成時 / 編集時ともに）
       // legs を正規化して JSON 比較（編集時は自分自身を除外）
-      const normalizeLegs = (legs: RouteLeg[]) =>
-        legs.map(l => ({
+      // v0.14.5: RouteLeg 型が database.ts と TransportFields.tsx で二重定義されており、
+      // carrier/green は後者のみ。ここは実行時の中身をそのまま見るため any 経由で扱う
+      const normalizeLegs = (legs: any[]) =>
+        (legs || []).map((l: any) => ({
           from: (l.from || '').trim(),
           to: (l.to || '').trim(),
           method: l.method || '電車',
@@ -1312,7 +1314,7 @@ export default function SettingsContent() {
         if (r.template_kind === 'roundtrip_package') return false; // パッケージは別扱い
         if (editingRoute && r.id === editingRoute.id) return false; // 編集中の自分を除外
         // 片道テンプレの paired_reverse 相手は内容が"逆順"なので正規化すれば違う → 重複判定対象外
-        const existingNormalized = JSON.stringify(normalizeLegs((r.route_legs || []) as RouteLeg[]));
+        const existingNormalized = JSON.stringify(normalizeLegs(r.route_legs || []));
         return r.name.trim() === candidateName && existingNormalized === candidateNormalized;
       });
       if (duplicate) {
