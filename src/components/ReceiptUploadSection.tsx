@@ -18,6 +18,9 @@ export interface ReceiptExtractedData {
   amount?: number;
   vendor?: string;
   kamoku_hint?: string | null;
+  // v0.15.4: 制作費・取材費と推定された時の内訳タグヒント
+  // 値は sub_categories.key (例: 'prod_transport', 'tori_lodging', 'prod_performance' 等)
+  sub_category_hint?: string | null;
   item_name?: string;
   items?: Array<{ name: string; quantity?: number; price?: number }>;
   payment_method?: string;

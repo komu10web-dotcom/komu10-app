@@ -110,13 +110,15 @@ interface TransportFieldsProps {
   mode?: 'entry' | 'template';
   // v0.14.0: 「別の片道テンプレを選ぶ」モード時に表示する復路テンプレセレクタ（親から注入）
   returnRouteSelector?: React.ReactNode;
+  // v0.15.2: 制作費/取材費の時は「目的」プルダウンを非表示（科目+案件タグで目的は明確なため）
+  hidePurpose?: boolean;
 }
 
 // スマホ最適化: 16px以上でiOSのズーム防止、タッチターゲット44px以上
 const inputClass = "w-full px-3 py-2.5 bg-[#F5F5F3] rounded-lg text-[16px] sm:text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50";
 
 // ── コンポーネント ──────────────────────────────────────────
-export default function TransportFields({ data, onChange, onAmountChange, mode = 'entry', returnRouteSelector }: TransportFieldsProps) {
+export default function TransportFields({ data, onChange, onAmountChange, mode = 'entry', returnRouteSelector, hidePurpose = false }: TransportFieldsProps) {
   const [showDetail, setShowDetail] = useState(false);
   const [purposes, setPurposes] = useState<{ id: string; name: string }[]>(DEFAULT_PURPOSES);
   const isTemplate = mode === 'template';
@@ -254,7 +256,8 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
       )}
 
       {/* 目的（トランザクション単位） */}
-      {!isTemplate && (
+      {/* v0.15.2: hidePurpose=true の時は非表示（制作費/取材費では科目+案件で目的が明確なため） */}
+      {!isTemplate && !hidePurpose && (
       <div>
         <label className="text-xs text-[#999] block mb-1">目的</label>
         <select

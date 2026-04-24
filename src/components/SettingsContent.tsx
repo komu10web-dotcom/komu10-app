@@ -284,6 +284,16 @@ export default function SettingsContent() {
   const [subCatDeleteTarget, setSubCatDeleteTarget] = useState<{ id: string; label: string; is_system: boolean } | null>(null);
   const [subCatAddingFor, setSubCatAddingFor] = useState<'production' | 'torizai' | null>(null);
   const [subCatInputValue, setSubCatInputValue] = useState('');
+  // v0.15.5: 削除時の移行付きダイアログ用
+  //   usageCount = その項目を使っている取引の件数
+  //   mode = 'existing' (既存項目に移行) or 'new' (新規項目作成して移行)
+  //   targetKey = 移行先の既存項目key (modeが'existing'時)
+  //   newLabel = 新規作成する項目名 (modeが'new'時)
+  const [subCatDeleteUsageCount, setSubCatDeleteUsageCount] = useState<number | null>(null);
+  const [subCatMigrateMode, setSubCatMigrateMode] = useState<'existing' | 'new'>('existing');
+  const [subCatMigrateTargetKey, setSubCatMigrateTargetKey] = useState<string>('');
+  const [subCatMigrateNewLabel, setSubCatMigrateNewLabel] = useState<string>('');
+  const [subCatDeleteInProgress, setSubCatDeleteInProgress] = useState(false);
 
   // v0.8: 請求書汎用テンプレ
   const [invoiceTemplates, setInvoiceTemplates] = useState<any[]>([]);
@@ -975,7 +985,7 @@ export default function SettingsContent() {
     if (!label) return;
     if (label.length > 20) { alert('20文字以内で入力してください'); return; }
     const dup = subCategories.find(s => s.parent_kamoku === parent && s.label === label);
-    if (dup) { alert(`「${label}」は既に登録されています`); return; }
+    if (dup) { alert(`「${label}」と同じ名前の項目が既にあります`); return; }
     const prefix = parent === 'production' ? 'prod_custom_' : 'tori_custom_';
     const newKey = prefix + Date.now().toString().slice(-8);
     const sameGroup = subCategories.filter(s => s.parent_kamoku === parent);
@@ -1010,7 +1020,7 @@ export default function SettingsContent() {
     const dup = subCategories.find(
       s => s.id !== id && s.parent_kamoku === target.parent_kamoku && s.label === label
     );
-    if (dup) { alert(`「${label}」は既に登録されています`); return; }
+    if (dup) { alert(`「${label}」と同じ名前の項目が既にあります`); return; }
     const { error } = await supabase
       .from('sub_categories' as any)
       .update({ label })
@@ -1020,18 +1030,116 @@ export default function SettingsContent() {
     setSubCatEditTarget(null);
   };
 
-  const handleSubCatDelete = async (id: string) => {
+  // v0.15.5: 削除アイコン押下時のハンドラ。件数カウント→適切なダイアログ表示へ
+  const handleSubCatDeleteClick = async (id: string, label: string, is_system: boolean) => {
     if (!supabase) return;
     const target = subCategories.find(s => s.id === id);
     if (!target) return;
-    // 論理削除（is_active=false）。システムシード/ユーザー追加問わず論理削除で統一
-    const { error } = await supabase
-      .from('sub_categories' as any)
-      .update({ is_active: false })
-      .eq('id', id);
-    if (error) { alert('削除に失敗しました: ' + error.message); return; }
-    await refreshSubCategories();
-    setSubCatDeleteTarget(null);
+    // 該当 key を使っている transactions の件数をカウント
+    const { count, error } = await supabase
+      .from('transactions')
+      .select('id', { count: 'exact', head: true })
+      .eq('sub_category', target.key);
+    if (error) {
+      alert('使用状況の確認に失敗しました: ' + error.message);
+      return;
+    }
+    const usageCount = count ?? 0;
+    // 移行先の初期選択（同じ parent_kamoku の他のactive項目の先頭）
+    const candidates = subCategories.filter(
+      s => s.parent_kamoku === target.parent_kamoku && s.id !== id && s.is_active
+    );
+    setSubCatMigrateTargetKey(candidates[0]?.key ?? '');
+    setSubCatMigrateMode('existing');
+    setSubCatMigrateNewLabel('');
+    setSubCatDeleteUsageCount(usageCount);
+    setSubCatDeleteTarget({ id, label, is_system });
+  };
+
+  // v0.15.5: 0件削除 or 移行付き削除を実行
+  const handleSubCatDeleteConfirm = async () => {
+    if (!supabase || !subCatDeleteTarget) return;
+    const target = subCategories.find(s => s.id === subCatDeleteTarget.id);
+    if (!target) return;
+    setSubCatDeleteInProgress(true);
+    try {
+      const usageCount = subCatDeleteUsageCount ?? 0;
+
+      if (usageCount === 0) {
+        // 0件時: そのまま論理削除
+        const { error } = await supabase
+          .from('sub_categories' as any)
+          .update({ is_active: false })
+          .eq('id', target.id);
+        if (error) throw new Error('削除に失敗しました: ' + error.message);
+      } else {
+        // 1件以上: 移行処理
+        let destKey: string;
+
+        if (subCatMigrateMode === 'existing') {
+          if (!subCatMigrateTargetKey) {
+            throw new Error('移行先の項目を選択してください');
+          }
+          destKey = subCatMigrateTargetKey;
+        } else {
+          // 新規項目を作って移行
+          const newLabel = subCatMigrateNewLabel.trim();
+          if (!newLabel) { throw new Error('新しい項目名を入力してください'); }
+          if (newLabel.length > 20) { throw new Error('20文字以内で入力してください'); }
+          const dup = subCategories.find(
+            s => s.parent_kamoku === target.parent_kamoku && s.label === newLabel && s.is_active
+          );
+          if (dup) {
+            throw new Error(`「${newLabel}」と同じ名前の項目が既にあります`);
+          }
+          const prefix = target.parent_kamoku === 'production' ? 'prod_custom_' : 'tori_custom_';
+          const newKey = prefix + Date.now().toString().slice(-8);
+          const sameGroup = subCategories.filter(s => s.parent_kamoku === target.parent_kamoku);
+          const maxUserOrder = Math.max(
+            0,
+            ...sameGroup.filter(s => s.display_order < 999).map(s => s.display_order)
+          );
+          const newOrder = maxUserOrder + 10;
+          const { error: insertErr } = await supabase
+            .from('sub_categories' as any)
+            .insert({
+              key: newKey,
+              label: newLabel,
+              parent_kamoku: target.parent_kamoku,
+              display_order: newOrder,
+              is_active: true,
+              is_system: false,
+            });
+          if (insertErr) throw new Error('新項目の作成に失敗しました: ' + insertErr.message);
+          destKey = newKey;
+        }
+
+        // transactions の sub_category を一括UPDATE
+        const { error: updateErr } = await supabase
+          .from('transactions')
+          .update({ sub_category: destKey } as any)
+          .eq('sub_category', target.key);
+        if (updateErr) throw new Error('既存取引の移行に失敗しました: ' + updateErr.message);
+
+        // 元の項目を論理削除
+        const { error: deleteErr } = await supabase
+          .from('sub_categories' as any)
+          .update({ is_active: false })
+          .eq('id', target.id);
+        if (deleteErr) throw new Error('項目の削除に失敗しました: ' + deleteErr.message);
+      }
+
+      await refreshSubCategories();
+      setSubCatDeleteTarget(null);
+      setSubCatDeleteUsageCount(null);
+      setSubCatMigrateTargetKey('');
+      setSubCatMigrateNewLabel('');
+      setSubCatMigrateMode('existing');
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSubCatDeleteInProgress(false);
+    }
   };
 
   const handleSubCatRestore = async (id: string) => {
@@ -3540,16 +3648,22 @@ export default function SettingsContent() {
 
         </>)}
 
-        {/* v0.15.0: 内訳タグ管理（制作費・取材費） */}
+        {/* v0.15.0: 内訳の項目管理（制作費・取材費） */}
         <section className="mb-6 mt-4">
           <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
-            内訳タグ管理
+            内訳の項目管理
           </div>
           <div className="bg-white rounded-xl shadow-sm p-4 space-y-4">
             <p className="text-[11px] text-[#666] leading-relaxed">
               制作費・取材費を入力する際に選択する「内訳」を管理できます。<br />
-              撮影・取材の実態に合わせて自由にタグを追加・編集してください。
+              撮影・取材の実態に合わせて自由に項目を追加・編集してください。
             </p>
+            <div className="bg-[#FFF9EA] border border-[#D4A03A]/30 rounded-lg px-3 py-2">
+              <p className="text-[10px] text-[#8B6D1F] leading-relaxed">
+                💡 <span className="font-medium">ラベルの編集について</span><br />
+                日本語ラベルのみの変更です。内訳項目の意味合いや既存取引の集計・紐付けは維持されます。
+              </p>
+            </div>
 
             {(['production', 'torizai'] as const).map((parent) => {
               const parentLabel = parent === 'production' ? '制作費' : '取材費';
@@ -3608,7 +3722,7 @@ export default function SettingsContent() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => setSubCatDeleteTarget({ id: s.id, label: s.label, is_system: s.is_system })}
+                            onClick={() => handleSubCatDeleteClick(s.id, s.label, s.is_system)}
                             className="text-[#999] hover:text-[#C23728]"
                             title="削除"
                           >
@@ -3625,7 +3739,7 @@ export default function SettingsContent() {
                           value={subCatInputValue}
                           onChange={(e) => setSubCatInputValue(e.target.value)}
                           className="bg-transparent outline-none text-[11px] w-24"
-                          placeholder="タグ名"
+                          placeholder="項目名"
                           autoFocus
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') handleSubCatAdd(parent, subCatInputValue);
@@ -3682,46 +3796,158 @@ export default function SettingsContent() {
           </div>
         </section>
 
-        {/* 削除確認モーダル（内訳タグ） */}
-        {subCatDeleteTarget && (
-          <div
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-            onClick={() => setSubCatDeleteTarget(null)}
-          >
+        {/* v0.15.5: 削除確認モーダル（0件時=シンプル / 1件以上時=移行付き） */}
+        {subCatDeleteTarget && subCatDeleteUsageCount !== null && (() => {
+          const targetParent = subCategories.find(s => s.id === subCatDeleteTarget.id)?.parent_kamoku;
+          const migrationCandidates = subCategories.filter(
+            s => s.parent_kamoku === targetParent && s.id !== subCatDeleteTarget.id && s.is_active
+          );
+          const usageCount = subCatDeleteUsageCount;
+
+          const closeModal = () => {
+            if (subCatDeleteInProgress) return;
+            setSubCatDeleteTarget(null);
+            setSubCatDeleteUsageCount(null);
+            setSubCatMigrateTargetKey('');
+            setSubCatMigrateNewLabel('');
+            setSubCatMigrateMode('existing');
+          };
+
+          return (
             <div
-              className="bg-white rounded-xl shadow-xl max-w-sm w-full p-5"
-              onClick={(e) => e.stopPropagation()}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+              onClick={closeModal}
             >
-              <h3 className="text-[14px] font-medium text-[#1a1a1a] mb-3">
-                内訳タグを削除しますか？
-              </h3>
-              <p className="text-[11px] text-[#666] mb-3">
-                「<span className="font-medium text-[#1a1a1a]">{subCatDeleteTarget.label}</span>」を削除します。
-              </p>
-              <p className="text-[10px] text-[#999] leading-relaxed mb-4">
-                ※ 削除後は経費入力画面の選択肢から外れます。<br />
-                ※ この内訳タグを使用している既存取引の記録は変更されません。<br />
-                ※ 設定画面の「削除済み」から復元できます。
-              </p>
-              <div className="flex gap-2 justify-end">
-                <button
-                  type="button"
-                  onClick={() => setSubCatDeleteTarget(null)}
-                  className="px-3 py-1.5 text-[11px] text-[#666] hover:bg-[#F5F5F3] rounded-lg"
-                >
-                  キャンセル
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSubCatDelete(subCatDeleteTarget.id)}
-                  className="px-3 py-1.5 text-[11px] bg-[#C23728] text-white hover:bg-[#A82C1F] rounded-lg"
-                >
-                  削除する
-                </button>
+              <div
+                className="bg-white rounded-xl shadow-xl max-w-sm w-full p-5 max-h-[90vh] overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {usageCount === 0 ? (
+                  /* 0件時: シンプル削除モーダル */
+                  <>
+                    <h3 className="text-[14px] font-medium text-[#1a1a1a] mb-3">
+                      「<span className="text-[#1a1a1a]">{subCatDeleteTarget.label}</span>」を削除しますか？
+                    </h3>
+                    <p className="text-[11px] text-[#666] mb-4">
+                      この項目を使っている取引はありません。
+                    </p>
+                    <div className="flex gap-2 justify-end">
+                      <button
+                        type="button"
+                        onClick={closeModal}
+                        disabled={subCatDeleteInProgress}
+                        className="px-3 py-1.5 text-[11px] text-[#666] hover:bg-[#F5F5F3] rounded-lg disabled:opacity-50"
+                      >
+                        キャンセル
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSubCatDeleteConfirm}
+                        disabled={subCatDeleteInProgress}
+                        className="px-3 py-1.5 text-[11px] bg-[#C23728] text-white hover:bg-[#A82C1F] rounded-lg disabled:opacity-50"
+                      >
+                        {subCatDeleteInProgress ? '削除中…' : '削除する'}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  /* 1件以上時: 移行付き削除モーダル */
+                  <>
+                    <h3 className="text-[14px] font-medium text-[#1a1a1a] mb-3">
+                      「<span className="text-[#1a1a1a]">{subCatDeleteTarget.label}</span>」を削除しますか？
+                    </h3>
+                    <p className="text-[11px] text-[#666] mb-3">
+                      この項目で登録されている経費が <span className="font-medium text-[#C23728]">{usageCount}件</span> あります。<br />
+                      削除する場合は別の項目への移行する必要があります。
+                    </p>
+
+                    {/* 移行先の選択 */}
+                    <div className="space-y-3 mb-4">
+                      {/* 既存項目に移行 */}
+                      <label className="flex items-start gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="migrate_mode"
+                          value="existing"
+                          checked={subCatMigrateMode === 'existing'}
+                          onChange={() => setSubCatMigrateMode('existing')}
+                          className="mt-0.5"
+                          disabled={migrationCandidates.length === 0 || subCatDeleteInProgress}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[12px] text-[#333] mb-1">既存の項目に置き換え</div>
+                          <select
+                            value={subCatMigrateTargetKey}
+                            onChange={(e) => {
+                              setSubCatMigrateTargetKey(e.target.value);
+                              setSubCatMigrateMode('existing');
+                            }}
+                            disabled={subCatMigrateMode !== 'existing' || migrationCandidates.length === 0 || subCatDeleteInProgress}
+                            className="w-full px-2 py-1.5 bg-[#F5F5F3] rounded text-[11px] border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50 disabled:opacity-50"
+                          >
+                            {migrationCandidates.length === 0 ? (
+                              <option value="">（他に項目がありません）</option>
+                            ) : (
+                              migrationCandidates.map(s => (
+                                <option key={s.key} value={s.key}>{s.label}</option>
+                              ))
+                            )}
+                          </select>
+                        </div>
+                      </label>
+
+                      {/* 新規項目を作って移行 */}
+                      <label className="flex items-start gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="migrate_mode"
+                          value="new"
+                          checked={subCatMigrateMode === 'new'}
+                          onChange={() => setSubCatMigrateMode('new')}
+                          className="mt-0.5"
+                          disabled={subCatDeleteInProgress}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[12px] text-[#333] mb-1">新規項目を作成して置き換え</div>
+                          <input
+                            type="text"
+                            value={subCatMigrateNewLabel}
+                            onChange={(e) => {
+                              setSubCatMigrateNewLabel(e.target.value);
+                              setSubCatMigrateMode('new');
+                            }}
+                            disabled={subCatMigrateMode !== 'new' || subCatDeleteInProgress}
+                            placeholder="項目名"
+                            className="w-full px-2 py-1.5 bg-[#F5F5F3] rounded text-[11px] border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50 disabled:opacity-50"
+                          />
+                        </div>
+                      </label>
+                    </div>
+
+                    <div className="flex gap-2 justify-end">
+                      <button
+                        type="button"
+                        onClick={closeModal}
+                        disabled={subCatDeleteInProgress}
+                        className="px-3 py-1.5 text-[11px] text-[#666] hover:bg-[#F5F5F3] rounded-lg disabled:opacity-50"
+                      >
+                        キャンセル
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSubCatDeleteConfirm}
+                        disabled={subCatDeleteInProgress || (subCatMigrateMode === 'existing' && !subCatMigrateTargetKey) || (subCatMigrateMode === 'new' && !subCatMigrateNewLabel.trim())}
+                        className="px-3 py-1.5 text-[11px] bg-[#C23728] text-white hover:bg-[#A82C1F] rounded-lg disabled:opacity-50"
+                      >
+                        {subCatDeleteInProgress ? '実行中…' : '移行して削除'}
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* リリースノート */}
         <section className="mb-6 mt-4">
@@ -3729,22 +3955,101 @@ export default function SettingsContent() {
             リリースノート
           </div>
           <div className="space-y-3">
-            {/* v0.15.0 */}
+            {/* v0.15.5 */}
             <div className="bg-white rounded-xl shadow-sm p-4">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.15.0</span>
+                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.15.5</span>
                 <span className="text-[9px] text-[#999]">2026.04.25</span>
                 <span className="text-[8px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full font-medium">LATEST</span>
               </div>
               <ul className="space-y-1">
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>制作費・取材費に「内訳タグ」機能を追加（移動/宿泊/飲食/衣装/小道具など）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>初期タグ26種類を用意（制作費17種・取材費9種）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>経費入力画面から「＋新規追加」で独自タグを即時作成可能</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>設定画面に「内訳タグ管理」セクションを新設（追加・編集・削除・復元）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>制作費・取材費で交通費詳細フィールドを「内訳=移動」選択時のみ展開に変更</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>領収書の複数添付を旅費交通費のみに限定（他は1枚まで・1領収書=1取引の原則）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>内訳の項目を削除する際、使っている取引がある場合は移行先を選べるように変更</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>移行先は「既存の項目」または「新しく作る項目」から選択可能</li>
               </ul>
             </div>
+
+            {/* v0.15.4 */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.15.4</span>
+                  <span className="text-[9px] text-[#999]">2026.04.25</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
+                <ul className="space-y-1">
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>AI領収書読み取り時、制作費・取材費に推定した場合は内訳の項目も自動選択</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>アナウンスバナーから制作費・取材費に変更した時も内訳の項目を自動反映</li>
+                </ul>
+              </div>
+            </details>
+
+            {/* v0.15.3 */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.15.3</span>
+                  <span className="text-[9px] text-[#999]">2026.04.25</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
+                <ul className="space-y-1">
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>AI領収書読み取りが一般科目に推定した時「制作費・取材費の可能性は？」とアナウンス</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>内訳の項目に「興行・観戦」「体験・施設」「季節イベント」を追加（制作費・取材費それぞれに）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>設定画面の内訳の項目管理セクションに「ラベル編集しても既存取引の集計は維持」アナウンス追加</li>
+                </ul>
+              </div>
+            </details>
+
+            {/* v0.15.2 */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.15.2</span>
+                  <span className="text-[9px] text-[#999]">2026.04.25</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
+                <ul className="space-y-1">
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>制作費・取材費の交通費詳細で「目的」プルダウンを非表示（案件で目的は明確なため）</li>
+                </ul>
+              </div>
+            </details>
+
+            {/* v0.15.1 */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.15.1</span>
+                  <span className="text-[9px] text-[#999]">2026.04.25</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
+                <ul className="space-y-1">
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>制作費・取材費も複数領収書OKに変更（トモが2人分決済等の実運用対応）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>1枚制限時の文言を「この勘定科目では領収書は1枚のみ添付できます」に修正</li>
+                </ul>
+              </div>
+            </details>
+
+            {/* v0.15.0 */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.15.0</span>
+                  <span className="text-[9px] text-[#999]">2026.04.25</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
+                <ul className="space-y-1">
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>制作費・取材費に「内訳」機能を追加（移動/宿泊/飲食/衣装/小道具など）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>初期項目26種類を用意（制作費17種・取材費9種）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>経費入力画面から「＋新規追加」で独自の項目を即時作成可能</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>設定画面に「内訳の項目管理」セクションを新設（追加・編集・削除・復元）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>制作費・取材費で交通費詳細フィールドを「内訳=移動」選択時のみ展開に変更</li>
+                </ul>
+              </div>
+            </details>
 
             {/* v0.14.7 */}
             <details className="bg-white rounded-xl shadow-sm">
@@ -4229,7 +4534,7 @@ export default function SettingsContent() {
 
         {/* バージョン */}
         <div className="text-center py-8">
-          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.15.0</span>
+          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.15.5</span>
         </div>
 
       </div>{/* end max-w-3xl */}

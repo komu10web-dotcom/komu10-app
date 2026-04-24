@@ -125,7 +125,50 @@ kamoku_hint が "equipment" / "supplies" / "production" の場合:
 kamoku_hint が "subscription" / "communication" / "software" の場合:
 - billing_period_from: 請求期間開始（YYYY-MM-DD）。読み取れなければnull。
 - billing_period_to: 請求期間終了（YYYY-MM-DD）。読み取れなければnull。
-- next_billing_date: 次回請求日（YYYY-MM-DD）。読み取れなければnull。`,
+- next_billing_date: 次回請求日（YYYY-MM-DD）。読み取れなければnull。
+
+【制作費・取材費の場合のみ追加で抽出】
+kamoku_hint が "production" または "torizai" の場合:
+- sub_category_hint: 以下から最適な内訳タグキーを1つ選択。判断不能ならnull。
+
+  【制作費の内訳タグ(kamoku_hint='production'時に選択)】
+  prod_transport（移動・タクシー・電車・新幹線・飛行機）,
+  prod_lodging（宿泊・ホテル・旅館）,
+  prod_meal（飲食・撮影現場食事）,
+  prod_costume（衣装・スタイリング用品）,
+  prod_props（小道具・備品・消耗品）,
+  prod_venue（場所代・スタジオ・ロケ地使用料）,
+  prod_cast_fee（出演謝礼・モデル協力者謝礼）,
+  prod_staff_fee（スタッフ謝礼・カメラマン・ヘアメイク等外注人件費）,
+  prod_rental（機材レンタル・カメラ・照明・音響レンタル）,
+  prod_music（音源・素材・BGM・効果音・フォント）,
+  prod_editing（編集外注・カラコレ・MA外部委託）,
+  prod_printing（印刷・制作物・チラシ・パンフ・ポスター）,
+  prod_shipping（配送・運搬・機材配送）,
+  prod_parking（駐車場）,
+  prod_permit（使用許可・ロケ申請・施設使用料）,
+  prod_reference（参考資料・取材補助・書籍・雑誌）,
+  prod_performance（興行・観戦・スポーツ観戦・ライブ・演劇・コンサート・歌舞伎・ミュージカル）,
+  prod_attraction（体験・施設・テーマパーク・動物園・水族館・美術館・博物館）,
+  prod_seasonal_event（季節イベント・花火大会・イルミネーション・祭り・フェスティバル）,
+  prod_other（その他制作費）
+
+  【取材費の内訳タグ(kamoku_hint='torizai'時に選択)】
+  tori_transport（移動・取材先交通費）,
+  tori_lodging（宿泊・取材先宿泊）,
+  tori_meal（飲食・取材時飲食・同行者との食事）,
+  tori_entry（入場・拝観料・施設入場料・観覧料）,
+  tori_gift（手土産・お礼・取材先手土産）,
+  tori_cast_fee（取材謝礼・取材協力者謝礼）,
+  tori_reference（資料・書籍・下調べ資料）,
+  tori_printing（資料印刷・取材資料印刷代）,
+  tori_performance（興行・観戦・スポーツ観戦・ライブ・演劇・コンサート・歌舞伎・ミュージカル）,
+  tori_attraction（体験・施設・テーマパーク・動物園・水族館・美術館・博物館）,
+  tori_seasonal_event（季節イベント・花火大会・イルミネーション・祭り・フェスティバル）,
+  tori_other（その他取材費）
+
+  例: レストラン領収書→"prod_meal" or "tori_meal"、ホテル領収書→"prod_lodging" or "tori_lodging"、タクシー領収書→"prod_transport" or "tori_transport"、東京ドーム→"prod_performance" or "tori_performance"、USJチケット→"prod_attraction" or "tori_attraction"。
+  ※ kamoku_hint が制作費・取材費以外の時は sub_category_hint は null。`,
             },
           ],
         },

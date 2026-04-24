@@ -714,9 +714,10 @@ export function requiresSubCategory(kamoku: string): boolean {
 }
 
 // v0.15.0: 複数領収書添付が許可される科目
-// 旅費交通費のみ、1トリップ=1取引の実務慣行により最大10枚まで許可
-// 制作費・取材費・その他経費は1領収書=1取引の原則に従い1枚まで
-export const MULTI_RECEIPT_KAMOKU = ['travel'] as const;
+// 旅費交通費: 1トリップ=1取引の実務慣行により最大10枚
+// v0.15.1: 制作費・取材費も追加（トモが2人分まとめて決済等、同一取引で複数領収書が発生するため）
+// その他経費は1領収書=1取引の原則に従い1枚まで
+export const MULTI_RECEIPT_KAMOKU = ['travel', 'production', 'torizai'] as const;
 export function allowsMultipleReceipts(kamoku: string): boolean {
   return (MULTI_RECEIPT_KAMOKU as readonly string[]).includes(kamoku);
 }

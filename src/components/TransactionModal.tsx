@@ -112,6 +112,12 @@ export default function TransactionModal({
   // v0.15.0: 内訳タグマスタ（sub_categories テーブルから取得）
   const [subCategories, setSubCategories] = useState<{ id: string; key: string; label: string; parent_kamoku: string; display_order: number; is_active: boolean }[]>([]);
 
+  // v0.15.3: AI OCR後、推定科目が一般系（travel/entertainment/meeting等）の時に
+  // 「制作費・取材費の可能性はありませんか？」とアナウンス表示するためのフラグ
+  const [productionHint, setProductionHint] = useState(false);
+  // v0.15.4: AI推定の内訳タグヒント（制作費/取材費に変更時に併せて反映する用）
+  const [aiSubCategoryHint, setAiSubCategoryHint] = useState<string | null>(null);
+
   // テンプレート取得（モーダルopen時 — transport + general 両方）
   useEffect(() => {
     if (!isOpen || !supabase) return;
@@ -903,7 +909,28 @@ export default function TransactionModal({
       description: descSuffix
         ? (prev.description ? `${prev.description}\n${descSuffix}` : descSuffix)
         : prev.description,
+      // v0.15.4: AI推定の内訳タグを反映（制作費/取材費時のみ有効）
+      sub_category: (inferredKamoku === 'production' || inferredKamoku === 'torizai') && data.sub_category_hint
+        ? data.sub_category_hint
+        : prev.sub_category,
     }));
+
+    // v0.15.3: 推定科目が一般系（制作費・取材費ではない経費科目）の時、
+    // 「制作費・取材費の可能性はありませんか？」というアナウンスを出す
+    // 対象: 業務上、制作費/取材費に振り替えられる可能性が高い科目のみ
+    const HINT_KAMOKU = ['travel', 'entertainment', 'meeting', 'welfare', 'supplies', 'equipment', 'misc'];
+    if (HINT_KAMOKU.includes(inferredKamoku)) {
+      setProductionHint(true);
+    } else {
+      setProductionHint(false);
+    }
+    // v0.15.4: AI が内訳タグを推定していた場合、キャッシュしてバナーで制作費/取材費に変更時に使えるようにする
+    // ただし prod_* / tori_* のプレフィックスで parent_kamoku を判別できるキーのみ採用
+    if (data.sub_category_hint && (data.sub_category_hint.startsWith('prod_') || data.sub_category_hint.startsWith('tori_'))) {
+      setAiSubCategoryHint(data.sub_category_hint);
+    } else {
+      setAiSubCategoryHint(null);
+    }
 
     // v0.10.1: 交通費の場合、ルート・往復・支払方法を transportData に自動流し込み
     if (inferredKamoku === 'travel') {
@@ -1020,7 +1047,7 @@ export default function TransactionModal({
     if (requiresSubCategory(form.kamoku)) {
       if (!form.sub_category) {
         const kamokuName = KAMOKU[form.kamoku as keyof typeof KAMOKU]?.name || form.kamoku;
-        setError(`${kamokuName}は内訳の選択が必須です`);
+        setError(`${kamokuName}の項目を選んでください。`);
         return;
       }
     }
@@ -1434,7 +1461,7 @@ export default function TransactionModal({
                 <span>AIに相談</span>
               </button>
             </div>
-            <select value={form.kamoku} onChange={(e) => setForm({ ...form, kamoku: e.target.value, sub_category: '' })}
+            <select value={form.kamoku} onChange={(e) => { setForm({ ...form, kamoku: e.target.value, sub_category: '' }); setProductionHint(false); }}
               className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
               <option value="" disabled>科目を選択してください</option>
               {topKamoku.length > 0 && (
@@ -1451,6 +1478,54 @@ export default function TransactionModal({
               </optgroup>
             </select>
           </div>
+
+          {/* v0.15.3: AI OCR後、一般系科目に推定された時に「制作費・取材費の可能性は？」とアナウンス */}
+          {productionHint && !requiresSubCategory(form.kamoku) && (
+            <div className="bg-[#FFF9EA] border border-[#D4A03A]/30 rounded-lg p-3">
+              <div className="flex items-start gap-2">
+                <Sparkles className="w-3.5 h-3.5 text-[#D4A03A] shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] text-[#8B6D1F] leading-relaxed mb-2">
+                    <span className="font-medium">制作費</span>か<span className="font-medium">取材費</span>の領収書ですか？
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // v0.15.4: AI ヒントが prod_* なら内訳も反映
+                        const useHint = aiSubCategoryHint && aiSubCategoryHint.startsWith('prod_') ? aiSubCategoryHint : '';
+                        setForm({ ...form, kamoku: 'production', sub_category: useHint });
+                        setProductionHint(false);
+                      }}
+                      className="px-2.5 py-1 rounded-full text-[10px] bg-white border border-[#D4A03A]/50 text-[#8B6D1F] hover:bg-[#D4A03A]/10"
+                    >
+                      制作費
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // v0.15.4: AI ヒントが tori_* なら内訳も反映
+                        const useHint = aiSubCategoryHint && aiSubCategoryHint.startsWith('tori_') ? aiSubCategoryHint : '';
+                        setForm({ ...form, kamoku: 'torizai', sub_category: useHint });
+                        setProductionHint(false);
+                      }}
+                      className="px-2.5 py-1 rounded-full text-[10px] bg-white border border-[#D4A03A]/50 text-[#8B6D1F] hover:bg-[#D4A03A]/10"
+                    >
+                      取材費
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setProductionHint(false)}
+                      className="px-2.5 py-1 rounded-full text-[10px] text-[#999] hover:bg-white"
+                    >
+                      そのまま
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* 金額・支払先（交通費以外） — 交通費は専用UI内で完結 */}
           {form.kamoku !== 'travel' && (
             <>
@@ -1508,7 +1583,7 @@ export default function TransactionModal({
                 <button
                   type="button"
                   onClick={async () => {
-                    const label = prompt('追加する内訳タグの名前を入力してください（例：ケータリング）');
+                    const label = prompt('追加する項目名を入力してください（例：ケータリング）');
                     if (!label || !label.trim()) return;
                     const trimmed = label.trim();
                     if (trimmed.length > 20) {
@@ -1520,7 +1595,7 @@ export default function TransactionModal({
                       s => s.parent_kamoku === form.kamoku && s.label === trimmed
                     );
                     if (dup) {
-                      alert(`「${trimmed}」は既に登録されています`);
+                      alert(`「${trimmed}」と同じ名前の項目が既にあります`);
                       setForm({ ...form, sub_category: dup.key });
                       return;
                     }
@@ -1706,6 +1781,7 @@ export default function TransactionModal({
               onAmountChange={(total) => {
                 if (total > 0) setForm(prev => ({ ...prev, amount: total.toString() }));
               }}
+              hidePurpose={form.kamoku === 'production' || form.kamoku === 'torizai'}
               returnRouteSelector={(() => {
                 // v0.14.0: 「別の片道テンプレを選ぶ」モード時に表示する片道テンプレセレクタ
                 // アーカイブ除外 + 片道のみ（パッケージは除外）
