@@ -123,7 +123,9 @@ export default function ReceiptUploadSection({
 
   const processFile = useCallback(async (file: File) => {
     if (items.length >= MAX_RECEIPTS) {
-      const msg = `領収書は最大${MAX_RECEIPTS}枚までです`;
+      const msg = MAX_RECEIPTS === 1
+        ? 'この勘定科目では領収書は1枚のみ添付できます'
+        : `領収書は最大${MAX_RECEIPTS}枚までです`;
       setErrorMsg(msg); onError?.(msg);
       setTimeout(() => setErrorMsg(null), 3000);
       return;
@@ -239,7 +241,7 @@ export default function ReceiptUploadSection({
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <span className="text-[11px] font-medium text-[#666]">
-          📎 領収書（{items.length} / {MAX_RECEIPTS}）
+          📎 領収書{MAX_RECEIPTS === 1 ? '' : `（${items.length} / ${MAX_RECEIPTS}）`}
         </span>
       </div>
 
