@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Loader2, Plus, Trash2, Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { KAMOKU, DIVISIONS, TRANSACTION_STATUS, PROJECT_TAG_REQUIRED_KAMOKU, KAMOKU_INPUT_GUIDE, DESCRIPTION_REQUIRED_KAMOKU, usesTransportDetail, UNASSIGNED_PROJECT_VALUE, UNASSIGNED_PROJECT_LABEL } from '@/types/database';
+import { KAMOKU, DIVISIONS, TRANSACTION_STATUS, PROJECT_TAG_REQUIRED_KAMOKU, KAMOKU_INPUT_GUIDE, DESCRIPTION_REQUIRED_KAMOKU, usesTransportDetail, UNASSIGNED_PROJECT_VALUE, UNASSIGNED_PROJECT_LABEL, requiresSubCategory, allowsMultipleReceipts, isTransportSubCategory } from '@/types/database';
 import type { Transaction, Project, ExpenseTemplate, RouteTemplate } from '@/types/database';
 import TransportFields, { EMPTY_TRANSPORT, reverseRouteLegs } from '@/components/TransportFields';
 import type { TransportData } from '@/components/TransportFields';
@@ -106,7 +106,11 @@ export default function TransactionModal({
     eq_serial: '',
     eq_business_ratio: '100',
     eq_warranty_date: '',
+    sub_category: '', // v0.15.0: 制作費・取材費の内訳タグ
   });
+
+  // v0.15.0: 内訳タグマスタ（sub_categories テーブルから取得）
+  const [subCategories, setSubCategories] = useState<{ id: string; key: string; label: string; parent_kamoku: string; display_order: number; is_active: boolean }[]>([]);
 
   // テンプレート取得（モーダルopen時 — transport + general 両方）
   useEffect(() => {
@@ -130,6 +134,15 @@ export default function TransactionModal({
       .order('use_count', { ascending: false })
       .then(({ data }: { data: any }) => {
         if (data) setRouteTemplates(data as RouteTemplate[]);
+      });
+    // v0.15.0: sub_categories取得（内訳タグマスタ）
+    supabase
+      .from('sub_categories' as any)
+      .select('*')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true })
+      .then(({ data }: { data: any }) => {
+        if (data) setSubCategories(data);
       });
   }, [isOpen, defaultOwner]);
 
@@ -186,6 +199,7 @@ export default function TransactionModal({
         eq_serial: '',
         eq_business_ratio: '100',
         eq_warranty_date: '',
+        sub_category: (editData as any).sub_category || '', // v0.15.0
       });
       // 既存equipment_item読み込み
       if (editData.kamoku === 'equipment' && supabase) {
@@ -306,6 +320,7 @@ export default function TransactionModal({
         eq_serial: '',
         eq_business_ratio: '100',
         eq_warranty_date: '',
+        sub_category: '', // v0.15.0
       });
       setTransportData({ ...EMPTY_TRANSPORT });
       setEntertainmentData({ ...EMPTY_ENTERTAINMENT });
@@ -1001,6 +1016,14 @@ export default function TransactionModal({
         return;
       }
     }
+    // v0.15.0: 取材費・制作費は内訳タグ（sub_category）必須
+    if (requiresSubCategory(form.kamoku)) {
+      if (!form.sub_category) {
+        const kamokuName = KAMOKU[form.kamoku as keyof typeof KAMOKU]?.name || form.kamoku;
+        setError(`${kamokuName}は内訳の選択が必須です`);
+        return;
+      }
+    }
     // 按分バリデーション
     if (hasAllocRows) {
       if (totalPercent !== 100) {
@@ -1080,6 +1103,8 @@ export default function TransactionModal({
       status: form.status || 'settled',
       accrual_date: form.date,
       actual_payment_date: form.actual_payment_date || form.date,
+      // v0.15.0: 内訳タグ（制作費・取材費のみ値あり、それ以外はnull）
+      sub_category: requiresSubCategory(form.kamoku) ? (form.sub_category || null) : null,
     });
 
     try {
@@ -1358,8 +1383,10 @@ export default function TransactionModal({
 
         <div className="px-5 py-4 space-y-3">
           {/* v0.11.0: 領収書アップロード（新規/編集 共通） */}
+          {/* v0.15.0: 旅費交通費のみ最大10枚、その他経費は最大1枚に制限 */}
           <ReceiptUploadSection
             defaultOwner={form.owner}
+            maxReceipts={allowsMultipleReceipts(form.kamoku) ? 10 : 1}
             formContext={{
               date: form.date,
               kamokuLabel: KAMOKU[form.kamoku as keyof typeof KAMOKU]?.name || form.kamoku,
@@ -1407,7 +1434,7 @@ export default function TransactionModal({
                 <span>AIに相談</span>
               </button>
             </div>
-            <select value={form.kamoku} onChange={(e) => setForm({ ...form, kamoku: e.target.value })}
+            <select value={form.kamoku} onChange={(e) => setForm({ ...form, kamoku: e.target.value, sub_category: '' })}
               className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
               <option value="" disabled>科目を選択してください</option>
               {topKamoku.length > 0 && (
@@ -1450,6 +1477,94 @@ export default function TransactionModal({
                   } />
               </div>
             </>
+          )}
+
+          {/* v0.15.0: 内訳タグ選択UI（制作費・取材費のみ） */}
+          {requiresSubCategory(form.kamoku) && (
+            <div>
+              <label className="text-xs text-[#999] block mb-1">
+                内訳 <span className="text-[#C23728]">*必須</span>
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {subCategories
+                  .filter(s => s.parent_kamoku === form.kamoku)
+                  .map((s) => {
+                    const selected = form.sub_category === s.key;
+                    return (
+                      <button
+                        key={s.key}
+                        type="button"
+                        onClick={() => setForm({ ...form, sub_category: s.key })}
+                        className={`px-3 py-1.5 rounded-full text-xs transition-colors ${
+                          selected
+                            ? 'bg-[#D4A03A] text-white'
+                            : 'bg-[#F5F5F3] text-[#333] hover:bg-[#EEE]'
+                        }`}
+                      >
+                        {s.label}
+                      </button>
+                    );
+                  })}
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const label = prompt('追加する内訳タグの名前を入力してください（例：ケータリング）');
+                    if (!label || !label.trim()) return;
+                    const trimmed = label.trim();
+                    if (trimmed.length > 20) {
+                      alert('20文字以内で入力してください');
+                      return;
+                    }
+                    // 同一 parent_kamoku 内で重複チェック
+                    const dup = subCategories.find(
+                      s => s.parent_kamoku === form.kamoku && s.label === trimmed
+                    );
+                    if (dup) {
+                      alert(`「${trimmed}」は既に登録されています`);
+                      setForm({ ...form, sub_category: dup.key });
+                      return;
+                    }
+                    // 英語キー自動採番: parent_kamoku + タイムスタンプ下6桁
+                    const prefix = form.kamoku === 'production' ? 'prod_custom_' : 'tori_custom_';
+                    const suffix = Date.now().toString().slice(-8);
+                    const newKey = prefix + suffix;
+                    // 表示順: 既存の最大 + 10（ただし other=999 より手前）
+                    const sameGroup = subCategories.filter(s => s.parent_kamoku === form.kamoku);
+                    const maxUserOrder = Math.max(
+                      0,
+                      ...sameGroup.filter(s => s.display_order < 999).map(s => s.display_order)
+                    );
+                    const newOrder = maxUserOrder + 10;
+                    if (!supabase) return;
+                    const { data, error } = await supabase
+                      .from('sub_categories' as any)
+                      .insert({
+                        key: newKey,
+                        label: trimmed,
+                        parent_kamoku: form.kamoku,
+                        display_order: newOrder,
+                        is_active: true,
+                        is_system: false,
+                      })
+                      .select()
+                      .single();
+                    if (error) {
+                      alert('追加に失敗しました: ' + error.message);
+                      return;
+                    }
+                    if (data) {
+                      setSubCategories(prev => [...prev, data as any].sort(
+                        (a, b) => a.display_order - b.display_order
+                      ));
+                      setForm({ ...form, sub_category: (data as any).key });
+                    }
+                  }}
+                  className="px-3 py-1.5 rounded-full text-xs bg-white border border-dashed border-[#D4A03A]/60 text-[#D4A03A] hover:bg-[#FFF9EA]"
+                >
+                  ＋ 新規追加
+                </button>
+              </div>
+            </div>
           )}
 
           {/* v0.7: 交通費テンプレ（業務メタ） + ルートテンプレ（物理経路）の独立選択 */}
@@ -1573,7 +1688,18 @@ export default function TransactionModal({
             ) : null;
           })()}
 
-          {usesTransportDetail(form.kamoku) && (
+          {(() => {
+            // v0.15.0: 交通費詳細の表示条件
+            //  - 旅費交通費 (travel): 常に表示
+            //  - 制作費 (production) / 取材費 (torizai): 内訳=移動 の時だけ表示
+            if (form.kamoku === 'travel') return true;
+            if (form.kamoku === 'production' || form.kamoku === 'torizai') {
+              if (!form.sub_category) return false;
+              const selectedLabel = subCategories.find(s => s.key === form.sub_category)?.label ?? null;
+              return isTransportSubCategory(form.sub_category, selectedLabel);
+            }
+            return false;
+          })() && (
             <TransportFields
               data={transportData}
               onChange={setTransportData}

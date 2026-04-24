@@ -67,9 +67,10 @@ interface ReceiptUploadSectionProps {
   onExtractedForForm: (data: ReceiptExtractedData) => void;
   onError?: (message: string) => void;
   onSetAmountFromReceipts?: (amount: number) => void;
+  maxReceipts?: number; // v0.15.0: 勘定科目による上限制御（travel=10, それ以外=1）
 }
 
-const MAX_RECEIPTS = 10;
+const MAX_RECEIPTS_DEFAULT = 10;
 const AMOUNT_DIFF_THRESHOLD = 1;
 
 function fileToBase64(file: File): Promise<string> {
@@ -93,7 +94,9 @@ export default function ReceiptUploadSection({
   onExtractedForForm,
   onError,
   onSetAmountFromReceipts,
+  maxReceipts,
 }: ReceiptUploadSectionProps) {
+  const MAX_RECEIPTS = maxReceipts ?? MAX_RECEIPTS_DEFAULT;
   const [items, setItems] = useState<ReceiptItem[]>(initialItems || []);
   const [processingFile, setProcessingFile] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);

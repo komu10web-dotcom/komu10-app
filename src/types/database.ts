@@ -63,6 +63,7 @@ export interface Database {
           payment_method: string | null; // 'personal' | 'bank_account'
           bank_account_id: string | null; // bank_accountsテーブルのUUID
           invoice_id: string | null; // FK→invoices（v0.6.2追加: 源泉税仕訳など請求書紐付けで使用）
+          sub_category: string | null; // v0.15.0: 制作費・取材費の内訳タグ（FK→sub_categories.key）
           created_at: string;
           updated_at: string;
         };
@@ -492,6 +493,23 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['expense_receipts']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['expense_receipts']['Insert']>;
       };
+
+      // v0.15.0: 制作費・取材費の内訳タグマスタ
+      sub_categories: {
+        Row: {
+          id: string;
+          key: string;
+          label: string;
+          parent_kamoku: 'production' | 'torizai';
+          display_order: number;
+          is_active: boolean;
+          is_system: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['sub_categories']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['sub_categories']['Insert']>;
+      };
     };
   };
 }
@@ -528,6 +546,7 @@ export type Client = Database['public']['Tables']['clients']['Row'];
 export type RecurringExpense = Database['public']['Tables']['recurring_expenses']['Row'];
 export type EquipmentItem = Database['public']['Tables']['equipment_items']['Row'];
 export type ExpenseReceipt = Database['public']['Tables']['expense_receipts']['Row'];
+export type SubCategory = Database['public']['Tables']['sub_categories']['Row'];
  
 // audit_log（訂正・削除履歴 — 優良な電子帳簿保存 要件❶）
 export type AuditLog = {
@@ -681,9 +700,37 @@ export const DESCRIPTION_REQUIRED_KAMOKU = ['torizai', 'production'] as const;
 
 // v0.13.0: 交通費詳細フィールドを表示する科目
 // 旅費交通費に加え、制作費・取材費でも交通系領収書を扱うため詳細入力を共通化
+// v0.15.0: 制作費・取材費では「内訳=移動」の時だけ展開される条件付き表示に変更
 export const TRANSPORT_DETAIL_KAMOKU = ['travel', 'production', 'torizai'] as const;
 export function usesTransportDetail(kamoku: string): boolean {
   return (TRANSPORT_DETAIL_KAMOKU as readonly string[]).includes(kamoku);
+}
+
+// v0.15.0: 内訳タグ（sub_category）必須化対象科目
+// 制作費・取材費は内訳タグの選択を必須とする（管理会計の粒度統一・証跡強化）
+export const SUB_CATEGORY_REQUIRED_KAMOKU = ['production', 'torizai'] as const;
+export function requiresSubCategory(kamoku: string): boolean {
+  return (SUB_CATEGORY_REQUIRED_KAMOKU as readonly string[]).includes(kamoku);
+}
+
+// v0.15.0: 複数領収書添付が許可される科目
+// 旅費交通費のみ、1トリップ=1取引の実務慣行により最大10枚まで許可
+// 制作費・取材費・その他経費は1領収書=1取引の原則に従い1枚まで
+export const MULTI_RECEIPT_KAMOKU = ['travel'] as const;
+export function allowsMultipleReceipts(kamoku: string): boolean {
+  return (MULTI_RECEIPT_KAMOKU as readonly string[]).includes(kamoku);
+}
+
+// v0.15.0: 内訳タグ「移動」系のキー
+// 制作費/取材費の内訳タグが「移動」の時だけ交通費詳細UIを展開する判定に使用
+// システムシードのキー prod_transport / tori_transport に加え、
+// 新規追加タグで label が「移動」「交通」を含むものも自動判定
+export const TRANSPORT_SUB_CATEGORY_SYSTEM_KEYS = ['prod_transport', 'tori_transport'] as const;
+export function isTransportSubCategory(subCategory: string | null | undefined, label?: string | null): boolean {
+  if (!subCategory) return false;
+  if ((TRANSPORT_SUB_CATEGORY_SYSTEM_KEYS as readonly string[]).includes(subCategory)) return true;
+  if (label && (label.includes('移動') || label.includes('交通'))) return true;
+  return false;
 }
 
 // v0.13.0: 「PJ未登録案件」を表すフロント専用識別子

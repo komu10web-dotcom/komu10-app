@@ -278,6 +278,13 @@ export default function SettingsContent() {
   // v0.7: 交通費目的マスタ（テンプレ・経費登録で共通利用）
   const [transportPurposes, setTransportPurposes] = useState<{ id: string; name: string }[]>([]);
 
+  // v0.15.0: 内訳タグマスタ（制作費・取材費の内訳）
+  const [subCategories, setSubCategories] = useState<{ id: string; key: string; label: string; parent_kamoku: string; display_order: number; is_active: boolean; is_system: boolean }[]>([]);
+  const [subCatEditTarget, setSubCatEditTarget] = useState<{ id: string; label: string } | null>(null);
+  const [subCatDeleteTarget, setSubCatDeleteTarget] = useState<{ id: string; label: string; is_system: boolean } | null>(null);
+  const [subCatAddingFor, setSubCatAddingFor] = useState<'production' | 'torizai' | null>(null);
+  const [subCatInputValue, setSubCatInputValue] = useState('');
+
   // v0.8: 請求書汎用テンプレ
   const [invoiceTemplates, setInvoiceTemplates] = useState<any[]>([]);
   const [invoiceTemplateItems, setInvoiceTemplateItems] = useState<Record<string, any[]>>({});
@@ -398,6 +405,12 @@ export default function SettingsContent() {
         .select('id, name')
         .order('sort_order');
 
+      // v0.15.0: 内訳タグマスタ（制作費・取材費の内訳）
+      const { data: subCatData } = await supabase
+        .from('sub_categories' as any)
+        .select('*')
+        .order('display_order', { ascending: true });
+
       // v0.8: 請求書汎用テンプレ + 明細
       const { data: invTplData } = await supabase
         .from('invoice_templates')
@@ -449,6 +462,7 @@ export default function SettingsContent() {
         route_legs: Array.isArray(r.route_legs) ? r.route_legs : [],
       })));
       setTransportPurposes(purposeData || []);
+      setSubCategories((subCatData as any) || []);
       setInvoiceTemplates(invTplData || []);
       setInvoiceTemplateItems(itemsMap);
 
@@ -943,6 +957,91 @@ export default function SettingsContent() {
       setClientDeleteTarget(null);
       await refreshClients();
     } catch (err) { console.error('取引先削除エラー:', err); }
+  };
+
+  // v0.15.0: 内訳タグ CRUD
+  const refreshSubCategories = async () => {
+    if (!supabase) return;
+    const { data } = await supabase
+      .from('sub_categories' as any)
+      .select('*')
+      .order('display_order', { ascending: true });
+    setSubCategories((data as any) || []);
+  };
+
+  const handleSubCatAdd = async (parent: 'production' | 'torizai', rawLabel: string) => {
+    if (!supabase) return;
+    const label = rawLabel.trim();
+    if (!label) return;
+    if (label.length > 20) { alert('20文字以内で入力してください'); return; }
+    const dup = subCategories.find(s => s.parent_kamoku === parent && s.label === label);
+    if (dup) { alert(`「${label}」は既に登録されています`); return; }
+    const prefix = parent === 'production' ? 'prod_custom_' : 'tori_custom_';
+    const newKey = prefix + Date.now().toString().slice(-8);
+    const sameGroup = subCategories.filter(s => s.parent_kamoku === parent);
+    const maxUserOrder = Math.max(
+      0,
+      ...sameGroup.filter(s => s.display_order < 999).map(s => s.display_order)
+    );
+    const newOrder = maxUserOrder + 10;
+    const { error } = await supabase
+      .from('sub_categories' as any)
+      .insert({
+        key: newKey,
+        label,
+        parent_kamoku: parent,
+        display_order: newOrder,
+        is_active: true,
+        is_system: false,
+      });
+    if (error) { alert('追加に失敗しました: ' + error.message); return; }
+    await refreshSubCategories();
+    setSubCatAddingFor(null);
+    setSubCatInputValue('');
+  };
+
+  const handleSubCatRename = async (id: string, rawLabel: string) => {
+    if (!supabase) return;
+    const label = rawLabel.trim();
+    if (!label) return;
+    if (label.length > 20) { alert('20文字以内で入力してください'); return; }
+    const target = subCategories.find(s => s.id === id);
+    if (!target) return;
+    const dup = subCategories.find(
+      s => s.id !== id && s.parent_kamoku === target.parent_kamoku && s.label === label
+    );
+    if (dup) { alert(`「${label}」は既に登録されています`); return; }
+    const { error } = await supabase
+      .from('sub_categories' as any)
+      .update({ label })
+      .eq('id', id);
+    if (error) { alert('更新に失敗しました: ' + error.message); return; }
+    await refreshSubCategories();
+    setSubCatEditTarget(null);
+  };
+
+  const handleSubCatDelete = async (id: string) => {
+    if (!supabase) return;
+    const target = subCategories.find(s => s.id === id);
+    if (!target) return;
+    // 論理削除（is_active=false）。システムシード/ユーザー追加問わず論理削除で統一
+    const { error } = await supabase
+      .from('sub_categories' as any)
+      .update({ is_active: false })
+      .eq('id', id);
+    if (error) { alert('削除に失敗しました: ' + error.message); return; }
+    await refreshSubCategories();
+    setSubCatDeleteTarget(null);
+  };
+
+  const handleSubCatRestore = async (id: string) => {
+    if (!supabase) return;
+    const { error } = await supabase
+      .from('sub_categories' as any)
+      .update({ is_active: true })
+      .eq('id', id);
+    if (error) { alert('復元に失敗しました: ' + error.message); return; }
+    await refreshSubCategories();
   };
 
   // v0.6.1: シードデータ投入/削除
@@ -3441,28 +3540,231 @@ export default function SettingsContent() {
 
         </>)}
 
+        {/* v0.15.0: 内訳タグ管理（制作費・取材費） */}
+        <section className="mb-6 mt-4">
+          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+            内訳タグ管理
+          </div>
+          <div className="bg-white rounded-xl shadow-sm p-4 space-y-4">
+            <p className="text-[11px] text-[#666] leading-relaxed">
+              制作費・取材費を入力する際に選択する「内訳」を管理できます。<br />
+              撮影・取材の実態に合わせて自由にタグを追加・編集してください。
+            </p>
+
+            {(['production', 'torizai'] as const).map((parent) => {
+              const parentLabel = parent === 'production' ? '制作費' : '取材費';
+              const activeItems = subCategories.filter(s => s.parent_kamoku === parent && s.is_active);
+              const archivedItems = subCategories.filter(s => s.parent_kamoku === parent && !s.is_active);
+              return (
+                <div key={parent} className="border border-[#EEE] rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-[12px] font-medium text-[#1a1a1a]">{parentLabel}の内訳</h3>
+                    <span className="text-[10px] text-[#999]">{activeItems.length}件</span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5">
+                    {activeItems.map((s) => {
+                      const isEditing = subCatEditTarget?.id === s.id;
+                      if (isEditing) {
+                        return (
+                          <div key={s.id} className="flex items-center gap-1 bg-[#FFF9EA] border border-[#D4A03A]/50 rounded-full px-2 py-0.5">
+                            <input
+                              type="text"
+                              value={subCatEditTarget.label}
+                              onChange={(e) => setSubCatEditTarget({ ...subCatEditTarget, label: e.target.value })}
+                              className="bg-transparent outline-none text-[11px] w-24"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSubCatRename(s.id, subCatEditTarget.label);
+                                if (e.key === 'Escape') setSubCatEditTarget(null);
+                              }}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleSubCatRename(s.id, subCatEditTarget.label)}
+                              className="text-[10px] text-[#1B4D3E] px-1"
+                            >保存</button>
+                            <button
+                              type="button"
+                              onClick={() => setSubCatEditTarget(null)}
+                              className="text-[10px] text-[#999] px-1"
+                            >×</button>
+                          </div>
+                        );
+                      }
+                      return (
+                        <div key={s.id} className="group relative flex items-center gap-1 bg-[#F5F5F3] rounded-full px-3 py-1 text-[11px]">
+                          <span className="text-[#333]">{s.label}</span>
+                          {s.is_system && (
+                            <span className="text-[8px] text-[#999] bg-white rounded px-1">システム</span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setSubCatEditTarget({ id: s.id, label: s.label })}
+                            className="ml-1 text-[#999] hover:text-[#D4A03A]"
+                            title="編集"
+                          >
+                            <Pencil className="w-2.5 h-2.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSubCatDeleteTarget({ id: s.id, label: s.label, is_system: s.is_system })}
+                            className="text-[#999] hover:text-[#C23728]"
+                            title="削除"
+                          >
+                            <Trash2 className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      );
+                    })}
+
+                    {subCatAddingFor === parent ? (
+                      <div className="flex items-center gap-1 bg-white border border-dashed border-[#D4A03A]/60 rounded-full px-2 py-0.5">
+                        <input
+                          type="text"
+                          value={subCatInputValue}
+                          onChange={(e) => setSubCatInputValue(e.target.value)}
+                          className="bg-transparent outline-none text-[11px] w-24"
+                          placeholder="タグ名"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSubCatAdd(parent, subCatInputValue);
+                            if (e.key === 'Escape') {
+                              setSubCatAddingFor(null);
+                              setSubCatInputValue('');
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleSubCatAdd(parent, subCatInputValue)}
+                          className="text-[10px] text-[#1B4D3E] px-1"
+                        >追加</button>
+                        <button
+                          type="button"
+                          onClick={() => { setSubCatAddingFor(null); setSubCatInputValue(''); }}
+                          className="text-[10px] text-[#999] px-1"
+                        >×</button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => { setSubCatAddingFor(parent); setSubCatInputValue(''); }}
+                        className="px-3 py-1 rounded-full text-[11px] bg-white border border-dashed border-[#D4A03A]/60 text-[#D4A03A] hover:bg-[#FFF9EA]"
+                      >
+                        ＋ 新規追加
+                      </button>
+                    )}
+                  </div>
+
+                  {archivedItems.length > 0 && (
+                    <details className="mt-3">
+                      <summary className="text-[10px] text-[#999] cursor-pointer">
+                        削除済み（{archivedItems.length}件）
+                      </summary>
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        {archivedItems.map((s) => (
+                          <div key={s.id} className="flex items-center gap-1 bg-[#FAFAF8] rounded-full px-3 py-1 text-[11px] text-[#999]">
+                            <span className="line-through">{s.label}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleSubCatRestore(s.id)}
+                              className="text-[10px] text-[#1B4D3E] hover:underline"
+                            >復元</button>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* 削除確認モーダル（内訳タグ） */}
+        {subCatDeleteTarget && (
+          <div
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={() => setSubCatDeleteTarget(null)}
+          >
+            <div
+              className="bg-white rounded-xl shadow-xl max-w-sm w-full p-5"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-[14px] font-medium text-[#1a1a1a] mb-3">
+                内訳タグを削除しますか？
+              </h3>
+              <p className="text-[11px] text-[#666] mb-3">
+                「<span className="font-medium text-[#1a1a1a]">{subCatDeleteTarget.label}</span>」を削除します。
+              </p>
+              <p className="text-[10px] text-[#999] leading-relaxed mb-4">
+                ※ 削除後は経費入力画面の選択肢から外れます。<br />
+                ※ この内訳タグを使用している既存取引の記録は変更されません。<br />
+                ※ 設定画面の「削除済み」から復元できます。
+              </p>
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setSubCatDeleteTarget(null)}
+                  className="px-3 py-1.5 text-[11px] text-[#666] hover:bg-[#F5F5F3] rounded-lg"
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSubCatDelete(subCatDeleteTarget.id)}
+                  className="px-3 py-1.5 text-[11px] bg-[#C23728] text-white hover:bg-[#A82C1F] rounded-lg"
+                >
+                  削除する
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* リリースノート */}
         <section className="mb-6 mt-4">
           <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
             リリースノート
           </div>
           <div className="space-y-3">
-            {/* v0.14.7 */}
+            {/* v0.15.0 */}
             <div className="bg-white rounded-xl shadow-sm p-4">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.14.7</span>
-                <span className="text-[9px] text-[#999]">2026.04.24</span>
+                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.15.0</span>
+                <span className="text-[9px] text-[#999]">2026.04.25</span>
                 <span className="text-[8px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full font-medium">LATEST</span>
               </div>
               <ul className="space-y-1">
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>勘定科目のデフォルトを空に変更（雑費の誤保存防止・プレースホルダ表示）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>「トシキの定番」「トモの定番」セクションを追加（直近3ヶ月の使用頻度上位3件を自動表示）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>往路既存テンプレ＋自動逆順モードで「この往復をパッケージ保存?」を提案（2段構え）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>逆順片道テンプレがない場合、保存提案モーダル第1段で片道として保存可能に</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>保存提案モーダル全体を Yes/No ラジオボタンに統一（各項目を独立判断可能に）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>下部ボタン文言を「キャンセル / 登録を確定」に変更</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>制作費・取材費に「内訳タグ」機能を追加（移動/宿泊/飲食/衣装/小道具など）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>初期タグ26種類を用意（制作費17種・取材費9種）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>経費入力画面から「＋新規追加」で独自タグを即時作成可能</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>設定画面に「内訳タグ管理」セクションを新設（追加・編集・削除・復元）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>制作費・取材費で交通費詳細フィールドを「内訳=移動」選択時のみ展開に変更</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>領収書の複数添付を旅費交通費のみに限定（他は1枚まで・1領収書=1取引の原則）</li>
               </ul>
             </div>
+
+            {/* v0.14.7 */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.14.7</span>
+                  <span className="text-[9px] text-[#999]">2026.04.24</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
+                <ul className="space-y-1">
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>勘定科目のデフォルトを空に変更（雑費の誤保存防止・プレースホルダ表示）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>「トシキの定番」「トモの定番」セクションを追加（直近3ヶ月の使用頻度上位3件を自動表示）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>往路既存テンプレ＋自動逆順モードで「この往復をパッケージ保存?」を提案（2段構え）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>逆順片道テンプレがない場合、保存提案モーダル第1段で片道として保存可能に</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>保存提案モーダル全体を Yes/No ラジオボタンに統一（各項目を独立判断可能に）</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>下部ボタン文言を「キャンセル / 登録を確定」に変更</li>
+                </ul>
+              </div>
+            </details>
 
             {/* v0.14.6 */}
             <details className="bg-white rounded-xl shadow-sm">
@@ -3927,7 +4229,7 @@ export default function SettingsContent() {
 
         {/* バージョン */}
         <div className="text-center py-8">
-          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.13.0</span>
+          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.15.0</span>
         </div>
 
       </div>{/* end max-w-3xl */}
