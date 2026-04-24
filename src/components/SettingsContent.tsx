@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { KAMOKU, DIVISIONS, RECURRING_FREQUENCY, UNASSIGNED_PROJECT_LABEL } from '@/types/database';
@@ -264,6 +264,16 @@ export default function SettingsContent() {
   // v0.14.0 Phase 5-E: アーカイブ済みルートテンプレの表示・復元
   const [showArchivedRoutes, setShowArchivedRoutes] = useState(false);
   const [archivedRouteTemplates, setArchivedRouteTemplates] = useState<RouteTemplate[]>([]);
+  // v0.14.1: フラッシュメッセージ（保存成功/失敗/重複警告の即時フィードバック）
+  const [flash, setFlash] = useState<{ type: 'success' | 'error' | 'warning'; message: string } | null>(null);
+  const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showFlash = useCallback((type: 'success' | 'error' | 'warning', message: string) => {
+    setFlash({ type, message });
+    if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+    flashTimerRef.current = setTimeout(() => setFlash(null), 2500);
+  }, []);
+  // v0.14.1: ルート保存の連打ガード（state更新遅延の隙間を埋める）
+  const routeSaveInProgressRef = useRef(false);
 
   // v0.7: 交通費目的マスタ（テンプレ・経費登録で共通利用）
   const [transportPurposes, setTransportPurposes] = useState<{ id: string; name: string }[]>([]);
@@ -1280,8 +1290,36 @@ export default function SettingsContent() {
     route_legs: RouteLeg[];
   }) => {
     if (!supabase) return;
+    // v0.14.1: 連打ガード（state更新遅延の隙間を埋める）
+    if (routeSaveInProgressRef.current) return;
+    routeSaveInProgressRef.current = true;
     try {
       const total = form.route_legs.reduce((s, l) => s + (l.amount || 0), 0);
+      // v0.14.1: 中身が同じレコードの重複チェック（新規作成時 / 編集時ともに）
+      // legs を正規化して JSON 比較（編集時は自分自身を除外）
+      const normalizeLegs = (legs: RouteLeg[]) =>
+        legs.map(l => ({
+          from: (l.from || '').trim(),
+          to: (l.to || '').trim(),
+          method: l.method || '電車',
+          carrier: (l.carrier || '').trim(),
+          amount: Number(l.amount) || 0,
+          green: !!l.green,
+        }));
+      const candidateNormalized = JSON.stringify(normalizeLegs(form.route_legs));
+      const candidateName = form.name.trim();
+      const duplicate = routeTemplates.find(r => {
+        if (r.template_kind === 'roundtrip_package') return false; // パッケージは別扱い
+        if (editingRoute && r.id === editingRoute.id) return false; // 編集中の自分を除外
+        // 片道テンプレの paired_reverse 相手は内容が"逆順"なので正規化すれば違う → 重複判定対象外
+        const existingNormalized = JSON.stringify(normalizeLegs((r.route_legs || []) as RouteLeg[]));
+        return r.name.trim() === candidateName && existingNormalized === candidateNormalized;
+      });
+      if (duplicate) {
+        showFlash('warning', '同じ名前・同じ内容のルートが既にあります');
+        return;
+      }
+
       if (editingRoute) {
         // 編集時: 既存の template_kind / paired_reverse_id を維持
         await supabase.from('route_templates').update({
@@ -1339,7 +1377,14 @@ export default function SettingsContent() {
         ...r,
         route_legs: Array.isArray(r.route_legs) ? r.route_legs : [],
       })));
-    } catch (err) { console.error('ルートテンプレート保存エラー:', err); }
+      // v0.14.1: 成功フラッシュ
+      showFlash('success', editingRoute ? 'ルートを更新しました' : 'ルートを登録しました');
+    } catch (err) {
+      console.error('ルートテンプレート保存エラー:', err);
+      showFlash('error', '保存に失敗しました');
+    } finally {
+      routeSaveInProgressRef.current = false;
+    }
   };
 
   // v0.14.0 Phase 5-B: 既存片道テンプレに逆順ペアを作成（救済ボタン）
@@ -1427,7 +1472,24 @@ export default function SettingsContent() {
   }): Promise<boolean> => {
     if (!supabase) return false;
     if (!form.name.trim() || !form.outbound_route_id || !form.return_route_id) return false;
+    // v0.14.1: 連打ガード
+    if (routeSaveInProgressRef.current) return false;
+    routeSaveInProgressRef.current = true;
     try {
+      // v0.14.1: 重複チェック（同じ往路・復路の組み合わせ+同名称のパッケージ）
+      const candidateName = form.name.trim();
+      const duplicate = routeTemplates.find(r => {
+        if (r.template_kind !== 'roundtrip_package') return false;
+        if (editingRoute && r.id === editingRoute.id) return false; // 自分自身除外
+        return r.name.trim() === candidateName
+          && r.outbound_route_id === form.outbound_route_id
+          && r.return_route_id === form.return_route_id;
+      });
+      if (duplicate) {
+        showFlash('warning', '同じ名前・同じ往路復路のパッケージが既にあります');
+        return false;
+      }
+
       if (editingRoute && editingRoute.template_kind === 'roundtrip_package') {
         // 編集
         await supabase.from('route_templates').update({
@@ -1451,7 +1513,7 @@ export default function SettingsContent() {
           return_route_id: form.return_route_id,
         });
       }
-      setRouteModalOpen(false);
+      setPackageModalOpen(false);
       setEditingRoute(null);
       const { data: routeData } = await supabase
         .from('route_templates')
@@ -1463,10 +1525,17 @@ export default function SettingsContent() {
         ...r,
         route_legs: Array.isArray(r.route_legs) ? r.route_legs : [],
       })));
+      // v0.14.1: 成功フラッシュ
+      showFlash('success', editingRoute && editingRoute.template_kind === 'roundtrip_package'
+        ? 'パッケージを更新しました'
+        : 'パッケージを登録しました');
       return true;
     } catch (err) {
       console.error('パッケージテンプレ保存エラー:', err);
+      showFlash('error', '保存に失敗しました');
       return false;
+    } finally {
+      routeSaveInProgressRef.current = false;
     }
   };
 
@@ -1626,6 +1695,24 @@ export default function SettingsContent() {
 
   return (
     <div className="min-h-screen">
+      {/* v0.14.1: フラッシュメッセージ（保存成功/失敗/重複の即時フィードバック） */}
+      {flash && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] pointer-events-none">
+          <div
+            className={`px-4 py-2.5 rounded-xl text-xs shadow-lg flex items-center gap-2 ${
+              flash.type === 'success'
+                ? 'bg-[#1B4D3E] text-white'
+                : flash.type === 'warning'
+                ? 'bg-[#D4A03A] text-white'
+                : 'bg-[#C23728] text-white'
+            }`}
+            style={{ minWidth: '220px', boxShadow: '0 8px 24px rgba(0,0,0,0.15)' }}
+          >
+            {flash.type === 'success' && <CheckCircle2 className="w-4 h-4 shrink-0" />}
+            <span className="flex-1">{flash.message}</span>
+          </div>
+        </div>
+      )}
       <div className="max-w-3xl mx-auto px-6 py-8">
         {/* ヘッダー + タブ */}
         <div className="mb-8">
