@@ -270,29 +270,35 @@ export default function IncomeContent() {
     <div className="min-h-screen">
       <div className="max-w-5xl mx-auto px-6 py-8">
 
-        {/* ── ヘッダー + タブ ── */}
-        <div className="flex items-end justify-between mb-6">
-          <div>
-            <h1 className="font-['Shippori_Mincho'] text-xl text-[#1a1a1a]">売上</h1>
-            <p className="text-[10px] font-light tracking-wider text-[#999] mt-1">SALES</p>
-          </div>
-          <div className="flex items-center gap-1 bg-[#F5F5F3] rounded-lg p-0.5">
-            <button
-              onClick={() => setActiveTab('sales')}
-              className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
-                activeTab === 'sales' ? 'bg-white text-[#1a1a1a] shadow-sm font-medium' : 'text-[#999] hover:text-[#666]'
-              }`}
-            >
-              売上一覧
-            </button>
-            <button
-              onClick={() => setActiveTab('invoices')}
-              className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
-                activeTab === 'invoices' ? 'bg-white text-[#1a1a1a] shadow-sm font-medium' : 'text-[#999] hover:text-[#666]'
-              }`}
-            >
-              請求書
-            </button>
+        {/* ── ヘッダー + タブ(δ案語彙・明色基調) ── */}
+        <div className="mb-8 pb-5 border-b border-[#e8e6e3]">
+          <div className="flex items-end justify-between">
+            <div>
+              <p className="font-['Saira_Condensed'] text-[11px] tracking-[0.3em] text-[#D4A03A] mb-3 font-medium">
+                VOLUME 03 · SALES
+              </p>
+              <h1 className="font-['Shippori_Mincho'] text-[26px] font-normal text-[#1a1a1a] leading-[1.4] tracking-[0.03em]">
+                いつ、誰から、いくら入ったか。
+              </h1>
+            </div>
+            <div className="flex items-center gap-1 bg-[#F5F5F3] rounded-lg p-0.5">
+              <button
+                onClick={() => setActiveTab('sales')}
+                className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
+                  activeTab === 'sales' ? 'bg-white text-[#1a1a1a] shadow-sm font-medium' : 'text-[#999] hover:text-[#666]'
+                }`}
+              >
+                売上一覧
+              </button>
+              <button
+                onClick={() => setActiveTab('invoices')}
+                className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
+                  activeTab === 'invoices' ? 'bg-white text-[#1a1a1a] shadow-sm font-medium' : 'text-[#999] hover:text-[#666]'
+                }`}
+              >
+                請求書
+              </button>
+            </div>
           </div>
         </div>
 
