@@ -596,13 +596,16 @@ export type FundTransfer = {
 };
  
 // 交通費・汎用経費テンプレート
+// v0.15.8: TransportFields の RouteLeg と統一（旧 green_available/green_surcharge を撤廃）
+// DB JSONB 上の実態フィールドに合わせる。同名の型がコンポーネント側にあったが、
+// 真実はこちら(database.ts)に一本化する。
 export type RouteLeg = {
   from: string;
   to: string;
   method: string;
+  carrier: string;
   amount: number;
-  green_available?: boolean;
-  green_surcharge?: number;
+  green: boolean;
 };
  
 export type TemplateAllocation = {

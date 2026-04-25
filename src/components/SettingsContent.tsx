@@ -1504,10 +1504,9 @@ export default function SettingsContent() {
       const total = form.route_legs.reduce((s, l) => s + (l.amount || 0), 0);
       // v0.14.1: 中身が同じレコードの重複チェック（新規作成時 / 編集時ともに）
       // legs を正規化して JSON 比較（編集時は自分自身を除外）
-      // v0.14.5: RouteLeg 型が database.ts と TransportFields.tsx で二重定義されており、
-      // carrier/green は後者のみ。ここは実行時の中身をそのまま見るため any 経由で扱う
-      const normalizeLegs = (legs: any[]) =>
-        (legs || []).map((l: any) => ({
+      // v0.15.8: RouteLeg 型を database.ts に一本化したため any 不要
+      const normalizeLegs = (legs: RouteLeg[]): RouteLeg[] =>
+        (legs || []).map((l) => ({
           from: (l.from || '').trim(),
           to: (l.to || '').trim(),
           method: l.method || '電車',
@@ -1543,10 +1542,10 @@ export default function SettingsContent() {
         // 片道テンプレ編集時、paired_reverse_id で紐づくペアBの legs を自動逆順同期
         // （名前は独立・同期しない —— session36 仕様）
         if (editingRoute.template_kind !== 'roundtrip_package' && editingRoute.paired_reverse_id) {
-          const reversedLegs = form.route_legs
+          const reversedLegs: RouteLeg[] = form.route_legs
             .slice()
             .reverse()
-            .map((l: any) => ({
+            .map((l) => ({
               from: l.to || '',
               to: l.from || '',
               method: l.method || '電車',
@@ -1554,7 +1553,7 @@ export default function SettingsContent() {
               amount: Number(l.amount) || 0,
               green: !!l.green,
             }));
-          const reverseTotal = reversedLegs.reduce((s: number, l: any) => s + (l.amount || 0), 0);
+          const reverseTotal = reversedLegs.reduce((s, l) => s + (l.amount || 0), 0);
           await supabase.from('route_templates').update({
             route_legs: reversedLegs,
             amount: reverseTotal, // DEPRECATED
@@ -1606,10 +1605,10 @@ export default function SettingsContent() {
     }
     try {
       // 逆順legs生成
-      const reversedLegs = (route.route_legs || [])
+      const reversedLegs: RouteLeg[] = (route.route_legs || [])
         .slice()
         .reverse()
-        .map((l: any) => ({
+        .map((l) => ({
           from: l.to || '',
           to: l.from || '',
           method: l.method || '電車',
@@ -3955,17 +3954,32 @@ export default function SettingsContent() {
             リリースノート
           </div>
           <div className="space-y-3">
-            {/* v0.15.7 */}
+            {/* v0.15.8 */}
             <div className="bg-white rounded-xl shadow-sm p-4">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.15.7</span>
+                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.15.8</span>
                 <span className="text-[9px] text-[#999]">2026.04.25</span>
                 <span className="text-[8px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full font-medium">LATEST</span>
               </div>
               <ul className="space-y-1">
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>設定画面のQ&A「交通費に領収書は必要？」をv0.15.6の交通費ヘルプと同じ文言に揃えた</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>内部リファクタ：交通費の区間データ型を一本化（動作影響なし）</li>
               </ul>
             </div>
+
+            {/* v0.15.7 */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.15.7</span>
+                  <span className="text-[9px] text-[#999]">2026.04.25</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
+                <ul className="space-y-1">
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>設定画面のQ&A「交通費に領収書は必要？」をv0.15.6の交通費ヘルプと同じ文言に揃えた</li>
+                </ul>
+              </div>
+            </details>
 
             {/* v0.15.6 */}
             <details className="bg-white rounded-xl shadow-sm">
@@ -4565,7 +4579,7 @@ export default function SettingsContent() {
 
         {/* バージョン */}
         <div className="text-center py-8">
-          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.15.7</span>
+          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.15.8</span>
         </div>
 
       </div>{/* end max-w-3xl */}
@@ -6363,8 +6377,9 @@ function RouteTemplateModal({
 
   // TransportFields 互換形式でstate管理
   const [transportData, setTransportData] = useState<TransportData>(() => {
-    const src = route?.route_legs && route.route_legs.length > 0
-      ? route.route_legs.map((l: any) => ({
+    // v0.15.8: 旧データ(green_available フィールド)への後方互換のため、any経由で安全に読む
+    const src: RouteLeg[] = route?.route_legs && route.route_legs.length > 0
+      ? (route.route_legs as Array<RouteLeg & { green_available?: boolean }>).map((l) => ({
           from: l.from || '',
           to: l.to || '',
           method: l.method || '電車',
@@ -6378,7 +6393,7 @@ function RouteTemplateModal({
 
   const handleSave = async () => {
     if (!name.trim()) return;
-    const validLegs = (transportData.route_legs || [])
+    const validLegs: RouteLeg[] = (transportData.route_legs || [])
       .filter(l => l.from && l.to && Number(l.amount) > 0)
       .map(l => ({
         from: l.from,
@@ -6387,7 +6402,7 @@ function RouteTemplateModal({
         carrier: l.carrier || '',
         amount: Number(l.amount) || 0,
         green: !!l.green,
-      })) as any[];
+      }));
     if (validLegs.length === 0) return;
     setSaving(true);
     await onSave({ name: name.trim(), direction, route_legs: validLegs });

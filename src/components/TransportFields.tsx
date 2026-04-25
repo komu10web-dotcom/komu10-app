@@ -3,6 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { ChevronDown, ChevronRight, Plus, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+// v0.15.8: RouteLeg型を database.ts に一本化、こちらからimport
+import type { RouteLeg } from '@/types/database';
+export type { RouteLeg };
 
 // ── 定数 ──────────────────────────────────────────────
 const TRANSPORT_METHODS = [
@@ -29,14 +32,7 @@ const DEFAULT_PURPOSES = [
 ];
 
 // ── 型定義 ──────────────────────────────────────────────
-export interface RouteLeg {
-  from: string;
-  to: string;
-  method: string;
-  carrier: string;
-  amount: number;
-  green: boolean;
-}
+// v0.15.8: RouteLeg は @/types/database から再エクスポート（上部で済み）
 
 export interface TransportData {
   purpose: string;
