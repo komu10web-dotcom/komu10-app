@@ -3163,7 +3163,7 @@ export default function SettingsContent() {
                           <span className="text-sm text-[#1a1a1a] font-medium truncate">{re.description}</span>
                         </div>
                         <div className="text-[11px] text-[#999] mt-0.5">
-                          ¥{re.amount.toLocaleString()} / {RECURRING_FREQUENCY[re.frequency]}
+                          ¥{re.amount.toLocaleString()} / {RECURRING_FREQUENCY[re.frequency as keyof typeof RECURRING_FREQUENCY]}
                           {divDef ? ` · ${divDef.name}` : ''}
                           {clientName ? ` · ${clientName}` : ''}
                           {!re.is_active && <span className="ml-1 text-[#C23728]">（停止中）</span>}
@@ -3528,7 +3528,7 @@ export default function SettingsContent() {
               // v0.14.0 Phase 5-A: パッケージと片道を分離表示
               const packages = routeTemplates.filter(r => r.template_kind === 'roundtrip_package');
               const oneways = routeTemplates.filter(r => r.template_kind !== 'roundtrip_package');
-              const onewayById = new Map(oneways.map(r => [r.id, r]));
+              const onewayById = new Map<string, RouteTemplate>(oneways.map(r => [r.id, r]));
               return (
                 <div className="space-y-5">
                   {/* ── 往復パッケージ ── */}
