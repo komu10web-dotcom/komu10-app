@@ -239,18 +239,25 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
     <div className="border border-[#D4A03A]/30 rounded-xl p-4 space-y-3 bg-[#D4A03A]/5">
       <p className="text-xs font-medium text-[#D4A03A]">{isTemplate ? '交通費テンプレート' : '交通費詳細'}</p>
 
-      {/* 注意書き */}
+      {/* 注意書き（v0.15.6: 1目的地=1件の原則準拠に再構成） */}
       {!isTemplate && (
-      <div className="text-[11px] text-[#888] leading-relaxed space-y-2 border-l-2 border-[#D4A03A]/30 pl-3">
-        <div>
-          <p className="font-medium text-[#666]">電車・バス</p>
-          <p className="mt-0.5">出発地と最終目的地だけ入力。乗り継ぎはメモ欄に記載してください。</p>
-          <p className="text-[10px] text-[#aaa] mt-0.5">※ 不安な場合は「区間追加」で経由地も登録できます。</p>
+      <div className="leading-relaxed space-y-4 border-l-2 border-[#D4A03A]/30 pl-3">
+        <div className="space-y-1">
+          <p className="text-[12px] font-semibold text-[#D4A03A]">1件の単位</p>
+          <p className="text-[11px] text-[#888]">1つの目的地への移動を1件として登録してください（往復も1件）。</p>
+          <p className="text-[11px] text-[#888]">途中の乗り継ぎや経由は「区間を追加」で繋げていきます。</p>
+          <p className="text-[11px] text-[#888]">領収書もまとめて添付できます。</p>
         </div>
-        <div>
-          <p className="font-medium text-[#666]">タクシー・飛行機</p>
-          <p className="mt-0.5">領収書ごとに1件ずつ登録してください。</p>
-          <p className="text-[10px] text-[#aaa] mt-0.5">※ 区間追加には対応していません。</p>
+        <div className="space-y-1">
+          <p className="text-[12px] font-semibold text-[#D4A03A]">領収書</p>
+          <p className="text-[11px] text-[#888]">電車・バス・近距離の鉄道は領収書なしでOK。</p>
+          <p className="text-[11px] text-[#888]">新幹線・特急は領収書を取得可能な場合は添付してください（3万円以上は必須）。</p>
+          <p className="text-[11px] text-[#888]">タクシーは領収書必須。</p>
+          <p className="text-[11px] text-[#888]">飛行機は購入時の領収書(eチケット)を添付してください。</p>
+        </div>
+        <div className="space-y-1">
+          <p className="text-[12px] font-semibold text-[#D4A03A]">区間や座席クラスの入力</p>
+          <p className="text-[11px] text-[#888]">新幹線・特急・飛行機など座席クラスがある手段は、区間ごとに手段・運賃・グリーン/普通席を入力してください。</p>
         </div>
       </div>
       )}
