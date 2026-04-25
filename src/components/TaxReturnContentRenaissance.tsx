@@ -30,6 +30,10 @@ import {
   downloadCSV,
   type KamokuSummary,
 } from './TaxReturnContent';
+import {
+  getSurtaxRates,
+  INCOME_DEDUCTION_ITEMS,
+} from '@/lib/taxConstants';
 
 const C = {
   bg: '#0a0a0b',
@@ -391,6 +395,19 @@ export default function TaxReturnContentRenaissance() {
     return revenueCurrent >= threshold || revenueTwoYearsAgo > taxableLine;
   })();
 
+  // v0.28.0: Section 番号動的算出
+  // 01-03 = 固定 / 04 = invoiceBanner時のみ消費税 / 仕訳帳・減価償却・所得控除・申告サマリーは順番にインクリメント
+  const sec = (() => {
+    let n = 4;
+    const journalNum  = String(n + (showInvoiceBanner ? 1 : 0)).padStart(2, '0');
+    n = parseInt(journalNum);
+    const depNum      = depreciationRows.length > 0 ? String(n + 1).padStart(2, '0') : journalNum;
+    const afterDep    = depreciationRows.length > 0 ? n + 1 : n;
+    const deductNum   = String(afterDep + 1).padStart(2, '0');
+    const summaryNum  = String(afterDep + 2).padStart(2, '0');
+    return { journal: journalNum, depreciation: depNum, deduction: deductNum, summary: summaryNum };
+  })();
+
   let invoiceLevel: 'confirmed' | 'warning' | 'caution' = 'caution';
   if (revenueTwoYearsAgo > 10_000_000) invoiceLevel = 'confirmed';
   else if (revenueCurrent > 10_000_000) invoiceLevel = 'warning';
@@ -670,7 +687,7 @@ export default function TaxReturnContentRenaissance() {
           </Section>
         )}
 
-        <Section num={showInvoiceBanner ? '05' : '04'} title="仕訳帳 — 複式簿記の証跡">
+        <Section num={sec.journal} title="仕訳帳 — 複式簿記の証跡">
           <div style={{ marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <p style={{ fontSize: 12, color: C.textMute, lineHeight: 1.6 }}>
               CSV出力して e-Tax への転記確認に使えます。
@@ -751,7 +768,7 @@ export default function TaxReturnContentRenaissance() {
         </Section>
 
         {depreciationRows.length > 0 && (
-          <Section num={showInvoiceBanner ? '06' : '05'} title="減価償却 — 資産の費用化">
+          <Section num={sec.depreciation} title="減価償却 — 資産の費用化">
             <div style={{ background: C.surface, border: `1px solid ${C.line}`, overflowX: 'auto' }}>
               <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
                 <thead>
@@ -781,6 +798,63 @@ export default function TaxReturnContentRenaissance() {
             </div>
           </Section>
         )}
+
+        <Section num={sec.deduction} title="所得控除 — 払う前に、引かれるもの">
+          <div style={{ background: C.surface, border: `1px solid ${C.line}`, padding: '40px 36px' }}>
+            <p style={{ fontSize: 12, color: C.textSub, lineHeight: 1.85, marginBottom: 28 }}>
+              事業所得から差し引ける控除をここに集約します。医療費・社会保険・生命保険・寄附金など、年に一度の入力で翌年の確定申告がそのまま完了します。
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+              {INCOME_DEDUCTION_ITEMS.map(item => (
+                <div key={item.key} style={{
+                  border: `1px solid ${C.lineSoft}`, padding: '14px 16px',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12,
+                }}>
+                  <span style={{ fontFamily: F.jp, fontSize: 12, color: C.textSub }}>{item.label}</span>
+                  <span style={{ fontFamily: F.num, fontSize: 11, color: C.textMute, letterSpacing: '0.15em' }}>準備中</span>
+                </div>
+              ))}
+            </div>
+            <p style={{ fontSize: 10, color: C.textMute, lineHeight: 1.8, marginTop: 28, letterSpacing: '0.04em' }}>
+              ※ 各項目の入力UIは順次追加します。基礎控除は{year >= 2026 ? '令和8年分の改正後' : '令和7年分以前の'}段階制で計算されます。
+            </p>
+          </div>
+        </Section>
+
+        <Section num={sec.summary} title="申告サマリー — e-Tax への橋渡し">
+          <div style={{ background: C.surface, border: `1px solid ${C.line}`, padding: '40px 36px' }}>
+            <p style={{ fontSize: 12, color: C.textSub, lineHeight: 1.85, marginBottom: 24 }}>
+              事業所得から所得控除を差し引いた課税所得・所得税概算・付加税をまとめて表示します。e-Tax への転記に必要な数字をすべてここから取り出せます。
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 14 }}>
+              {(() => {
+                const surtax = getSurtaxRates(year);
+                const items: { label: string; note: string }[] = [
+                  { label: '事業所得（売上 − 経費）', note: '上の各セクションから自動集計' },
+                  { label: '所得控除合計',               note: '所得控除セクションから自動集計' },
+                  { label: '基礎控除',                   note: `${year >= 2026 ? '令和8年分' : '令和7年分'}の段階制で自動算出` },
+                  { label: '課税所得',                   note: '事業所得 − 所得控除合計' },
+                  { label: '所得税額（概算）',           note: '課税所得に応じた累進税率で算出' },
+                  { label: '復興特別所得税',             note: surtax.reconstruction > 0 ? `所得税額 × ${(surtax.reconstruction * 100).toFixed(1)}%` : '対象外' },
+                  { label: '防衛特別所得税',             note: surtax.defense > 0 ? `所得税額 × ${(surtax.defense * 100).toFixed(1)}%` : `${year}年分は対象外` },
+                ];
+                return items.map((it, i) => (
+                  <div key={i} style={{
+                    borderBottom: i < items.length - 1 ? `1px solid ${C.lineSoft}` : 'none',
+                    padding: '16px 0', display: 'flex', justifyContent: 'space-between',
+                    alignItems: 'baseline', gap: 16, flexWrap: 'wrap',
+                  }}>
+                    <div>
+                      <p style={{ fontFamily: F.jp, fontSize: 13, color: C.text, marginBottom: 4 }}>{it.label}</p>
+                      <p style={{ fontSize: 10, color: C.textMute, letterSpacing: '0.04em' }}>{it.note}</p>
+                    </div>
+                    <span style={{ fontFamily: F.num, fontSize: 11, color: C.textMute, letterSpacing: '0.2em' }}>準備中</span>
+                  </div>
+                ));
+              })()}
+            </div>
+          </div>
+        </Section>
 
         <footer style={{
           marginTop: 96, paddingTop: 32, borderTop: `1px solid ${C.line}`,
