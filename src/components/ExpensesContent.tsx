@@ -439,12 +439,11 @@ export default function ExpensesContent() {
             <p className="text-sm text-[#1a1a1a] mb-2 font-medium">この取引を削除しますか？</p>
             {deleteTarget.driveFileIds.length > 0 ? (
               <p className="text-xs text-[#666] mb-4 leading-relaxed">
-                紐づく領収書 {deleteTarget.driveFileIds.length}件 も<br />
-                Google Driveのゴミ箱に移動されます<br />
-                <span className="text-[#999]">（30日間は復元可能）</span>
+                領収書 {deleteTarget.driveFileIds.length}件 もまとめてゴミ箱に移します。<br />
+                <span className="text-[#999]">30日間は元に戻せます。</span>
               </p>
             ) : (
-              <p className="text-xs text-[#666] mb-4">この操作は取り消せません。</p>
+              <p className="text-xs text-[#666] mb-4">削除すると、元に戻せません。</p>
             )}
             <div className="flex gap-2">
               <button
