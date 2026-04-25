@@ -624,7 +624,7 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
           </p>
           {!isTemplate && total >= 30000 && (
             <p className="text-[11px] text-[#E07A3A]">
-              3万円以上の交通費は領収書の保管が推奨されます
+              3万円以上の交通費は領収書の添付が必須です
             </p>
           )}
         </div>

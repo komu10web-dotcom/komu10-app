@@ -58,35 +58,35 @@ const PROJECT_STATUS: Record<string, string> = {
 const QA_ITEMS = [
   {
     q: '撮影旅行の食事は経費になる？',
-    a: '取材目的の食事は「接待交際費」として計上できます。ただし、一人での食事は原則認められません。取材先や同行者との食事で、取材メモや写真があると根拠になります。',
+    a: '取材先や同行者との食事は「取材費」または「会議費」になります。接待目的なら「接待交際費」。一人の食事は原則として経費になりません。取材メモや写真を残し、事業との関連が説明できる状態にしておきましょう。',
   },
   {
     q: 'カメラの購入はどう処理する？',
-    a: '10万円未満は「消耗品費」として一括経費。10万円以上は「固定資産」として登録し、耐用年数（カメラは5年）で減価償却します。設定ページの固定資産台帳で管理できます。',
+    a: '10万円未満は「消耗品費」として一括で経費にできます。10万円から40万円未満は、青色申告の特例で一括計上が可能（年間合計300万円まで）。40万円以上は「固定資産」として登録し、耐用年数（カメラは5年）にわたって減価償却します。設定ページの固定資産台帳で管理できます。',
   },
   {
     q: '按分とは？',
-    a: '自宅兼事務所の家賃や通信費など、事業とプライベート両方で使う費用について、事業利用分の割合（%）だけを経費にする仕組みです。税務署への根拠説明が必要なので、メモに理由を残しましょう。',
+    a: '自宅兼事務所の家賃や通信費など、事業とプライベートの両方で使う費用について、事業利用分の割合だけを経費にする仕組みです。税務署への根拠説明が求められるため、按分の理由をメモに残しましょう。',
   },
   {
     q: '交通費に領収書は必要？',
-    a: '電車・バス・近距離の鉄道は領収書なしでOK。新幹線・特急は領収書を取得可能な場合は添付してください（3万円以上は必須）。タクシーは領収書必須。飛行機は購入時の領収書（eチケット）を添付してください。',
+    a: '電車・バス・近距離の鉄道は領収書なしで問題ありません。新幹線・特急は、可能な範囲で領収書を添付してください（3万円以上は必須）。タクシーは領収書が必須。飛行機は購入時の領収書（eチケット控え）を添付してください。',
   },
   {
     q: 'YouTubeの広告収益はどう計上する？',
-    a: 'Googleからの入金時に「売上高」として計上します。収益タイプは「広告収益（YouTube）」を選択。月次でAdSenseのレポートと突合しましょう。',
+    a: 'Googleからの入金時に「売上高」として計上します。収益タイプは「広告収益（YouTube）」を選択。月次でAdSenseのレポートと突き合わせましょう。',
   },
   {
     q: '確定申告の期限は？',
-    a: '毎年2月16日〜3月15日が申告期間です。青色申告の65万円控除を受けるにはe-Taxでの電子申告が必要です。このアプリの確定申告ページからE-TAXに転記できます。',
+    a: '毎年2月16日から3月15日が申告期間です。青色申告の65万円控除を受けるには、e-Taxで期限内に電子申告する必要があります。このアプリの確定申告ページから、e-Taxに転記する形で申告できます。',
   },
   {
     q: 'サブスクリプションの処理は？',
-    a: 'Adobe CC、クラウドストレージ等の月額サービスは、事業利用割合に応じて按分します。設定ページで按分率を登録し、明細に「事業利用◯%」とメモを残しましょう。',
+    a: 'Adobe Creative Cloudやクラウドストレージなど、月額のサービス費は事業利用割合に応じて按分します。設定ページで按分率を登録し、明細に「事業利用○%」とメモを残しましょう。',
   },
   {
     q: '2人（トモ・トシキ）の経費はどう分ける？',
-    a: '各取引に「担当者」を設定します。確定申告は個人別に行うため、担当者ごとに売上・経費が自動分離されます。共通経費は按分設定で各自の割合を設定してください。',
+    a: '各取引に「担当者」を設定してください。確定申告は個人別に行うため、担当者ごとに売上と経費が自動的に分離されます。共通経費は按分設定で各自の割合を指定してください。',
   },
 ];
 
@@ -1041,7 +1041,7 @@ export default function SettingsContent() {
       .select('id', { count: 'exact', head: true })
       .eq('sub_category', target.key);
     if (error) {
-      alert('使用状況の確認に失敗しました: ' + error.message);
+      alert('使用状況を確認できませんでした。通信状態を確認してもう一度お試しください。\n' + error.message);
       return;
     }
     const usageCount = count ?? 0;
@@ -3954,17 +3954,36 @@ export default function SettingsContent() {
             リリースノート
           </div>
           <div className="space-y-3">
-            {/* v0.15.8 */}
+            {/* v0.16.0 */}
             <div className="bg-white rounded-xl shadow-sm p-4">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.15.8</span>
+                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.16.0</span>
                 <span className="text-[9px] text-[#999]">2026.04.25</span>
                 <span className="text-[8px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full font-medium">LATEST</span>
               </div>
               <ul className="space-y-1">
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>内部リファクタ：交通費の区間データ型を一本化（動作影響なし）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>カメラ購入のFAQを令和8年度税制改正に対応（少額減価償却資産の特例30万円→40万円）</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>FAQ全8項目の文言を見直し、より自然で読みやすい日本語に統一</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>交通費の合計3万円以上アラートを「保管が推奨」から「添付が必須」に修正(税務上の正確化)</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>削除モーダルの使用状況確認エラー文を、状況と対処が一目で分かる文面に変更</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>確定申告FAQの「E-TAX」を国税庁公式表記の「e-Tax」に統一</li>
               </ul>
             </div>
+
+            {/* v0.15.8 */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.15.8</span>
+                  <span className="text-[9px] text-[#999]">2026.04.25</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
+                <ul className="space-y-1">
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>内部リファクタ：交通費の区間データ型を一本化（動作影響なし）</li>
+                </ul>
+              </div>
+            </details>
 
             {/* v0.15.7 */}
             <details className="bg-white rounded-xl shadow-sm">
@@ -4579,7 +4598,7 @@ export default function SettingsContent() {
 
         {/* バージョン */}
         <div className="text-center py-8">
-          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.15.8</span>
+          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.16.0</span>
         </div>
 
       </div>{/* end max-w-3xl */}
