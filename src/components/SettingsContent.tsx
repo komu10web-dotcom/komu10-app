@@ -70,7 +70,7 @@ const QA_ITEMS = [
   },
   {
     q: '交通費に領収書は必要？',
-    a: '電車・バスは領収書不要ですが、IC履歴や乗車区間の記録が必要です。タクシーは領収書必須。飛行機は搭乗券の控えも保管してください。',
+    a: '電車・バス・近距離の鉄道は領収書なしでOK。新幹線・特急は領収書を取得可能な場合は添付してください（3万円以上は必須）。タクシーは領収書必須。飛行機は購入時の領収書（eチケット）を添付してください。',
   },
   {
     q: 'YouTubeの広告収益はどう計上する？',
@@ -3955,18 +3955,33 @@ export default function SettingsContent() {
             リリースノート
           </div>
           <div className="space-y-3">
-            {/* v0.15.6 */}
+            {/* v0.15.7 */}
             <div className="bg-white rounded-xl shadow-sm p-4">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.15.6</span>
+                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.15.7</span>
                 <span className="text-[9px] text-[#999]">2026.04.25</span>
                 <span className="text-[8px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full font-medium">LATEST</span>
               </div>
               <ul className="space-y-1">
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>交通費入力のヘルプ文を「1つの目的地への移動を1件」の原則で再整理</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>領収書の要否を電車・新幹線・タクシー・飛行機ごとに明記</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>設定画面のQ&A「交通費に領収書は必要？」をv0.15.6の交通費ヘルプと同じ文言に揃えた</li>
               </ul>
             </div>
+
+            {/* v0.15.6 */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.15.6</span>
+                  <span className="text-[9px] text-[#999]">2026.04.25</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
+                <ul className="space-y-1">
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>交通費入力のヘルプ文を「1つの目的地への移動を1件」の原則で再整理</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>領収書の要否を電車・新幹線・タクシー・飛行機ごとに明記</li>
+                </ul>
+              </div>
+            </details>
 
             {/* v0.15.5 */}
             <details className="bg-white rounded-xl shadow-sm">
@@ -4550,7 +4565,7 @@ export default function SettingsContent() {
 
         {/* バージョン */}
         <div className="text-center py-8">
-          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.15.6</span>
+          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.15.7</span>
         </div>
 
       </div>{/* end max-w-3xl */}
