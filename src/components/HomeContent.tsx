@@ -111,7 +111,7 @@ export default function HomeContent() {
         .eq('tx_type', 'revenue')
         .gte('date', `${currentYear}-01-01`)
         .lt('date', `${currentYear + 1}-01-01`);
-      setRevenueCurrent((revCurrentData || []).reduce((s, r: any) => s + (r.amount || 0), 0));
+      setRevenueCurrent((revCurrentData || []).reduce((s: number, r: any) => s + (r.amount || 0), 0));
 
       // 2年前売上(基準期間)
       const { data: rev2yData } = await supabase
@@ -121,7 +121,7 @@ export default function HomeContent() {
         .eq('tx_type', 'revenue')
         .gte('date', `${currentYear - 2}-01-01`)
         .lt('date', `${currentYear - 1}-01-01`);
-      setRevenueTwoYearsAgo((rev2yData || []).reduce((s, r: any) => s + (r.amount || 0), 0));
+      setRevenueTwoYearsAgo((rev2yData || []).reduce((s: number, r: any) => s + (r.amount || 0), 0));
     } catch (err) {
       console.error('Fetch error:', err);
     } finally {

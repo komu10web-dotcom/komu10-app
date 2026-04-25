@@ -451,8 +451,8 @@ export default function TaxReturnContent() {
       // v0.17.0
       setInvoiceRegistered(!!(profileData as any)?.invoice_registered);
       setIsTaxable(!!(profileData as any)?.is_taxable);
-      setRevenueCurrent((revCurrentData || []).reduce((s, r: any) => s + (r.amount || 0), 0));
-      setRevenueTwoYearsAgo((rev2yData || []).reduce((s, r: any) => s + (r.amount || 0), 0));
+      setRevenueCurrent((revCurrentData || []).reduce((s: number, r: any) => s + (r.amount || 0), 0));
+      setRevenueTwoYearsAgo((rev2yData || []).reduce((s: number, r: any) => s + (r.amount || 0), 0));
     } catch (err) {
       console.error('データ取得エラー:', err);
     } finally {
