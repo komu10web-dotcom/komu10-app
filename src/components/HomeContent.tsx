@@ -8,6 +8,7 @@ import { CheckCircle2, AlertTriangle, ArrowRight, PenLine } from 'lucide-react';
 import Link from 'next/link';
 import { usePeriodRange } from './HeaderControls';
 import TransactionModal from '@/components/TransactionModal';
+import BulkReceiptModal from '@/components/BulkReceiptModal';
 
 interface TransactionRow {
   id: string;
@@ -31,6 +32,7 @@ export default function HomeContent() {
 
   // v0.9.0: 経費追加モーダル（領収書アップロード統合済）
   const [manualModalOpen, setManualModalOpen] = useState(false);
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [projects, setProjects] = useState<Project[]>([]);
 
   // v0.17.1: インボイス登録判定用(当年・2年前売上 + 登録済フラグ)
@@ -254,9 +256,26 @@ export default function HomeContent() {
           <span className="text-sm font-medium">経費を追加</span>
         </button>
 
+        {/* v0.19.0: 複数領収書まとめてリンク */}
+        <button
+          onClick={() => setBulkModalOpen(true)}
+          className="w-full text-center text-[11px] text-[#999] hover:text-[#1a1a1a] transition-colors -mt-2"
+        >
+          領収書をまとめて取り込む
+        </button>
+
         <TransactionModal
           isOpen={manualModalOpen}
           onClose={() => setManualModalOpen(false)}
+          onSaved={fetchData}
+          defaultOwner={owner === 'all' ? 'tomo' : owner}
+          projects={projects}
+        />
+
+        {/* v0.19.0: 複数領収書一括取込モーダル */}
+        <BulkReceiptModal
+          isOpen={bulkModalOpen}
+          onClose={() => setBulkModalOpen(false)}
           onSaved={fetchData}
           defaultOwner={owner === 'all' ? 'tomo' : owner}
           projects={projects}

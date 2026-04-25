@@ -12,8 +12,9 @@ const STATUS_STYLES: Record<string, { bg: string; text: string }> = {
   settled:  { bg: 'bg-[#1B4D3E]/10', text: 'text-[#1B4D3E]' },
 };
 import type { Transaction, Project } from '@/types/database';
-import { Plus, Upload, Pencil, Trash2, Search, Loader2, Sparkles } from 'lucide-react';
+import { Plus, Upload, Pencil, Trash2, Search, Loader2, Sparkles, Layers } from 'lucide-react';
 import TransactionModal from './TransactionModal';
+import BulkReceiptModal from './BulkReceiptModal';
 import ConsultationModal from './ConsultationModal';
 import { usePeriodRange } from './HeaderControls';
 
@@ -31,6 +32,7 @@ export default function ExpensesContent() {
 
   // モーダル
   const [modalOpen, setModalOpen] = useState(false);
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Transaction | null>(null);
 
   // CSVインポート
@@ -233,6 +235,13 @@ export default function ExpensesContent() {
               <Plus className="w-3.5 h-3.5" />
               手入力
             </button>
+            <button
+              onClick={() => setBulkModalOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-2 bg-white text-[#1a1a1a] rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors border border-gray-200"
+            >
+              <Layers className="w-3.5 h-3.5" />
+              まとめて
+            </button>
             <label className="flex items-center gap-1.5 px-4 py-2 bg-white text-[#1a1a1a] rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors cursor-pointer border border-gray-200">
               <Upload className="w-3.5 h-3.5" />
               {importing ? 'インポート中...' : 'CSV'}
@@ -400,6 +409,15 @@ export default function ExpensesContent() {
         onSaved={fetchTransactions}
         editData={editTarget}
         defaultOwner={owner}
+        projects={projects}
+      />
+
+      {/* ── v0.19.0: 複数領収書一括取込モーダル ── */}
+      <BulkReceiptModal
+        isOpen={bulkModalOpen}
+        onClose={() => setBulkModalOpen(false)}
+        onSaved={fetchTransactions}
+        defaultOwner={owner === 'all' ? 'tomo' : owner}
         projects={projects}
       />
 
