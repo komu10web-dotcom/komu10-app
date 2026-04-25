@@ -741,6 +741,46 @@ export function isTransportSubCategory(subCategory: string | null | undefined, l
   return false;
 }
 
+// v0.27.0: 科目バナー切替時の内訳タグ自動推定マップ
+// AI が判定した「元の科目」から、制作費(production)・取材費(torizai)に振替えた時に
+// 内訳タグ(sub_category)を自動セットして「内訳*必須」のバリデーションエラーを防ぐ。
+// マッピング根拠：元科目の意味的性質はそのまま、制作・取材の文脈に再分類する設計。
+// - travel        → 移動         (prod_transport / tori_transport)
+// - entertainment → 飲食         (prod_meal      / tori_meal)
+// - meeting       → 飲食
+// - welfare       → 飲食
+// - supplies      → 小道具・備品 (prod_props)  / 資料 (tori_reference)
+// - equipment     → 小道具・備品 / 資料
+// - misc          → その他       (prod_other   / tori_other)
+const SUB_CATEGORY_INFERENCE_BY_KAMOKU: Record<string, { production: string; torizai: string }> = {
+  travel:        { production: 'prod_transport', torizai: 'tori_transport' },
+  entertainment: { production: 'prod_meal',      torizai: 'tori_meal' },
+  meeting:       { production: 'prod_meal',      torizai: 'tori_meal' },
+  welfare:       { production: 'prod_meal',      torizai: 'tori_meal' },
+  supplies:      { production: 'prod_props',     torizai: 'tori_reference' },
+  equipment:     { production: 'prod_props',     torizai: 'tori_reference' },
+  misc:          { production: 'prod_other',     torizai: 'tori_other' },
+};
+
+// v0.27.0: 科目バナー切替時の内訳タグ推定
+// AI 判定結果(fromKamoku) → 制作費/取材費(toKamoku) への振替時に
+// 内訳タグを推定して返す。AI ヒント(aiSubCategoryHint)が優先される。
+export function inferSubCategoryOnKamokuSwitch(
+  fromKamoku: string,
+  toKamoku: 'production' | 'torizai',
+  aiSubCategoryHint: string | null | undefined
+): string {
+  // AI ヒントが切替先と同系統(prod_*/tori_*)なら最優先
+  const expectedPrefix = toKamoku === 'production' ? 'prod_' : 'tori_';
+  if (aiSubCategoryHint && aiSubCategoryHint.startsWith(expectedPrefix)) {
+    return aiSubCategoryHint;
+  }
+  // フォールバック：元科目からのマッピング表
+  const mapping = SUB_CATEGORY_INFERENCE_BY_KAMOKU[fromKamoku];
+  if (mapping) return mapping[toKamoku];
+  return '';
+}
+
 // v0.13.0: 「PJ未登録案件」を表すフロント専用識別子
 // 企画段階で正式PJ化前の制作費・取材費でPJ必須をクリアするために使用
 // DB保存時は project_id = null に変換される

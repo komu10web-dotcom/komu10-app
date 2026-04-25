@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Loader2, Plus, Trash2, Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { KAMOKU, DIVISIONS, TRANSACTION_STATUS, PROJECT_TAG_REQUIRED_KAMOKU, KAMOKU_INPUT_GUIDE, DESCRIPTION_REQUIRED_KAMOKU, usesTransportDetail, UNASSIGNED_PROJECT_VALUE, UNASSIGNED_PROJECT_LABEL, requiresSubCategory, allowsMultipleReceipts, isTransportSubCategory } from '@/types/database';
+import { KAMOKU, DIVISIONS, TRANSACTION_STATUS, PROJECT_TAG_REQUIRED_KAMOKU, KAMOKU_INPUT_GUIDE, DESCRIPTION_REQUIRED_KAMOKU, usesTransportDetail, UNASSIGNED_PROJECT_VALUE, UNASSIGNED_PROJECT_LABEL, requiresSubCategory, allowsMultipleReceipts, isTransportSubCategory, inferSubCategoryOnKamokuSwitch } from '@/types/database';
 import type { Transaction, Project, ExpenseTemplate, RouteTemplate } from '@/types/database';
 import TransportFields, { EMPTY_TRANSPORT, reverseRouteLegs } from '@/components/TransportFields';
 import type { TransportData } from '@/components/TransportFields';
@@ -1492,9 +1492,11 @@ export default function TransactionModal({
                     <button
                       type="button"
                       onClick={() => {
-                        // v0.15.4: AI ヒントが prod_* なら内訳も反映
-                        const useHint = aiSubCategoryHint && aiSubCategoryHint.startsWith('prod_') ? aiSubCategoryHint : '';
-                        setForm({ ...form, kamoku: 'production', sub_category: useHint });
+                        // v0.27.0: AIが判定した元科目(form.kamoku)から制作費の内訳タグを自動推定
+                        // 例: 旅費→移動, 接待→飲食, 消耗品→小道具・備品
+                        // AI ヒント(aiSubCategoryHint)があればそれを優先
+                        const inferred = inferSubCategoryOnKamokuSwitch(form.kamoku, 'production', aiSubCategoryHint);
+                        setForm({ ...form, kamoku: 'production', sub_category: inferred });
                         setProductionHint(false);
                       }}
                       className="px-2.5 py-1 rounded-full text-[10px] bg-white border border-[#D4A03A]/50 text-[#8B6D1F] hover:bg-[#D4A03A]/10"
@@ -1504,9 +1506,11 @@ export default function TransactionModal({
                     <button
                       type="button"
                       onClick={() => {
-                        // v0.15.4: AI ヒントが tori_* なら内訳も反映
-                        const useHint = aiSubCategoryHint && aiSubCategoryHint.startsWith('tori_') ? aiSubCategoryHint : '';
-                        setForm({ ...form, kamoku: 'torizai', sub_category: useHint });
+                        // v0.27.0: AIが判定した元科目(form.kamoku)から取材費の内訳タグを自動推定
+                        // 例: 旅費→移動, 接待→飲食, 消耗品→資料
+                        // AI ヒント(aiSubCategoryHint)があればそれを優先
+                        const inferred = inferSubCategoryOnKamokuSwitch(form.kamoku, 'torizai', aiSubCategoryHint);
+                        setForm({ ...form, kamoku: 'torizai', sub_category: inferred });
                         setProductionHint(false);
                       }}
                       className="px-2.5 py-1 rounded-full text-[10px] bg-white border border-[#D4A03A]/50 text-[#8B6D1F] hover:bg-[#D4A03A]/10"
