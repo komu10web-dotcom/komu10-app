@@ -713,21 +713,10 @@ export default function ManagementContent() {
       <div className="max-w-5xl mx-auto px-6 py-8">
 
         {/* ── ヘッダー ── */}
-        <div className="flex items-end justify-between mb-8 pb-5 border-b border-white/10">
+        <div className="flex items-end justify-between mb-6">
           <div>
-            <p className="font-['Saira_Condensed'] text-[10px] tracking-[0.3em] text-[#D4A03A] mb-2">
-              VOLUME 04 · MANAGEMENT
-            </p>
-            <h1 className="font-['Shippori_Mincho'] text-2xl text-white leading-tight">
-              {viewMode === 'pl' && 'いま、儲かっているのか。'}
-              {viewMode === 'cf' && 'いま、お金は足りているのか。'}
-              {viewMode === 'fund' && 'お金の動き、すべてを記録する。'}
-            </h1>
-            <p className="text-[10px] font-light tracking-wider text-white/40 mt-2">
-              {viewMode === 'pl' && '損益 · Profit & Loss'}
-              {viewMode === 'cf' && 'キャッシュフロー · Cash Flow'}
-              {viewMode === 'fund' && '資金移動 · Fund Transfer'}
-            </p>
+            <h1 className="font-['Shippori_Mincho'] text-xl text-[#1a1a1a]">経営</h1>
+            <p className="text-[10px] font-light tracking-wider text-[#999] mt-1">MANAGEMENT</p>
           </div>
           <div className="flex items-center gap-1 bg-[#F5F5F3] rounded-lg p-0.5">
             <button
