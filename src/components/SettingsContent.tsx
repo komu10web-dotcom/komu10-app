@@ -152,6 +152,12 @@ export default function SettingsContent() {
   const [billingEmail, setBillingEmail] = useState('');
   const [billingSaving, setBillingSaving] = useState(false);
 
+  // v0.17.0: 事業者ステータス（インボイス・課税判定）
+  const [invoiceRegistered, setInvoiceRegistered] = useState(false);
+  const [invoiceNumber, setInvoiceNumber] = useState('');
+  const [isTaxable, setIsTaxable] = useState(false);
+  const [bizStatusSaving, setBizStatusSaving] = useState(false);
+
   // 按分設定
   const [anbunSettings, setAnbunSettings] = useState<AnbunSetting[]>([]);
   const [anbunDraft, setAnbunDraft] = useState<Record<string, { ratio: number; note: string }>>({});
@@ -323,10 +329,10 @@ export default function SettingsContent() {
         .eq('owner', effectiveOwner)
         .order('acquisition_date', { ascending: false });
 
-      // プロフィール（テーマ + 背景色 + 請求元情報）
+      // プロフィール（テーマ + 背景色 + 請求元情報 + v0.17.0 事業者ステータス）
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('theme, fiscal_start_month, owner_color, business_name, postal_code, address, phone, email')
+        .select('theme, fiscal_start_month, owner_color, business_name, postal_code, address, phone, email, invoice_registered, invoice_number, is_taxable')
         .eq('user_key', effectiveOwner)
         .single();
 
@@ -452,6 +458,10 @@ export default function SettingsContent() {
         setBillingAddress((profileData as any).address || '');
         setBillingPhone((profileData as any).phone || '');
         setBillingEmail((profileData as any).email || '');
+        // v0.17.0: 事業者ステータス
+        setInvoiceRegistered(!!(profileData as any).invoice_registered);
+        setInvoiceNumber((profileData as any).invoice_number || '');
+        setIsTaxable(!!(profileData as any).is_taxable);
       }
       setContractTypes(ctData || []);
       setBusinessDomains(bdData || []);
@@ -2723,6 +2733,136 @@ export default function SettingsContent() {
               className="mt-4 px-4 py-2 text-xs text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] transition-colors disabled:opacity-50 flex items-center gap-1.5"
             >
               {billingSaving && <Loader2 className="w-3 h-3 animate-spin" />}
+              保存する
+            </button>
+          </div>
+        </section>
+
+        {/* ── v0.17.0: 事業者ステータス ── */}
+        <section className="mb-10">
+          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+            事業者ステータス
+          </div>
+          <div className="bg-white rounded-xl shadow-sm p-5">
+            <p className="text-[11px] text-[#666] leading-relaxed mb-4 whitespace-pre-line">
+              {`${ownerLabel}が、消費税を納める立場（課税事業者）かどうかを設定します。
+インボイス（取引先が経費精算で使う「正式な請求書」を発行できる）登録の有無もここで管理します。
+
+いまは「未登録」「いいえ」のままで構いません。
+売上が伸びて立場が変わったとき、確定申告ページに案内が出ます。
+
+※ 売上が年1,000万円以下の間は、原則として「未登録」「いいえ」が正しい状態です`}
+            </p>
+
+            <div className="space-y-4">
+              {/* インボイス登録 */}
+              <div>
+                <label className="block text-xs text-[#999] mb-2">インボイス登録</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInvoiceRegistered(false);
+                      setInvoiceNumber('');
+                    }}
+                    className={`flex-1 px-3 py-2 text-xs rounded-lg transition-colors ${
+                      !invoiceRegistered
+                        ? 'bg-[#1a1a1a] text-white'
+                        : 'bg-[#F5F5F3] text-[#666] hover:bg-[#ECECE9]'
+                    }`}
+                  >
+                    未登録
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInvoiceRegistered(true);
+                      setIsTaxable(true); // インボイス登録時は自動で課税事業者
+                    }}
+                    className={`flex-1 px-3 py-2 text-xs rounded-lg transition-colors ${
+                      invoiceRegistered
+                        ? 'bg-[#1a1a1a] text-white'
+                        : 'bg-[#F5F5F3] text-[#666] hover:bg-[#ECECE9]'
+                    }`}
+                  >
+                    登録済
+                  </button>
+                </div>
+              </div>
+
+              {/* 登録番号（インボイス登録済の場合のみ表示） */}
+              {invoiceRegistered && (
+                <div>
+                  <label className="block text-xs text-[#999] mb-1">登録番号</label>
+                  <input
+                    type="text"
+                    value={invoiceNumber}
+                    onChange={(e) => setInvoiceNumber(e.target.value)}
+                    placeholder="T1234567890123"
+                    className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed'] tabular-nums"
+                  />
+                  <p className="text-[10px] text-[#999] mt-1">
+                    適格請求書発行事業者の登録番号（Tから始まる14桁）
+                  </p>
+                </div>
+              )}
+
+              {/* 課税事業者 */}
+              <div>
+                <label className="block text-xs text-[#999] mb-2">
+                  課税事業者
+                  {invoiceRegistered && (
+                    <span className="ml-2 text-[10px] text-[#999]">
+                      （インボイス登録済のため自動で「はい」）
+                    </span>
+                  )}
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    disabled={invoiceRegistered}
+                    onClick={() => setIsTaxable(false)}
+                    className={`flex-1 px-3 py-2 text-xs rounded-lg transition-colors ${
+                      !isTaxable
+                        ? 'bg-[#1a1a1a] text-white'
+                        : 'bg-[#F5F5F3] text-[#666] hover:bg-[#ECECE9]'
+                    } ${invoiceRegistered ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    いいえ（免税事業者）
+                  </button>
+                  <button
+                    type="button"
+                    disabled={invoiceRegistered}
+                    onClick={() => setIsTaxable(true)}
+                    className={`flex-1 px-3 py-2 text-xs rounded-lg transition-colors ${
+                      isTaxable
+                        ? 'bg-[#1a1a1a] text-white'
+                        : 'bg-[#F5F5F3] text-[#666] hover:bg-[#ECECE9]'
+                    } ${invoiceRegistered ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    はい（課税事業者）
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={async () => {
+                if (!supabase) return;
+                setBizStatusSaving(true);
+                try {
+                  await supabase.from('profiles').update({
+                    invoice_registered: invoiceRegistered,
+                    invoice_number: invoiceRegistered ? (invoiceNumber.trim() || null) : null,
+                    is_taxable: invoiceRegistered ? true : isTaxable,
+                  } as any).eq('user_key', effectiveOwner);
+                } catch (err) { console.error('事業者ステータス保存エラー:', err); }
+                finally { setBizStatusSaving(false); }
+              }}
+              disabled={bizStatusSaving}
+              className="mt-4 px-4 py-2 text-xs text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] transition-colors disabled:opacity-50 flex items-center gap-1.5"
+            >
+              {bizStatusSaving && <Loader2 className="w-3 h-3 animate-spin" />}
               保存する
             </button>
           </div>

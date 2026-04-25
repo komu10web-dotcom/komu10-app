@@ -25,6 +25,10 @@ export interface Database {
           address: string | null; // 住所
           phone: string | null; // 電話番号
           email: string | null; // メールアドレス
+          // v0.17.0: 事業者ステータス（インボイス・課税判定）
+          invoice_registered: boolean; // インボイス（適格請求書発行事業者）登録の有無
+          invoice_number: string | null; // 登録番号（T+13桁）。未登録ならNULL
+          is_taxable: boolean; // 課税事業者フラグ。インボイス登録済なら自動true扱い
           created_at: string;
           updated_at: string;
         };

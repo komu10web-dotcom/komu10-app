@@ -368,6 +368,11 @@ export default function TaxReturnContent() {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [fundTransfers, setFundTransfers] = useState<FundTransfer[]>([]);
+  // v0.17.0: 事業者ステータス + 過去2年売上（インボイス判定用）
+  const [invoiceRegistered, setInvoiceRegistered] = useState(false);
+  const [isTaxable, setIsTaxable] = useState(false);
+  const [revenueCurrent, setRevenueCurrent] = useState(0);  // 当年売上
+  const [revenueTwoYearsAgo, setRevenueTwoYearsAgo] = useState(0);  // 2年前売上（基準期間）
 
   // データ取得
   const fetchData = useCallback(async () => {
@@ -414,11 +419,40 @@ export default function TaxReturnContent() {
         .lt('transfer_date', `${year + 1}-01-01`)
         .order('transfer_date', { ascending: true });
 
+      // v0.17.0: 事業者ステータス
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('invoice_registered, is_taxable')
+        .eq('user_key', effectiveOwner)
+        .single();
+
+      // v0.17.0: 当年・2年前の年間総売上（インボイス判定用）
+      const { data: revCurrentData } = await supabase
+        .from('transactions')
+        .select('amount')
+        .eq('owner', effectiveOwner)
+        .eq('tx_type', 'revenue')
+        .gte('date', `${year}-01-01`)
+        .lt('date', `${year + 1}-01-01`);
+
+      const { data: rev2yData } = await supabase
+        .from('transactions')
+        .select('amount')
+        .eq('owner', effectiveOwner)
+        .eq('tx_type', 'revenue')
+        .gte('date', `${year - 2}-01-01`)
+        .lt('date', `${year - 1}-01-01`);
+
       setTransactions(txData || []);
       setAnbunSettings(anbunData || []);
       setAssets(assetData || []);
       setBankAccounts(bankData || []);
       setFundTransfers(ftData || []);
+      // v0.17.0
+      setInvoiceRegistered(!!(profileData as any)?.invoice_registered);
+      setIsTaxable(!!(profileData as any)?.is_taxable);
+      setRevenueCurrent((revCurrentData || []).reduce((s, r: any) => s + (r.amount || 0), 0));
+      setRevenueTwoYearsAgo((rev2yData || []).reduce((s, r: any) => s + (r.amount || 0), 0));
     } catch (err) {
       console.error('データ取得エラー:', err);
     } finally {
@@ -643,6 +677,145 @@ export default function TaxReturnContent() {
             </div>
           </div>
         </section>
+
+        {/* ── v0.17.0: 青色申告特別控除 ── */}
+        <section className="mb-10">
+          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+            青色申告特別控除
+          </div>
+          <div className="bg-white rounded-xl shadow-sm p-5">
+            <div className="flex items-start gap-3">
+              <div className="w-5 h-5 rounded-full bg-[#1B4D3E]/10 flex items-center justify-center shrink-0 mt-0.5">
+                <Check className="w-3 h-3 text-[#1B4D3E]" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-[#1a1a1a] mb-2">
+                  75万円控除を受ける準備ができています
+                </p>
+                <p className="text-[11px] text-[#666] leading-relaxed whitespace-pre-line">
+                  {`このアプリで行ったすべての訂正と削除は、自動で記録されています。
+これは「優良な電子帳簿」と呼ばれる、税務署が認める帳簿の要件のひとつです。
+
+これを満たした上で:
+└ 複式簿記での記帳（このアプリでの登録が自動で複式簿記の仕訳になります）
+└ 期限内のe-Tax提出（あなたが期限を守れば達成）
+
+この3つを揃えると、令和9年分（2028年提出）の確定申告から、
+青色申告特別控除が65万円→75万円に拡大されます。
+
+※ 青色申告特別控除 = 売上から差し引ける金額。多いほど税金が安くなる`}
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── v0.17.0: インボイス登録判定（条件付き表示） ── */}
+        {(() => {
+          // 800万円未満は何も表示しない（ゴミを出さない）
+          // 既にインボイス登録済の場合も表示しない
+          if (invoiceRegistered) return null;
+          const threshold = 8_000_000;
+          const taxableLine = 10_000_000;
+          // 表示条件: 当年売上が閾値超 OR 2年前売上が課税ライン超
+          const showByCurrentYear = revenueCurrent >= threshold;
+          const showByBaseLine = revenueTwoYearsAgo > taxableLine;
+          if (!showByCurrentYear && !showByBaseLine) return null;
+
+          // レベル判定（強い順）
+          let level: 'confirmed' | 'warning' | 'caution' = 'caution';
+          if (showByBaseLine) level = 'confirmed'; // 2年前1,000万超 → 確定で課税事業者
+          else if (revenueCurrent > taxableLine) level = 'warning'; // 当年1,000万超
+          else level = 'caution'; // 800万〜1,000万
+
+          const config = {
+            confirmed: {
+              color: '#C23728',
+              bg: '#FDF0EE',
+              title: '当年から、消費税を納める必要があります',
+              body: `2年前の売上が1,000万円を超えていたため、当年から消費税の納税義務が発生しました。
+
+これは何を意味するか:
+└ 当年の売上の一部を、消費税として国に納める必要があります
+└ 確定申告で「消費税の申告」をします（所得税とは別）
+└ 取引先と取引する際、インボイス登録番号がないと相手が経費精算で損をします
+
+すぐに、何をすべきか:
+1. インボイス登録（まだなら今すぐ・国税庁）
+2. 消費税の計算方法を選ぶ（後ほど確認画面で選択できるようにします）
+3. 確定申告では消費税申告も必要（所得税と同時提出が一般的）`,
+            },
+            warning: {
+              color: '#C23728',
+              bg: '#FDF0EE',
+              title: '来々年（2年後）から、消費税を納める必要があります',
+              body: `当年の売上が1,000万円を超えました。
+
+これによって何が起きるか:
+└ 来々年（2年後）から、消費税の納税義務が発生します
+└ 確定申告で「消費税の申告」が必要になります（所得税とは別）
+└ 取引先からインボイス登録番号を求められる可能性が高まります
+
+いま、何をすべきか:
+1. インボイス登録の手続きを始める（国税庁・無料・1〜2ヶ月かかる）
+2. 消費税の計算方法を選ぶ（複数の方式があり、税額が変わります）
+
+※ アプリ側でも、登録後は自動で消費税の計算をサポートします`,
+            },
+            caution: {
+              color: '#D4A03A',
+              bg: '#FAF6EE',
+              title: '売上1,000万円が見えてきました',
+              body: `当年の売上が800万円を超えました。
+
+このまま1,000万円を超えると、何が起きるか:
+└ 2年後から、消費税の納税義務が発生します
+└ 取引先によっては、インボイス登録番号を求められます
+
+いま、何をしておくと安心か:
+└ 売上1,000万円を超えそうな状態を把握しておく
+└ インボイス登録は、課税事業者になる前から手続き可能です
+
+※ 消費税の納税義務 = 売上の一部を税金として国に納める義務
+※ インボイス = 取引先が経費精算するときに必要な「正式な請求書」`,
+            },
+          }[level];
+
+          return (
+            <section className="mb-10">
+              <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+                インボイス登録の判定
+              </div>
+              <div className="rounded-xl shadow-sm p-5" style={{ backgroundColor: config.bg }}>
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" style={{ color: config.color }} />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium mb-2" style={{ color: config.color }}>
+                      {config.title}
+                    </p>
+                    <p className="text-[11px] text-[#333] leading-relaxed whitespace-pre-line">
+                      {config.body}
+                    </p>
+                    <div className="mt-3 grid grid-cols-2 gap-3 text-[11px]">
+                      <div>
+                        <div className="text-[#999]">当年売上</div>
+                        <div className="font-['Saira_Condensed'] text-base text-[#1a1a1a] tabular-nums">
+                          {yen(revenueCurrent)}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[#999]">2年前売上（基準期間）</div>
+                        <div className="font-['Saira_Condensed'] text-base text-[#1a1a1a] tabular-nums">
+                          {yen(revenueTwoYearsAgo)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          );
+        })()}
 
         {/* ── 仕訳帳 ── */}
         <section className="mb-10">
