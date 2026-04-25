@@ -305,7 +305,7 @@ export default function TaxReturnContentRenaissance() {
               fontFamily: F.jp, fontSize: 24, fontWeight: 400, color: C.text,
               lineHeight: 1.45, letterSpacing: '0.03em', marginBottom: 10,
             }}>
-              この一年で、いくら手元に残ったか。
+              この一年を、締める。
             </h1>
             <p style={{ fontSize: 10, color: C.textMute, letterSpacing: '0.2em', fontWeight: 300 }}>
               確定申告 · {year} · {ownerLabel}
@@ -461,7 +461,7 @@ export default function TaxReturnContentRenaissance() {
             VOLUME 05 · TAX RETURN
           </p>
           <h1 style={{ fontFamily: F.jp, fontSize: 40, fontWeight: 400, color: C.text, lineHeight: 1.35, letterSpacing: '0.04em', marginBottom: 16 }}>
-            この一年で、いくら手元に残ったか。
+            この一年を、締める。
           </h1>
           <p style={{ fontSize: 11, color: C.textMute, letterSpacing: '0.2em', fontWeight: 300, marginBottom: 18 }}>
             確定申告 — Tax Return · {year} · {ownerLabel}

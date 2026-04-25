@@ -300,7 +300,8 @@ export default function ManagementContentRenaissance() {
     );
   }
 
-  const poeticTitle = viewMode === 'pl' ? 'いま、儲かっているのか。' : 'いま、お金は足りているのか。';
+  const poeticTitle = 'いま、儲かっているのか。';
+  const subContext = viewMode === 'pl' ? 'お金は、どう生まれたか。' : 'お金は、どう動いたか。';
   const sectionLabel = viewMode === 'pl' ? '損益 — Profit & Loss' : 'キャッシュフロー — Cash Flow';
 
   return (
@@ -327,10 +328,21 @@ export default function ManagementContentRenaissance() {
                 color: C.text,
                 lineHeight: 1.35,
                 letterSpacing: '0.04em',
-                marginBottom: 16,
+                marginBottom: 14,
               }}>
                 {poeticTitle}
               </h1>
+              <p style={{
+                fontFamily: F.jp,
+                fontSize: 18,
+                fontWeight: 400,
+                color: C.textSub,
+                letterSpacing: '0.06em',
+                lineHeight: 1.5,
+                marginBottom: 16,
+              }}>
+                — {subContext}
+              </p>
               <p style={{ fontSize: 11, color: C.textMute, letterSpacing: '0.2em', fontWeight: 300 }}>
                 {sectionLabel} · {year}
               </p>

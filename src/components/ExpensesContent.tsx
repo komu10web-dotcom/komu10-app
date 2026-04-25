@@ -221,17 +221,17 @@ export default function ExpensesContent() {
     <div className="min-h-screen">
       <div className="max-w-5xl mx-auto px-6 py-8">
 
-        {/* ── ヘッダー(δ案語彙・明色基調) ── */}
-        <div className="flex items-end justify-between mb-8 pb-5 border-b border-[#e8e6e3]">
+        {/* ── ヘッダー(δ案語彙・明色基調・縦積み構造) ── */}
+        <div className="mb-8 pb-5 border-b border-[#e8e6e3]">
           <div>
             <p className="font-['Saira_Condensed'] text-[11px] tracking-[0.3em] text-[#D4A03A] mb-3 font-medium">
               VOLUME 02 · EXPENSES
             </p>
             <h1 className="font-['Shippori_Mincho'] text-[26px] font-normal text-[#1a1a1a] leading-[1.4] tracking-[0.03em]">
-              いつ、何に、いくら使ったか。
+              いくら、投じているか。
             </h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="mt-6 flex flex-wrap items-center gap-2">
             <button
               onClick={() => { setEditTarget(null); setModalOpen(true); }}
               className="flex items-center gap-1.5 px-4 py-2 bg-[#1a1a1a] text-white rounded-lg text-xs font-medium hover:bg-[#333] transition-colors"
