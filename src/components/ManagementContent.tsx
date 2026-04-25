@@ -709,7 +709,7 @@ export default function ManagementContent() {
   }
 
   return (
-    <div className="k10-mgmt-renaissance min-h-screen">
+    <div className="min-h-screen">
       <div className="max-w-5xl mx-auto px-6 py-8">
 
         {/* ── ヘッダー ── */}
