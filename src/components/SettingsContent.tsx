@@ -1057,6 +1057,7 @@ export default function SettingsContent() {
   };
 
   // v0.15.5: 0件削除 or 移行付き削除を実行
+  // v0.16.1: 操作ログを audit_log に記録(優良な電子帳簿保存 要件①)
   const handleSubCatDeleteConfirm = async () => {
     if (!supabase || !subCatDeleteTarget) return;
     const target = subCategories.find(s => s.id === subCatDeleteTarget.id);
@@ -1072,9 +1073,21 @@ export default function SettingsContent() {
           .update({ is_active: false })
           .eq('id', target.id);
         if (error) throw new Error('項目を削除できませんでした。もう一度お試しください。\n' + error.message);
+
+        // v0.16.1: 削除ログ記録(失敗してもサイレントに継続 = 業務影響なし)
+        await supabase.from('audit_log' as any).insert({
+          table_name: 'sub_categories',
+          record_id: target.id,
+          operation: 'DELETE',
+          old_data: target,
+          new_data: { ...target, is_active: false },
+          changed_fields: ['is_active'],
+          context: { reason: 'manual_delete_zero_usage', usage_count: 0 },
+        }).then(() => null).catch(() => null);
       } else {
         // 1件以上: 移行処理
         let destKey: string;
+        let newSubCategoryId: string | null = null;
 
         if (subCatMigrateMode === 'existing') {
           if (!subCatMigrateTargetKey) {
@@ -1100,7 +1113,7 @@ export default function SettingsContent() {
             ...sameGroup.filter(s => s.display_order < 999).map(s => s.display_order)
           );
           const newOrder = maxUserOrder + 10;
-          const { error: insertErr } = await supabase
+          const { data: insertedRow, error: insertErr } = await supabase
             .from('sub_categories' as any)
             .insert({
               key: newKey,
@@ -1109,9 +1122,24 @@ export default function SettingsContent() {
               display_order: newOrder,
               is_active: true,
               is_system: false,
-            });
+            })
+            .select()
+            .single();
           if (insertErr) throw new Error('新しい項目を作成できませんでした。もう一度お試しください。\n' + insertErr.message);
           destKey = newKey;
+          newSubCategoryId = (insertedRow as any)?.id ?? null;
+
+          // v0.16.1: 新規項目作成ログ
+          if (newSubCategoryId) {
+            await supabase.from('audit_log' as any).insert({
+              table_name: 'sub_categories',
+              record_id: newSubCategoryId,
+              operation: 'INSERT',
+              old_data: null,
+              new_data: insertedRow,
+              context: { reason: 'created_for_migration', migrated_from_key: target.key },
+            }).then(() => null).catch(() => null);
+          }
         }
 
         // transactions の sub_category を一括UPDATE
@@ -1121,12 +1149,44 @@ export default function SettingsContent() {
           .eq('sub_category', target.key);
         if (updateErr) throw new Error('取引の移行に失敗しました。データはそのまま残っています。\n' + updateErr.message);
 
+        // v0.16.1: 取引一括移行ログ
+        await supabase.from('audit_log' as any).insert({
+          table_name: 'transactions',
+          record_id: target.id, // 移行元 sub_category.id を参照
+          operation: 'MIGRATE',
+          old_data: { sub_category: target.key },
+          new_data: { sub_category: destKey },
+          changed_fields: ['sub_category'],
+          context: {
+            reason: 'sub_category_deletion',
+            from_key: target.key,
+            to_key: destKey,
+            from_label: target.label,
+            affected_count: usageCount,
+          },
+        }).then(() => null).catch(() => null);
+
         // 元の項目を論理削除
         const { error: deleteErr } = await supabase
           .from('sub_categories' as any)
           .update({ is_active: false })
           .eq('id', target.id);
         if (deleteErr) throw new Error('項目を削除できませんでした。取引はそのまま残っています。\n' + deleteErr.message);
+
+        // v0.16.1: 削除ログ
+        await supabase.from('audit_log' as any).insert({
+          table_name: 'sub_categories',
+          record_id: target.id,
+          operation: 'DELETE',
+          old_data: target,
+          new_data: { ...target, is_active: false },
+          changed_fields: ['is_active'],
+          context: {
+            reason: 'manual_delete_with_migration',
+            usage_count: usageCount,
+            migrated_to_key: destKey,
+          },
+        }).then(() => null).catch(() => null);
       }
 
       await refreshSubCategories();
@@ -3954,22 +4014,38 @@ export default function SettingsContent() {
             リリースノート
           </div>
           <div className="space-y-3">
-            {/* v0.16.0 */}
+            {/* v0.16.1 */}
             <div className="bg-white rounded-xl shadow-sm p-4">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.16.0</span>
+                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.16.1</span>
                 <span className="text-[9px] text-[#999]">2026.04.25</span>
                 <span className="text-[8px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full font-medium">LATEST</span>
               </div>
               <ul className="space-y-1">
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>内訳項目の削除・移行・新規作成の操作履歴を audit_log に自動記録(優良な電子帳簿保存 要件①への対応開始)</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#666]">·</span>記録される情報: 操作種別 / 移行元と移行先 / 影響件数 / 操作日時</li>
+              </ul>
+            </div>
+
+            {/* v0.16.0 */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.16.0</span>
+                  <span className="text-[9px] text-[#999]">2026.04.25</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
+                <ul className="space-y-1">
                 <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>カメラ購入のFAQを令和8年度税制改正に対応（少額減価償却資産の特例30万円→40万円）</li>
                 <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>FAQ全8項目の文言を見直し、より自然で読みやすい日本語に統一</li>
                 <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>交通費の合計3万円以上アラートを「保管が推奨」から「添付が必須」に修正(税務上の正確化)</li>
                 <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>削除モーダルの使用状況確認エラー文を、状況と対処が一目で分かる文面に変更</li>
                 <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>内訳項目の追加・編集・削除に関する全エラー文言を見直し(取引データの安全性を明示)</li>
                 <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>確定申告FAQの「E-TAX」を国税庁公式表記の「e-Tax」に統一</li>
-              </ul>
-            </div>
+                </ul>
+              </div>
+            </details>
 
             {/* v0.15.8 */}
             <details className="bg-white rounded-xl shadow-sm">
@@ -4599,7 +4675,7 @@ export default function SettingsContent() {
 
         {/* バージョン */}
         <div className="text-center py-8">
-          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.16.0</span>
+          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.16.1</span>
         </div>
 
       </div>{/* end max-w-3xl */}
