@@ -7,19 +7,38 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PU
 const GAS_URL = process.env.DEFAULT_GAS_API_URL || 'https://script.google.com/macros/s/AKfycbwiGFVxofGPnaPJnox_K7GeW01elk9ZGPoN0dWC9bi9hqoKdEmXbGtxQZjDRWw94oah/exec';
 const COMPANY_FOLDER_ID = '1RkUALh9_Zl8Yz7_gXMfYNMPnnh7NSo5R'; // 00_会社
 
+// v0.18.1: 全24テーブルを網羅。リストア時の外部キー依存を考慮し
+// マスタ系 → トランザクション系 → 子テーブル系の順に並べる
 const TABLES = [
-  'transactions',
-  'transaction_allocations',
-  'projects',
-  'assets',
-  'anbun_settings',
-  'transport_details',
+  // ── マスタ・基本情報 ──
   'profiles',
+  'business_domains',
+  'contract_types',
   'revenue_types',
   'revenue_type_divisions',
-  'contract_types',
   'clients',
-  'recurring_expenses',
+  'projects',
+  'sub_categories',           // v0.15.0: 内訳タグマスタ
+  'transport_purposes',       // 取材目的マスタ
+  'route_templates',          // v0.7: 交通費物理経路マスタ
+  'bank_accounts',            // 振込先口座
+  'equipment_items',          // 備品台帳
+  'assets',                   // 固定資産
+  'anbun_settings',           // 按分設定
+  'recurring_expenses',       // 定期取引
+
+  // ── 請求書系 ──
+  'invoice_templates',        // 請求書テンプレ
+  'invoice_template_items',   // 請求書テンプレ明細
+  'invoices',                 // 請求書本体
+  'invoice_items',            // 請求書明細
+
+  // ── トランザクション系 ──
+  'transactions',
+  'transaction_allocations',  // 案件配賦
+  'transport_details',        // 交通費詳細(route_legs等)
+  'expense_receipts',         // v0.11.0: 複数領収書添付
+  'bank_transactions',        // 銀行明細(将来用)
 ] as const;
 
 // ── 共通: バックアップJSON生成 ──
