@@ -1,21 +1,19 @@
 'use client';
 
 /**
- * TaxReturnContentRenaissance.tsx — komu10 確定申告 δ案 Renaissance版
+ * TaxReturnContentRenaissance.tsx — komu10 確定申告 δ案 v0.22.0
  *
- * 設計原則:
- *   - 配色: 黒(#0a0a0b) / 白 / 金黄(#D4A03A) / 緑(#1B4D3E) / 赤(#C23728) のみ
- *   - フォント: Saira Condensed(数字主役) / Shippori Mincho(和文) / Inter(本文)
- *   - 装飾: 影・グラデ・絵文字 完全禁止
- *   - JSX直書きスタイル(!important禁止・CSS上書き禁止)
+ * 設計思想:
+ *   - スマホ(<768px) = 入力主体・確定申告は基本PCで・誘導文表示
+ *   - タブレット縦・PC(>=768px) = 没入体験フル表示
  *
  * STEP 8 通過済(四面トリプルチェック+Jobs+COMMANDER)
  *
- * ロジックは既存 TaxReturnContent.tsx から共有関数を import 再利用:
- *   - calcDepreciation: 減価償却計算
- *   - generateJournalEntries: 仕訳帳生成
- *   - downloadCSV: 仕訳CSV出力
+ * v0.22.0 改修:
+ *   - スマホ簡易ビュー新設(損益サマリー+案C誘導文)
+ *   - PC/タブレット側: max-width 880→960拡大・余白拡大・所得Saira 64→80px
  *
+ * ロジックは既存 TaxReturnContent.tsx から共有関数を import 再利用
  * ブランド統括: Hedi Slimane / AD: Raf Simons / 窓口: David Sims
  */
 
@@ -25,14 +23,13 @@ import { KAMOKU } from '@/types/database';
 import type { Transaction, Asset, AnbunSetting, FundTransfer, BankAccount } from '@/types/database';
 import { Copy, Check, Download, Loader2, AlertTriangle } from 'lucide-react';
 import { usePeriodRange } from './HeaderControls';
+import { useViewport } from '@/lib/useViewport';
 import {
   calcDepreciation,
   generateJournalEntries,
   downloadCSV,
   type KamokuSummary,
 } from './TaxReturnContent';
-
-// ========== デザイントークン ==========
 
 const C = {
   bg: '#0a0a0b',
@@ -58,8 +55,6 @@ const F = {
   body: "'Inter', sans-serif",
 } as const;
 
-// ========== ヘルパー ==========
-
 const yen = (n: number) => '¥' + Math.floor(n).toLocaleString('ja-JP');
 const yenShort = (n: number) => {
   const a = Math.abs(n);
@@ -74,8 +69,6 @@ const formatDate = (d: string) => {
   const [, m, dd] = d.split('-');
   return `${m}/${dd}`;
 };
-
-// ========== コピーボタン(暗色版) ==========
 
 function CopyButton({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
@@ -107,7 +100,6 @@ function CopyButton({ value }: { value: string }) {
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        transition: 'opacity 0.15s',
       }}
       title="金額をコピー"
     >
@@ -120,27 +112,25 @@ function CopyButton({ value }: { value: string }) {
   );
 }
 
-// ========== セクション枠 ==========
-
 function Section({ num, title, children }: { num: string; title: string; children: React.ReactNode }) {
   return (
-    <section style={{ marginBottom: 56 }}>
-      <div style={{ marginBottom: 20, display: 'flex', alignItems: 'baseline', gap: 16 }}>
-        <span style={{ fontFamily: F.num, fontSize: 12, color: C.gold, letterSpacing: '0.2em', fontWeight: 500 }}>— {num}</span>
-        <span style={{ fontFamily: F.jp, fontSize: 15, color: C.textSub, letterSpacing: '0.05em' }}>{title}</span>
+    <section style={{ marginBottom: 80 }}>
+      <div style={{ marginBottom: 28, display: 'flex', alignItems: 'baseline', gap: 20 }}>
+        <span style={{ fontFamily: F.num, fontSize: 13, color: C.gold, letterSpacing: '0.25em', fontWeight: 500 }}>— {num}</span>
+        <span style={{ fontFamily: F.jp, fontSize: 17, color: C.textSub, letterSpacing: '0.06em' }}>{title}</span>
       </div>
       {children}
     </section>
   );
 }
 
-// ========== コンポーネント本体 ==========
-
 export default function TaxReturnContentRenaissance() {
   const { owner, year: yearStr } = usePeriodRange();
   const year = parseInt(yearStr);
+  const { isWide, mounted } = useViewport();
 
   const [loading, setLoading] = useState(true);
+  const [appeared, setAppeared] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [anbunSettings, setAnbunSettings] = useState<AnbunSetting[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -150,17 +140,24 @@ export default function TaxReturnContentRenaissance() {
   const [revenueCurrent, setRevenueCurrent] = useState(0);
   const [revenueTwoYearsAgo, setRevenueTwoYearsAgo] = useState(0);
 
+  useEffect(() => {
+    if (!loading) {
+      const t = setTimeout(() => setAppeared(true), 40);
+      return () => clearTimeout(t);
+    }
+  }, [loading]);
+
   const fetchData = useCallback(async () => {
     if (!supabase) return;
     setLoading(true);
+    setAppeared(false);
     try {
       const effectiveOwner = owner === 'all' ? 'tomo' : owner;
 
       const { data: txData } = await supabase
         .from('transactions').select('*')
         .eq('owner', effectiveOwner)
-        .gte('date', `${year}-01-01`)
-        .lt('date', `${year + 1}-01-01`)
+        .gte('date', `${year}-01-01`).lt('date', `${year + 1}-01-01`)
         .order('date', { ascending: true });
 
       const { data: anbunData } = await supabase
@@ -177,15 +174,12 @@ export default function TaxReturnContentRenaissance() {
       const { data: ftData } = await supabase
         .from('fund_transfers').select('*')
         .eq('owner', effectiveOwner)
-        .gte('transfer_date', `${year}-01-01`)
-        .lt('transfer_date', `${year + 1}-01-01`)
+        .gte('transfer_date', `${year}-01-01`).lt('transfer_date', `${year + 1}-01-01`)
         .order('transfer_date', { ascending: true });
 
       const { data: profileData } = await supabase
-        .from('profiles')
-        .select('invoice_registered, is_taxable')
-        .eq('user_key', effectiveOwner)
-        .single();
+        .from('profiles').select('invoice_registered, is_taxable')
+        .eq('user_key', effectiveOwner).single();
 
       const { data: revCurrentData } = await supabase
         .from('transactions').select('amount')
@@ -213,8 +207,6 @@ export default function TaxReturnContentRenaissance() {
   }, [owner, year]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
-
-  // ========== 集計 ==========
 
   const effectiveOwner = owner === 'all' ? 'tomo' : owner;
   const ownerLabel = effectiveOwner === 'tomo' ? 'トモ' : 'トシキ';
@@ -283,9 +275,7 @@ export default function TaxReturnContentRenaissance() {
     [transactions, kamokuSummaries, depreciationRows, year, bankAccounts, fundTransfers]
   );
 
-  // ========== UI ==========
-
-  if (loading) {
+  if (loading || !mounted) {
     return (
       <div style={{ background: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Loader2 style={{ width: 20, height: 20, color: C.gold }} className="animate-spin" />
@@ -293,7 +283,107 @@ export default function TaxReturnContentRenaissance() {
     );
   }
 
-  // インボイス判定の表示条件
+  // ========== スマホ簡易ビュー ==========
+
+  if (!isWide) {
+    return (
+      <div style={{
+        background: C.bg,
+        minHeight: '100vh',
+        color: C.text,
+        fontFamily: F.body,
+        opacity: appeared ? 1 : 0,
+        transition: 'opacity 280ms ease-out',
+      }}>
+        <div style={{ maxWidth: 480, margin: '0 auto', padding: '32px 24px 64px' }}>
+
+          <header style={{ paddingBottom: 24, marginBottom: 36, borderBottom: `1px solid ${C.line}` }}>
+            <p style={{ fontFamily: F.num, fontSize: 11, letterSpacing: '0.3em', color: C.gold, marginBottom: 14, fontWeight: 500 }}>
+              VOLUME 05 · TAX RETURN
+            </p>
+            <h1 style={{
+              fontFamily: F.jp, fontSize: 24, fontWeight: 400, color: C.text,
+              lineHeight: 1.45, letterSpacing: '0.03em', marginBottom: 10,
+            }}>
+              この一年で、いくら手元に残ったか。
+            </h1>
+            <p style={{ fontSize: 10, color: C.textMute, letterSpacing: '0.2em', fontWeight: 300 }}>
+              確定申告 · {year} · {ownerLabel}
+            </p>
+          </header>
+
+          {/* 簡易チェック: 売上/経費/所得 */}
+          <section style={{ marginBottom: 40 }}>
+            <p style={{ fontFamily: F.num, fontSize: 10, letterSpacing: '0.25em', color: C.gold, marginBottom: 16, fontWeight: 500 }}>
+              — 簡易チェック
+            </p>
+            <div style={{ background: C.surface, border: `1px solid ${C.line}`, padding: '24px 20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 18 }}>
+                <span style={{ fontSize: 11, color: C.textSub, letterSpacing: '0.05em' }}>売上</span>
+                <span style={{ fontFamily: F.num, fontSize: 28, color: C.gold, fontFeatureSettings: "'tnum' 1" }}>{yenShort(revenueTotal)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 18, paddingTop: 14, borderTop: `1px solid ${C.lineSoft}` }}>
+                <span style={{ fontSize: 11, color: C.textSub, letterSpacing: '0.05em' }}>経費(按分後)</span>
+                <span style={{ fontFamily: F.num, fontSize: 28, color: C.crimson, fontFeatureSettings: "'tnum' 1" }}>{yenShort(expenseTotal)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: 16, borderTop: `1px solid ${C.line}` }}>
+                <span style={{ fontSize: 11, color: C.text, letterSpacing: '0.05em', fontWeight: 500 }}>所得</span>
+                <span style={{
+                  fontFamily: F.num, fontSize: 36, fontWeight: 500,
+                  letterSpacing: '-0.02em', lineHeight: 1,
+                  color: income >= 0 ? C.green : C.crimson,
+                  fontFeatureSettings: "'tnum' 1",
+                }}>
+                  {yenShort(income)}
+                </span>
+              </div>
+            </div>
+          </section>
+
+          {/* 誘導メッセージ */}
+          <section style={{ marginTop: 56, marginBottom: 24 }}>
+            <div style={{
+              padding: '40px 8px',
+              borderTop: `1px solid ${C.line}`,
+              borderBottom: `1px solid ${C.line}`,
+              textAlign: 'center',
+            }}>
+              <p style={{ fontFamily: F.jp, fontSize: 18, color: C.text, lineHeight: 2, letterSpacing: '0.08em', marginBottom: 4 }}>
+                入力は、ここで。
+              </p>
+              <p style={{ fontFamily: F.jp, fontSize: 18, color: C.text, lineHeight: 2, letterSpacing: '0.08em', marginBottom: 28 }}>
+                確定申告は、PC で。
+              </p>
+              <p style={{
+                fontSize: 11, color: C.textSub, lineHeight: 1.95, letterSpacing: '0.05em',
+                maxWidth: 340, margin: '0 auto',
+              }}>
+                e-Taxへの転記、仕訳帳のCSV出力、減価償却の確認は、
+                <br />
+                PC・タブレットからご覧ください。
+              </p>
+            </div>
+          </section>
+
+          <footer style={{
+            marginTop: 48, paddingTop: 24, borderTop: `1px solid ${C.line}`,
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            fontSize: 9, color: C.textMute, letterSpacing: '0.15em',
+          }}>
+            <span style={{ fontFamily: F.num, fontWeight: 500, fontSize: 12 }}>
+              komu<span style={{ color: C.gold }}>10</span>
+            </span>
+            <span style={{ fontFamily: F.num, letterSpacing: '0.25em' }}>
+              VOLUME 05 · {year}
+            </span>
+          </footer>
+        </div>
+      </div>
+    );
+  }
+
+  // ========== PC・タブレット 没入ビュー ==========
+
   const showInvoiceBanner = (() => {
     if (invoiceRegistered) return false;
     const threshold = 8_000_000;
@@ -356,38 +446,43 @@ export default function TaxReturnContentRenaissance() {
   }[invoiceLevel];
 
   return (
-    <div style={{ background: C.bg, minHeight: '100vh', color: C.text, fontFamily: F.body }}>
-      <div style={{ maxWidth: 880, margin: '0 auto', padding: '40px 24px 80px' }}>
+    <div style={{
+      background: C.bg,
+      minHeight: '100vh',
+      color: C.text,
+      fontFamily: F.body,
+      opacity: appeared ? 1 : 0,
+      transition: 'opacity 280ms ease-out',
+    }}>
+      <div style={{ maxWidth: 960, margin: '0 auto', padding: '64px 48px 96px' }}>
 
-        {/* ===== ヘッダー ===== */}
-        <header style={{ borderBottom: `1px solid ${C.line}`, paddingBottom: 28, marginBottom: 40 }}>
-          <p style={{ fontFamily: F.num, fontSize: 11, letterSpacing: '0.3em', color: C.gold, marginBottom: 14, fontWeight: 500 }}>
+        <header style={{ borderBottom: `1px solid ${C.line}`, paddingBottom: 40, marginBottom: 64 }}>
+          <p style={{ fontFamily: F.num, fontSize: 12, letterSpacing: '0.35em', color: C.gold, marginBottom: 22, fontWeight: 500 }}>
             VOLUME 05 · TAX RETURN
           </p>
-          <h1 style={{ fontFamily: F.jp, fontSize: 30, fontWeight: 400, color: C.text, lineHeight: 1.4, letterSpacing: '0.02em', marginBottom: 10 }}>
+          <h1 style={{ fontFamily: F.jp, fontSize: 40, fontWeight: 400, color: C.text, lineHeight: 1.35, letterSpacing: '0.04em', marginBottom: 16 }}>
             この一年で、いくら手元に残ったか。
           </h1>
-          <p style={{ fontSize: 11, color: C.textMute, letterSpacing: '0.15em', fontWeight: 300, marginBottom: 14 }}>
+          <p style={{ fontSize: 11, color: C.textMute, letterSpacing: '0.2em', fontWeight: 300, marginBottom: 18 }}>
             確定申告 — Tax Return · {year} · {ownerLabel}
           </p>
-          <p style={{ fontSize: 12, color: C.textSub, lineHeight: 1.7 }}>
+          <p style={{ fontSize: 13, color: C.textSub, lineHeight: 1.75 }}>
             この画面の数字を e-Tax に転記してください。各項目の金額はコピーアイコンから取り出せます。
           </p>
         </header>
 
-        {/* ===== 按分未設定の警告 ===== */}
         {missingAnbun.length > 0 && (
           <div style={{
-            marginBottom: 24,
-            padding: '16px 20px',
+            marginBottom: 32,
+            padding: '20px 24px',
             background: C.goldSoft,
             border: `1px solid ${C.gold}`,
             display: 'flex',
             alignItems: 'flex-start',
-            gap: 12,
+            gap: 14,
           }}>
-            <AlertTriangle style={{ width: 16, height: 16, color: C.gold, marginTop: 2, flexShrink: 0 }} />
-            <div style={{ fontSize: 12, color: C.text, lineHeight: 1.7 }}>
+            <AlertTriangle style={{ width: 18, height: 18, color: C.gold, marginTop: 2, flexShrink: 0 }} />
+            <div style={{ fontSize: 13, color: C.text, lineHeight: 1.75 }}>
               <span style={{ fontWeight: 500 }}>按分設定がありません：</span>
               {missingAnbun.map(k => k.name).join('、')}
               <br />
@@ -396,30 +491,24 @@ export default function TaxReturnContentRenaissance() {
           </div>
         )}
 
-        {/* ===== — 01 損益サマリー(Hero) ===== */}
         <Section num="01" title="今年の手応え">
           <div style={{
             background: C.surface,
             border: `1px solid ${C.line}`,
-            padding: '40px 32px',
+            padding: '56px 48px',
             display: 'grid',
             gridTemplateColumns: '1fr',
-            gap: 28,
+            gap: 36,
           }}>
-            {/* 売上 */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 16, flexWrap: 'wrap' }}>
               <div>
-                <p style={{ fontSize: 10, letterSpacing: '0.25em', color: C.textMute, marginBottom: 8, textTransform: 'uppercase' }}>売上</p>
-                <p style={{ fontSize: 11, color: C.textSub }}>すべての入金</p>
+                <p style={{ fontSize: 11, letterSpacing: '0.3em', color: C.textMute, marginBottom: 10, textTransform: 'uppercase', fontWeight: 500 }}>売上</p>
+                <p style={{ fontSize: 12, color: C.textSub }}>すべての入金</p>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{
-                  fontFamily: F.num,
-                  fontSize: 48,
-                  fontWeight: 400,
-                  letterSpacing: '-0.02em',
-                  lineHeight: 1,
-                  color: C.gold,
+                  fontFamily: F.num, fontSize: 56, fontWeight: 400,
+                  letterSpacing: '-0.025em', lineHeight: 1, color: C.gold,
                   fontFeatureSettings: "'tnum' 1, 'lnum' 1",
                 }}>
                   {yen(revenueTotal)}
@@ -428,20 +517,15 @@ export default function TaxReturnContentRenaissance() {
               </div>
             </div>
 
-            {/* 経費 */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 16, paddingTop: 24, borderTop: `1px solid ${C.lineSoft}`, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 16, paddingTop: 32, borderTop: `1px solid ${C.lineSoft}`, flexWrap: 'wrap' }}>
               <div>
-                <p style={{ fontSize: 10, letterSpacing: '0.25em', color: C.textMute, marginBottom: 8, textTransform: 'uppercase' }}>経費</p>
-                <p style={{ fontSize: 11, color: C.textSub }}>按分後 + 減価償却</p>
+                <p style={{ fontSize: 11, letterSpacing: '0.3em', color: C.textMute, marginBottom: 10, textTransform: 'uppercase', fontWeight: 500 }}>経費</p>
+                <p style={{ fontSize: 12, color: C.textSub }}>按分後 + 減価償却</p>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{
-                  fontFamily: F.num,
-                  fontSize: 48,
-                  fontWeight: 400,
-                  letterSpacing: '-0.02em',
-                  lineHeight: 1,
-                  color: C.crimson,
+                  fontFamily: F.num, fontSize: 56, fontWeight: 400,
+                  letterSpacing: '-0.025em', lineHeight: 1, color: C.crimson,
                   fontFeatureSettings: "'tnum' 1, 'lnum' 1",
                 }}>
                   {yen(expenseTotal)}
@@ -450,19 +534,15 @@ export default function TaxReturnContentRenaissance() {
               </div>
             </div>
 
-            {/* 所得 */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 16, paddingTop: 24, borderTop: `1px solid ${C.line}`, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 16, paddingTop: 32, borderTop: `1px solid ${C.line}`, flexWrap: 'wrap' }}>
               <div>
-                <p style={{ fontSize: 10, letterSpacing: '0.25em', color: C.textMute, marginBottom: 8, textTransform: 'uppercase' }}>所得</p>
-                <p style={{ fontSize: 11, color: C.textSub }}>売上 − 経費</p>
+                <p style={{ fontSize: 11, letterSpacing: '0.3em', color: C.textMute, marginBottom: 10, textTransform: 'uppercase', fontWeight: 500 }}>所得</p>
+                <p style={{ fontSize: 12, color: C.textSub }}>売上 − 経費</p>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{
-                  fontFamily: F.num,
-                  fontSize: 64,
-                  fontWeight: 400,
-                  letterSpacing: '-0.03em',
-                  lineHeight: 1,
+                  fontFamily: F.num, fontSize: 80, fontWeight: 400,
+                  letterSpacing: '-0.04em', lineHeight: 1,
                   color: income >= 0 ? C.green : C.crimson,
                   fontFeatureSettings: "'tnum' 1, 'lnum' 1",
                 }}>
@@ -474,56 +554,45 @@ export default function TaxReturnContentRenaissance() {
           </div>
         </Section>
 
-        {/* ===== — 02 経費の内訳 ===== */}
         <Section num="02" title="経費の内訳（按分後）">
           {kamokuSummaries.length === 0 && depreciationTotal === 0 ? (
-            <div style={{ background: C.surface, border: `1px solid ${C.line}`, padding: '40px 24px', textAlign: 'center' }}>
+            <div style={{ background: C.surface, border: `1px solid ${C.line}`, padding: '48px 32px', textAlign: 'center' }}>
               <p style={{ fontSize: 12, color: C.textMute }}>経費データがありません</p>
             </div>
           ) : (
             <div style={{ background: C.surface, border: `1px solid ${C.line}` }}>
               {kamokuSummaries.map(k => (
                 <div key={k.kamokuId} style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '14px 24px',
-                  borderBottom: `1px solid ${C.lineSoft}`,
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '18px 32px', borderBottom: `1px solid ${C.lineSoft}`,
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontFamily: F.jp, fontSize: 13, color: C.text }}>{k.name}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <span style={{ fontFamily: F.jp, fontSize: 14, color: C.text }}>{k.name}</span>
                     {k.anbunRatio !== null && (
                       <span style={{
-                        fontSize: 10,
-                        color: C.textSub,
-                        background: C.lineSoft,
-                        padding: '2px 8px',
-                        letterSpacing: '0.05em',
+                        fontSize: 10, color: C.textSub, background: C.lineSoft,
+                        padding: '3px 10px', letterSpacing: '0.05em',
                       }}>
                         按分 {k.anbunRatio}%
                       </span>
                     )}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontFamily: F.num, fontSize: 16, color: C.text, fontFeatureSettings: "'tnum' 1" }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ fontFamily: F.num, fontSize: 18, color: C.text, fontFeatureSettings: "'tnum' 1" }}>
                       {yen(k.amount)}
                     </span>
                     <CopyButton value={String(k.amount)} />
                   </div>
                 </div>
               ))}
-
               {depreciationTotal > 0 && (
                 <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '14px 24px',
-                  borderBottom: `1px solid ${C.lineSoft}`,
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '18px 32px', borderBottom: `1px solid ${C.lineSoft}`,
                 }}>
-                  <span style={{ fontFamily: F.jp, fontSize: 13, color: C.text }}>減価償却費</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontFamily: F.num, fontSize: 16, color: C.text, fontFeatureSettings: "'tnum' 1" }}>
+                  <span style={{ fontFamily: F.jp, fontSize: 14, color: C.text }}>減価償却費</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ fontFamily: F.num, fontSize: 18, color: C.text, fontFeatureSettings: "'tnum' 1" }}>
                       {yen(depreciationTotal)}
                     </span>
                     <CopyButton value={String(depreciationTotal)} />
@@ -534,30 +603,23 @@ export default function TaxReturnContentRenaissance() {
           )}
         </Section>
 
-        {/* ===== — 03 青色申告特別控除(75万円) ===== */}
         <Section num="03" title="青色申告特別控除">
           <div style={{
-            background: C.surface,
-            border: `1px solid ${C.line}`,
-            padding: '24px 28px',
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: 16,
+            background: C.surface, border: `1px solid ${C.line}`, padding: '32px 36px',
+            display: 'flex', alignItems: 'flex-start', gap: 20,
           }}>
             <div style={{
-              width: 24, height: 24,
-              background: C.greenSoft,
+              width: 28, height: 28, background: C.greenSoft,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              flexShrink: 0,
-              marginTop: 2,
+              flexShrink: 0, marginTop: 2,
             }}>
-              <Check style={{ width: 14, height: 14, color: C.green }} />
+              <Check style={{ width: 16, height: 16, color: C.green }} />
             </div>
             <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 14, fontWeight: 500, color: C.text, marginBottom: 14, letterSpacing: '0.02em' }}>
+              <p style={{ fontSize: 15, fontWeight: 500, color: C.text, marginBottom: 16, letterSpacing: '0.02em' }}>
                 75万円控除を受ける準備ができています
               </p>
-              <p style={{ fontSize: 12, color: C.textSub, lineHeight: 1.85, whiteSpace: 'pre-line' }}>
+              <p style={{ fontSize: 13, color: C.textSub, lineHeight: 1.95, whiteSpace: 'pre-line' }}>
                 {`このアプリで行ったすべての訂正と削除は、自動で記録されています。
 これは「優良な電子帳簿」と呼ばれる、税務署が認める帳簿の要件のひとつです。
 
@@ -574,40 +636,33 @@ export default function TaxReturnContentRenaissance() {
           </div>
         </Section>
 
-        {/* ===== — 04 インボイス登録判定(条件付き) ===== */}
         {showInvoiceBanner && (
           <Section num="04" title="消費税とインボイスの予感">
             <div style={{
               background: invoiceConfig.color === C.crimson ? C.crimsonSoft : C.goldSoft,
               border: `1px solid ${invoiceConfig.color}`,
-              padding: '24px 28px',
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: 16,
+              padding: '32px 36px',
+              display: 'flex', alignItems: 'flex-start', gap: 20,
             }}>
-              <AlertTriangle style={{ width: 18, height: 18, color: invoiceConfig.color, marginTop: 2, flexShrink: 0 }} />
+              <AlertTriangle style={{ width: 20, height: 20, color: invoiceConfig.color, marginTop: 2, flexShrink: 0 }} />
               <div style={{ flex: 1 }}>
-                <p style={{ fontSize: 14, fontWeight: 500, color: invoiceConfig.color, marginBottom: 14, letterSpacing: '0.02em' }}>
+                <p style={{ fontSize: 15, fontWeight: 500, color: invoiceConfig.color, marginBottom: 16, letterSpacing: '0.02em' }}>
                   {invoiceConfig.title}
                 </p>
-                <p style={{ fontSize: 12, color: C.text, lineHeight: 1.85, whiteSpace: 'pre-line' }}>
+                <p style={{ fontSize: 13, color: C.text, lineHeight: 1.95, whiteSpace: 'pre-line' }}>
                   {invoiceConfig.body}
                 </p>
                 <div style={{
-                  marginTop: 16,
-                  paddingTop: 14,
-                  borderTop: `1px solid ${C.line}`,
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: 16,
+                  marginTop: 20, paddingTop: 18, borderTop: `1px solid ${C.line}`,
+                  display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24,
                 }}>
                   <div>
-                    <p style={{ fontSize: 10, letterSpacing: '0.2em', color: C.textMute, marginBottom: 6, textTransform: 'uppercase' }}>当年売上</p>
-                    <p style={{ fontFamily: F.num, fontSize: 20, color: C.text, fontFeatureSettings: "'tnum' 1" }}>{yen(revenueCurrent)}</p>
+                    <p style={{ fontSize: 10, letterSpacing: '0.25em', color: C.textMute, marginBottom: 8, textTransform: 'uppercase' }}>当年売上</p>
+                    <p style={{ fontFamily: F.num, fontSize: 24, color: C.text, fontFeatureSettings: "'tnum' 1" }}>{yen(revenueCurrent)}</p>
                   </div>
                   <div>
-                    <p style={{ fontSize: 10, letterSpacing: '0.2em', color: C.textMute, marginBottom: 6, textTransform: 'uppercase' }}>2年前売上 <span style={{ textTransform: 'none', letterSpacing: 0, color: C.textFade }}>(基準期間)</span></p>
-                    <p style={{ fontFamily: F.num, fontSize: 20, color: C.text, fontFeatureSettings: "'tnum' 1" }}>{yen(revenueTwoYearsAgo)}</p>
+                    <p style={{ fontSize: 10, letterSpacing: '0.25em', color: C.textMute, marginBottom: 8, textTransform: 'uppercase' }}>2年前売上 <span style={{ textTransform: 'none', letterSpacing: 0, color: C.textFade }}>(基準期間)</span></p>
+                    <p style={{ fontFamily: F.num, fontSize: 24, color: C.text, fontFeatureSettings: "'tnum' 1" }}>{yen(revenueTwoYearsAgo)}</p>
                   </div>
                 </div>
               </div>
@@ -615,40 +670,32 @@ export default function TaxReturnContentRenaissance() {
           </Section>
         )}
 
-        {/* ===== — 仕訳帳 ===== */}
         <Section num={showInvoiceBanner ? '05' : '04'} title="仕訳帳 — 複式簿記の証跡">
-          <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <p style={{ fontSize: 11, color: C.textMute, lineHeight: 1.6 }}>
+          <div style={{ marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <p style={{ fontSize: 12, color: C.textMute, lineHeight: 1.6 }}>
               CSV出力して e-Tax への転記確認に使えます。
             </p>
             {journalEntries.length > 0 && (
               <button
                 onClick={() => downloadCSV(journalEntries, year, ownerLabel)}
                 style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  background: 'transparent',
-                  border: `1px solid ${C.gold}`,
-                  color: C.gold,
-                  fontSize: 11,
-                  letterSpacing: '0.1em',
-                  padding: '8px 14px',
-                  cursor: 'pointer',
-                  fontFamily: F.body,
-                  transition: 'background 0.15s',
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  background: 'transparent', border: `1px solid ${C.gold}`,
+                  color: C.gold, fontSize: 12, letterSpacing: '0.12em',
+                  padding: '10px 18px', cursor: 'pointer',
+                  fontFamily: F.body, transition: 'background 0.15s',
                 }}
                 onMouseEnter={e => { e.currentTarget.style.background = C.goldSoft; }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
               >
-                <Download style={{ width: 13, height: 13 }} />
+                <Download style={{ width: 14, height: 14 }} />
                 CSV出力
               </button>
             )}
           </div>
 
           {journalEntries.length === 0 ? (
-            <div style={{ background: C.surface, border: `1px solid ${C.line}`, padding: '40px 24px', textAlign: 'center' }}>
+            <div style={{ background: C.surface, border: `1px solid ${C.line}`, padding: '48px 32px', textAlign: 'center' }}>
               <p style={{ fontSize: 12, color: C.textMute }}>仕訳データがありません</p>
             </div>
           ) : (
@@ -659,12 +706,8 @@ export default function TaxReturnContentRenaissance() {
                     {['日付', '借方科目', '借方金額', '貸方科目', '貸方金額', '摘要'].map((h, i) => (
                       <th key={i} style={{
                         textAlign: i === 2 || i === 4 ? 'right' : 'left',
-                        padding: '12px 14px',
-                        fontSize: 9,
-                        letterSpacing: '0.2em',
-                        color: C.textMute,
-                        fontWeight: 500,
-                        textTransform: 'uppercase',
+                        padding: '14px 16px', fontSize: 9, letterSpacing: '0.25em',
+                        color: C.textMute, fontWeight: 500, textTransform: 'uppercase',
                       }}>{h}</th>
                     ))}
                   </tr>
@@ -672,27 +715,27 @@ export default function TaxReturnContentRenaissance() {
                 <tbody>
                   {journalEntries.map((e, i) => (
                     <tr key={i} style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
-                      <td style={{ padding: '10px 14px', color: C.textSub, fontFamily: F.num, fontFeatureSettings: "'tnum' 1" }}>{formatDate(e.date)}</td>
-                      <td style={{ padding: '10px 14px', color: C.gold }}>{e.debitAccount}</td>
-                      <td style={{ padding: '10px 14px', textAlign: 'right', fontFamily: F.num, fontSize: 13, color: C.text, fontFeatureSettings: "'tnum' 1" }}>{yen(e.debitAmount)}</td>
-                      <td style={{ padding: '10px 14px', color: C.green }}>{e.creditAccount}</td>
-                      <td style={{ padding: '10px 14px', textAlign: 'right', fontFamily: F.num, fontSize: 13, color: C.text, fontFeatureSettings: "'tnum' 1" }}>{yen(e.creditAmount)}</td>
-                      <td style={{ padding: '10px 14px', color: C.textMute, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.description}</td>
+                      <td style={{ padding: '12px 16px', color: C.textSub, fontFamily: F.num, fontFeatureSettings: "'tnum' 1" }}>{formatDate(e.date)}</td>
+                      <td style={{ padding: '12px 16px', color: C.gold }}>{e.debitAccount}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right', fontFamily: F.num, fontSize: 13, color: C.text, fontFeatureSettings: "'tnum' 1" }}>{yen(e.debitAmount)}</td>
+                      <td style={{ padding: '12px 16px', color: C.green }}>{e.creditAccount}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right', fontFamily: F.num, fontSize: 13, color: C.text, fontFeatureSettings: "'tnum' 1" }}>{yen(e.creditAmount)}</td>
+                      <td style={{ padding: '12px 16px', color: C.textMute, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.description}</td>
                     </tr>
                   ))}
                 </tbody>
                 <tfoot>
                   <tr style={{ borderTop: `1px solid ${C.line}` }}>
-                    <td style={{ padding: '12px 14px', fontSize: 9, color: C.textSub, letterSpacing: '0.2em', textTransform: 'uppercase' }}>合計</td>
+                    <td style={{ padding: '14px 16px', fontSize: 9, color: C.textSub, letterSpacing: '0.25em', textTransform: 'uppercase' }}>合計</td>
                     <td></td>
-                    <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: F.num, fontSize: 14, color: C.text, fontWeight: 500, fontFeatureSettings: "'tnum' 1" }}>
+                    <td style={{ padding: '14px 16px', textAlign: 'right', fontFamily: F.num, fontSize: 14, color: C.text, fontWeight: 500, fontFeatureSettings: "'tnum' 1" }}>
                       {yen(journalEntries.reduce((s, e) => s + e.debitAmount, 0))}
                     </td>
                     <td></td>
-                    <td style={{ padding: '12px 14px', textAlign: 'right', fontFamily: F.num, fontSize: 14, color: C.text, fontWeight: 500, fontFeatureSettings: "'tnum' 1" }}>
+                    <td style={{ padding: '14px 16px', textAlign: 'right', fontFamily: F.num, fontSize: 14, color: C.text, fontWeight: 500, fontFeatureSettings: "'tnum' 1" }}>
                       {yen(journalEntries.reduce((s, e) => s + e.creditAmount, 0))}
                     </td>
-                    <td style={{ padding: '12px 14px', fontSize: 10, letterSpacing: '0.05em' }}>
+                    <td style={{ padding: '14px 16px', fontSize: 10, letterSpacing: '0.05em' }}>
                       {journalEntries.reduce((s, e) => s + e.debitAmount, 0) ===
                       journalEntries.reduce((s, e) => s + e.creditAmount, 0) ? (
                         <span style={{ color: C.green }}>貸借一致</span>
@@ -707,7 +750,6 @@ export default function TaxReturnContentRenaissance() {
           )}
         </Section>
 
-        {/* ===== — 減価償却(条件付き) ===== */}
         {depreciationRows.length > 0 && (
           <Section num={showInvoiceBanner ? '06' : '05'} title="減価償却 — 資産の費用化">
             <div style={{ background: C.surface, border: `1px solid ${C.line}`, overflowX: 'auto' }}>
@@ -717,12 +759,8 @@ export default function TaxReturnContentRenaissance() {
                     {['資産名', '取得価額', '耐用年数', '事業割合', '当期償却', '期末簿価'].map((h, i) => (
                       <th key={i} style={{
                         textAlign: i === 0 ? 'left' : 'right',
-                        padding: '12px 14px',
-                        fontSize: 9,
-                        letterSpacing: '0.2em',
-                        color: C.textMute,
-                        fontWeight: 500,
-                        textTransform: 'uppercase',
+                        padding: '14px 16px', fontSize: 9, letterSpacing: '0.25em',
+                        color: C.textMute, fontWeight: 500, textTransform: 'uppercase',
                       }}>{h}</th>
                     ))}
                   </tr>
@@ -730,12 +768,12 @@ export default function TaxReturnContentRenaissance() {
                 <tbody>
                   {depreciationRows.map(d => (
                     <tr key={d.id} style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
-                      <td style={{ padding: '10px 14px', color: C.text, fontFamily: F.jp }}>{d.name}</td>
-                      <td style={{ padding: '10px 14px', textAlign: 'right', fontFamily: F.num, fontSize: 13, color: C.textSub, fontFeatureSettings: "'tnum' 1" }}>{yen(d.acquisitionCost)}</td>
-                      <td style={{ padding: '10px 14px', textAlign: 'right', color: C.textSub, fontFamily: F.num, fontFeatureSettings: "'tnum' 1" }}>{d.usefulLife}年</td>
-                      <td style={{ padding: '10px 14px', textAlign: 'right', color: C.textSub, fontFamily: F.num, fontFeatureSettings: "'tnum' 1" }}>{d.businessUseRatio}%</td>
-                      <td style={{ padding: '10px 14px', textAlign: 'right', fontFamily: F.num, fontSize: 13, color: C.crimson, fontFeatureSettings: "'tnum' 1" }}>{yen(d.currentYearAmount)}</td>
-                      <td style={{ padding: '10px 14px', textAlign: 'right', fontFamily: F.num, fontSize: 13, color: C.text, fontFeatureSettings: "'tnum' 1" }}>{yen(d.bookValue)}</td>
+                      <td style={{ padding: '12px 16px', color: C.text, fontFamily: F.jp }}>{d.name}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right', fontFamily: F.num, fontSize: 13, color: C.textSub, fontFeatureSettings: "'tnum' 1" }}>{yen(d.acquisitionCost)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right', color: C.textSub, fontFamily: F.num, fontFeatureSettings: "'tnum' 1" }}>{d.usefulLife}年</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right', color: C.textSub, fontFamily: F.num, fontFeatureSettings: "'tnum' 1" }}>{d.businessUseRatio}%</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right', fontFamily: F.num, fontSize: 13, color: C.crimson, fontFeatureSettings: "'tnum' 1" }}>{yen(d.currentYearAmount)}</td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right', fontFamily: F.num, fontSize: 13, color: C.text, fontFeatureSettings: "'tnum' 1" }}>{yen(d.bookValue)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -744,22 +782,15 @@ export default function TaxReturnContentRenaissance() {
           </Section>
         )}
 
-        {/* ===== フッター ===== */}
         <footer style={{
-          marginTop: 80,
-          paddingTop: 24,
-          borderTop: `1px solid ${C.line}`,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          fontSize: 10,
-          color: C.textMute,
-          letterSpacing: '0.1em',
+          marginTop: 96, paddingTop: 32, borderTop: `1px solid ${C.line}`,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          fontSize: 10, color: C.textMute, letterSpacing: '0.15em',
         }}>
-          <span style={{ fontFamily: F.num, fontWeight: 500, fontSize: 13 }}>
+          <span style={{ fontFamily: F.num, fontWeight: 500, fontSize: 14 }}>
             komu<span style={{ color: C.gold }}>10</span>
           </span>
-          <span style={{ fontFamily: F.num, letterSpacing: '0.2em' }}>
+          <span style={{ fontFamily: F.num, letterSpacing: '0.25em' }}>
             VOLUME 05 · TAX RETURN · {year} · {ownerLabel}
           </span>
         </footer>
