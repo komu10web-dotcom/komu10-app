@@ -10,7 +10,7 @@ import { usePeriodRange } from './HeaderControls';
 // ============================================================
 // 型定義
 // ============================================================
-interface KamokuSummary {
+export interface KamokuSummary {
   kamokuId: string;
   name: string;
   rawAmount: number;       // 按分前の合計
@@ -18,7 +18,7 @@ interface KamokuSummary {
   amount: number;          // 按分後の確定額
 }
 
-interface DepreciationRow {
+export interface DepreciationRow {
   id: string;
   name: string;
   acquisitionDate: string;
@@ -29,7 +29,7 @@ interface DepreciationRow {
   bookValue: number;         // 期末帳簿価額
 }
 
-interface JournalEntry {
+export interface JournalEntry {
   date: string;
   debitAccount: string;
   debitAmount: number;
@@ -91,7 +91,7 @@ function CopyButton({ value }: { value: string }) {
 // ============================================================
 // 減価償却計算
 // ============================================================
-function calcDepreciation(asset: Asset, year: number): DepreciationRow {
+export function calcDepreciation(asset: Asset, year: number): DepreciationRow {
   const acqDate = new Date(asset.acquisition_date);
   const acqYear = acqDate.getFullYear();
   const acqMonth = acqDate.getMonth() + 1; // 1-12
@@ -146,7 +146,7 @@ function calcDepreciation(asset: Asset, year: number): DepreciationRow {
 // ============================================================
 // 仕訳生成
 // ============================================================
-function generateJournalEntries(
+export function generateJournalEntries(
   transactions: Transaction[],
   kamokuSummaries: KamokuSummary[],
   depreciationRows: DepreciationRow[],
@@ -339,7 +339,7 @@ function generateJournalEntries(
 // ============================================================
 // CSV出力
 // ============================================================
-function downloadCSV(entries: JournalEntry[], year: number, ownerLabel: string) {
+export function downloadCSV(entries: JournalEntry[], year: number, ownerLabel: string) {
   const header = '日付,借方科目,借方金額,貸方科目,貸方金額,摘要';
   const rows = entries.map(e =>
     `${e.date},"${e.debitAccount}",${e.debitAmount},"${e.creditAccount}",${e.creditAmount},"${e.description || ''}"`
