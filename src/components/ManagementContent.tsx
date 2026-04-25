@@ -130,6 +130,10 @@ export default function ManagementContent() {
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<{ success: boolean; message: string } | null>(null);
 
+  // v0.18.0: 経費構成（科目別集計 + 制作費・取材費の内訳展開）
+  const [subCategories, setSubCategories] = useState<{ key: string; label: string; parent_kamoku: string }[]>([]);
+  const [expandedKamoku, setExpandedKamoku] = useState<Set<string>>(new Set());
+
   // ========== データ取得 ==========
 
   const fetchData = useCallback(async () => {
@@ -201,6 +205,17 @@ export default function ManagementContent() {
       if (owner !== 'all') ftQ = ftQ.eq('owner', owner);
       const { data: ftData } = await ftQ;
       setFundTransfers((ftData as FundTransfer[]) || []);
+
+      // v0.18.0: 内訳タグマスタ（制作費・取材費の内訳ラベル解決用）
+      const { data: subCatData } = await supabase
+        .from('sub_categories' as any)
+        .select('key, label, parent_kamoku')
+        .order('display_order', { ascending: true });
+      setSubCategories(((subCatData || []) as any[]).map(s => ({
+        key: s.key,
+        label: s.label,
+        parent_kamoku: s.parent_kamoku,
+      })));
     } catch (err) {
       console.error('Fetch error:', err);
     } finally {
@@ -1509,6 +1524,179 @@ export default function ManagementContent() {
             )}
           </div>
         </div>
+
+        {/* ===== v0.18.0: 経費構成（科目別・制作費/取材費は内訳展開可） ===== */}
+        {(() => {
+          // 科目別の経費合計を集計（settled / forecast 区別なく合算）
+          const expenseTx = filteredTx.filter(t => t.tx_type === 'expense');
+          const kamokuTotals = new Map<string, number>();
+          const subTotalsByKamoku = new Map<string, Map<string, number>>();
+          const noTagTotalsByKamoku = new Map<string, number>();
+
+          for (const t of expenseTx) {
+            const k = t.kamoku as string;
+            kamokuTotals.set(k, (kamokuTotals.get(k) || 0) + t.amount);
+            // 制作費・取材費の内訳集計
+            if (k === 'production' || k === 'torizai') {
+              const subKey = (t as any).sub_category as string | null;
+              if (!subTotalsByKamoku.has(k)) subTotalsByKamoku.set(k, new Map());
+              const m = subTotalsByKamoku.get(k)!;
+              if (subKey) {
+                m.set(subKey, (m.get(subKey) || 0) + t.amount);
+              } else {
+                noTagTotalsByKamoku.set(k, (noTagTotalsByKamoku.get(k) || 0) + t.amount);
+              }
+            }
+          }
+
+          // 大きい順にソート
+          const sortedKamoku = Array.from(kamokuTotals.entries())
+            .sort(([, a], [, b]) => b - a);
+          const totalExp = sortedKamoku.reduce((s, [, v]) => s + v, 0);
+          const maxKamokuVal = sortedKamoku[0]?.[1] || 1;
+
+          if (sortedKamoku.length === 0) return null;
+
+          const subLabel = (kamoku: string, subKey: string): string => {
+            const found = subCategories.find(s => s.key === subKey && s.parent_kamoku === kamoku);
+            return found?.label || subKey;
+          };
+
+          return (
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-[10px] tracking-wider text-[#999]">経費構成</p>
+                <p className="text-[10px] text-[#999]">
+                  合計 <span className="font-['Saira_Condensed'] tabular-nums text-[#1a1a1a]">{yen(totalExp)}</span>
+                </p>
+              </div>
+              <div className="bg-white rounded-2xl px-5 py-4" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
+                <div className="space-y-2.5">
+                  {sortedKamoku.map(([k, v]) => {
+                    const expandable = (k === 'production' || k === 'torizai');
+                    const isOpen = expandedKamoku.has(k);
+                    const ratio = totalExp > 0 ? (v / totalExp) * 100 : 0;
+                    const barWidth = (v / maxKamokuVal) * 100;
+                    const subEntries = expandable
+                      ? Array.from((subTotalsByKamoku.get(k) || new Map()).entries())
+                          .sort(([, a], [, b]) => (b as number) - (a as number)) as [string, number][]
+                      : [];
+                    const noTagAmt = expandable ? (noTagTotalsByKamoku.get(k) || 0) : 0;
+                    const subMax = Math.max(
+                      ...subEntries.map(([, sv]) => sv),
+                      noTagAmt,
+                      1,
+                    );
+
+                    return (
+                      <div key={k}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!expandable) return;
+                            setExpandedKamoku(prev => {
+                              const next = new Set(prev);
+                              if (next.has(k)) next.delete(k); else next.add(k);
+                              return next;
+                            });
+                          }}
+                          className={`w-full text-left ${expandable ? 'cursor-pointer hover:bg-[#FAFAF8]' : 'cursor-default'} rounded-md px-2 py-1.5 -mx-2 transition-colors`}
+                          aria-expanded={expandable ? isOpen : undefined}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-1.5">
+                              {expandable && (
+                                isOpen
+                                  ? <ChevronUp className="w-3 h-3 text-[#999]" />
+                                  : <ChevronDown className="w-3 h-3 text-[#999]" />
+                              )}
+                              <span className="text-xs text-[#1a1a1a]">{kamokuName(k)}</span>
+                              <span className="text-[9px] text-[#999] font-['Saira_Condensed'] tabular-nums">
+                                {ratio.toFixed(1)}%
+                              </span>
+                            </div>
+                            <span className="font-['Saira_Condensed'] text-xs tabular-nums text-[#1a1a1a]">
+                              {yen(v)}
+                            </span>
+                          </div>
+                          <div className="w-full h-1.5 bg-[#F5F5F3] rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-300"
+                              style={{
+                                width: `${barWidth}%`,
+                                background: expandable ? '#1B4D3E' : '#999',
+                                opacity: expandable ? 0.85 : 0.6,
+                              }}
+                            />
+                          </div>
+                        </button>
+
+                        {/* 内訳展開 */}
+                        {expandable && isOpen && (subEntries.length > 0 || noTagAmt > 0) && (
+                          <div className="mt-2 ml-5 pl-3 border-l border-[#ECECE9] space-y-1.5">
+                            {subEntries.map(([sk, sv]) => {
+                              const sRatio = v > 0 ? (sv / v) * 100 : 0;
+                              return (
+                                <div key={sk}>
+                                  <div className="flex items-center justify-between mb-0.5">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-[10px] text-[#666]">{subLabel(k, sk)}</span>
+                                      <span className="text-[9px] text-[#999] font-['Saira_Condensed'] tabular-nums">
+                                        {sRatio.toFixed(1)}%
+                                      </span>
+                                    </div>
+                                    <span className="font-['Saira_Condensed'] text-[11px] tabular-nums text-[#666]">
+                                      {yen(sv)}
+                                    </span>
+                                  </div>
+                                  <div className="w-full h-1 bg-[#F5F5F3] rounded-full overflow-hidden">
+                                    <div
+                                      className="h-full rounded-full"
+                                      style={{
+                                        width: `${(sv / subMax) * 100}%`,
+                                        background: '#1B4D3E',
+                                        opacity: 0.5,
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                            {noTagAmt > 0 && (
+                              <div>
+                                <div className="flex items-center justify-between mb-0.5">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[10px] text-[#C23728]">内訳タグ未設定</span>
+                                    <span className="text-[9px] text-[#999] font-['Saira_Condensed'] tabular-nums">
+                                      {v > 0 ? ((noTagAmt / v) * 100).toFixed(1) : '0.0'}%
+                                    </span>
+                                  </div>
+                                  <span className="font-['Saira_Condensed'] text-[11px] tabular-nums text-[#C23728]">
+                                    {yen(noTagAmt)}
+                                  </span>
+                                </div>
+                                <div className="w-full h-1 bg-[#F5F5F3] rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full rounded-full"
+                                    style={{
+                                      width: `${(noTagAmt / subMax) * 100}%`,
+                                      background: '#C23728',
+                                      opacity: 0.4,
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ===== 部門別損益 ===== */}
         <div className="mb-8">
