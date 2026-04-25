@@ -144,6 +144,25 @@ export default function HomeContent() {
     <div className="min-h-screen">
       <div className="max-w-lg mx-auto px-4 py-8 space-y-6">
 
+        {/* ── ヘッダー(δ案語彙・明色基調・3層タイポ) ── */}
+        <header className="pb-5 border-b border-[#e8e6e3]">
+          <p className="font-['Saira_Condensed'] text-[11px] tracking-[0.3em] text-[#D4A03A] mb-6 font-medium uppercase">
+            VOLUME 01 · HOME
+          </p>
+          <h1
+            className="font-['Cormorant_Garamond'] italic text-[#1a1a1a] mb-3.5"
+            style={{ fontSize: 36, fontWeight: 400, letterSpacing: '0.01em', lineHeight: 1.2 }}
+          >
+            day by day
+          </h1>
+          <p
+            className="font-['Shippori_Mincho'] text-[#1a1a1a]"
+            style={{ fontSize: 22, fontWeight: 400, letterSpacing: '0.04em', lineHeight: 1.5 }}
+          >
+            — 昨日と、今日と、明日。
+          </p>
+        </header>
+
         {/* ── サマリー ── */}
         <div className="bg-white rounded-2xl p-5" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
           {loading ? (
