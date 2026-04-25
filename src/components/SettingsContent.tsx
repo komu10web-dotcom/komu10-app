@@ -983,9 +983,9 @@ export default function SettingsContent() {
     if (!supabase) return;
     const label = rawLabel.trim();
     if (!label) return;
-    if (label.length > 20) { alert('20文字以内で入力してください'); return; }
+    if (label.length > 20) { alert('項目名は20文字以内で入力してください'); return; }
     const dup = subCategories.find(s => s.parent_kamoku === parent && s.label === label);
-    if (dup) { alert(`「${label}」と同じ名前の項目が既にあります`); return; }
+    if (dup) { alert(`「${label}」という名前の項目はすでにあります`); return; }
     const prefix = parent === 'production' ? 'prod_custom_' : 'tori_custom_';
     const newKey = prefix + Date.now().toString().slice(-8);
     const sameGroup = subCategories.filter(s => s.parent_kamoku === parent);
@@ -1004,7 +1004,7 @@ export default function SettingsContent() {
         is_active: true,
         is_system: false,
       });
-    if (error) { alert('追加に失敗しました: ' + error.message); return; }
+    if (error) { alert('項目を追加できませんでした。もう一度お試しください。\n' + error.message); return; }
     await refreshSubCategories();
     setSubCatAddingFor(null);
     setSubCatInputValue('');
@@ -1014,18 +1014,18 @@ export default function SettingsContent() {
     if (!supabase) return;
     const label = rawLabel.trim();
     if (!label) return;
-    if (label.length > 20) { alert('20文字以内で入力してください'); return; }
+    if (label.length > 20) { alert('項目名は20文字以内で入力してください'); return; }
     const target = subCategories.find(s => s.id === id);
     if (!target) return;
     const dup = subCategories.find(
       s => s.id !== id && s.parent_kamoku === target.parent_kamoku && s.label === label
     );
-    if (dup) { alert(`「${label}」と同じ名前の項目が既にあります`); return; }
+    if (dup) { alert(`「${label}」という名前の項目はすでにあります`); return; }
     const { error } = await supabase
       .from('sub_categories' as any)
       .update({ label })
       .eq('id', id);
-    if (error) { alert('更新に失敗しました: ' + error.message); return; }
+    if (error) { alert('項目名を変更できませんでした。もう一度お試しください。\n' + error.message); return; }
     await refreshSubCategories();
     setSubCatEditTarget(null);
   };
@@ -1071,26 +1071,26 @@ export default function SettingsContent() {
           .from('sub_categories' as any)
           .update({ is_active: false })
           .eq('id', target.id);
-        if (error) throw new Error('削除に失敗しました: ' + error.message);
+        if (error) throw new Error('項目を削除できませんでした。もう一度お試しください。\n' + error.message);
       } else {
         // 1件以上: 移行処理
         let destKey: string;
 
         if (subCatMigrateMode === 'existing') {
           if (!subCatMigrateTargetKey) {
-            throw new Error('移行先の項目を選択してください');
+            throw new Error('移行先の項目を選んでください。');
           }
           destKey = subCatMigrateTargetKey;
         } else {
           // 新規項目を作って移行
           const newLabel = subCatMigrateNewLabel.trim();
-          if (!newLabel) { throw new Error('新しい項目名を入力してください'); }
-          if (newLabel.length > 20) { throw new Error('20文字以内で入力してください'); }
+          if (!newLabel) { throw new Error('新しい項目名を入力してください。'); }
+          if (newLabel.length > 20) { throw new Error('項目名は20文字以内で入力してください。'); }
           const dup = subCategories.find(
             s => s.parent_kamoku === target.parent_kamoku && s.label === newLabel && s.is_active
           );
           if (dup) {
-            throw new Error(`「${newLabel}」と同じ名前の項目が既にあります`);
+            throw new Error(`「${newLabel}」という名前の項目はすでにあります。`);
           }
           const prefix = target.parent_kamoku === 'production' ? 'prod_custom_' : 'tori_custom_';
           const newKey = prefix + Date.now().toString().slice(-8);
@@ -1110,7 +1110,7 @@ export default function SettingsContent() {
               is_active: true,
               is_system: false,
             });
-          if (insertErr) throw new Error('新項目の作成に失敗しました: ' + insertErr.message);
+          if (insertErr) throw new Error('新しい項目を作成できませんでした。もう一度お試しください。\n' + insertErr.message);
           destKey = newKey;
         }
 
@@ -1119,14 +1119,14 @@ export default function SettingsContent() {
           .from('transactions')
           .update({ sub_category: destKey } as any)
           .eq('sub_category', target.key);
-        if (updateErr) throw new Error('既存取引の移行に失敗しました: ' + updateErr.message);
+        if (updateErr) throw new Error('取引の移行に失敗しました。データはそのまま残っています。\n' + updateErr.message);
 
         // 元の項目を論理削除
         const { error: deleteErr } = await supabase
           .from('sub_categories' as any)
           .update({ is_active: false })
           .eq('id', target.id);
-        if (deleteErr) throw new Error('項目の削除に失敗しました: ' + deleteErr.message);
+        if (deleteErr) throw new Error('項目を削除できませんでした。取引はそのまま残っています。\n' + deleteErr.message);
       }
 
       await refreshSubCategories();
@@ -3966,6 +3966,7 @@ export default function SettingsContent() {
                 <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>FAQ全8項目の文言を見直し、より自然で読みやすい日本語に統一</li>
                 <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>交通費の合計3万円以上アラートを「保管が推奨」から「添付が必須」に修正(税務上の正確化)</li>
                 <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>削除モーダルの使用状況確認エラー文を、状況と対処が一目で分かる文面に変更</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>内訳項目の追加・編集・削除に関する全エラー文言を見直し(取引データの安全性を明示)</li>
                 <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>確定申告FAQの「E-TAX」を国税庁公式表記の「e-Tax」に統一</li>
               </ul>
             </div>
