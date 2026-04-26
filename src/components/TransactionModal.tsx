@@ -30,9 +30,10 @@ interface AllocRow {
   percent: number;
 }
 
+// v0.29.0: is_active=false の科目は新規作成時に非表示。編集時は editData.kamoku が is_active=false でも表示する。
 const EXPENSE_KAMOKU = Object.entries(KAMOKU)
   .filter(([, v]) => v.type === 'expense')
-  .map(([id, v]) => ({ id, name: v.name }));
+  .map(([id, v]) => ({ id, name: v.name, isActive: (v as { is_active?: boolean }).is_active !== false }));
 
 // v0.14.7: owner日本語ラベル（「{owner}の定番」セクション表示用）
 const OWNER_LABEL: Record<string, string> = {
@@ -174,7 +175,9 @@ export default function TransactionModal({
           .sort(([, a], [, b]) => b - a)
           .slice(0, 3)
           .map(([k]) => k)
-          .filter((k) => k in KAMOKU);
+          .filter((k) => k in KAMOKU)
+          // v0.29.0: 非アクティブ科目(welfare等)は定番から除外
+          .filter((k) => (KAMOKU[k as keyof typeof KAMOKU] as { is_active?: boolean }).is_active !== false);
         setTopKamoku(top);
       });
   }, [isOpen, form.owner]);
@@ -1474,7 +1477,10 @@ export default function TransactionModal({
                 </optgroup>
               )}
               <optgroup label={topKamoku.length > 0 ? 'すべての科目' : ''}>
-                {EXPENSE_KAMOKU.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
+                {/* v0.29.0: 編集モードで現科目が非アクティブ(welfare等)の場合は表示する */}
+                {EXPENSE_KAMOKU
+                  .filter((k) => k.isActive || (editData && k.id === editData.kamoku))
+                  .map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
               </optgroup>
             </select>
           </div>

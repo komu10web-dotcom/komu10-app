@@ -668,7 +668,7 @@ export const KAMOKU = {
   entertainment: { name: '接待交際費', type: 'expense', anbun: false },
   torizai: { name: '取材費', type: 'expense', anbun: false },
   meeting: { name: '会議費', type: 'expense', anbun: false },
-  welfare: { name: '福利厚生費', type: 'expense', anbun: false },
+  welfare: { name: '福利厚生費', type: 'expense', anbun: false, is_active: false }, // v0.29.0: 個人事業主期間中は計上不可のため非表示(法人化時にtrueへ)
   supplies: { name: '事務用品費', type: 'expense', anbun: false },
   outsource: { name: '外注費', type: 'expense', anbun: false },
   production: { name: '制作費', type: 'expense', anbun: false },
@@ -788,20 +788,33 @@ export const UNASSIGNED_PROJECT_VALUE = '__unassigned__';
 export const UNASSIGNED_PROJECT_LABEL = '（PJ未登録案件）';
 
 // v0.8.2: 科目別の記入ガイドヘルプテキスト（TransactionModal/Uploaderで表示）
+// v0.29.0: 取材費・制作費を税務調査対策の証跡作法に沿って加筆。会議費・研修費を新規追加。
 export const KAMOKU_INPUT_GUIDE: Record<string, { title: string; body: string; example: string; requireProject: boolean; requireDescription?: boolean }> = {
   torizai: {
     title: '取材費の記入ポイント',
-    body: '取材対象と目的を簡潔に記載。案件詳細は紐付けた案件タグから参照します。',
+    body: '摘要には「取材対象」と「取材目的」を明記してください。取材活動の一部としての飲食(取材対象に同席いただく食事代等)に限り、内訳「飲食」で計上できます。単に取材日の昼食では計上できません。',
     example: '湯河原温泉旅館○○ 代表インタビュー',
     requireProject: true,
     requireDescription: true,
   },
   production: {
     title: '制作費の記入ポイント',
-    body: '購入物と使用目的を簡潔に記載。',
-    example: 'シャツ2点 出演衣装／撮影題材のホテル代',
+    body: '購入物と使用目的を簡潔に記載。撮影専用の衣装・小道具を全額計上する場合は、撮影直後の保管状態の写真や着用記録を残すと税務調査時に立証しやすくなります。私服兼用が想定される衣服は事業比率での按分が必要です。',
+    example: 'シャツ2点 出演衣装(撮影専用・自宅保管) ／ 撮影題材のホテル代',
     requireProject: true,
     requireDescription: true,
+  },
+  meeting: {
+    title: '会議費の記入ポイント',
+    body: '1人あたり5,000円以下が会議費の目安。超える場合は接待交際費を選択してください。摘要には「相手」と「目的」を記載してください。',
+    example: '○○社 鈴木様 打合せカフェ代',
+    requireProject: false,
+  },
+  training: {
+    title: '研修費の記入ポイント',
+    body: '摘要には「業務との接続」を1文で記載してください。申込画面・受講証明書のスクショを領収書に添付すると証跡が強くなります。自己啓発色が強い研修は否認リスクがあるため業務関連性を明示してください。',
+    example: '○○マーケティング講座(YT動画分析手法習得・Scene Notes視聴者分析業務に直結)',
+    requireProject: false,
   },
 };
  

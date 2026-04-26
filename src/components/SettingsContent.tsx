@@ -4156,18 +4156,36 @@ export default function SettingsContent() {
             リリースノート
           </div>
           <div className="space-y-3">
-            {/* v0.16.1 */}
+            {/* v0.29.0 */}
             <div className="bg-white rounded-xl shadow-sm p-4">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.16.1</span>
-                <span className="text-[9px] text-[#999]">2026.04.25</span>
+                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.29.0</span>
+                <span className="text-[9px] text-[#999]">2026.04.27</span>
                 <span className="text-[8px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full font-medium">LATEST</span>
               </div>
               <ul className="space-y-1">
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>内訳項目の削除・移行・新規作成の操作履歴を audit_log に自動記録(優良な電子帳簿保存 要件①への対応開始)</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#666]">·</span>記録される情報: 操作種別 / 移行元と移行先 / 影響件数 / 操作日時</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>福利厚生費を一時非表示に変更(個人事業主期間中は計上できないため・税務レビュー結果)</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>取材費・制作費の入力ガイドを強化(税務調査時の証跡作法を追記)</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>会議費・研修費の入力ガイドを新規追加</li>
+                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#666]">·</span>法人化(2027年予定)後は福利厚生費を再表示します</li>
               </ul>
             </div>
+
+            {/* v0.16.1 */}
+            <details className="bg-white rounded-xl shadow-sm">
+              <summary className="p-4 cursor-pointer select-none">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.16.1</span>
+                  <span className="text-[9px] text-[#999]">2026.04.25</span>
+                </div>
+              </summary>
+              <div className="px-4 pb-4">
+                <ul className="space-y-1">
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>内訳項目の削除・移行・新規作成の操作履歴を audit_log に自動記録(優良な電子帳簿保存 要件①への対応開始)</li>
+                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#666]">·</span>記録される情報: 操作種別 / 移行元と移行先 / 影響件数 / 操作日時</li>
+                </ul>
+              </div>
+            </details>
 
             {/* v0.16.0 */}
             <details className="bg-white rounded-xl shadow-sm">
