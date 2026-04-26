@@ -123,3 +123,49 @@ export const INCOME_DEDUCTION_ITEMS = [
 ] as const;
 
 export type IncomeDeductionKey = typeof INCOME_DEDUCTION_ITEMS[number]['key'];
+
+// ─────────────────────────────────────────────────────────
+// v0.30.0 Phase 2: tax_deductions テーブルの deduction_key 一覧
+// 13項目の親キーに加え、Phase 2 が扱うサブキーを定義
+// ─────────────────────────────────────────────────────────
+export const TAX_DEDUCTION_KEYS = {
+  // 社会保険料控除(年額1本)
+  socialInsurance: 'social_insurance',
+  // 小規模企業共済等掛金控除(3カテゴリ別年額)
+  smallEnterpriseKyosai: 'small_enterprise_kyosai',     // 小規模企業共済
+  smallEnterpriseIdeco: 'small_enterprise_ideco',       // iDeCo
+  smallEnterpriseKokuminKikin: 'small_enterprise_kokumin_kikin', // 国民年金基金
+  // 医療費控除(通知書年額・補填額・選択方式)
+  medicalNotificationAmount: 'medical_notification_amount',     // 通知書記載額
+  medicalNotificationSource: 'medical_notification_source',     // 通知書発行元(国保/健保/マイナポータル)
+  medicalReimbursement: 'medical_reimbursement',                // 保険等補填額
+  medicalMethod: 'medical_method',                              // 'medical' | 'self_medication' | 'auto'(自動有利判定)
+  // セルフメディケーション要件
+  selfmedQualified: 'selfmed_qualified',                        // 健診・予防接種の充足(bool)
+  selfmedQualificationNote: 'selfmed_qualification_note',       // 「2026年6月 健康診断」等のメモ
+} as const;
+
+export type TaxDeductionKey = typeof TAX_DEDUCTION_KEYS[keyof typeof TAX_DEDUCTION_KEYS];
+
+// ─────────────────────────────────────────────────────────
+// 医療費控除カテゴリ(medical_expense_details.category)
+// ─────────────────────────────────────────────────────────
+export const MEDICAL_CATEGORIES = [
+  { key: 'otc',       label: '市販薬' },
+  { key: 'transport', label: '通院交通費' },
+  { key: 'dental',    label: '歯科自由診療' },
+  { key: 'care',      label: '介護サービス' },
+  { key: 'other',     label: 'その他' },
+] as const;
+
+export type MedicalCategory = typeof MEDICAL_CATEGORIES[number]['key'];
+
+// 受診者区分(medical_expense_details.patient_type)
+// session57: ボス指示で「自分/家族(生計を一にする)/その他」の3区分
+export const PATIENT_TYPES = [
+  { key: 'self',   label: '自分' },
+  { key: 'family', label: '家族(生計を一にする)' },
+  { key: 'other',  label: 'その他' },
+] as const;
+
+export type PatientType = typeof PATIENT_TYPES[number]['key'];

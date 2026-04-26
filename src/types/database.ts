@@ -514,6 +514,45 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['sub_categories']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['sub_categories']['Insert']>;
       };
+
+      // v0.30.0: 所得控除タブ Phase 2 — 年×ユーザー×項目別サマリ
+      tax_deductions: {
+        Row: {
+          id: string;
+          owner: string; // 'tomo' | 'toshiki'
+          year: number; // 申告年(2026 = 令和8年分)
+          deduction_key: string; // INCOME_DEDUCTION_KEY と一致
+          amount: number | null; // 金額(円)
+          text_value: string | null; // テキスト値(セルメデ要件メモ等)
+          bool_value: boolean | null; // 真偽値(セルメデ要件充足等)
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['tax_deductions']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['tax_deductions']['Insert']>;
+      };
+
+      // v0.30.0: 医療費控除の追加明細
+      medical_expense_details: {
+        Row: {
+          id: string;
+          owner: string; // 'tomo' | 'toshiki'
+          year: number;
+          expense_date: string; // YYYY-MM-DD
+          patient_type: 'self' | 'family' | 'other';
+          patient_name: string | null;
+          category: 'otc' | 'transport' | 'dental' | 'care' | 'other';
+          vendor: string | null;
+          amount: number;
+          reimbursement: number;
+          is_selfmed: boolean;
+          note: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['medical_expense_details']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['medical_expense_details']['Insert']>;
+      };
     };
   };
 }
