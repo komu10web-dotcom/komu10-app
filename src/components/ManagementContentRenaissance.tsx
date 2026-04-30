@@ -31,28 +31,17 @@ import { Loader2 } from 'lucide-react';
 import { usePeriodRange } from './HeaderControls';
 import { useViewport } from '@/lib/useViewport';
 
-const C = {
-  bg: '#0a0a0b',
-  surface: '#131316',
-  surfaceHi: '#1a1a1f',
-  line: 'rgba(255,255,255,0.08)',
-  lineSoft: 'rgba(255,255,255,0.04)',
-  text: 'rgba(255,255,255,0.92)',
-  textSub: 'rgba(255,255,255,0.55)',
-  textMute: 'rgba(255,255,255,0.32)',
-  textFade: 'rgba(255,255,255,0.20)',
-  gold: '#D4A03A',
-  goldSoft: 'rgba(212,160,58,0.18)',
-  green: '#1B4D3E',
-  greenSoft: 'rgba(27,77,62,0.25)',
-  crimson: '#C23728',
-  crimsonSoft: 'rgba(194,55,40,0.22)',
-} as const;
+import { APP_DARK, FONTS } from '@/lib/brandTokens';
 
+// v0.33.0: ブランドトークン一元管理に統合(brandTokens.ts)
+// 旧: ローカル C/F オブジェクト定義 → 新: APP_DARK / FONTS から参照
+// ブランド規定変更時は brandTokens.ts の1箇所変更で全画面に波及
+const C = APP_DARK;
+// Renaissance ローカル命名(body/jp/num)をブランドトークン正式名(ui/mincho/num)へマッピング
 const F = {
-  jp: "'Shippori Mincho', serif",
-  num: "'Saira Condensed', sans-serif",
-  body: "'Inter', sans-serif",
+  body: FONTS.ui,
+  jp:   FONTS.mincho,
+  num:  FONTS.num,
 } as const;
 
 function yen(n: number): string {

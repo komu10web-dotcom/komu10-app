@@ -35,28 +35,13 @@ import {
   INCOME_DEDUCTION_ITEMS,
 } from '@/lib/taxConstants';
 
-const C = {
-  bg: '#0a0a0b',
-  surface: '#131316',
-  surfaceHi: '#1a1a1f',
-  line: 'rgba(255,255,255,0.08)',
-  lineSoft: 'rgba(255,255,255,0.04)',
-  text: 'rgba(255,255,255,0.92)',
-  textSub: 'rgba(255,255,255,0.55)',
-  textMute: 'rgba(255,255,255,0.32)',
-  textFade: 'rgba(255,255,255,0.20)',
-  gold: '#D4A03A',
-  goldSoft: 'rgba(212,160,58,0.18)',
-  green: '#1B4D3E',
-  greenSoft: 'rgba(27,77,62,0.25)',
-  crimson: '#C23728',
-  crimsonSoft: 'rgba(194,55,40,0.22)',
-} as const;
-
+// v0.33.0: ブランドトークン一元管理(brandTokens.ts)
+import { APP_DARK, FONTS } from '@/lib/brandTokens';
+const C = APP_DARK;
 const F = {
-  jp: "'Shippori Mincho', serif",
-  num: "'Saira Condensed', sans-serif",
-  body: "'Inter', sans-serif",
+  body: FONTS.ui,
+  jp:   FONTS.mincho,
+  num:  FONTS.num,
 } as const;
 
 const yen = (n: number) => '¥' + Math.floor(n).toLocaleString('ja-JP');
