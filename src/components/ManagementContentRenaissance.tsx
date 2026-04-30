@@ -164,15 +164,31 @@ export default function ManagementContentRenaissance() {
   const profitTotal = revenueTotal - expenseTotal;
   const profitRate = revenueTotal > 0 ? (profitTotal / revenueTotal) * 100 : 0;
 
+  // v0.31.0: 実績/予測分離。settled=実績、それ以外(forecast/accrued/billed)=予測
+  // IncomeContent と同じ getEffectiveStatus パターン(status null は settled 扱い)
+  const isSettled = (t: Transaction): boolean => (t.status || 'settled') === 'settled';
+
   const monthlyPL = useMemo(() => Array.from({ length: 12 }, (_, i) => {
     const m = i + 1;
     const mTx = chartYearTx.filter(t => {
       const d = new Date(t.date);
       return d.getMonth() + 1 === m;
     });
-    const rev = mTx.filter(t => t.tx_type === 'revenue').reduce((s, t) => s + (t.amount || 0), 0);
-    const exp = mTx.filter(t => t.tx_type === 'expense').reduce((s, t) => s + (t.amount || 0), 0);
-    return { month: m, rev, exp, profit: rev - exp };
+    const revs = mTx.filter(t => t.tx_type === 'revenue');
+    const exps = mTx.filter(t => t.tx_type === 'expense');
+    const revSettled = revs.filter(isSettled).reduce((s, t) => s + (t.amount || 0), 0);
+    const revForecast = revs.filter(t => !isSettled(t)).reduce((s, t) => s + (t.amount || 0), 0);
+    const expSettled = exps.filter(isSettled).reduce((s, t) => s + (t.amount || 0), 0);
+    const expForecast = exps.filter(t => !isSettled(t)).reduce((s, t) => s + (t.amount || 0), 0);
+    const rev = revSettled + revForecast;
+    const exp = expSettled + expForecast;
+    return {
+      month: m,
+      rev, exp, profit: rev - exp,
+      revSettled, revForecast,
+      expSettled, expForecast,
+      profitSettled: revSettled - expSettled,
+    };
   }), [chartYearTx]);
 
   const monthlyCF = useMemo(() => Array.from({ length: 12 }, (_, i) => {
@@ -183,9 +199,21 @@ export default function ManagementContentRenaissance() {
       const payDate = t.actual_payment_date || t.date;
       return payDate.startsWith(prefix);
     });
-    const inflow = mTx.filter(t => t.tx_type === 'revenue').reduce((s, t) => s + (t.amount || 0), 0);
-    const outflow = mTx.filter(t => t.tx_type === 'expense').reduce((s, t) => s + (t.amount || 0), 0);
-    return { month: m, inflow, outflow, net: inflow - outflow };
+    const ins = mTx.filter(t => t.tx_type === 'revenue');
+    const outs = mTx.filter(t => t.tx_type === 'expense');
+    const inflowSettled = ins.filter(isSettled).reduce((s, t) => s + (t.amount || 0), 0);
+    const inflowForecast = ins.filter(t => !isSettled(t)).reduce((s, t) => s + (t.amount || 0), 0);
+    const outflowSettled = outs.filter(isSettled).reduce((s, t) => s + (t.amount || 0), 0);
+    const outflowForecast = outs.filter(t => !isSettled(t)).reduce((s, t) => s + (t.amount || 0), 0);
+    const inflow = inflowSettled + inflowForecast;
+    const outflow = outflowSettled + outflowForecast;
+    return {
+      month: m,
+      inflow, outflow, net: inflow - outflow,
+      inflowSettled, inflowForecast,
+      outflowSettled, outflowForecast,
+      netSettled: inflowSettled - outflowSettled,
+    };
   }), [chartYearTx, transactions, year]);
 
   const cfTotalInflow = monthlyCF.reduce((s, m) => s + m.inflow, 0);
@@ -629,7 +657,11 @@ function PLView({ year, revenueTotal, expenseTotal, profitTotal, profitRate, mon
   expenseTotal: number;
   profitTotal: number;
   profitRate: number;
-  monthlyPL: { month: number; rev: number; exp: number; profit: number }[];
+  monthlyPL: { month: number; rev: number; exp: number; profit: number;
+    revSettled: number; revForecast: number;
+    expSettled: number; expForecast: number;
+    profitSettled: number;
+  }[];
   divisionPL: { id: string; name: string; label: string; color: string; revenue: number; expense: number; profit: number }[];
   kamokuExpense: { kamoku: string; name: string; amount: number }[];
   projectPL: { id: string; name: string; division: string; revenue: number; expense: number; profit: number; rate: number }[];
@@ -705,7 +737,11 @@ function CFView({ year, cfTotalInflow, cfTotalOutflow, cfNet, totalBankBalance, 
   runwayColor: string;
   runwayLabel: string;
   avgMonthlyOutflow: number;
-  monthlyCF: { month: number; inflow: number; outflow: number; net: number }[];
+  monthlyCF: { month: number; inflow: number; outflow: number; net: number;
+    inflowSettled: number; inflowForecast: number;
+    outflowSettled: number; outflowForecast: number;
+    netSettled: number;
+  }[];
 }) {
   return (
     <>
@@ -846,17 +882,41 @@ function Section({ num, title, children }: { num: string; title: string; childre
   );
 }
 
-function PLChart({ data }: { data: { month: number; rev: number; exp: number; profit: number }[] }) {
+function PLChart({ data }: { data: { month: number; rev: number; exp: number; profit: number;
+  revSettled: number; revForecast: number;
+  expSettled: number; expForecast: number;
+  profitSettled: number;
+}[] }) {
   const maxVal = Math.max(...data.flatMap(d => [d.rev, d.exp]), 1);
   const ticks = calcAxisTicks(maxVal);
   const chartMax = ticks[ticks.length - 1] || 1;
 
+  // v0.31.0: 実績/予測分離。境界月=settled が profit に存在する最後の月
+  // 境界月までは実線、境界月の次月以降は点線で利益折れ線を描く
+  const lastSettledIdx = (() => {
+    for (let i = data.length - 1; i >= 0; i--) {
+      if (data[i].revSettled > 0 || data[i].expSettled > 0) return i;
+    }
+    return -1;
+  })();
+  const settledLine = data
+    .filter((_, i) => i <= lastSettledIdx)
+    .map((d, i) => `${((i + 0.5) / 12) * 100},${100 - Math.max(0, (d.profitSettled / chartMax) * 100)}`)
+    .join(' ');
+  const forecastLine = data.map((d, i) => `${((i + 0.5) / 12) * 100},${100 - Math.max(0, (d.profit / chartMax) * 100)}`).join(' ');
+
   return (
     <div style={{ background: C.surface, border: `1px solid ${C.line}`, padding: '40px 36px' }}>
-      <div style={{ display: 'flex', gap: 28, marginBottom: 28, fontSize: 11, letterSpacing: '0.18em', color: C.textSub }}>
-        <Legend color={C.gold} label="売上" />
-        <Legend color={C.crimson} label="経費" />
-        <Legend color={C.green} label="利益" line />
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ display: 'flex', gap: 28, fontSize: 11, letterSpacing: '0.18em', color: C.textSub }}>
+          <Legend color={C.gold} label="売上" />
+          <Legend color={C.crimson} label="経費" />
+          <Legend color={C.green} label="利益" line />
+        </div>
+        <div style={{ display: 'flex', gap: 18, marginTop: 10, fontSize: 9, letterSpacing: '0.2em', color: C.textMute, textTransform: 'uppercase' }}>
+          <SubLegend variant="solid" label="実績" />
+          <SubLegend variant="hatched" label="見込み" />
+        </div>
       </div>
 
       <div style={{ display: 'flex', height: 280 }}>
@@ -873,25 +933,43 @@ function PLChart({ data }: { data: { month: number; rev: number; exp: number; pr
             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'flex-end' }}>
               {data.map(d => (
                 <div key={d.month} style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap: 3, height: '100%' }}>
-                  <div style={{ width: 10, height: `${(d.rev / chartMax) * 100}%`, background: C.gold, opacity: d.rev > 0 ? 1 : 0 }} title={`${d.month}月 売上 ${yen(d.rev)}`} />
-                  <div style={{ width: 10, height: `${(d.exp / chartMax) * 100}%`, background: C.crimson, opacity: d.exp > 0 ? 1 : 0 }} title={`${d.month}月 経費 ${yen(d.exp)}`} />
+                  {/* 売上棒: 下=settled / 上=forecast 斜線 */}
+                  <div style={{ width: 10, height: `${(d.rev / chartMax) * 100}%`, display: 'flex', flexDirection: 'column-reverse', opacity: d.rev > 0 ? 1 : 0 }} title={`${d.month}月 売上 ${yen(d.rev)}\n  実績 ${yen(d.revSettled)}\n  見込み ${yen(d.revForecast)}`}>
+                    <div style={{ width: '100%', height: `${d.rev > 0 ? (d.revSettled / d.rev) * 100 : 0}%`, background: C.gold }} />
+                    <div style={{ width: '100%', height: `${d.rev > 0 ? (d.revForecast / d.rev) * 100 : 0}%`, background: `repeating-linear-gradient(135deg, ${C.gold} 0 2px, transparent 2px 5px)`, border: `1px solid ${C.gold}`, boxSizing: 'border-box' }} />
+                  </div>
+                  {/* 経費棒: 下=settled / 上=forecast 斜線 */}
+                  <div style={{ width: 10, height: `${(d.exp / chartMax) * 100}%`, display: 'flex', flexDirection: 'column-reverse', opacity: d.exp > 0 ? 1 : 0 }} title={`${d.month}月 経費 ${yen(d.exp)}\n  実績 ${yen(d.expSettled)}\n  見込み ${yen(d.expForecast)}`}>
+                    <div style={{ width: '100%', height: `${d.exp > 0 ? (d.expSettled / d.exp) * 100 : 0}%`, background: C.crimson }} />
+                    <div style={{ width: '100%', height: `${d.exp > 0 ? (d.expForecast / d.exp) * 100 : 0}%`, background: `repeating-linear-gradient(135deg, ${C.crimson} 0 2px, transparent 2px 5px)`, border: `1px solid ${C.crimson}`, boxSizing: 'border-box' }} />
+                  </div>
                 </div>
               ))}
             </div>
             <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }} preserveAspectRatio="none" viewBox="0 0 100 100">
+              {/* 着地見込み利益(全status・点線) */}
               <polyline
                 fill="none"
                 stroke={C.green}
                 strokeWidth="0.4"
                 strokeLinecap="round"
                 strokeLinejoin="round"
+                strokeDasharray="1.5 1.2"
                 vectorEffect="non-scaling-stroke"
-                points={data.map((d, i) => {
-                  const x = ((i + 0.5) / 12) * 100;
-                  const y = 100 - Math.max(0, (d.profit / chartMax) * 100);
-                  return `${x},${y}`;
-                }).join(' ')}
+                points={forecastLine}
               />
+              {/* 確定利益(settled のみ・実線) */}
+              {lastSettledIdx >= 0 && (
+                <polyline
+                  fill="none"
+                  stroke={C.green}
+                  strokeWidth="0.55"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  vectorEffect="non-scaling-stroke"
+                  points={settledLine}
+                />
+              )}
             </svg>
           </div>
           <XAxis />
@@ -901,16 +979,26 @@ function PLChart({ data }: { data: { month: number; rev: number; exp: number; pr
   );
 }
 
-function CFChart({ data }: { data: { month: number; inflow: number; outflow: number; net: number }[] }) {
+function CFChart({ data }: { data: { month: number; inflow: number; outflow: number; net: number;
+  inflowSettled: number; inflowForecast: number;
+  outflowSettled: number; outflowForecast: number;
+  netSettled: number;
+}[] }) {
   const maxVal = Math.max(...data.flatMap(d => [d.inflow, d.outflow]), 1);
   const ticks = calcAxisTicks(maxVal);
   const chartMax = ticks[ticks.length - 1] || 1;
 
   return (
     <div style={{ background: C.surface, border: `1px solid ${C.line}`, padding: '40px 36px' }}>
-      <div style={{ display: 'flex', gap: 28, marginBottom: 28, fontSize: 11, letterSpacing: '0.18em', color: C.textSub }}>
-        <Legend color={C.gold} label="入金" />
-        <Legend color={C.crimson} label="出金" />
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ display: 'flex', gap: 28, fontSize: 11, letterSpacing: '0.18em', color: C.textSub }}>
+          <Legend color={C.gold} label="入金" />
+          <Legend color={C.crimson} label="出金" />
+        </div>
+        <div style={{ display: 'flex', gap: 18, marginTop: 10, fontSize: 9, letterSpacing: '0.2em', color: C.textMute, textTransform: 'uppercase' }}>
+          <SubLegend variant="solid" label="実績" />
+          <SubLegend variant="hatched" label="見込み" />
+        </div>
       </div>
       <div style={{ display: 'flex', height: 260 }}>
         <YAxis ticks={ticks} />
@@ -926,8 +1014,14 @@ function CFChart({ data }: { data: { month: number; inflow: number; outflow: num
             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'flex-end' }}>
               {data.map(d => (
                 <div key={d.month} style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap: 3, height: '100%' }}>
-                  <div style={{ width: 10, height: `${(d.inflow / chartMax) * 100}%`, background: C.gold, opacity: d.inflow > 0 ? 1 : 0 }} title={`${d.month}月 入金 ${yen(d.inflow)}`} />
-                  <div style={{ width: 10, height: `${(d.outflow / chartMax) * 100}%`, background: C.crimson, opacity: d.outflow > 0 ? 1 : 0 }} title={`${d.month}月 出金 ${yen(d.outflow)}`} />
+                  <div style={{ width: 10, height: `${(d.inflow / chartMax) * 100}%`, display: 'flex', flexDirection: 'column-reverse', opacity: d.inflow > 0 ? 1 : 0 }} title={`${d.month}月 入金 ${yen(d.inflow)}\n  実績 ${yen(d.inflowSettled)}\n  見込み ${yen(d.inflowForecast)}`}>
+                    <div style={{ width: '100%', height: `${d.inflow > 0 ? (d.inflowSettled / d.inflow) * 100 : 0}%`, background: C.gold }} />
+                    <div style={{ width: '100%', height: `${d.inflow > 0 ? (d.inflowForecast / d.inflow) * 100 : 0}%`, background: `repeating-linear-gradient(135deg, ${C.gold} 0 2px, transparent 2px 5px)`, border: `1px solid ${C.gold}`, boxSizing: 'border-box' }} />
+                  </div>
+                  <div style={{ width: 10, height: `${(d.outflow / chartMax) * 100}%`, display: 'flex', flexDirection: 'column-reverse', opacity: d.outflow > 0 ? 1 : 0 }} title={`${d.month}月 出金 ${yen(d.outflow)}\n  実績 ${yen(d.outflowSettled)}\n  見込み ${yen(d.outflowForecast)}`}>
+                    <div style={{ width: '100%', height: `${d.outflow > 0 ? (d.outflowSettled / d.outflow) * 100 : 0}%`, background: C.crimson }} />
+                    <div style={{ width: '100%', height: `${d.outflow > 0 ? (d.outflowForecast / d.outflow) * 100 : 0}%`, background: `repeating-linear-gradient(135deg, ${C.crimson} 0 2px, transparent 2px 5px)`, border: `1px solid ${C.crimson}`, boxSizing: 'border-box' }} />
+                  </div>
                 </div>
               ))}
             </div>
@@ -972,6 +1066,25 @@ function Legend({ color, label, line }: { color: string; label: string; line?: b
         background: color,
         display: 'inline-block',
         transform: line ? 'translateY(-4px)' : undefined,
+      }} />
+      {label}
+    </span>
+  );
+}
+
+// v0.31.0: 棒グラフ実績/予測 サブ凡例
+function SubLegend({ variant, label }: { variant: 'solid' | 'hatched'; label: string }) {
+  return (
+    <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <span style={{
+        width: 14,
+        height: 10,
+        display: 'inline-block',
+        background: variant === 'solid'
+          ? C.textSub
+          : `repeating-linear-gradient(135deg, ${C.textSub} 0 2px, transparent 2px 5px)`,
+        border: variant === 'hatched' ? `1px solid ${C.textSub}` : 'none',
+        boxSizing: 'border-box',
       }} />
       {label}
     </span>
