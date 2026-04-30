@@ -118,7 +118,7 @@ function CopyButton({ value }: { value: string }) {
 
 function Section({ num, title, children }: { num: string; title: string; children: React.ReactNode }) {
   return (
-    <section style={{ marginBottom: 80 }}>
+    <section id={`section-${num}`} style={{ marginBottom: 80, scrollMarginTop: 80 }}>
       <div style={{ marginBottom: 28, display: 'flex', alignItems: 'baseline', gap: 20 }}>
         <span style={{ fontFamily: F.num, fontSize: 13, color: C.gold, letterSpacing: '0.25em', fontWeight: 500 }}>— {num}</span>
         <span style={{ fontFamily: F.jp, fontSize: 17, color: C.textSub, letterSpacing: '0.06em' }}>{title}</span>
@@ -136,6 +136,9 @@ export default function TaxReturnContentRenaissance() {
   const [loading, setLoading] = useState(true);
   const [appeared, setAppeared] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  // v0.32.0: 仕訳帳↔総勘定元帳 双方向リンク用ハイライト state
+  const [highlightedAccount, setHighlightedAccount] = useState<string | null>(null);
+  const [highlightedEntryNumber, setHighlightedEntryNumber] = useState<string | null>(null);
   const [anbunSettings, setAnbunSettings] = useState<AnbunSetting[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
@@ -279,6 +282,27 @@ export default function TaxReturnContentRenaissance() {
     [transactions, kamokuSummaries, depreciationRows, year, bankAccounts, fundTransfers]
   );
 
+  // v0.32.0: 総勘定元帳 — 科目別に借方/貸方を集計し残高(借方-貸方)を計算
+  // 各科目の取引履歴(時系列)も保持して双方向リンクで使用
+  const ledger = useMemo(() => {
+    const accounts = new Map<string, { name: string; debit: number; credit: number; entries: { entryNumber: string; date: string; counterAccount: string; amount: number; side: 'debit' | 'credit'; description: string }[] }>();
+    const ensure = (name: string) => {
+      if (!accounts.has(name)) accounts.set(name, { name, debit: 0, credit: 0, entries: [] });
+      return accounts.get(name)!;
+    };
+    for (const e of journalEntries) {
+      const dr = ensure(e.debitAccount);
+      dr.debit += e.debitAmount;
+      dr.entries.push({ entryNumber: e.entryNumber, date: e.date, counterAccount: e.creditAccount, amount: e.debitAmount, side: 'debit', description: e.description });
+      const cr = ensure(e.creditAccount);
+      cr.credit += e.creditAmount;
+      cr.entries.push({ entryNumber: e.entryNumber, date: e.date, counterAccount: e.debitAccount, amount: e.creditAmount, side: 'credit', description: e.description });
+    }
+    return Array.from(accounts.values())
+      .map(a => ({ ...a, balance: a.debit - a.credit, total: a.debit + a.credit }))
+      .sort((a, b) => b.total - a.total);
+  }, [journalEntries]);
+
   if (loading || !mounted) {
     return (
       <div style={{ background: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -396,16 +420,19 @@ export default function TaxReturnContentRenaissance() {
   })();
 
   // v0.28.0: Section 番号動的算出
-  // 01-03 = 固定 / 04 = invoiceBanner時のみ消費税 / 仕訳帳・減価償却・所得控除・申告サマリーは順番にインクリメント
+  // 01-03 = 固定 / 04 = invoiceBanner時のみ消費税 / 仕訳帳→総勘定元帳→減価償却→所得控除→申告サマリーは順番にインクリメント
+  // v0.32.0: ledger(総勘定元帳)を仕訳帳の直後に追加
   const sec = (() => {
     let n = 4;
     const journalNum  = String(n + (showInvoiceBanner ? 1 : 0)).padStart(2, '0');
     n = parseInt(journalNum);
-    const depNum      = depreciationRows.length > 0 ? String(n + 1).padStart(2, '0') : journalNum;
+    const ledgerNum   = String(n + 1).padStart(2, '0');
+    n = n + 1;
+    const depNum      = depreciationRows.length > 0 ? String(n + 1).padStart(2, '0') : ledgerNum;
     const afterDep    = depreciationRows.length > 0 ? n + 1 : n;
     const deductNum   = String(afterDep + 1).padStart(2, '0');
     const summaryNum  = String(afterDep + 2).padStart(2, '0');
-    return { journal: journalNum, depreciation: depNum, deduction: deductNum, summary: summaryNum };
+    return { journal: journalNum, ledger: ledgerNum, depreciation: depNum, deduction: deductNum, summary: summaryNum };
   })();
 
   let invoiceLevel: 'confirmed' | 'warning' | 'caution' = 'caution';
@@ -720,9 +747,9 @@ export default function TaxReturnContentRenaissance() {
               <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ borderBottom: `1px solid ${C.line}` }}>
-                    {['日付', '借方科目', '借方金額', '貸方科目', '貸方金額', '摘要'].map((h, i) => (
+                    {['№', '日付', '借方科目', '借方金額', '貸方科目', '貸方金額', '摘要'].map((h, i) => (
                       <th key={i} style={{
-                        textAlign: i === 2 || i === 4 ? 'right' : 'left',
+                        textAlign: i === 3 || i === 5 ? 'right' : 'left',
                         padding: '14px 16px', fontSize: 9, letterSpacing: '0.25em',
                         color: C.textMute, fontWeight: 500, textTransform: 'uppercase',
                       }}>{h}</th>
@@ -730,19 +757,40 @@ export default function TaxReturnContentRenaissance() {
                   </tr>
                 </thead>
                 <tbody>
-                  {journalEntries.map((e, i) => (
-                    <tr key={i} style={{ borderBottom: `1px solid ${C.lineSoft}` }}>
-                      <td style={{ padding: '12px 16px', color: C.textSub, fontFamily: F.num, fontFeatureSettings: "'tnum' 1" }}>{formatDate(e.date)}</td>
-                      <td style={{ padding: '12px 16px', color: C.gold }}>{e.debitAccount}</td>
-                      <td style={{ padding: '12px 16px', textAlign: 'right', fontFamily: F.num, fontSize: 13, color: C.text, fontFeatureSettings: "'tnum' 1" }}>{yen(e.debitAmount)}</td>
-                      <td style={{ padding: '12px 16px', color: C.green }}>{e.creditAccount}</td>
-                      <td style={{ padding: '12px 16px', textAlign: 'right', fontFamily: F.num, fontSize: 13, color: C.text, fontFeatureSettings: "'tnum' 1" }}>{yen(e.creditAmount)}</td>
-                      <td style={{ padding: '12px 16px', color: C.textMute, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.description}</td>
-                    </tr>
-                  ))}
+                  {journalEntries.map((e, i) => {
+                    const isHighlighted = highlightedEntryNumber === e.entryNumber;
+                    const debitMatch = highlightedAccount === e.debitAccount;
+                    const creditMatch = highlightedAccount === e.creditAccount;
+                    const accountFiltered = highlightedAccount && !debitMatch && !creditMatch;
+                    return (
+                      <tr key={i} style={{
+                        borderBottom: `1px solid ${C.lineSoft}`,
+                        background: isHighlighted ? C.goldSoft : (debitMatch || creditMatch) ? 'rgba(212,160,58,0.06)' : 'transparent',
+                        opacity: accountFiltered ? 0.25 : 1,
+                        transition: 'background 200ms ease, opacity 200ms ease',
+                      }}>
+                        <td style={{ padding: '12px 14px', color: C.textMute, fontFamily: F.num, fontSize: 11, letterSpacing: '0.05em', fontFeatureSettings: "'tnum' 1" }}>{e.entryNumber}</td>
+                        <td style={{ padding: '12px 16px', color: C.textSub, fontFamily: F.num, fontFeatureSettings: "'tnum' 1" }}>{formatDate(e.date)}</td>
+                        <td style={{ padding: '12px 16px', color: C.gold, cursor: 'pointer', textDecoration: debitMatch ? 'underline' : 'none' }}
+                            onClick={() => setHighlightedAccount(highlightedAccount === e.debitAccount ? null : e.debitAccount)}
+                            title="クリックで総勘定元帳の該当科目をハイライト">
+                          {e.debitAccount}
+                        </td>
+                        <td style={{ padding: '12px 16px', textAlign: 'right', fontFamily: F.num, fontSize: 13, color: C.text, fontFeatureSettings: "'tnum' 1" }}>{yen(e.debitAmount)}</td>
+                        <td style={{ padding: '12px 16px', color: C.green, cursor: 'pointer', textDecoration: creditMatch ? 'underline' : 'none' }}
+                            onClick={() => setHighlightedAccount(highlightedAccount === e.creditAccount ? null : e.creditAccount)}
+                            title="クリックで総勘定元帳の該当科目をハイライト">
+                          {e.creditAccount}
+                        </td>
+                        <td style={{ padding: '12px 16px', textAlign: 'right', fontFamily: F.num, fontSize: 13, color: C.text, fontFeatureSettings: "'tnum' 1" }}>{yen(e.creditAmount)}</td>
+                        <td style={{ padding: '12px 16px', color: C.textMute, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.description}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
                 <tfoot>
                   <tr style={{ borderTop: `1px solid ${C.line}` }}>
+                    <td></td>
                     <td style={{ padding: '14px 16px', fontSize: 9, color: C.textSub, letterSpacing: '0.25em', textTransform: 'uppercase' }}>合計</td>
                     <td></td>
                     <td style={{ padding: '14px 16px', textAlign: 'right', fontFamily: F.num, fontSize: 14, color: C.text, fontWeight: 500, fontFeatureSettings: "'tnum' 1" }}>
@@ -764,6 +812,109 @@ export default function TaxReturnContentRenaissance() {
                 </tfoot>
               </table>
             </div>
+          )}
+        </Section>
+
+        {/* v0.32.0: 総勘定元帳 — 科目別T字勘定 + 双方向リンク */}
+        <Section num={sec.ledger} title="総勘定元帳 — 科目別の流れ">
+          {ledger.length === 0 ? (
+            <div style={{ background: C.surface, border: `1px solid ${C.line}`, padding: '48px 32px', textAlign: 'center' }}>
+              <p style={{ fontSize: 12, color: C.textMute }}>元帳データがありません</p>
+            </div>
+          ) : (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 18, marginBottom: 18, fontSize: 11, color: C.textSub, letterSpacing: '0.06em' }}>
+                <span>科目をクリックすると、仕訳帳の該当行と元帳の明細が連動表示されます。</span>
+                {highlightedAccount && (
+                  <button
+                    onClick={() => setHighlightedAccount(null)}
+                    style={{
+                      fontFamily: F.num, fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase',
+                      color: C.gold, background: 'transparent', border: `1px solid ${C.gold}`,
+                      padding: '6px 14px', cursor: 'pointer', transition: 'all 200ms ease',
+                    }}
+                  >
+                    解除 — {highlightedAccount}
+                  </button>
+                )}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 18 }}>
+                {ledger.map(account => {
+                  const isHighlighted = highlightedAccount === account.name;
+                  const isFiltered = highlightedAccount && !isHighlighted;
+                  return (
+                    <div
+                      key={account.name}
+                      onClick={() => setHighlightedAccount(highlightedAccount === account.name ? null : account.name)}
+                      style={{
+                        background: C.surface,
+                        border: `1px solid ${isHighlighted ? C.gold : C.line}`,
+                        padding: '20px 22px',
+                        cursor: 'pointer',
+                        opacity: isFiltered ? 0.3 : 1,
+                        transition: 'all 200ms ease',
+                      }}
+                      title="クリックで仕訳帳の該当行と連動"
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
+                        <div style={{ fontFamily: F.jp, fontSize: 14, color: C.text, letterSpacing: '0.04em' }}>{account.name}</div>
+                        <div style={{ fontFamily: F.num, fontSize: 10, color: C.textMute, letterSpacing: '0.2em', textTransform: 'uppercase' }}>{account.entries.length}件</div>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, background: C.line, marginBottom: 12 }}>
+                        <div style={{ background: C.surface, padding: '10px 12px' }}>
+                          <div style={{ fontSize: 9, color: C.textMute, letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: 4 }}>借方</div>
+                          <div style={{ fontFamily: F.num, fontSize: 14, color: C.gold, fontFeatureSettings: "'tnum' 1" }}>{yen(account.debit)}</div>
+                        </div>
+                        <div style={{ background: C.surface, padding: '10px 12px' }}>
+                          <div style={{ fontSize: 9, color: C.textMute, letterSpacing: '0.25em', textTransform: 'uppercase', marginBottom: 4 }}>貸方</div>
+                          <div style={{ fontFamily: F.num, fontSize: 14, color: C.green, fontFeatureSettings: "'tnum' 1" }}>{yen(account.credit)}</div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: 12, borderTop: `1px solid ${C.lineSoft}` }}>
+                        <span style={{ fontSize: 9, color: C.textMute, letterSpacing: '0.25em', textTransform: 'uppercase' }}>残高(借−貸)</span>
+                        <span style={{ fontFamily: F.num, fontSize: 13, color: account.balance >= 0 ? C.text : C.crimson, fontFeatureSettings: "'tnum' 1" }}>{yen(account.balance)}</span>
+                      </div>
+                      {isHighlighted && (
+                        <div style={{ marginTop: 16, paddingTop: 14, borderTop: `1px solid ${C.line}` }}>
+                          <div style={{ fontSize: 9, color: C.textMute, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 10 }}>明細(クリックで仕訳帳に飛ぶ)</div>
+                          <div style={{ maxHeight: 280, overflowY: 'auto' }}>
+                            {account.entries.map((en, j) => (
+                              <div
+                                key={j}
+                                onClick={(ev) => {
+                                  ev.stopPropagation();
+                                  setHighlightedEntryNumber(en.entryNumber);
+                                  setTimeout(() => setHighlightedEntryNumber(null), 2400);
+                                  document.querySelector(`#section-${sec.journal}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                }}
+                                style={{
+                                  display: 'grid',
+                                  gridTemplateColumns: '52px 60px 1fr auto',
+                                  gap: 10,
+                                  padding: '8px 0',
+                                  borderBottom: `1px solid ${C.lineSoft}`,
+                                  fontSize: 11,
+                                  cursor: 'pointer',
+                                  alignItems: 'baseline',
+                                }}
+                                title="クリックで仕訳帳の該当行へジャンプ"
+                              >
+                                <span style={{ fontFamily: F.num, color: C.textMute, fontSize: 10, letterSpacing: '0.05em' }}>{en.entryNumber.split('-')[1]}</span>
+                                <span style={{ fontFamily: F.num, color: C.textSub, fontFeatureSettings: "'tnum' 1" }}>{formatDate(en.date)}</span>
+                                <span style={{ color: en.side === 'debit' ? C.green : C.gold, fontSize: 10 }}>
+                                  {en.side === 'debit' ? '← ' : '→ '}{en.counterAccount}
+                                </span>
+                                <span style={{ fontFamily: F.num, color: C.text, fontFeatureSettings: "'tnum' 1" }}>{yen(en.amount)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
         </Section>
 

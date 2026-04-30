@@ -30,6 +30,7 @@ export interface DepreciationRow {
 }
 
 export interface JournalEntry {
+  entryNumber: string;     // v0.32.0: 仕訳番号(年度連番 例: 2026-0001)・電帳法 一意性要件
   date: string;
   debitAccount: string;
   debitAmount: number;
@@ -154,7 +155,8 @@ export function generateJournalEntries(
   bankAccounts: BankAccount[],
   fundTransfers: FundTransfer[]
 ): JournalEntry[] {
-  const entries: JournalEntry[] = [];
+  // v0.32.0: 仕訳番号は最後にまとめて付与するため、内部では entryNumber 抜きで蓄積
+  const entries: Omit<JournalEntry, 'entryNumber'>[] = [];
 
   // 貸方口座の動的決定
   const getCreditAccount = (tx: Transaction): string => {
@@ -333,16 +335,24 @@ export function generateJournalEntries(
   // 日付順ソート
   entries.sort((a, b) => a.date.localeCompare(b.date));
 
-  return entries;
+  // v0.32.0: 仕訳番号付与(年度連番・電帳法 一意性要件・改ざん検知用)
+  // 形式: {年度}-{4桁ゼロ埋め}  例: 2026-0001, 2026-0002
+  // 日付順ソート後の連番のため、同日内の順序は entries.push の順(=transactions の処理順)に従う
+  const numbered: JournalEntry[] = entries.map((e, i) => ({
+    ...e,
+    entryNumber: `${year}-${String(i + 1).padStart(4, '0')}`,
+  }));
+
+  return numbered;
 }
 
 // ============================================================
 // CSV出力
 // ============================================================
 export function downloadCSV(entries: JournalEntry[], year: number, ownerLabel: string) {
-  const header = '日付,借方科目,借方金額,貸方科目,貸方金額,摘要';
+  const header = '仕訳番号,日付,借方科目,借方金額,貸方科目,貸方金額,摘要';
   const rows = entries.map(e =>
-    `${e.date},"${e.debitAccount}",${e.debitAmount},"${e.creditAccount}",${e.creditAmount},"${e.description || ''}"`
+    `${e.entryNumber},${e.date},"${e.debitAccount}",${e.debitAmount},"${e.creditAccount}",${e.creditAmount},"${e.description || ''}"`
   );
   const csv = '\uFEFF' + [header, ...rows].join('\n'); // BOM付きUTF-8
 
@@ -849,6 +859,7 @@ export default function TaxReturnContent() {
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="border-b border-[#f0f0f0]">
+                      <th className="text-left px-3 py-2.5 text-[10px] font-medium tracking-wider text-[#999]">№</th>
                       <th className="text-left px-4 py-2.5 text-[10px] font-medium tracking-wider text-[#999]">日付</th>
                       <th className="text-left px-4 py-2.5 text-[10px] font-medium tracking-wider text-[#999]">借方科目</th>
                       <th className="text-right px-4 py-2.5 text-[10px] font-medium tracking-wider text-[#999]">借方金額</th>
@@ -860,6 +871,7 @@ export default function TaxReturnContent() {
                   <tbody>
                     {journalEntries.map((e, i) => (
                       <tr key={i} className="border-b border-[#fafafa] hover:bg-[#fafafa] transition-colors">
+                        <td className="px-3 py-2 font-['Saira_Condensed'] text-[10px] text-[#999] tabular-nums tracking-wider">{e.entryNumber}</td>
                         <td className="px-4 py-2 text-[#666]">{formatDate(e.date)}</td>
                         <td className="px-4 py-2 text-[#D4A03A]">{e.debitAccount}</td>
                         <td className="px-4 py-2 text-right font-['Saira_Condensed'] text-sm text-[#1a1a1a]">{yen(e.debitAmount)}</td>
@@ -871,6 +883,7 @@ export default function TaxReturnContent() {
                   </tbody>
                   <tfoot>
                     <tr className="border-t border-[#e0e0e0]">
+                      <td></td>
                       <td className="px-4 py-2.5 text-[10px] font-medium text-[#999]">合計</td>
                       <td></td>
                       <td className="px-4 py-2.5 text-right font-['Saira_Condensed'] text-sm font-medium text-[#1a1a1a]">
