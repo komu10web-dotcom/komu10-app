@@ -28,6 +28,8 @@ import { supabase } from '@/lib/supabase';
 import { DIVISIONS, KAMOKU } from '@/types/database';
 import type { Transaction, Project, TransactionAllocation, BankAccount } from '@/types/database';
 import { Loader2 } from 'lucide-react';
+import AnimatedChapterTitle from './AnimatedChapterTitle';
+import XLineFlash from './XLineFlash';
 import { usePeriodRange } from './HeaderControls';
 import { useViewport } from '@/lib/useViewport';
 import { useReducedMotion } from '@/lib/useReducedMotion';
@@ -398,11 +400,17 @@ export default function ManagementContentRenaissance() {
     }}>
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '72px 96px 128px' }}>
 
-        <header style={{ borderBottom: `1px solid ${C.line}`, paddingBottom: 56, marginBottom: 64 }}>
+        <header style={{ paddingBottom: 56, marginBottom: 64, position: 'relative' }}>
           {/* ===== Phase 1.5a-1 改 章扉(session77 確定・Violent Discipline 第1段階) =====
               アプリ名 THE MONEY BOOK はグローバルヘッダーで常時表示中。
               章扉では「章名 MANAGEMENT」を主役に格上げ(本の章タイトル)。
               裁定: Hedi(CEO)/ Saville(CBO)/ Paula(CDO)/ 出口(CCV)
+
+              ===== Phase 1.5a-2 + 1.5b 統合(session78 確定・Violent Discipline 第2段階) =====
+              Phase 1.5a-2: AnimatedChapterTitle で章名カオス→結晶化(800ms)
+              Phase 1.5b:   XLineFlash で画面横一閃の金色 X ライン武器化(500ms)
+              両者は章扉マウント時に同時発火。視覚の暴力性を最大化。
+              裁定: Hedi(CEO)/ Saville(CBO)/ Es Devlin(CAD)/ 川村(CXD)/ Raf(COO)
           */}
 
           {/* レイヤー1 — Chapter ラベル(Bricolage 小・上部の余白印) */}
@@ -418,18 +426,20 @@ export default function ManagementContentRenaissance() {
             Chapter · {year}
           </div>
 
-          {/* レイヤー2 — 章名 MANAGEMENT(巨大主タイトル / 暴力的タイポアートの核) */}
-          <h1 style={{
-            fontFamily: "'Big Shoulders Display', sans-serif",
-            fontSize: 'clamp(72px, 12vw, 168px)',
-            fontWeight: 900,
-            color: C.text,
-            letterSpacing: '-0.02em',
-            lineHeight: 0.92,
-            marginBottom: 24,
-          }}>
-            MANAGEMENT
-          </h1>
+          {/* レイヤー2 — 章名 MANAGEMENT(巨大主タイトル / Phase 1.5a-2 アニメ適用) */}
+          <AnimatedChapterTitle
+            text="MANAGEMENT"
+            storageKey="management-desktop"
+            style={{
+              fontFamily: "'Big Shoulders Display', sans-serif",
+              fontSize: 'clamp(72px, 12vw, 168px)',
+              fontWeight: 900,
+              color: C.text,
+              letterSpacing: '-0.02em',
+              lineHeight: 0.92,
+              marginBottom: 24,
+            }}
+          />
 
           {/* レイヤー3 — 詩タイトル + サブコンテキスト + ビューモード切替 */}
           <div style={{
@@ -487,12 +497,14 @@ export default function ManagementContentRenaissance() {
               ))}
             </nav>
           </div>
+
+          {/* Phase 1.5b X ライン武器化(session78 確定) — header 下端で画面横一閃 */}
+          <XLineFlash storageKey="management-desktop" />
         </header>
 
         {/* Phase 1.5b: 静的 X ライン削除済(session77)
             旧 Type II Forward 階段ポリゴンはボス判断「変・意味不明」で全廃。
-            武器化版(章扉到達時の画面横断閃光・500ms・stroke 2.6pt)は
-            次 Sub-phase で IntersectionObserver + GSAP で実装予定。 */}
+            武器化版(session78 で実装) → 章扉 header 下端に XLineFlash 配置済。 */}
 
         <ViewSwitch viewKey={`${viewMode}-${year}`}>
           {viewMode === 'pl' ? (
@@ -602,7 +614,7 @@ function MobileView({ appeared, year, revenueTotal, expenseTotal, profitTotal, p
     }}>
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '32px 24px 64px' }}>
 
-        <header style={{ paddingBottom: 28, marginBottom: 36, borderBottom: `1px solid ${C.line}` }}>
+        <header style={{ paddingBottom: 28, marginBottom: 36, position: 'relative' }}>
           {/* レイヤー1 — Chapter ラベル */}
           <div style={{
             fontFamily: "'Bricolage Grotesque', sans-serif",
@@ -616,18 +628,20 @@ function MobileView({ appeared, year, revenueTotal, expenseTotal, profitTotal, p
             Chapter · {year}
           </div>
 
-          {/* レイヤー2 — 章名 MANAGEMENT(スマホ巨大組み) */}
-          <h1 style={{
-            fontFamily: "'Big Shoulders Display', sans-serif",
-            fontSize: 'clamp(40px, 13vw, 64px)',
-            fontWeight: 900,
-            color: C.text,
-            letterSpacing: '-0.02em',
-            lineHeight: 0.92,
-            marginBottom: 16,
-          }}>
-            MANAGEMENT
-          </h1>
+          {/* レイヤー2 — 章名 MANAGEMENT(スマホ巨大組み・Phase 1.5a-2 アニメ適用) */}
+          <AnimatedChapterTitle
+            text="MANAGEMENT"
+            storageKey="management-mobile"
+            style={{
+              fontFamily: "'Big Shoulders Display', sans-serif",
+              fontSize: 'clamp(40px, 13vw, 64px)',
+              fontWeight: 900,
+              color: C.text,
+              letterSpacing: '-0.02em',
+              lineHeight: 0.92,
+              marginBottom: 16,
+            }}
+          />
 
           {/* レイヤー3 — 詩タイトル */}
           <h2 style={{
@@ -641,6 +655,9 @@ function MobileView({ appeared, year, revenueTotal, expenseTotal, profitTotal, p
           }}>
             いま、儲かっているのか。
           </h2>
+
+          {/* Phase 1.5b X ライン武器化(session78 確定) — header 下端 */}
+          <XLineFlash storageKey="management-mobile" />
         </header>
 
         <section style={{ marginBottom: 40 }}>
