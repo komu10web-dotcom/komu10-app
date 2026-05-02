@@ -120,6 +120,32 @@ export const FONTS = {
 } as const;
 
 // ============================================================
+// タイポ階層スケール(Khoi Vinh modular scale 1.333 / Renaissance Phase 1)
+// session77 確定:fontSize 直書き 15種 → 7階層+和文h1 に圧縮
+// 判定:Paula Scher(タイポ階層)/ Edward Tufte(数値根拠)/ 小林章(和欧混植)
+//
+// 階層運用ルール:
+//   t1=主指標(画面の主役・KPI最大値)
+//   t2=副指標(主の対比・大型KPI)
+//   t3=中指標(セクション内合計・カード内主役)
+//   t4=文脈数字/和文セクション(modular base)
+//   t5=本文(プロジェクト名・科目名・基本本文)
+//   t6=補助(ラベル・小キャプション・トラッキング英字)
+//   t7=メタ(更新日・データソース・極小キャプション)
+//   h1Jp=和文画面タイトル(Shippori Mincho 専用)
+// ============================================================
+export const TYPE_SCALE = {
+  t1:    128,  // 階層1 主指標(Saira / fw 300)
+  t2:     56,  // 階層2 副指標(Saira / fw 400)
+  t3:     28,  // 階層3 中指標(Saira / fw 500)
+  t4:     18,  // 階層4 文脈数字 / 和文セクション(Saira fw 500 / Mincho fw 400)
+  t5:     14,  // 階層5 本文(Inter / Mincho fw 400)
+  t6:     11,  // 階層6 補助(Inter fw 400 / tracking 0.2em)
+  t7:      9,  // 階層7 メタ(Inter fw 400 / tracking 0.3em / uppercase)
+  h1Jp:   40,  // 和文画面タイトル(Shippori Mincho / fw 400)
+} as const;
+
+// ============================================================
 // 統合エクスポート(主に使う名前空間)
 // ============================================================
 export const BRAND = {
@@ -129,6 +155,7 @@ export const BRAND = {
   content: CONTENT_COLORS,
   sem:     SEMANTIC,
   font:    FONTS,
+  scale:   TYPE_SCALE,
 } as const;
 
 export default BRAND;

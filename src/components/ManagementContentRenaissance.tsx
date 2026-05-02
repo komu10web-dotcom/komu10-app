@@ -30,8 +30,10 @@ import type { Transaction, Project, TransactionAllocation, BankAccount } from '@
 import { Loader2 } from 'lucide-react';
 import { usePeriodRange } from './HeaderControls';
 import { useViewport } from '@/lib/useViewport';
+import { useReducedMotion } from '@/lib/useReducedMotion';
+import { useCountUp } from '@/lib/useCountUp';
 
-import { APP_DARK, FONTS } from '@/lib/brandTokens';
+import { APP_DARK, FONTS, TYPE_SCALE } from '@/lib/brandTokens';
 
 // v0.33.0: ブランドトークン一元管理に統合(brandTokens.ts)
 // 旧: ローカル C/F オブジェクト定義 → 新: APP_DARK / FONTS から参照
@@ -43,6 +45,9 @@ const F = {
   jp:   FONTS.mincho,
   num:  FONTS.num,
 } as const;
+// Phase 1 (session77): タイポ階層 7階層+h1Jp(Khoi Vinh modular scale 1.333)
+// 直書き fontSize 全廃 → T.t1 〜 T.t7 / T.h1Jp で参照
+const T = TYPE_SCALE;
 
 function yen(n: number): string {
   if (n === 0) return '¥0';
@@ -76,6 +81,8 @@ const kamokuName = (k: string) => KAMOKU[k as keyof typeof KAMOKU]?.name || k;
 export default function ManagementContentRenaissance() {
   const { mode, owner, startDate, endDate, year } = usePeriodRange();
   const { isWide, mounted } = useViewport();
+  // session77 Phase 1 軸4: prefers-reduced-motion 対応(WCAG / Léonie Watson 必須)
+  const reduceMotion = useReducedMotion();
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -328,19 +335,19 @@ export default function ManagementContentRenaissance() {
       color: C.text,
       fontFamily: F.body,
       opacity: appeared ? 1 : 0,
-      transition: 'opacity 280ms ease-out',
+      transition: reduceMotion ? 'none' : 'opacity 280ms ease-out',
     }}>
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '64px 48px 96px' }}>
 
         <header style={{ borderBottom: `1px solid ${C.line}`, paddingBottom: 40, marginBottom: 64 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 32, flexWrap: 'wrap' }}>
             <div style={{ flex: 1, minWidth: 320 }}>
-              <p style={{ fontFamily: F.num, fontSize: 12, letterSpacing: '0.35em', color: C.gold, marginBottom: 22, fontWeight: 500 }}>
+              <p style={{ fontFamily: F.num, fontSize: T.t6, letterSpacing: '0.35em', color: C.gold, marginBottom: 22, fontWeight: 500 }}>
                 VOLUME 04 · MANAGEMENT
               </p>
               <h1 style={{
                 fontFamily: F.jp,
-                fontSize: 40,
+                fontSize: T.h1Jp,
                 fontWeight: 400,
                 color: C.text,
                 lineHeight: 1.35,
@@ -351,7 +358,7 @@ export default function ManagementContentRenaissance() {
               </h1>
               <p style={{
                 fontFamily: F.jp,
-                fontSize: 18,
+                fontSize: T.t4,
                 fontWeight: 400,
                 color: C.textSub,
                 letterSpacing: '0.06em',
@@ -360,7 +367,7 @@ export default function ManagementContentRenaissance() {
               }}>
                 — {subContext}
               </p>
-              <p style={{ fontSize: 11, color: C.textMute, letterSpacing: '0.2em', fontWeight: 300 }}>
+              <p style={{ fontSize: T.t6, color: C.textMute, letterSpacing: '0.2em', fontWeight: 300 }}>
                 {sectionLabel} · {year}
               </p>
             </div>
@@ -372,7 +379,7 @@ export default function ManagementContentRenaissance() {
                   onClick={() => setViewMode(tab.v)}
                   style={{
                     padding: '12px 28px',
-                    fontSize: 11,
+                    fontSize: T.t6,
                     fontFamily: F.body,
                     fontWeight: 500,
                     letterSpacing: '0.2em',
@@ -381,7 +388,7 @@ export default function ManagementContentRenaissance() {
                     border: 'none',
                     borderLeft: i > 0 ? `1px solid ${C.line}` : 'none',
                     cursor: 'pointer',
-                    transition: 'background 0.18s ease, color 0.18s ease',
+                    transition: reduceMotion ? 'none' : 'background 0.18s ease, color 0.18s ease',
                   }}
                 >
                   {tab.label}
@@ -426,11 +433,11 @@ export default function ManagementContentRenaissance() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          fontSize: 10,
+          fontSize: T.t7,
           color: C.textMute,
           letterSpacing: '0.15em',
         }}>
-          <span style={{ fontFamily: F.num, fontWeight: 500, fontSize: 14 }}>
+          <span style={{ fontFamily: F.num, fontWeight: 500, fontSize: T.t5 }}>
             komu<span style={{ color: C.gold }}>10</span>
           </span>
           <span style={{ fontFamily: F.num, letterSpacing: '0.25em' }}>
@@ -456,6 +463,12 @@ function MobileView({ appeared, year, revenueTotal, expenseTotal, profitTotal, p
   runwayLabel: string;
   totalBankBalance: number;
 }) {
+  // session77 Phase 1 軸4: 主指標 4KPI のカウントアップ + reduceMotion 対応
+  const reduceMotion = useReducedMotion();
+  const animRev    = useCountUp(revenueTotal);
+  const animExp    = useCountUp(expenseTotal);
+  const animProfit = useCountUp(profitTotal);
+  const animRate   = useCountUp(profitRate);
   return (
     <div style={{
       background: C.bg,
@@ -463,17 +476,17 @@ function MobileView({ appeared, year, revenueTotal, expenseTotal, profitTotal, p
       color: C.text,
       fontFamily: F.body,
       opacity: appeared ? 1 : 0,
-      transition: 'opacity 280ms ease-out',
+      transition: reduceMotion ? 'none' : 'opacity 280ms ease-out',
     }}>
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '32px 24px 64px' }}>
 
         <header style={{ paddingBottom: 24, marginBottom: 36, borderBottom: `1px solid ${C.line}` }}>
-          <p style={{ fontFamily: F.num, fontSize: 11, letterSpacing: '0.3em', color: C.gold, marginBottom: 14, fontWeight: 500 }}>
+          <p style={{ fontFamily: F.num, fontSize: T.t6, letterSpacing: '0.3em', color: C.gold, marginBottom: 14, fontWeight: 500 }}>
             VOLUME 04 · MANAGEMENT
           </p>
           <h1 style={{
             fontFamily: F.jp,
-            fontSize: 24,
+            fontSize: T.t3,
             fontWeight: 400,
             color: C.text,
             lineHeight: 1.45,
@@ -482,13 +495,13 @@ function MobileView({ appeared, year, revenueTotal, expenseTotal, profitTotal, p
           }}>
             いま、儲かっているのか。
           </h1>
-          <p style={{ fontSize: 10, color: C.textMute, letterSpacing: '0.2em', fontWeight: 300 }}>
+          <p style={{ fontSize: T.t7, color: C.textMute, letterSpacing: '0.2em', fontWeight: 300 }}>
             損益 · {year}
           </p>
         </header>
 
         <section style={{ marginBottom: 40 }}>
-          <p style={{ fontFamily: F.num, fontSize: 10, letterSpacing: '0.25em', color: C.gold, marginBottom: 16, fontWeight: 500 }}>
+          <p style={{ fontFamily: F.num, fontSize: T.t7, letterSpacing: '0.25em', color: C.gold, marginBottom: 16, fontWeight: 500 }}>
             — 簡易チェック
           </p>
           <div style={{
@@ -498,10 +511,10 @@ function MobileView({ appeared, year, revenueTotal, expenseTotal, profitTotal, p
             background: C.surface,
           }}>
             {[
-              { label: '売上', value: yenShort(revenueTotal), color: C.gold, borderLeft: false, borderTop: false },
-              { label: '経費', value: yenShort(expenseTotal), color: C.crimson, borderLeft: true, borderTop: false },
-              { label: '利益', value: yenShort(profitTotal), color: profitTotal >= 0 ? C.green : C.crimson, borderLeft: false, borderTop: true },
-              { label: '利益率', value: `${profitRate.toFixed(1)}%`, color: profitRate >= 0 ? C.green : C.crimson, borderLeft: true, borderTop: true },
+              { label: '売上', value: yenShort(animRev), color: C.gold, borderLeft: false, borderTop: false },
+              { label: '経費', value: yenShort(animExp), color: C.crimson, borderLeft: true, borderTop: false },
+              { label: '利益', value: yenShort(animProfit), color: profitTotal >= 0 ? C.green : C.crimson, borderLeft: false, borderTop: true },
+              { label: '利益率', value: `${animRate.toFixed(1)}%`, color: profitRate >= 0 ? C.green : C.crimson, borderLeft: true, borderTop: true },
             ].map((kpi) => (
               <div
                 key={kpi.label}
@@ -511,12 +524,12 @@ function MobileView({ appeared, year, revenueTotal, expenseTotal, profitTotal, p
                   borderTop: kpi.borderTop ? `1px solid ${C.line}` : 'none',
                 }}
               >
-                <p style={{ fontSize: 9, letterSpacing: '0.25em', color: C.textMute, marginBottom: 12, textTransform: 'uppercase' }}>
+                <p style={{ fontSize: T.t7, letterSpacing: '0.25em', color: C.textMute, marginBottom: 12, textTransform: 'uppercase' }}>
                   {kpi.label}
                 </p>
                 <p style={{
                   fontFamily: F.num,
-                  fontSize: 28,
+                  fontSize: T.t3,
                   fontWeight: 400,
                   letterSpacing: '-0.02em',
                   lineHeight: 1,
@@ -532,7 +545,7 @@ function MobileView({ appeared, year, revenueTotal, expenseTotal, profitTotal, p
 
         {runwayMonths !== null && (
           <section style={{ marginBottom: 48 }}>
-            <p style={{ fontFamily: F.num, fontSize: 10, letterSpacing: '0.25em', color: C.gold, marginBottom: 16, fontWeight: 500 }}>
+            <p style={{ fontFamily: F.num, fontSize: T.t7, letterSpacing: '0.25em', color: C.gold, marginBottom: 16, fontWeight: 500 }}>
               — このペースで
             </p>
             <div style={{
@@ -540,13 +553,13 @@ function MobileView({ appeared, year, revenueTotal, expenseTotal, profitTotal, p
               border: `1px solid ${C.line}`,
               padding: '28px 24px',
             }}>
-              <p style={{ fontSize: 9, letterSpacing: '0.25em', color: C.textMute, marginBottom: 14, textTransform: 'uppercase' }}>
+              <p style={{ fontSize: T.t7, letterSpacing: '0.25em', color: C.textMute, marginBottom: 14, textTransform: 'uppercase' }}>
                 Runway · あと
               </p>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 14 }}>
                 <span style={{
                   fontFamily: F.num,
-                  fontSize: 56,
+                  fontSize: T.t2,
                   fontWeight: 400,
                   lineHeight: 0.9,
                   letterSpacing: '-0.03em',
@@ -555,9 +568,9 @@ function MobileView({ appeared, year, revenueTotal, expenseTotal, profitTotal, p
                 }}>
                   {runwayMonths.toFixed(1)}
                 </span>
-                <span style={{ fontFamily: F.jp, fontSize: 16, color: C.textSub }}>ヶ月</span>
+                <span style={{ fontFamily: F.jp, fontSize: T.t4, color: C.textSub }}>ヶ月</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 10, letterSpacing: '0.1em' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: T.t7, letterSpacing: '0.1em' }}>
                 <span style={{
                   padding: '3px 8px',
                   background: runwayColor === C.crimson ? C.crimsonSoft : runwayColor === C.gold ? C.goldSoft : C.greenSoft,
@@ -584,7 +597,7 @@ function MobileView({ appeared, year, revenueTotal, expenseTotal, profitTotal, p
           }}>
             <p style={{
               fontFamily: F.jp,
-              fontSize: 18,
+              fontSize: T.t4,
               color: C.text,
               lineHeight: 2,
               letterSpacing: '0.08em',
@@ -594,7 +607,7 @@ function MobileView({ appeared, year, revenueTotal, expenseTotal, profitTotal, p
             </p>
             <p style={{
               fontFamily: F.jp,
-              fontSize: 18,
+              fontSize: T.t4,
               color: C.text,
               lineHeight: 2,
               letterSpacing: '0.08em',
@@ -603,7 +616,7 @@ function MobileView({ appeared, year, revenueTotal, expenseTotal, profitTotal, p
               経営は、PC で。
             </p>
             <p style={{
-              fontSize: 11,
+              fontSize: T.t6,
               color: C.textSub,
               lineHeight: 1.95,
               letterSpacing: '0.05em',
@@ -624,11 +637,11 @@ function MobileView({ appeared, year, revenueTotal, expenseTotal, profitTotal, p
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          fontSize: 9,
+          fontSize: T.t7,
           color: C.textMute,
           letterSpacing: '0.15em',
         }}>
-          <span style={{ fontFamily: F.num, fontWeight: 500, fontSize: 12 }}>
+          <span style={{ fontFamily: F.num, fontWeight: 500, fontSize: T.t6 }}>
             komu<span style={{ color: C.gold }}>10</span>
           </span>
           <span style={{ fontFamily: F.num, letterSpacing: '0.25em' }}>
@@ -655,6 +668,12 @@ function PLView({ year, revenueTotal, expenseTotal, profitTotal, profitRate, mon
   kamokuExpense: { kamoku: string; name: string; amount: number }[];
   projectPL: { id: string; name: string; division: string; revenue: number; expense: number; profit: number; rate: number }[];
 }) {
+  // session77 Phase 1 軸4: 主指標 4KPI のカウントアップ(280-400ms / easeOutQuart)
+  // prefers-reduced-motion: reduce のとき即時表示にフォールバック
+  const animRev    = useCountUp(revenueTotal);
+  const animExp    = useCountUp(expenseTotal);
+  const animProfit = useCountUp(profitTotal);
+  const animRate   = useCountUp(profitRate);
   return (
     <>
       <Section num="01" title={`${year}年の手応え`}>
@@ -664,10 +683,10 @@ function PLView({ year, revenueTotal, expenseTotal, profitTotal, profitRate, mon
           border: `1px solid ${C.line}`,
         }}>
           {[
-            { label: '売上', value: yenShort(revenueTotal), color: C.gold },
-            { label: '経費', value: yenShort(expenseTotal), color: C.crimson },
-            { label: '利益', value: yenShort(profitTotal), color: profitTotal >= 0 ? C.green : C.crimson },
-            { label: '利益率', value: `${profitRate.toFixed(1)}%`, color: profitRate >= 0 ? C.green : C.crimson },
+            { label: '売上', value: yenShort(animRev), color: C.gold },
+            { label: '経費', value: yenShort(animExp), color: C.crimson },
+            { label: '利益', value: yenShort(animProfit), color: profitTotal >= 0 ? C.green : C.crimson },
+            { label: '利益率', value: `${animRate.toFixed(1)}%`, color: profitRate >= 0 ? C.green : C.crimson },
           ].map((kpi, i) => (
             <div
               key={kpi.label}
@@ -677,12 +696,12 @@ function PLView({ year, revenueTotal, expenseTotal, profitTotal, profitRate, mon
                 background: C.surface,
               }}
             >
-              <p style={{ fontSize: 10, letterSpacing: '0.3em', color: C.textMute, marginBottom: 22, textTransform: 'uppercase', fontWeight: 500 }}>
+              <p style={{ fontSize: T.t7, letterSpacing: '0.3em', color: C.textMute, marginBottom: 22, textTransform: 'uppercase', fontWeight: 500 }}>
                 {kpi.label}
               </p>
               <p style={{
                 fontFamily: F.num,
-                fontSize: 56,
+                fontSize: T.t2,
                 fontWeight: 400,
                 letterSpacing: '-0.025em',
                 lineHeight: 1,
@@ -732,6 +751,12 @@ function CFView({ year, cfTotalInflow, cfTotalOutflow, cfNet, totalBankBalance, 
     netSettled: number;
   }[];
 }) {
+  // session77 Phase 1 軸4: 主指標カウントアップ + reduceMotion 対応
+  const animRunway   = useCountUp(runwayMonths ?? 0);
+  const animInflow   = useCountUp(cfTotalInflow);
+  const animOutflow  = useCountUp(cfTotalOutflow);
+  const animNet      = useCountUp(cfNet);
+  const animBalance  = useCountUp(totalBankBalance);
   return (
     <>
       <Section num="01" title="このペースで、あと何ヶ月もつのか">
@@ -746,31 +771,31 @@ function CFView({ year, cfTotalInflow, cfTotalOutflow, cfNet, totalBankBalance, 
           gap: 48,
         }}>
           <div>
-            <p style={{ fontSize: 11, letterSpacing: '0.3em', color: C.textMute, marginBottom: 24, textTransform: 'uppercase', fontWeight: 500 }}>
+            <p style={{ fontSize: T.t6, letterSpacing: '0.3em', color: C.textMute, marginBottom: 24, textTransform: 'uppercase', fontWeight: 500 }}>
               RUNWAY · あと
             </p>
             {runwayMonths !== null ? (
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 16, marginBottom: 18 }}>
                 <span style={{
                   fontFamily: F.num,
-                  fontSize: 128,
+                  fontSize: T.t1,
                   fontWeight: 400,
                   lineHeight: 0.88,
                   letterSpacing: '-0.05em',
                   color: runwayColor,
                   fontFeatureSettings: "'tnum' 1",
                 }}>
-                  {runwayMonths.toFixed(1)}
+                  {animRunway.toFixed(1)}
                 </span>
-                <span style={{ fontFamily: F.jp, fontSize: 28, color: C.textSub, letterSpacing: '0.05em' }}>ヶ月</span>
+                <span style={{ fontFamily: F.jp, fontSize: T.t3, color: C.textSub, letterSpacing: '0.05em' }}>ヶ月</span>
               </div>
             ) : (
-              <p style={{ fontFamily: F.jp, fontSize: 20, color: C.textMute, marginBottom: 18 }}>
+              <p style={{ fontFamily: F.jp, fontSize: T.t4, color: C.textMute, marginBottom: 18 }}>
                 データ不足
               </p>
             )}
             {runwayMonths !== null && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 12, letterSpacing: '0.12em' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: T.t6, letterSpacing: '0.12em' }}>
                 <span style={{
                   padding: '5px 14px',
                   background: runwayColor === C.crimson ? C.crimsonSoft : runwayColor === C.gold ? C.goldSoft : C.greenSoft,
@@ -787,22 +812,22 @@ function CFView({ year, cfTotalInflow, cfTotalOutflow, cfNet, totalBankBalance, 
           </div>
 
           <div style={{ minWidth: 280, paddingLeft: 32, borderLeft: `1px solid ${C.line}` }}>
-            <p style={{ fontSize: 11, letterSpacing: '0.3em', color: C.textMute, marginBottom: 18, textTransform: 'uppercase', fontWeight: 500 }}>
+            <p style={{ fontSize: T.t6, letterSpacing: '0.3em', color: C.textMute, marginBottom: 18, textTransform: 'uppercase', fontWeight: 500 }}>
               口座残高
             </p>
             {bankAccounts.length === 0 ? (
-              <p style={{ fontSize: 12, color: C.textMute }}>口座未登録</p>
+              <p style={{ fontSize: T.t6, color: C.textMute }}>口座未登録</p>
             ) : (
               <>
                 {bankAccounts.map(ba => (
-                  <div key={ba.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10, fontSize: 13 }}>
+                  <div key={ba.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10, fontSize: T.t5 }}>
                     <span style={{ color: C.textSub }}>{ba.name}</span>
                     <span style={{ fontFamily: F.num, color: C.text, letterSpacing: '-0.01em' }}>{yenShort(ba.balance)}</span>
                   </div>
                 ))}
                 <div style={{ borderTop: `1px solid ${C.line}`, paddingTop: 12, marginTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <span style={{ fontSize: 11, color: C.textSub, letterSpacing: '0.08em' }}>合計</span>
-                  <span style={{ fontFamily: F.num, fontSize: 24, color: C.gold, fontWeight: 500 }}>{yenShort(totalBankBalance)}</span>
+                  <span style={{ fontSize: T.t6, color: C.textSub, letterSpacing: '0.08em' }}>合計</span>
+                  <span style={{ fontFamily: F.num, fontSize: T.t3, color: C.gold, fontWeight: 500 }}>{yenShort(animBalance)}</span>
                 </div>
               </>
             )}
@@ -817,15 +842,15 @@ function CFView({ year, cfTotalInflow, cfTotalOutflow, cfNet, totalBankBalance, 
           border: `1px solid ${C.line}`,
         }}>
           {[
-            { label: '入金', value: cfTotalInflow, color: C.gold },
-            { label: '出金', value: cfTotalOutflow, color: C.crimson },
-            { label: '差引', value: cfNet, color: cfNet >= 0 ? C.green : C.crimson },
+            { label: '入金', value: animInflow,  color: C.gold },
+            { label: '出金', value: animOutflow, color: C.crimson },
+            { label: '差引', value: animNet,     color: cfNet >= 0 ? C.green : C.crimson },
           ].map((kpi, i) => (
             <div key={kpi.label} style={{ padding: '40px 32px', borderLeft: i > 0 ? `1px solid ${C.line}` : 'none', background: C.surface }}>
-              <p style={{ fontSize: 10, letterSpacing: '0.3em', color: C.textMute, marginBottom: 22, textTransform: 'uppercase', fontWeight: 500 }}>{kpi.label}</p>
+              <p style={{ fontSize: T.t7, letterSpacing: '0.3em', color: C.textMute, marginBottom: 22, textTransform: 'uppercase', fontWeight: 500 }}>{kpi.label}</p>
               <p style={{
                 fontFamily: F.num,
-                fontSize: 56,
+                fontSize: T.t2,
                 fontWeight: 400,
                 letterSpacing: '-0.025em',
                 lineHeight: 1,
@@ -852,14 +877,14 @@ function Section({ num, title, children }: { num: string; title: string; childre
       <div style={{ marginBottom: 28, display: 'flex', alignItems: 'baseline', gap: 20 }}>
         <span style={{
           fontFamily: F.num,
-          fontSize: 13,
+          fontSize: T.t5,
           color: C.gold,
           letterSpacing: '0.25em',
           fontWeight: 500,
         }}>— {num}</span>
         <span style={{
           fontFamily: F.jp,
-          fontSize: 17,
+          fontSize: T.t4,
           color: C.textSub,
           letterSpacing: '0.06em',
         }}>
@@ -897,12 +922,12 @@ function PLChart({ data }: { data: { month: number; rev: number; exp: number; pr
   return (
     <div style={{ background: C.surface, border: `1px solid ${C.line}`, padding: '40px 36px' }}>
       <div style={{ marginBottom: 28 }}>
-        <div style={{ display: 'flex', gap: 28, fontSize: 11, letterSpacing: '0.18em', color: C.textSub }}>
+        <div style={{ display: 'flex', gap: 28, fontSize: T.t6, letterSpacing: '0.18em', color: C.textSub }}>
           <Legend color={C.gold} label="売上" />
           <Legend color={C.crimson} label="経費" />
           <Legend color={C.green} label="利益" line />
         </div>
-        <div style={{ display: 'flex', gap: 18, marginTop: 10, fontSize: 9, letterSpacing: '0.2em', color: C.textMute, textTransform: 'uppercase' }}>
+        <div style={{ display: 'flex', gap: 18, marginTop: 10, fontSize: T.t7, letterSpacing: '0.2em', color: C.textMute, textTransform: 'uppercase' }}>
           <SubLegend variant="solid" label="実績" />
           <SubLegend variant="hatched" label="見込み" />
         </div>
@@ -980,11 +1005,11 @@ function CFChart({ data }: { data: { month: number; inflow: number; outflow: num
   return (
     <div style={{ background: C.surface, border: `1px solid ${C.line}`, padding: '40px 36px' }}>
       <div style={{ marginBottom: 28 }}>
-        <div style={{ display: 'flex', gap: 28, fontSize: 11, letterSpacing: '0.18em', color: C.textSub }}>
+        <div style={{ display: 'flex', gap: 28, fontSize: T.t6, letterSpacing: '0.18em', color: C.textSub }}>
           <Legend color={C.gold} label="入金" />
           <Legend color={C.crimson} label="出金" />
         </div>
-        <div style={{ display: 'flex', gap: 18, marginTop: 10, fontSize: 9, letterSpacing: '0.2em', color: C.textMute, textTransform: 'uppercase' }}>
+        <div style={{ display: 'flex', gap: 18, marginTop: 10, fontSize: T.t7, letterSpacing: '0.2em', color: C.textMute, textTransform: 'uppercase' }}>
           <SubLegend variant="solid" label="実績" />
           <SubLegend variant="hatched" label="見込み" />
         </div>
@@ -1026,7 +1051,7 @@ function YAxis({ ticks }: { ticks: number[] }) {
   return (
     <div style={{ width: 72, flexShrink: 0, paddingRight: 12, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', paddingBottom: 28 }}>
       {[...ticks].reverse().map((t, i) => (
-        <span key={i} style={{ fontFamily: F.num, fontSize: 10, color: C.textMute, textAlign: 'right', fontFeatureSettings: "'tnum' 1" }}>
+        <span key={i} style={{ fontFamily: F.num, fontSize: T.t7, color: C.textMute, textAlign: 'right', fontFeatureSettings: "'tnum' 1" }}>
           {yenShort(t)}
         </span>
       ))}
@@ -1038,7 +1063,7 @@ function XAxis() {
   return (
     <div style={{ display: 'flex', paddingTop: 10, height: 28 }}>
       {Array.from({ length: 12 }, (_, i) => (
-        <div key={i} style={{ flex: 1, textAlign: 'center', fontFamily: F.num, fontSize: 11, color: C.textMute, fontFeatureSettings: "'tnum' 1" }}>
+        <div key={i} style={{ flex: 1, textAlign: 'center', fontFamily: F.num, fontSize: T.t6, color: C.textMute, fontFeatureSettings: "'tnum' 1" }}>
           {i + 1}
         </div>
       ))}
@@ -1083,6 +1108,8 @@ function SubLegend({ variant, label }: { variant: 'solid' | 'hatched'; label: st
 // ========== 事業別フロー(全事業最大値で正規化・v0.22.0修正) ==========
 
 function DivisionFlow({ divisions }: { divisions: { id: string; name: string; label: string; color: string; revenue: number; expense: number; profit: number }[] }) {
+  // session77 Phase 1 軸4: バー幅トランジション reduceMotion ガード
+  const reduceMotion = useReducedMotion();
   const totalRev = divisions.reduce((s, d) => s + d.revenue, 0);
   const totalExp = divisions.reduce((s, d) => s + d.expense, 0);
   const totalProfit = totalRev - totalExp;
@@ -1097,18 +1124,18 @@ function DivisionFlow({ divisions }: { divisions: { id: string; name: string; la
     <div style={{ background: C.surface, border: `1px solid ${C.line}`, padding: '36px 32px' }}>
       <div style={{ display: 'flex', gap: 48, marginBottom: 32, paddingBottom: 24, borderBottom: `1px solid ${C.lineSoft}`, flexWrap: 'wrap' }}>
         <div>
-          <p style={{ fontSize: 10, letterSpacing: '0.25em', color: C.textMute, marginBottom: 8 }}>合計売上</p>
-          <p style={{ fontFamily: F.num, fontSize: 28, color: C.gold, fontWeight: 500, fontFeatureSettings: "'tnum' 1" }}>{yenShort(totalRev)}</p>
+          <p style={{ fontSize: T.t7, letterSpacing: '0.25em', color: C.textMute, marginBottom: 8 }}>合計売上</p>
+          <p style={{ fontFamily: F.num, fontSize: T.t3, color: C.gold, fontWeight: 500, fontFeatureSettings: "'tnum' 1" }}>{yenShort(totalRev)}</p>
         </div>
         <div>
-          <p style={{ fontSize: 10, letterSpacing: '0.25em', color: C.textMute, marginBottom: 8 }}>合計経費</p>
-          <p style={{ fontFamily: F.num, fontSize: 28, color: C.crimson, fontWeight: 500, fontFeatureSettings: "'tnum' 1" }}>{yenShort(totalExp)}</p>
+          <p style={{ fontSize: T.t7, letterSpacing: '0.25em', color: C.textMute, marginBottom: 8 }}>合計経費</p>
+          <p style={{ fontFamily: F.num, fontSize: T.t3, color: C.crimson, fontWeight: 500, fontFeatureSettings: "'tnum' 1" }}>{yenShort(totalExp)}</p>
         </div>
         <div>
-          <p style={{ fontSize: 10, letterSpacing: '0.25em', color: C.textMute, marginBottom: 8 }}>合計利益</p>
+          <p style={{ fontSize: T.t7, letterSpacing: '0.25em', color: C.textMute, marginBottom: 8 }}>合計利益</p>
           <p style={{
             fontFamily: F.num,
-            fontSize: 28,
+            fontSize: T.t3,
             color: totalProfit >= 0 ? C.green : C.crimson,
             fontWeight: 500,
             fontFeatureSettings: "'tnum' 1",
@@ -1126,30 +1153,30 @@ function DivisionFlow({ divisions }: { divisions: { id: string; name: string; la
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <span style={{ width: 10, height: 10, background: C.gold, display: 'inline-block' }} />
-                  <span style={{ fontFamily: F.num, fontSize: 14, color: C.text, letterSpacing: '0.05em', fontWeight: 500 }}>{d.name.toUpperCase()}</span>
-                  <span style={{ fontFamily: F.jp, fontSize: 13, color: C.textSub }}>{d.label}</span>
+                  <span style={{ fontFamily: F.num, fontSize: T.t5, color: C.text, letterSpacing: '0.05em', fontWeight: 500 }}>{d.name.toUpperCase()}</span>
+                  <span style={{ fontFamily: F.jp, fontSize: T.t5, color: C.textSub }}>{d.label}</span>
                 </div>
-                <span style={{ fontFamily: F.num, fontSize: 18, color: profitColor, fontWeight: 500, fontFeatureSettings: "'tnum' 1" }}>
+                <span style={{ fontFamily: F.num, fontSize: T.t4, color: profitColor, fontWeight: 500, fontFeatureSettings: "'tnum' 1" }}>
                   {yenShort(d.profit)}
                 </span>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 5 }}>
-                <span style={{ width: 40, fontSize: 9, color: C.textMute, letterSpacing: '0.1em' }}>売上</span>
+                <span style={{ width: 40, fontSize: T.t7, color: C.textMute, letterSpacing: '0.1em' }}>売上</span>
                 <div style={{ flex: 1, height: 5, background: C.lineSoft, position: 'relative' }}>
-                  <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${revPct}%`, background: C.gold, transition: 'width 320ms ease-out' }} />
+                  <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${revPct}%`, background: C.gold, transition: reduceMotion ? 'none' : 'width 320ms ease-out' }} />
                 </div>
-                <span style={{ width: 96, textAlign: 'right', fontFamily: F.num, fontSize: 12, color: C.textSub, fontFeatureSettings: "'tnum' 1" }}>
+                <span style={{ width: 96, textAlign: 'right', fontFamily: F.num, fontSize: T.t6, color: C.textSub, fontFeatureSettings: "'tnum' 1" }}>
                   {yenShort(d.revenue)}
                 </span>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                <span style={{ width: 40, fontSize: 9, color: C.textMute, letterSpacing: '0.1em' }}>経費</span>
+                <span style={{ width: 40, fontSize: T.t7, color: C.textMute, letterSpacing: '0.1em' }}>経費</span>
                 <div style={{ flex: 1, height: 5, background: C.lineSoft, position: 'relative' }}>
-                  <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${expPct}%`, background: C.crimson, transition: 'width 320ms ease-out' }} />
+                  <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${expPct}%`, background: C.crimson, transition: reduceMotion ? 'none' : 'width 320ms ease-out' }} />
                 </div>
-                <span style={{ width: 96, textAlign: 'right', fontFamily: F.num, fontSize: 12, color: C.textSub, fontFeatureSettings: "'tnum' 1" }}>
+                <span style={{ width: 96, textAlign: 'right', fontFamily: F.num, fontSize: T.t6, color: C.textSub, fontFeatureSettings: "'tnum' 1" }}>
                   {yenShort(d.expense)}
                 </span>
               </div>
@@ -1162,10 +1189,12 @@ function DivisionFlow({ divisions }: { divisions: { id: string; name: string; la
 }
 
 function KamokuBars({ items, total }: { items: { kamoku: string; name: string; amount: number }[]; total: number }) {
+  // session77 Phase 1 軸4: バー transition reduceMotion ガード
+  const reduceMotion = useReducedMotion();
   if (items.length === 0) {
     return (
       <div style={{ background: C.surface, border: `1px solid ${C.line}`, padding: '48px 32px', textAlign: 'center' }}>
-        <p style={{ fontSize: 12, color: C.textMute }}>経費データがありません</p>
+        <p style={{ fontSize: T.t6, color: C.textMute }}>経費データがありません</p>
       </div>
     );
   }
@@ -1179,16 +1208,16 @@ function KamokuBars({ items, total }: { items: { kamoku: string; name: string; a
             <div key={item.kamoku}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                  <span style={{ fontFamily: F.num, fontSize: 10, color: C.textMute, letterSpacing: '0.18em', minWidth: 28 }}>
+                  <span style={{ fontFamily: F.num, fontSize: T.t7, color: C.textMute, letterSpacing: '0.18em', minWidth: 28 }}>
                     {String(i + 1).padStart(2, '0')}
                   </span>
-                  <span style={{ fontFamily: F.jp, fontSize: 14, color: C.text }}>{item.name}</span>
+                  <span style={{ fontFamily: F.jp, fontSize: T.t5, color: C.text }}>{item.name}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 14 }}>
-                  <span style={{ fontFamily: F.num, fontSize: 12, color: C.textMute, fontFeatureSettings: "'tnum' 1" }}>
+                  <span style={{ fontFamily: F.num, fontSize: T.t6, color: C.textMute, fontFeatureSettings: "'tnum' 1" }}>
                     {pct.toFixed(1)}%
                   </span>
-                  <span style={{ fontFamily: F.num, fontSize: 16, color: C.text, fontFeatureSettings: "'tnum' 1", minWidth: 96, textAlign: 'right' }}>
+                  <span style={{ fontFamily: F.num, fontSize: T.t4, color: C.text, fontFeatureSettings: "'tnum' 1", minWidth: 96, textAlign: 'right' }}>
                     {yenShort(item.amount)}
                   </span>
                 </div>
@@ -1199,7 +1228,7 @@ function KamokuBars({ items, total }: { items: { kamoku: string; name: string; a
                   width: `${pct}%`,
                   background: C.crimson,
                   opacity: 0.75,
-                  transition: 'width 320ms ease-out',
+                  transition: reduceMotion ? 'none' : 'width 320ms ease-out',
                 }} />
               </div>
             </div>
@@ -1213,10 +1242,12 @@ function KamokuBars({ items, total }: { items: { kamoku: string; name: string; a
 // ========== PJ別利益率テーブル(PC前提・カラム幅広く・v0.22.0修正) ==========
 
 function ProjectTable({ items }: { items: { id: string; name: string; division: string; revenue: number; expense: number; profit: number; rate: number }[] }) {
+  // session77 Phase 1 軸4: バー transition reduceMotion ガード
+  const reduceMotion = useReducedMotion();
   if (items.length === 0) {
     return (
       <div style={{ background: C.surface, border: `1px solid ${C.line}`, padding: '48px 32px', textAlign: 'center' }}>
-        <p style={{ fontSize: 12, color: C.textMute }}>プロジェクト別データがありません</p>
+        <p style={{ fontSize: T.t6, color: C.textMute }}>プロジェクト別データがありません</p>
       </div>
     );
   }
@@ -1232,7 +1263,7 @@ function ProjectTable({ items }: { items: { id: string; name: string; division: 
         gap: 16,
         padding: '18px 32px',
         borderBottom: `1px solid ${C.line}`,
-        fontSize: 10,
+        fontSize: T.t7,
         letterSpacing: '0.25em',
         color: C.textMute,
         textTransform: 'uppercase',
@@ -1263,23 +1294,23 @@ function ProjectTable({ items }: { items: { id: string; name: string; division: 
             }}
           >
             <span style={{ width: 10, height: 10, background: dotColor, display: 'inline-block', alignSelf: 'center' }} />
-            <span style={{ fontFamily: F.jp, fontSize: 14, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <span style={{ fontFamily: F.jp, fontSize: T.t5, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {p.name}
             </span>
-            <span style={{ fontFamily: F.num, fontSize: 14, color: C.textSub, textAlign: 'right', fontFeatureSettings: "'tnum' 1" }}>
+            <span style={{ fontFamily: F.num, fontSize: T.t5, color: C.textSub, textAlign: 'right', fontFeatureSettings: "'tnum' 1" }}>
               {yenShort(p.revenue)}
             </span>
-            <span style={{ fontFamily: F.num, fontSize: 14, color: C.textSub, textAlign: 'right', fontFeatureSettings: "'tnum' 1" }}>
+            <span style={{ fontFamily: F.num, fontSize: T.t5, color: C.textSub, textAlign: 'right', fontFeatureSettings: "'tnum' 1" }}>
               {yenShort(p.expense)}
             </span>
-            <span style={{ fontFamily: F.num, fontSize: 16, color: barColor, textAlign: 'right', fontFeatureSettings: "'tnum' 1", fontWeight: 500 }}>
+            <span style={{ fontFamily: F.num, fontSize: T.t4, color: barColor, textAlign: 'right', fontFeatureSettings: "'tnum' 1", fontWeight: 500 }}>
               {yenShort(p.profit)}
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ flex: 1, height: 4, background: C.lineSoft, position: 'relative' }}>
-                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${barWidth}%`, background: barColor, transition: 'width 320ms ease-out' }} />
+                <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${barWidth}%`, background: barColor, transition: reduceMotion ? 'none' : 'width 320ms ease-out' }} />
               </div>
-              <span style={{ fontFamily: F.num, fontSize: 12, color: barColor, fontFeatureSettings: "'tnum' 1", minWidth: 44, textAlign: 'right' }}>
+              <span style={{ fontFamily: F.num, fontSize: T.t6, color: barColor, fontFeatureSettings: "'tnum' 1", minWidth: 44, textAlign: 'right' }}>
                 {p.rate.toFixed(0)}%
               </span>
             </div>
