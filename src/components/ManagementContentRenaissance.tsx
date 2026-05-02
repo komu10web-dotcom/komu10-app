@@ -95,6 +95,8 @@ export default function ManagementContentRenaissance() {
   const [appeared, setAppeared] = useState(false);
   // session77 Phase 1 B3: Tufte 流メタ情報帯(更新日)
   const [lastUpdated, setLastUpdated] = useState<string>('—');
+  // session77 Phase 1 C2: エラー復帰画面(振動でなく優しい揺り戻し)
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading) {
@@ -107,6 +109,7 @@ export default function ManagementContentRenaissance() {
     if (!supabase) return;
     setLoading(true);
     setAppeared(false);
+    setFetchError(null);
     try {
       let txQ = supabase.from('transactions').select('*')
         .gte('date', startDate).lt('date', endDate);
@@ -142,6 +145,9 @@ export default function ManagementContentRenaissance() {
       }
     } catch (err) {
       console.error('Fetch error:', err);
+      // session77 Phase 1 C2: 道案内テキスト(技術用語ではなく次の一歩を示す)
+      const msg = err instanceof Error ? err.message : '通信が一度途切れたようです';
+      setFetchError(msg);
     } finally {
       setLoading(false);
       // session77 Phase 1 B3: メタ情報帯の更新日を記録(YYYY-MM-DD HH:MM)
@@ -350,6 +356,16 @@ export default function ManagementContentRenaissance() {
     );
   }
 
+  // session77 Phase 1 C2: エラー復帰画面(振動でなく優しい揺り戻し+次の道案内)
+  // 判定:深津貴之(コピーライティング)/ 出口夏希(CCV) / Léonie Watson(WCAG)
+  if (fetchError) {
+    return (
+      <div style={{ background: C.bg, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 24px' }}>
+        <ErrorRecovery message={fetchError} onRetry={fetchData} />
+      </div>
+    );
+  }
+
   if (!isWide) {
     return (
       <MobileView
@@ -440,6 +456,23 @@ export default function ManagementContentRenaissance() {
             </nav>
           </div>
         </header>
+
+        {/* session77 Phase 1 C1: X ライン1箇所先行導入(章扉装飾)
+            規定書 v1.1 §2.2 Type II 非対称テーパー Forward / §3 stroke 1.0pt 中央階段(実描画 2.5px)
+            §4.1 暗背景 / §4.2 〜→ X Gold(進行・到達点・章扉)
+            §5 絶対禁則#1: UI 進捗バー用途ではない・章扉装飾としての使用 ◯ */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12, marginBottom: 64 }}>
+          <svg width="240" height="6" viewBox="0 0 240 6" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }} aria-hidden="true">
+            <defs>
+              <linearGradient id="x-line-forward" x1="0" y1="0" x2="240" y2="0" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stopColor="#B8893A" stopOpacity="0" />
+                <stop offset="1" stopColor="#B8893A" stopOpacity="1" />
+              </linearGradient>
+            </defs>
+            {/* Type II Forward:始点 太(2.5px) → 終点 細(終端 20% = 0.5px) */}
+            <polygon points="0,1.75 240,2.75 240,3.25 0,4.25" fill="url(#x-line-forward)" />
+          </svg>
+        </div>
 
         <ViewSwitch viewKey={`${viewMode}-${year}`}>
           {viewMode === 'pl' ? (
@@ -989,16 +1022,22 @@ function PLChart({ data }: { data: { month: number; rev: number; exp: number; pr
 
   return (
     <div style={{ background: C.surface, border: `1px solid ${C.line}`, padding: '40px 36px' }}>
-      <div style={{ marginBottom: 28 }}>
-        <div style={{ display: 'flex', gap: 28, fontSize: T.t6, letterSpacing: '0.18em', color: C.textSub }}>
-          <Legend color={C.gold} label="売上" />
-          <Legend color={C.crimson} label="経費" />
-          <Legend color={C.green} label="利益" line />
+      <div style={{ marginBottom: 28, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
+        <div>
+          <div style={{ display: 'flex', gap: 28, fontSize: T.t6, letterSpacing: '0.18em', color: C.textSub }}>
+            <Legend color={C.gold} label="売上" />
+            <Legend color={C.crimson} label="経費" />
+            <Legend color={C.green} label="利益" line />
+          </div>
+          <div style={{ display: 'flex', gap: 18, marginTop: 10, fontSize: T.t7, letterSpacing: '0.2em', color: C.textMute, textTransform: 'uppercase' }}>
+            <SubLegend variant="solid" label="実績" />
+            <SubLegend variant="hatched" label="見込み" />
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 18, marginTop: 10, fontSize: T.t7, letterSpacing: '0.2em', color: C.textMute, textTransform: 'uppercase' }}>
-          <SubLegend variant="solid" label="実績" />
-          <SubLegend variant="hatched" label="見込み" />
-        </div>
+        {/* session77 Phase 1 C3: 全 chart に単位・基準明記(Tufte 流) */}
+        <span style={{ fontFamily: F.num, fontSize: T.t7, letterSpacing: '0.22em', color: C.textFade, textTransform: 'uppercase' }}>
+          Unit · JPY
+        </span>
       </div>
 
       <div style={{ display: 'flex', height: 280 }}>
@@ -1072,15 +1111,21 @@ function CFChart({ data }: { data: { month: number; inflow: number; outflow: num
 
   return (
     <div style={{ background: C.surface, border: `1px solid ${C.line}`, padding: '40px 36px' }}>
-      <div style={{ marginBottom: 28 }}>
-        <div style={{ display: 'flex', gap: 28, fontSize: T.t6, letterSpacing: '0.18em', color: C.textSub }}>
-          <Legend color={C.gold} label="入金" />
-          <Legend color={C.crimson} label="出金" />
+      <div style={{ marginBottom: 28, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
+        <div>
+          <div style={{ display: 'flex', gap: 28, fontSize: T.t6, letterSpacing: '0.18em', color: C.textSub }}>
+            <Legend color={C.gold} label="入金" />
+            <Legend color={C.crimson} label="出金" />
+          </div>
+          <div style={{ display: 'flex', gap: 18, marginTop: 10, fontSize: T.t7, letterSpacing: '0.2em', color: C.textMute, textTransform: 'uppercase' }}>
+            <SubLegend variant="solid" label="実績" />
+            <SubLegend variant="hatched" label="見込み" />
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 18, marginTop: 10, fontSize: T.t7, letterSpacing: '0.2em', color: C.textMute, textTransform: 'uppercase' }}>
-          <SubLegend variant="solid" label="実績" />
-          <SubLegend variant="hatched" label="見込み" />
-        </div>
+        {/* session77 Phase 1 C3: 全 chart に単位・基準明記(Tufte 流) */}
+        <span style={{ fontFamily: F.num, fontSize: T.t7, letterSpacing: '0.22em', color: C.textFade, textTransform: 'uppercase' }}>
+          Unit · JPY
+        </span>
       </div>
       <div style={{ display: 'flex', height: 260 }}>
         <YAxis ticks={ticks} />
@@ -1329,6 +1374,98 @@ function KamokuBars({ items, total }: { items: { kamoku: string; name: string; a
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// ========== ErrorRecovery(C2 / エラー復帰画面・優しい揺り戻し) ==========
+// session77 Phase 1 C2 / 軸4
+// 設計:振動アニメーションではなく、180ms フェードインで穏やかに登場
+//      技術用語は隠し、次の一歩(再読み込み)を主役にする
+// 判定:深津貴之(コピーライティング)/ 出口夏希(CCV)/ Val Head(モーション)/ Léonie Watson(WCAG)
+function ErrorRecovery({ message, onRetry }: { message: string; onRetry: () => void }) {
+  const reduceMotion = useReducedMotion();
+  const [appeared, setAppeared] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setAppeared(true), 24);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <div
+      role="alert"
+      aria-live="polite"
+      style={{
+        maxWidth: 520,
+        textAlign: 'center',
+        opacity: reduceMotion ? 1 : (appeared ? 1 : 0),
+        transform: reduceMotion ? 'none' : (appeared ? 'translateY(0)' : 'translateY(6px)'),
+        transition: reduceMotion ? 'none' : 'opacity 240ms ease-out, transform 240ms ease-out',
+      }}
+    >
+      <p style={{
+        fontFamily: F.num,
+        fontSize: T.t7,
+        letterSpacing: '0.3em',
+        color: C.gold,
+        textTransform: 'uppercase',
+        marginBottom: 18,
+        fontWeight: 500,
+      }}>
+        — A Brief Pause
+      </p>
+      <h2 style={{
+        fontFamily: F.jp,
+        fontSize: T.t3,
+        fontWeight: 400,
+        color: C.text,
+        letterSpacing: '0.04em',
+        lineHeight: 1.5,
+        marginBottom: 16,
+      }}>
+        少し、息をついてから。
+      </h2>
+      <p style={{
+        fontFamily: F.jp,
+        fontSize: T.t5,
+        color: C.textSub,
+        letterSpacing: '0.06em',
+        lineHeight: 1.7,
+        marginBottom: 36,
+      }}>
+        通信が一度途切れたようです。<br />
+        もう一度、データを取りに行ってみます。
+      </p>
+      <button
+        onClick={onRetry}
+        style={{
+          fontFamily: F.body,
+          fontSize: T.t6,
+          letterSpacing: '0.25em',
+          color: C.bg,
+          background: C.gold,
+          border: 'none',
+          padding: '14px 36px',
+          cursor: 'pointer',
+          fontWeight: 500,
+          textTransform: 'uppercase',
+          transition: reduceMotion ? 'none' : 'opacity 0.18s ease',
+        }}
+        onMouseEnter={(e) => { if (!reduceMotion) (e.currentTarget as HTMLButtonElement).style.opacity = '0.85'; }}
+        onMouseLeave={(e) => { if (!reduceMotion) (e.currentTarget as HTMLButtonElement).style.opacity = '1'; }}
+      >
+        再び読み込む
+      </button>
+      {/* 技術詳細は控えめに(色は最弱・letterSpacing 強め) */}
+      <p style={{
+        marginTop: 28,
+        fontFamily: F.num,
+        fontSize: T.t7,
+        color: C.textFade,
+        letterSpacing: '0.18em',
+        opacity: 0.6,
+      }}>
+        {message.length > 80 ? message.slice(0, 80) + '…' : message}
+      </p>
     </div>
   );
 }
