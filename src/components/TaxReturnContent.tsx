@@ -77,13 +77,13 @@ function CopyButton({ value }: { value: string }) {
   return (
     <button
       onClick={handleCopy}
-      className="p-1 rounded hover:bg-[#eee] transition-colors"
+      className="p-1 rounded hover:bg-app-button-disabled transition-colors"
       title="金額をコピー"
     >
       {copied ? (
-        <Check className="w-3.5 h-3.5 text-[#1B4D3E]" />
+        <Check className="w-3.5 h-3.5 text-app-green" />
       ) : (
-        <Copy className="w-3.5 h-3.5 text-[#999]" />
+        <Copy className="w-3.5 h-3.5 text-app-text-mute" />
       )}
     </button>
   );
@@ -558,7 +558,7 @@ export default function TaxReturnContent() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-5 h-5 text-[#D4A03A] animate-spin" />
+        <Loader2 className="w-5 h-5 text-app-gold animate-spin" />
       </div>
     );
   }
@@ -568,13 +568,13 @@ export default function TaxReturnContent() {
       <div className="max-w-3xl mx-auto px-6 py-8">
         {/* ヘッダー */}
         <div className="mb-8">
-          <h1 className="font-['Shippori_Mincho'] text-xl text-[#1a1a1a]">
+          <h1 className="font-['Shippori_Mincho'] text-xl text-app-text">
             {year}年 確定申告サマリー
           </h1>
-          <p className="text-[10px] font-light tracking-wider text-[#999] mt-1 mb-4">
+          <p className="text-[10px] font-light tracking-wider text-app-text-mute mt-1 mb-4">
             TAX RETURN — {ownerLabel}
           </p>
-          <p className="text-xs text-[#666] leading-relaxed">
+          <p className="text-xs text-app-text-sub leading-relaxed">
             この画面の数字をE-TAXに転記してください。
             <br />
             科目別の金額は📋ボタンでコピーできます。
@@ -583,9 +583,9 @@ export default function TaxReturnContent() {
 
         {/* 按分未設定の警告 */}
         {missingAnbun.length > 0 && (
-          <div className="mb-6 p-4 bg-[#FFF8E1] border border-[#FFE082] rounded-lg flex items-start gap-3">
-            <AlertTriangle className="w-4 h-4 text-[#F9A825] mt-0.5 shrink-0" />
-            <div className="text-xs text-[#5D4037] leading-relaxed">
+          <div className="mb-6 p-4 bg-state-warn-bg border border-state-warn-line rounded-lg flex items-start gap-3">
+            <AlertTriangle className="w-4 h-4 text-app-warn-strong mt-0.5 shrink-0" />
+            <div className="text-xs text-app-warn-text leading-relaxed">
               <span className="font-medium">按分設定がありません：</span>
               {missingAnbun.map(k => k.name).join('、')}
               <br />
@@ -596,14 +596,14 @@ export default function TaxReturnContent() {
 
         {/* ── 売上 ── */}
         <section className="mb-6">
-          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+          <div className="text-[10px] font-medium tracking-widest text-app-text-mute mb-3">
             売上
           </div>
           <div className="bg-white rounded-xl p-5 shadow-sm">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-[#333]">売上高</span>
+              <span className="text-sm text-app-text-strong">売上高</span>
               <div className="flex items-center gap-2">
-                <span className="font-['Saira_Condensed'] text-2xl text-[#1a1a1a]">
+                <span className="font-['Saira_Condensed'] text-2xl text-app-text">
                   {yen(revenueTotal)}
                 </span>
                 <CopyButton value={String(revenueTotal)} />
@@ -614,22 +614,22 @@ export default function TaxReturnContent() {
 
         {/* ── 経費（按分後）── */}
         <section className="mb-6">
-          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+          <div className="text-[10px] font-medium tracking-widest text-app-text-mute mb-3">
             経費（按分後）
           </div>
-          <div className="bg-white rounded-xl shadow-sm divide-y divide-[#f0f0f0]">
+          <div className="bg-white rounded-xl shadow-sm divide-y divide-app-line">
             {kamokuSummaries.map(k => (
               <div key={k.kamokuId} className="flex items-center justify-between px-5 py-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-[#333]">{k.name}</span>
+                  <span className="text-sm text-app-text-strong">{k.name}</span>
                   {k.anbunRatio !== null && (
-                    <span className="text-[10px] text-[#999] bg-[#F5F5F3] px-1.5 py-0.5 rounded">
+                    <span className="text-[10px] text-app-text-mute bg-app-surface-alt px-1.5 py-0.5 rounded">
                       按分{k.anbunRatio}%
                     </span>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="font-['Saira_Condensed'] text-lg text-[#1a1a1a]">
+                  <span className="font-['Saira_Condensed'] text-lg text-app-text">
                     {yen(k.amount)}
                   </span>
                   <CopyButton value={String(k.amount)} />
@@ -640,9 +640,9 @@ export default function TaxReturnContent() {
             {/* 減価償却費 */}
             {depreciationTotal > 0 && (
               <div className="flex items-center justify-between px-5 py-3">
-                <span className="text-sm text-[#333]">減価償却費</span>
+                <span className="text-sm text-app-text-strong">減価償却費</span>
                 <div className="flex items-center gap-2">
-                  <span className="font-['Saira_Condensed'] text-lg text-[#1a1a1a]">
+                  <span className="font-['Saira_Condensed'] text-lg text-app-text">
                     {yen(depreciationTotal)}
                   </span>
                   <CopyButton value={String(depreciationTotal)} />
@@ -651,7 +651,7 @@ export default function TaxReturnContent() {
             )}
 
             {kamokuSummaries.length === 0 && depreciationTotal === 0 && (
-              <div className="px-5 py-8 text-center text-sm text-[#999]">
+              <div className="px-5 py-8 text-center text-sm text-app-text-mute">
                 経費データがありません
               </div>
             )}
@@ -662,22 +662,22 @@ export default function TaxReturnContent() {
         <section className="mb-10">
           <div className="bg-white rounded-xl p-5 shadow-sm space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-[#333]">経費合計</span>
+              <span className="text-sm font-medium text-app-text-strong">経費合計</span>
               <div className="flex items-center gap-2">
-                <span className="font-['Saira_Condensed'] text-2xl text-[#C23728]">
+                <span className="font-['Saira_Condensed'] text-2xl text-app-red">
                   {yen(expenseTotal)}
                 </span>
                 <CopyButton value={String(expenseTotal)} />
               </div>
             </div>
-            <div className="border-t border-[#f0f0f0] pt-3 flex items-center justify-between">
-              <span className="text-sm font-medium text-[#333]">
+            <div className="border-t border-app-line pt-3 flex items-center justify-between">
+              <span className="text-sm font-medium text-app-text-strong">
                 所得（売上 − 経費）
               </span>
               <div className="flex items-center gap-2">
                 <span
                   className={`font-['Saira_Condensed'] text-2xl ${
-                    income >= 0 ? 'text-[#1B4D3E]' : 'text-[#C23728]'
+                    income >= 0 ? 'text-app-green' : 'text-app-red'
                   }`}
                 >
                   {yen(income)}
@@ -690,19 +690,19 @@ export default function TaxReturnContent() {
 
         {/* ── v0.17.0: 青色申告特別控除 ── */}
         <section className="mb-10">
-          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+          <div className="text-[10px] font-medium tracking-widest text-app-text-mute mb-3">
             青色申告特別控除
           </div>
           <div className="bg-white rounded-xl shadow-sm p-5">
             <div className="flex items-start gap-3">
-              <div className="w-5 h-5 rounded-full bg-[#1B4D3E]/10 flex items-center justify-center shrink-0 mt-0.5">
-                <Check className="w-3 h-3 text-[#1B4D3E]" />
+              <div className="w-5 h-5 rounded-full bg-app-green/10 flex items-center justify-center shrink-0 mt-0.5">
+                <Check className="w-3 h-3 text-app-green" />
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium text-[#1a1a1a] mb-2">
+                <p className="text-sm font-medium text-app-text mb-2">
                   75万円控除を受ける準備ができています
                 </p>
-                <p className="text-[11px] text-[#666] leading-relaxed whitespace-pre-line">
+                <p className="text-[11px] text-app-text-sub leading-relaxed whitespace-pre-line">
                   {`このアプリで行ったすべての訂正と削除は、自動で記録されています。
 これは「優良な電子帳簿」と呼ばれる、税務署が認める帳簿の要件のひとつです。
 
@@ -793,7 +793,7 @@ export default function TaxReturnContent() {
 
           return (
             <section className="mb-10">
-              <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+              <div className="text-[10px] font-medium tracking-widest text-app-text-mute mb-3">
                 インボイス登録の判定
               </div>
               <div className="rounded-xl shadow-sm p-5" style={{ backgroundColor: config.bg }}>
@@ -803,19 +803,19 @@ export default function TaxReturnContent() {
                     <p className="text-sm font-medium mb-2" style={{ color: config.color }}>
                       {config.title}
                     </p>
-                    <p className="text-[11px] text-[#333] leading-relaxed whitespace-pre-line">
+                    <p className="text-[11px] text-app-text-strong leading-relaxed whitespace-pre-line">
                       {config.body}
                     </p>
                     <div className="mt-3 grid grid-cols-2 gap-3 text-[11px]">
                       <div>
-                        <div className="text-[#999]">当年売上</div>
-                        <div className="font-['Saira_Condensed'] text-base text-[#1a1a1a] tabular-nums">
+                        <div className="text-app-text-mute">当年売上</div>
+                        <div className="font-['Saira_Condensed'] text-base text-app-text tabular-nums">
                           {yen(revenueCurrent)}
                         </div>
                       </div>
                       <div>
-                        <div className="text-[#999]">2年前売上（基準期間）</div>
-                        <div className="font-['Saira_Condensed'] text-base text-[#1a1a1a] tabular-nums">
+                        <div className="text-app-text-mute">2年前売上（基準期間）</div>
+                        <div className="font-['Saira_Condensed'] text-base text-app-text tabular-nums">
                           {yen(revenueTwoYearsAgo)}
                         </div>
                       </div>
@@ -831,17 +831,17 @@ export default function TaxReturnContent() {
         <section className="mb-10">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <div className="text-[10px] font-medium tracking-widest text-[#999]">
+              <div className="text-[10px] font-medium tracking-widest text-app-text-mute">
                 仕訳帳
               </div>
-              <p className="text-[11px] text-[#999] mt-1">
+              <p className="text-[11px] text-app-text-mute mt-1">
                 複式簿記の帳簿です。CSV出力してE-TAXへの転記確認に使えます。
               </p>
             </div>
             {journalEntries.length > 0 && (
               <button
                 onClick={() => downloadCSV(journalEntries, year, ownerLabel)}
-                className="flex items-center gap-1.5 text-xs text-[#D4A03A] hover:text-[#b8862e] transition-colors"
+                className="flex items-center gap-1.5 text-xs text-app-gold hover:text-app-gold-hover transition-colors"
               >
                 <Download className="w-3.5 h-3.5" />
                 CSV出力
@@ -851,54 +851,54 @@ export default function TaxReturnContent() {
 
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             {journalEntries.length === 0 ? (
-              <div className="px-5 py-8 text-center text-sm text-[#999]">
+              <div className="px-5 py-8 text-center text-sm text-app-text-mute">
                 仕訳データがありません
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="border-b border-[#f0f0f0]">
-                      <th className="text-left px-3 py-2.5 text-[10px] font-medium tracking-wider text-[#999]">№</th>
-                      <th className="text-left px-4 py-2.5 text-[10px] font-medium tracking-wider text-[#999]">日付</th>
-                      <th className="text-left px-4 py-2.5 text-[10px] font-medium tracking-wider text-[#999]">借方科目</th>
-                      <th className="text-right px-4 py-2.5 text-[10px] font-medium tracking-wider text-[#999]">借方金額</th>
-                      <th className="text-left px-4 py-2.5 text-[10px] font-medium tracking-wider text-[#999]">貸方科目</th>
-                      <th className="text-right px-4 py-2.5 text-[10px] font-medium tracking-wider text-[#999]">貸方金額</th>
-                      <th className="text-left px-4 py-2.5 text-[10px] font-medium tracking-wider text-[#999]">摘要</th>
+                    <tr className="border-b border-app-line">
+                      <th className="text-left px-3 py-2.5 text-[10px] font-medium tracking-wider text-app-text-mute">№</th>
+                      <th className="text-left px-4 py-2.5 text-[10px] font-medium tracking-wider text-app-text-mute">日付</th>
+                      <th className="text-left px-4 py-2.5 text-[10px] font-medium tracking-wider text-app-text-mute">借方科目</th>
+                      <th className="text-right px-4 py-2.5 text-[10px] font-medium tracking-wider text-app-text-mute">借方金額</th>
+                      <th className="text-left px-4 py-2.5 text-[10px] font-medium tracking-wider text-app-text-mute">貸方科目</th>
+                      <th className="text-right px-4 py-2.5 text-[10px] font-medium tracking-wider text-app-text-mute">貸方金額</th>
+                      <th className="text-left px-4 py-2.5 text-[10px] font-medium tracking-wider text-app-text-mute">摘要</th>
                     </tr>
                   </thead>
                   <tbody>
                     {journalEntries.map((e, i) => (
-                      <tr key={i} className="border-b border-[#fafafa] hover:bg-[#fafafa] transition-colors">
-                        <td className="px-3 py-2 font-['Saira_Condensed'] text-[10px] text-[#999] tabular-nums tracking-wider">{e.entryNumber}</td>
-                        <td className="px-4 py-2 text-[#666]">{formatDate(e.date)}</td>
-                        <td className="px-4 py-2 text-[#D4A03A]">{e.debitAccount}</td>
-                        <td className="px-4 py-2 text-right font-['Saira_Condensed'] text-sm text-[#1a1a1a]">{yen(e.debitAmount)}</td>
-                        <td className="px-4 py-2 text-[#81D8D0]">{e.creditAccount}</td>
-                        <td className="px-4 py-2 text-right font-['Saira_Condensed'] text-sm text-[#1a1a1a]">{yen(e.creditAmount)}</td>
-                        <td className="px-4 py-2 text-[#999] max-w-[200px] truncate">{e.description}</td>
+                      <tr key={i} className="border-b border-app-line-soft hover:bg-app-line-soft transition-colors">
+                        <td className="px-3 py-2 font-['Saira_Condensed'] text-[10px] text-app-text-mute tabular-nums tracking-wider">{e.entryNumber}</td>
+                        <td className="px-4 py-2 text-app-text-sub">{formatDate(e.date)}</td>
+                        <td className="px-4 py-2 text-app-gold">{e.debitAccount}</td>
+                        <td className="px-4 py-2 text-right font-['Saira_Condensed'] text-sm text-app-text">{yen(e.debitAmount)}</td>
+                        <td className="px-4 py-2 text-content-scene-notes">{e.creditAccount}</td>
+                        <td className="px-4 py-2 text-right font-['Saira_Condensed'] text-sm text-app-text">{yen(e.creditAmount)}</td>
+                        <td className="px-4 py-2 text-app-text-mute max-w-[200px] truncate">{e.description}</td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
-                    <tr className="border-t border-[#e0e0e0]">
+                    <tr className="border-t border-app-line-strong">
                       <td></td>
-                      <td className="px-4 py-2.5 text-[10px] font-medium text-[#999]">合計</td>
+                      <td className="px-4 py-2.5 text-[10px] font-medium text-app-text-mute">合計</td>
                       <td></td>
-                      <td className="px-4 py-2.5 text-right font-['Saira_Condensed'] text-sm font-medium text-[#1a1a1a]">
+                      <td className="px-4 py-2.5 text-right font-['Saira_Condensed'] text-sm font-medium text-app-text">
                         {yen(journalEntries.reduce((s, e) => s + e.debitAmount, 0))}
                       </td>
                       <td></td>
-                      <td className="px-4 py-2.5 text-right font-['Saira_Condensed'] text-sm font-medium text-[#1a1a1a]">
+                      <td className="px-4 py-2.5 text-right font-['Saira_Condensed'] text-sm font-medium text-app-text">
                         {yen(journalEntries.reduce((s, e) => s + e.creditAmount, 0))}
                       </td>
-                      <td className="px-4 py-2.5 text-[10px] text-[#999]">
+                      <td className="px-4 py-2.5 text-[10px] text-app-text-mute">
                         {journalEntries.reduce((s, e) => s + e.debitAmount, 0) ===
                         journalEntries.reduce((s, e) => s + e.creditAmount, 0) ? (
-                          <span className="text-[#1B4D3E]">✓ 貸借一致</span>
+                          <span className="text-app-green">✓ 貸借一致</span>
                         ) : (
-                          <span className="text-[#C23728]">⚠ 貸借不一致</span>
+                          <span className="text-app-red">⚠ 貸借不一致</span>
                         )}
                       </td>
                     </tr>
@@ -912,31 +912,31 @@ export default function TaxReturnContent() {
         {/* ── 減価償却 ── */}
         {depreciationRows.length > 0 && (
           <section className="mb-10">
-            <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+            <div className="text-[10px] font-medium tracking-widest text-app-text-mute mb-3">
               減価償却
             </div>
             <div className="bg-white rounded-xl shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="border-b border-[#f0f0f0]">
-                      <th className="text-left px-4 py-2.5 text-[10px] font-medium tracking-wider text-[#999]">資産名</th>
-                      <th className="text-right px-4 py-2.5 text-[10px] font-medium tracking-wider text-[#999]">取得価額</th>
-                      <th className="text-right px-4 py-2.5 text-[10px] font-medium tracking-wider text-[#999]">耐用年数</th>
-                      <th className="text-right px-4 py-2.5 text-[10px] font-medium tracking-wider text-[#999]">事業割合</th>
-                      <th className="text-right px-4 py-2.5 text-[10px] font-medium tracking-wider text-[#999]">当期償却</th>
-                      <th className="text-right px-4 py-2.5 text-[10px] font-medium tracking-wider text-[#999]">期末簿価</th>
+                    <tr className="border-b border-app-line">
+                      <th className="text-left px-4 py-2.5 text-[10px] font-medium tracking-wider text-app-text-mute">資産名</th>
+                      <th className="text-right px-4 py-2.5 text-[10px] font-medium tracking-wider text-app-text-mute">取得価額</th>
+                      <th className="text-right px-4 py-2.5 text-[10px] font-medium tracking-wider text-app-text-mute">耐用年数</th>
+                      <th className="text-right px-4 py-2.5 text-[10px] font-medium tracking-wider text-app-text-mute">事業割合</th>
+                      <th className="text-right px-4 py-2.5 text-[10px] font-medium tracking-wider text-app-text-mute">当期償却</th>
+                      <th className="text-right px-4 py-2.5 text-[10px] font-medium tracking-wider text-app-text-mute">期末簿価</th>
                     </tr>
                   </thead>
                   <tbody>
                     {depreciationRows.map(d => (
-                      <tr key={d.id} className="border-b border-[#fafafa]">
-                        <td className="px-4 py-2 text-[#333]">{d.name}</td>
+                      <tr key={d.id} className="border-b border-app-line-soft">
+                        <td className="px-4 py-2 text-app-text-strong">{d.name}</td>
                         <td className="px-4 py-2 text-right font-['Saira_Condensed'] text-sm">{yen(d.acquisitionCost)}</td>
-                        <td className="px-4 py-2 text-right text-[#666]">{d.usefulLife}年</td>
-                        <td className="px-4 py-2 text-right text-[#666]">{d.businessUseRatio}%</td>
-                        <td className="px-4 py-2 text-right font-['Saira_Condensed'] text-sm text-[#C23728]">{yen(d.currentYearAmount)}</td>
-                        <td className="px-4 py-2 text-right font-['Saira_Condensed'] text-sm text-[#1a1a1a]">{yen(d.bookValue)}</td>
+                        <td className="px-4 py-2 text-right text-app-text-sub">{d.usefulLife}年</td>
+                        <td className="px-4 py-2 text-right text-app-text-sub">{d.businessUseRatio}%</td>
+                        <td className="px-4 py-2 text-right font-['Saira_Condensed'] text-sm text-app-red">{yen(d.currentYearAmount)}</td>
+                        <td className="px-4 py-2 text-right font-['Saira_Condensed'] text-sm text-app-text">{yen(d.bookValue)}</td>
                       </tr>
                     ))}
                   </tbody>

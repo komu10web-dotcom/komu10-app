@@ -247,20 +247,20 @@ export default function ConsultationModal({
         {/* ヘッダー */}
         <div className="sticky top-0 bg-white border-b border-gray-100 px-5 py-4 flex items-center justify-between z-10 sm:rounded-t-2xl">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-[#1a1a1a]" />
-            <p className="text-sm font-medium text-[#1a1a1a]">AIに相談</p>
+            <Sparkles className="w-4 h-4 text-app-text" />
+            <p className="text-sm font-medium text-app-text">AIに相談</p>
           </div>
           <button onClick={handleClose} className="p-1 rounded-lg hover:bg-black/5">
-            <X className="w-4 h-4 text-[#999]" />
+            <X className="w-4 h-4 text-app-text-mute" />
           </button>
         </div>
 
         {/* 文脈サマリー */}
-        <div className="px-5 py-3 bg-[#FAF9F6] border-b border-gray-100 text-[11px] text-[#666]">
-          <span className="font-medium text-[#1a1a1a]">
+        <div className="px-5 py-3 bg-app-surface border-b border-gray-100 text-[11px] text-app-text-sub">
+          <span className="font-medium text-app-text">
             {context.date || '日付未'} / ¥{(context.amount || 0).toLocaleString()} / {context.store || '支払先未'}
           </span>
-          <span className="text-[#999]"> / 現在の科目: {kamokuName(context.kamoku)}</span>
+          <span className="text-app-text-mute"> / 現在の科目: {kamokuName(context.kamoku)}</span>
         </div>
 
         {/* 過去の類似取引（折りたたみ） */}
@@ -268,7 +268,7 @@ export default function ConsultationModal({
           <div className="border-b border-gray-100">
             <button
               onClick={() => setSimilarOpen(!similarOpen)}
-              className="w-full px-5 py-2.5 flex items-center justify-between text-[11px] text-[#666] hover:bg-black/5"
+              className="w-full px-5 py-2.5 flex items-center justify-between text-[11px] text-app-text-sub hover:bg-black/5"
             >
               <span>過去の同じ支払先の処理（{similarStore.length}件）</span>
               {similarOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
@@ -280,16 +280,16 @@ export default function ConsultationModal({
                     key={s.id}
                     onClick={() => handleApplySimilar(s)}
                     disabled={applying}
-                    className="w-full text-left p-2 rounded-lg bg-white border border-gray-200 hover:border-[#1a1a1a] transition-colors disabled:opacity-50"
+                    className="w-full text-left p-2 rounded-lg bg-white border border-gray-200 hover:border-app-text transition-colors disabled:opacity-50"
                   >
                     <div className="flex justify-between items-center text-[11px]">
                       <div>
-                        <span className="text-[#1a1a1a] font-medium">{kamokuName(s.kamoku)}</span>
-                        {s.item_description && <span className="text-[#999] ml-2">{s.item_description}</span>}
+                        <span className="text-app-text font-medium">{kamokuName(s.kamoku)}</span>
+                        {s.item_description && <span className="text-app-text-mute ml-2">{s.item_description}</span>}
                       </div>
-                      <span className="text-[#666]">{s.date} ¥{s.amount.toLocaleString()}</span>
+                      <span className="text-app-text-sub">{s.date} ¥{s.amount.toLocaleString()}</span>
                     </div>
-                    <div className="text-[9px] text-[#3B7DA8] mt-0.5">タップでこの科目を適用</div>
+                    <div className="text-[9px] text-app-info mt-0.5">タップでこの科目を適用</div>
                   </button>
                 ))}
               </div>
@@ -298,10 +298,10 @@ export default function ConsultationModal({
         )}
 
         {/* チャット領域 */}
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3 bg-[#FCFBF8]">
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3 bg-app-surface">
           {messages.length === 0 && !loading && (
-            <div className="text-center text-[11px] text-[#999] py-8">
-              <MessageCircle className="w-6 h-6 mx-auto mb-2 text-[#ccc]" />
+            <div className="text-center text-[11px] text-app-text-mute py-8">
+              <MessageCircle className="w-6 h-6 mx-auto mb-2 text-app-text-fade" />
               AIが状況を確認中...
             </div>
           )}
@@ -310,8 +310,8 @@ export default function ConsultationModal({
               <div
                 className={`max-w-[85%] px-3 py-2 rounded-2xl text-[12px] leading-relaxed whitespace-pre-wrap ${
                   m.role === 'user'
-                    ? 'bg-[#1a1a1a] text-white rounded-br-sm'
-                    : 'bg-white text-[#1a1a1a] border border-gray-200 rounded-bl-sm'
+                    ? 'bg-app-button text-white rounded-br-sm'
+                    : 'bg-white text-app-text border border-gray-200 rounded-bl-sm'
                 }`}
               >
                 {m.content}
@@ -320,17 +320,17 @@ export default function ConsultationModal({
           ))}
           {loading && (
             <div className="flex justify-start">
-              <div className="px-3 py-2 rounded-2xl bg-white border border-gray-200 text-[#999] text-[12px]">
+              <div className="px-3 py-2 rounded-2xl bg-white border border-gray-200 text-app-text-mute text-[12px]">
                 <span className="inline-flex gap-1">
-                  <span className="w-1.5 h-1.5 bg-[#999] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-1.5 h-1.5 bg-[#999] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-1.5 h-1.5 bg-[#999] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <span className="w-1.5 h-1.5 bg-app-text-mute rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1.5 h-1.5 bg-app-text-mute rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-1.5 h-1.5 bg-app-text-mute rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                 </span>
               </div>
             </div>
           )}
           {error && (
-            <div className="text-[11px] text-[#C23728] bg-[#FDF1F0] px-3 py-2 rounded-lg">
+            <div className="text-[11px] text-app-red bg-state-error-bg px-3 py-2 rounded-lg">
               {error}
             </div>
           )}
@@ -339,15 +339,15 @@ export default function ConsultationModal({
 
         {/* 推奨科目アクション */}
         {suggestedKamoku && !loading && (
-          <div className="px-5 py-3 bg-[#FFF8E7] border-t border-[#F5D88E]">
+          <div className="px-5 py-3 bg-state-warn-bg border-t border-state-warn-line">
             <div className="flex items-center justify-between gap-3">
-              <div className="text-[11px] text-[#1a1a1a]">
+              <div className="text-[11px] text-app-text">
                 提案: <span className="font-medium">{kamokuName(suggestedKamoku)}</span>
               </div>
               <button
                 onClick={handleApplyKamoku}
                 disabled={applying || suggestedKamoku === context.kamoku}
-                className="px-3 py-1.5 rounded-lg bg-[#1a1a1a] text-white text-[11px] font-medium hover:bg-[#333] disabled:opacity-40 disabled:cursor-not-allowed"
+                className="px-3 py-1.5 rounded-lg bg-app-button text-white text-[11px] font-medium hover:bg-app-button-hover disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {suggestedKamoku === context.kamoku ? '同じ科目です' : applying ? '適用中...' : 'この科目で確定'}
               </button>
@@ -365,13 +365,13 @@ export default function ConsultationModal({
               placeholder="質問を入力..."
               rows={1}
               disabled={loading}
-              className="flex-1 px-3 py-2 text-[12px] border border-gray-200 rounded-lg focus:outline-none focus:border-[#1a1a1a] resize-none disabled:bg-gray-50"
+              className="flex-1 px-3 py-2 text-[12px] border border-gray-200 rounded-lg focus:outline-none focus:border-app-text resize-none disabled:bg-gray-50"
               style={{ minHeight: '36px', maxHeight: '100px' }}
             />
             <button
               onClick={() => handleSend()}
               disabled={loading || !input.trim()}
-              className="p-2 rounded-lg bg-[#1a1a1a] text-white disabled:opacity-30 disabled:cursor-not-allowed"
+              className="p-2 rounded-lg bg-app-button text-white disabled:opacity-30 disabled:cursor-not-allowed"
               title="送信 (⌘+Enter)"
             >
               <Send className="w-4 h-4" />

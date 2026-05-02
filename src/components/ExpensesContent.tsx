@@ -6,10 +6,10 @@ import { KAMOKU, TRANSACTION_STATUS, PROJECT_TAG_REQUIRED_KAMOKU } from '@/types
 
 // ステータスバッジの色定義
 const STATUS_STYLES: Record<string, { bg: string; text: string }> = {
-  forecast: { bg: 'bg-[#F5F5F3]', text: 'text-[#999]' },
-  accrued:  { bg: 'bg-[#81D8D0]/10', text: 'text-[#1B4D3E]' },
-  billed:   { bg: 'bg-[#D4A03A]/10', text: 'text-[#D4A03A]' },
-  settled:  { bg: 'bg-[#1B4D3E]/10', text: 'text-[#1B4D3E]' },
+  forecast: { bg: 'bg-app-surface-alt', text: 'text-app-text-mute' },
+  accrued:  { bg: 'bg-content-scene-notes/10', text: 'text-app-green' },
+  billed:   { bg: 'bg-app-gold/10', text: 'text-app-gold' },
+  settled:  { bg: 'bg-app-green/10', text: 'text-app-green' },
 };
 import type { Transaction, Project } from '@/types/database';
 import { Plus, Upload, Pencil, Trash2, Search, Loader2, Sparkles, Layers } from 'lucide-react';
@@ -222,31 +222,31 @@ export default function ExpensesContent() {
       <div className="max-w-5xl mx-auto px-6 py-8">
 
         {/* ── ヘッダー(δ案語彙・明色基調・縦積み構造) ── */}
-        <div className="mb-8 pb-5 border-b border-[#e8e6e3]">
+        <div className="mb-8 pb-5 border-b border-app-line-medium">
           <div>
-            <p className="font-['Saira_Condensed'] text-[11px] tracking-[0.3em] text-[#D4A03A] mb-3 font-medium">
+            <p className="font-['Saira_Condensed'] text-[11px] tracking-[0.3em] text-app-gold mb-3 font-medium">
               VOLUME 02 · EXPENSES
             </p>
-            <h1 className="font-['Shippori_Mincho'] text-[26px] font-normal text-[#1a1a1a] leading-[1.4] tracking-[0.03em]">
+            <h1 className="font-['Shippori_Mincho'] text-[26px] font-normal text-app-text leading-[1.4] tracking-[0.03em]">
               いくら、投じているか。
             </h1>
           </div>
           <div className="mt-6 flex flex-wrap items-center gap-2">
             <button
               onClick={() => { setEditTarget(null); setModalOpen(true); }}
-              className="flex items-center gap-1.5 px-4 py-2 bg-[#1a1a1a] text-white rounded-lg text-xs font-medium hover:bg-[#333] transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 bg-app-button text-white rounded-lg text-xs font-medium hover:bg-app-button-hover transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
               手入力
             </button>
             <button
               onClick={() => setBulkModalOpen(true)}
-              className="flex items-center gap-1.5 px-4 py-2 bg-white text-[#1a1a1a] rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors border border-gray-200"
+              className="flex items-center gap-1.5 px-4 py-2 bg-white text-app-text rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors border border-gray-200"
             >
               <Layers className="w-3.5 h-3.5" />
               まとめて
             </button>
-            <label className="flex items-center gap-1.5 px-4 py-2 bg-white text-[#1a1a1a] rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors cursor-pointer border border-gray-200">
+            <label className="flex items-center gap-1.5 px-4 py-2 bg-white text-app-text rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors cursor-pointer border border-gray-200">
               <Upload className="w-3.5 h-3.5" />
               {importing ? 'インポート中...' : 'CSV'}
               <input
@@ -266,13 +266,13 @@ export default function ExpensesContent() {
         {/* ── フィルター ── */}
         <div className="flex flex-wrap items-center gap-2 mb-4">
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#999]" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-app-text-mute" />
             <input
               type="text"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               placeholder="検索..."
-              className="pl-8 pr-3 py-2 bg-white rounded-lg text-xs border border-gray-200 outline-none focus:ring-2 focus:ring-[#D4A03A]/50 w-40"
+              className="pl-8 pr-3 py-2 bg-white rounded-lg text-xs border border-gray-200 outline-none focus:ring-2 focus:ring-app-gold/50 w-40"
             />
           </div>
           {/* v0.9.0: 未紐付けフィルタートグル（取材費・制作費で案件タグ未紐付け） */}
@@ -281,14 +281,14 @@ export default function ExpensesContent() {
               onClick={() => setShowOnlyUntagged(v => !v)}
               className={`px-3 py-2 rounded-lg text-xs border transition-colors ${
                 showOnlyUntagged
-                  ? 'bg-[#C23728]/10 border-[#C23728]/30 text-[#C23728]'
-                  : 'bg-white border-gray-200 text-[#666] hover:border-[#C23728]/30'
+                  ? 'bg-app-red/10 border-app-red/30 text-app-red'
+                  : 'bg-white border-gray-200 text-app-text-sub hover:border-app-red/30'
               }`}
             >
               未紐付け {untaggedIds.size}件
             </button>
           )}
-          <span className="text-xs text-[#999] ml-auto">
+          <span className="text-xs text-app-text-mute ml-auto">
             {filtered.length}件
           </span>
         </div>
@@ -297,10 +297,10 @@ export default function ExpensesContent() {
         <div className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
           {loading ? (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-5 h-5 text-[#D4A03A] animate-spin" />
+              <Loader2 className="w-5 h-5 text-app-gold animate-spin" />
             </div>
           ) : filtered.length === 0 ? (
-            <div className="py-20 text-center text-sm text-[#ccc]">
+            <div className="py-20 text-center text-sm text-app-text-fade">
               取引がありません
             </div>
           ) : (
@@ -308,12 +308,12 @@ export default function ExpensesContent() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100">
-                    <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">日付</th>
-                    <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">ステータス</th>
-                    <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">支払先</th>
-                    <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">科目</th>
-                    <th className="text-right px-4 py-3 text-xs text-[#999] font-normal">金額</th>
-                    <th className="text-right px-4 py-3 text-xs text-[#999] font-normal w-20">操作</th>
+                    <th className="text-left px-4 py-3 text-xs text-app-text-mute font-normal">日付</th>
+                    <th className="text-left px-4 py-3 text-xs text-app-text-mute font-normal">ステータス</th>
+                    <th className="text-left px-4 py-3 text-xs text-app-text-mute font-normal">支払先</th>
+                    <th className="text-left px-4 py-3 text-xs text-app-text-mute font-normal">科目</th>
+                    <th className="text-right px-4 py-3 text-xs text-app-text-mute font-normal">金額</th>
+                    <th className="text-right px-4 py-3 text-xs text-app-text-mute font-normal w-20">操作</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -323,8 +323,8 @@ export default function ExpensesContent() {
                     const statusStyle = STATUS_STYLES[effStatus] || STATUS_STYLES.settled;
                     const statusLabel = TRANSACTION_STATUS[effStatus as keyof typeof TRANSACTION_STATUS] || TRANSACTION_STATUS.settled;
                     return (
-                      <tr key={tx.id} className="border-b border-gray-50 hover:bg-[#F5F5F3]/50 transition-colors">
-                        <td className="px-4 py-3 font-['Saira_Condensed'] text-xs text-[#999] tabular-nums">
+                      <tr key={tx.id} className="border-b border-gray-50 hover:bg-app-surface-alt/50 transition-colors">
+                        <td className="px-4 py-3 font-['Saira_Condensed'] text-xs text-app-text-mute tabular-nums">
                           {formatDate(tx.date)}
                         </td>
                         <td className="px-4 py-3">
@@ -333,26 +333,26 @@ export default function ExpensesContent() {
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="text-[#1a1a1a]">{tx.store || '—'}</div>
+                          <div className="text-app-text">{tx.store || '—'}</div>
                           {tx.description && (
-                            <div className="text-xs text-[#999] mt-0.5">{tx.description}</div>
+                            <div className="text-xs text-app-text-mute mt-0.5">{tx.description}</div>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-xs text-[#6b6b6b]">
+                        <td className="px-4 py-3 text-xs text-app-text-sub">
                           <div className="flex items-center gap-1.5">
                             <span>{kamokuName}</span>
                             {untaggedIds.has(tx.id) && (
-                              <span className="px-1.5 py-0.5 bg-[#C23728]/10 text-[#C23728] rounded text-[9px] font-medium">
+                              <span className="px-1.5 py-0.5 bg-app-red/10 text-app-red rounded text-[9px] font-medium">
                                 タグ未
                               </span>
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-right font-['Saira_Condensed'] tabular-nums text-[#1a1a1a]">
+                        <td className="px-4 py-3 text-right font-['Saira_Condensed'] tabular-nums text-app-text">
                           <div className="flex items-center justify-end gap-1.5">
                             {receiptCountMap.get(tx.id) ? (
                               <span
-                                className="text-[9px] bg-[#1B4D3E]/10 text-[#1B4D3E] px-1.5 py-0.5 rounded-full font-medium"
+                                className="text-[9px] bg-app-green/10 text-app-green px-1.5 py-0.5 rounded-full font-medium"
                                 title={`領収書 ${receiptCountMap.get(tx.id)}件`}
                               >
                                 📎 {receiptCountMap.get(tx.id)}
@@ -368,21 +368,21 @@ export default function ExpensesContent() {
                               className="p-1.5 hover:bg-black/5 rounded-md transition-colors"
                               title="AIに相談"
                             >
-                              <Sparkles className="w-3.5 h-3.5 text-[#999]" />
+                              <Sparkles className="w-3.5 h-3.5 text-app-text-mute" />
                             </button>
                             <button
                               onClick={() => { setEditTarget(tx); setModalOpen(true); }}
                               className="p-1.5 hover:bg-black/5 rounded-md transition-colors"
                               title="編集"
                             >
-                              <Pencil className="w-3.5 h-3.5 text-[#999]" />
+                              <Pencil className="w-3.5 h-3.5 text-app-text-mute" />
                             </button>
                             <button
                               onClick={() => requestDelete(tx.id)}
-                              className="p-1.5 hover:bg-[#C23728]/10 rounded-md transition-colors"
+                              className="p-1.5 hover:bg-app-red/10 rounded-md transition-colors"
                               title="削除"
                             >
-                              <Trash2 className="w-3.5 h-3.5 text-[#999]" />
+                              <Trash2 className="w-3.5 h-3.5 text-app-text-mute" />
                             </button>
                           </div>
                         </td>
@@ -396,10 +396,10 @@ export default function ExpensesContent() {
 
           {/* ── フッター集計 ── */}
           {!loading && filtered.length > 0 && (
-            <div className="flex items-center justify-end px-4 py-3 border-t border-gray-100 bg-[#F5F5F3]/50">
+            <div className="flex items-center justify-end px-4 py-3 border-t border-gray-100 bg-app-surface-alt/50">
               <div className="text-xs">
-                <span className="text-[#999]">合計: </span>
-                <span className="font-['Saira_Condensed'] text-[#1a1a1a] tabular-nums">{formatAmount(expenseSum)}</span>
+                <span className="text-app-text-mute">合計: </span>
+                <span className="font-['Saira_Condensed'] text-app-text tabular-nums">{formatAmount(expenseSum)}</span>
               </div>
             </div>
           )}
@@ -458,25 +458,25 @@ export default function ExpensesContent() {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/30" onClick={() => setDeleteTarget(null)} />
           <div className="relative bg-white rounded-2xl p-6 max-w-sm mx-4" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
-            <p className="text-sm text-[#1a1a1a] mb-2 font-medium">この取引を削除しますか？</p>
+            <p className="text-sm text-app-text mb-2 font-medium">この取引を削除しますか？</p>
             {deleteTarget.driveFileIds.length > 0 ? (
-              <p className="text-xs text-[#666] mb-4 leading-relaxed">
+              <p className="text-xs text-app-text-sub mb-4 leading-relaxed">
                 領収書 {deleteTarget.driveFileIds.length}件 もまとめてゴミ箱に移します。<br />
-                <span className="text-[#999]">30日間は元に戻せます。</span>
+                <span className="text-app-text-mute">30日間は元に戻せます。</span>
               </p>
             ) : (
-              <p className="text-xs text-[#666] mb-4">削除すると、元に戻せません。</p>
+              <p className="text-xs text-app-text-sub mb-4">削除すると、元に戻せません。</p>
             )}
             <div className="flex gap-2">
               <button
                 onClick={() => setDeleteTarget(null)}
-                className="flex-1 py-2 text-xs text-[#999] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors"
+                className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors"
               >
                 キャンセル
               </button>
               <button
                 onClick={() => handleDelete(deleteTarget)}
-                className="flex-1 py-2 text-xs text-white bg-[#C23728] rounded-lg hover:bg-[#a82e22] transition-colors"
+                className="flex-1 py-2 text-xs text-white bg-app-red rounded-lg hover:bg-app-red-hover transition-colors"
               >
                 削除する
               </button>

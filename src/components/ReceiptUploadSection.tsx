@@ -243,7 +243,7 @@ export default function ReceiptUploadSection({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-medium text-[#666]">
+        <span className="text-[11px] font-medium text-app-text-sub">
           📎 領収書{MAX_RECEIPTS === 1 ? '' : `（${items.length} / ${MAX_RECEIPTS}）`}
         </span>
       </div>
@@ -251,7 +251,7 @@ export default function ReceiptUploadSection({
       {items.length > 0 && (
         <div className="space-y-2">
           {items.map((item, idx) => (
-            <div key={item.clientId} className="bg-[#FAFAF8] border border-gray-200 rounded-lg p-3 space-y-2">
+            <div key={item.clientId} className="bg-app-surface border border-gray-200 rounded-lg p-3 space-y-2">
               <div className="flex items-start gap-2">
                 <div className="shrink-0">
                   {item.previewUrl ? (
@@ -259,44 +259,44 @@ export default function ReceiptUploadSection({
                   ) : item.driveUrl ? (
                     <a href={item.driveUrl} target="_blank" rel="noopener noreferrer"
                        className="w-14 h-14 rounded border border-gray-200 flex items-center justify-center bg-white hover:bg-gray-50">
-                      <ExternalLink className="w-5 h-5 text-[#666]" />
+                      <ExternalLink className="w-5 h-5 text-app-text-sub" />
                     </a>
                   ) : (
                     <div className="w-14 h-14 rounded border border-gray-200 flex items-center justify-center bg-white">
-                      <Check className="w-5 h-5 text-[#1B4D3E]" />
+                      <Check className="w-5 h-5 text-app-green" />
                     </div>
                   )}
                 </div>
 
                 <div className="flex-1 min-w-0 space-y-1">
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="text-[11px] font-medium text-[#333] truncate">{item.fileName}</span>
+                    <span className="text-[11px] font-medium text-app-text-strong truncate">{item.fileName}</span>
                     {item.staged ? (
-                      <span className="text-[9px] bg-[#FBBF24]/20 text-[#92400E] px-1.5 py-0.5 rounded-full shrink-0 font-medium">未保存</span>
+                      <span className="text-[9px] bg-app-warn-strong/20 text-app-warn-deep px-1.5 py-0.5 rounded-full shrink-0 font-medium">未保存</span>
                     ) : (
-                      <span className="text-[9px] bg-[#1B4D3E]/10 text-[#1B4D3E] px-1.5 py-0.5 rounded-full shrink-0 font-medium">保存済</span>
+                      <span className="text-[9px] bg-app-green/10 text-app-green px-1.5 py-0.5 rounded-full shrink-0 font-medium">保存済</span>
                     )}
                   </div>
 
                   <div className="flex items-center gap-1.5">
-                    <label className="text-[10px] text-[#999] shrink-0">ラベル:</label>
+                    <label className="text-[10px] text-app-text-mute shrink-0">ラベル:</label>
                     <input
                       type="text"
                       value={item.label}
                       onChange={(e) => handleLabelChange(item.clientId, e.target.value)}
                       placeholder="例: トモ分（任意）"
-                      className="flex-1 text-[11px] px-2 py-1 border border-gray-200 rounded bg-white focus:outline-none focus:border-[#D4A03A]"
+                      className="flex-1 text-[11px] px-2 py-1 border border-gray-200 rounded bg-white focus:outline-none focus:border-app-gold"
                     />
                   </div>
 
                   {typeof item.aiExtractedAmount === 'number' && item.aiExtractedAmount > 0 && (
-                    <div className="text-[10px] text-[#666]">AI抽出: ¥{item.aiExtractedAmount.toLocaleString()}</div>
+                    <div className="text-[10px] text-app-text-sub">AI抽出: ¥{item.aiExtractedAmount.toLocaleString()}</div>
                   )}
                 </div>
 
                 <button type="button" onClick={() => handleRemove(item.clientId)}
                         className="p-1 hover:bg-black/5 rounded shrink-0" aria-label="削除">
-                  <X className="w-4 h-4 text-[#999]" />
+                  <X className="w-4 h-4 text-app-text-mute" />
                 </button>
               </div>
             </div>
@@ -305,30 +305,30 @@ export default function ReceiptUploadSection({
       )}
 
       {processingFile && (
-        <div className="bg-[#FAFAF8] border border-gray-200 rounded-lg p-3 flex items-center justify-center gap-2">
-          <Loader2 className="w-4 h-4 animate-spin text-[#D4A03A]" />
-          <span className="text-[11px] text-[#666]">AI読み取り中: {processingFile}</span>
+        <div className="bg-app-surface border border-gray-200 rounded-lg p-3 flex items-center justify-center gap-2">
+          <Loader2 className="w-4 h-4 animate-spin text-app-gold" />
+          <span className="text-[11px] text-app-text-sub">AI読み取り中: {processingFile}</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="bg-[#C23728]/5 border border-[#C23728]/20 rounded-lg p-3">
-          <span className="text-[11px] text-[#C23728]">{errorMsg}</span>
+        <div className="bg-app-red/5 border border-app-red/20 rounded-lg p-3">
+          <span className="text-[11px] text-app-red">{errorMsg}</span>
         </div>
       )}
 
       {items.length < MAX_RECEIPTS && !processingFile && (
         <button type="button" onClick={() => fileInputRef.current?.click()}
-                className="w-full bg-[#FAFAF8] border border-dashed border-gray-300 rounded-lg p-3 flex items-center justify-center gap-1.5 hover:border-[#D4A03A] hover:bg-[#FFFBEB] transition-colors">
+                className="w-full bg-app-surface border border-dashed border-gray-300 rounded-lg p-3 flex items-center justify-center gap-1.5 hover:border-app-gold hover:bg-state-warn-bg transition-colors">
           {items.length === 0 ? (
             <>
-              <Camera className="w-4 h-4 text-[#999]" />
-              <span className="text-[11px] text-[#666] font-medium">領収書を添付（任意）</span>
+              <Camera className="w-4 h-4 text-app-text-mute" />
+              <span className="text-[11px] text-app-text-sub font-medium">領収書を添付（任意）</span>
             </>
           ) : (
             <>
-              <Plus className="w-4 h-4 text-[#666]" />
-              <span className="text-[11px] text-[#666] font-medium">領収書を追加</span>
+              <Plus className="w-4 h-4 text-app-text-sub" />
+              <span className="text-[11px] text-app-text-sub font-medium">領収書を追加</span>
             </>
           )}
         </button>
@@ -340,22 +340,22 @@ export default function ReceiptUploadSection({
       {items.length >= 2 && hasAnyAiAmount && (
         <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-1.5">
           <div className="flex justify-between text-[11px]">
-            <span className="text-[#666]">領収書合計（AI抽出）</span>
-            <span className="font-medium text-[#333]">¥{receiptSum.toLocaleString()}</span>
+            <span className="text-app-text-sub">領収書合計（AI抽出）</span>
+            <span className="font-medium text-app-text-strong">¥{receiptSum.toLocaleString()}</span>
           </div>
           <div className="flex justify-between text-[11px]">
-            <span className="text-[#666]">経費金額</span>
-            <span className="font-medium text-[#333]">¥{formContext.totalAmount.toLocaleString()}</span>
+            <span className="text-app-text-sub">経費金額</span>
+            <span className="font-medium text-app-text-strong">¥{formContext.totalAmount.toLocaleString()}</span>
           </div>
           <div className="flex justify-between text-[11px] pt-1.5 border-t border-gray-100">
-            <span className="text-[#666]">差分</span>
-            <span className={`font-medium ${inRange ? 'text-[#1B4D3E]' : 'text-[#D4A03A]'}`}>
+            <span className="text-app-text-sub">差分</span>
+            <span className={`font-medium ${inRange ? 'text-app-green' : 'text-app-gold'}`}>
               {inRange ? '🟢' : '🟡'} ¥{diffAbs.toLocaleString()}{inRange ? '（許容範囲内）' : '（要確認）'}
             </span>
           </div>
           {!inRange && onSetAmountFromReceipts && receiptSum > 0 && (
             <button type="button" onClick={() => onSetAmountFromReceipts(receiptSum)}
-                    className="w-full mt-1 text-[11px] bg-[#D4A03A] text-white py-1.5 rounded hover:bg-[#B8892D] transition-colors font-medium">
+                    className="w-full mt-1 text-[11px] bg-app-gold text-white py-1.5 rounded hover:bg-app-gold-hover transition-colors font-medium">
               領収書合計を経費金額にする（¥{receiptSum.toLocaleString()}）
             </button>
           )}
@@ -365,16 +365,16 @@ export default function ReceiptUploadSection({
       {items.length > 0 && (
         <div className="border border-gray-200 rounded-lg overflow-hidden">
           <button type="button" onClick={() => setShowFilenamePreview((v) => !v)}
-                  className="w-full px-3 py-2 flex items-center justify-between bg-[#FAFAF8] hover:bg-[#F5F5F0] text-[10px] text-[#666] transition-colors">
+                  className="w-full px-3 py-2 flex items-center justify-between bg-app-surface hover:bg-app-surface-alt text-[10px] text-app-text-sub transition-colors">
             <span>ファイル名プレビュー</span>
             {showFilenamePreview ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
           </button>
           {showFilenamePreview && (
             <div className="p-3 bg-white space-y-1">
               {filenamePreviews.map((name, idx) => (
-                <div key={idx} className="text-[10px] text-[#666] font-mono break-all">{idx + 1}. {name}</div>
+                <div key={idx} className="text-[10px] text-app-text-sub font-mono break-all">{idx + 1}. {name}</div>
               ))}
-              <div className="text-[9px] text-[#999] pt-1 border-t border-gray-100 mt-2">
+              <div className="text-[9px] text-app-text-mute pt-1 border-t border-gray-100 mt-2">
                 ※ 登録ボタン押下時にこの名前でGoogle Driveに保存されます
               </div>
             </div>

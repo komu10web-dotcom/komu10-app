@@ -352,15 +352,15 @@ export default function BulkReceiptModal({
         {/* ── ヘッダー ── */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
           <div>
-            <h2 className="text-base font-medium text-[#1a1a1a]">領収書をまとめて取り込み</h2>
-            <p className="text-[11px] text-[#999] mt-0.5">複数の領収書をAIで一気に読み取り・登録します</p>
+            <h2 className="text-base font-medium text-app-text">領収書をまとめて取り込み</h2>
+            <p className="text-[11px] text-app-text-mute mt-0.5">複数の領収書をAIで一気に読み取り・登録します</p>
           </div>
           <button
             onClick={handleClose}
             disabled={bulkSaving}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-30"
           >
-            <X className="w-4 h-4 text-[#666]" />
+            <X className="w-4 h-4 text-app-text-sub" />
           </button>
         </div>
 
@@ -373,21 +373,21 @@ export default function BulkReceiptModal({
               onDragLeave={() => setIsDragging(false)}
               onDrop={handleDrop}
               className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors ${
-                isDragging ? 'border-[#D4A03A] bg-[#FAF6EE]' : 'border-gray-200 bg-[#FAFAF8]'
+                isDragging ? 'border-app-gold bg-state-gold-soft' : 'border-gray-200 bg-app-surface'
               }`}
             >
-              <Upload className="w-6 h-6 mx-auto mb-2 text-[#999]" />
-              <p className="text-xs text-[#666] mb-2">
+              <Upload className="w-6 h-6 mx-auto mb-2 text-app-text-mute" />
+              <p className="text-xs text-app-text-sub mb-2">
                 領収書をドラッグ&ドロップ、または
               </p>
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={bulkSaving || rows.length >= MAX_FILES}
-                className="text-xs text-[#1a1a1a] underline hover:no-underline disabled:opacity-30"
+                className="text-xs text-app-text underline hover:no-underline disabled:opacity-30"
               >
                 ファイルを選択
               </button>
-              <p className="text-[10px] text-[#bbb] mt-2">
+              <p className="text-[10px] text-app-text-fade mt-2">
                 画像/PDF・最大{MAX_FILES}枚・1枚10MB以下
               </p>
               <input
@@ -403,8 +403,8 @@ export default function BulkReceiptModal({
 
           {/* グローバルエラー */}
           {globalError && (
-            <div className="bg-[#FDF0EE] border border-[#F5C6C0] rounded-lg px-3 py-2">
-              <p className="text-xs text-[#C23728]">{globalError}</p>
+            <div className="bg-state-error-bg border border-state-error-line rounded-lg px-3 py-2">
+              <p className="text-xs text-app-red">{globalError}</p>
             </div>
           )}
 
@@ -415,46 +415,46 @@ export default function BulkReceiptModal({
                 <div
                   key={row.clientId}
                   className={`rounded-xl p-3 ${
-                    row.status === 'failed' ? 'bg-[#FDF0EE]' :
-                    row.status === 'saved' ? 'bg-[#F0F7F1]' :
-                    'bg-[#FAFAF8]'
+                    row.status === 'failed' ? 'bg-state-error-bg' :
+                    row.status === 'saved' ? 'bg-state-success-bg' :
+                    'bg-app-surface'
                   }`}
                 >
                   {/* 行ヘッダー(ステータス + ファイル名) */}
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2 min-w-0 flex-1">
-                      {row.status === 'analyzing' && <Loader2 className="w-3 h-3 animate-spin text-[#999] shrink-0" />}
-                      {row.status === 'ready' && <div className="w-2 h-2 rounded-full bg-[#D4A03A] shrink-0" />}
-                      {row.status === 'saving' && <Loader2 className="w-3 h-3 animate-spin text-[#1B4D3E] shrink-0" />}
-                      {row.status === 'saved' && <Check className="w-3 h-3 text-[#1B4D3E] shrink-0" />}
-                      {row.status === 'failed' && <AlertCircle className="w-3 h-3 text-[#C23728] shrink-0" />}
-                      <span className="text-[11px] text-[#666] truncate">{row.fileName}</span>
+                      {row.status === 'analyzing' && <Loader2 className="w-3 h-3 animate-spin text-app-text-mute shrink-0" />}
+                      {row.status === 'ready' && <div className="w-2 h-2 rounded-full bg-app-gold shrink-0" />}
+                      {row.status === 'saving' && <Loader2 className="w-3 h-3 animate-spin text-app-green shrink-0" />}
+                      {row.status === 'saved' && <Check className="w-3 h-3 text-app-green shrink-0" />}
+                      {row.status === 'failed' && <AlertCircle className="w-3 h-3 text-app-red shrink-0" />}
+                      <span className="text-[11px] text-app-text-sub truncate">{row.fileName}</span>
                     </div>
                     {(row.status === 'ready' || row.status === 'failed' || row.status === 'analyzing') && !bulkSaving && (
                       <button
                         onClick={() => removeRow(row.clientId)}
                         className="p-1 hover:bg-black/5 rounded"
                       >
-                        <Trash2 className="w-3 h-3 text-[#999]" />
+                        <Trash2 className="w-3 h-3 text-app-text-mute" />
                       </button>
                     )}
                   </div>
 
                   {/* 解析中・保存中 */}
                   {(row.status === 'analyzing' || row.status === 'saving') && (
-                    <p className="text-[11px] text-[#999]">
+                    <p className="text-[11px] text-app-text-mute">
                       {row.status === 'analyzing' ? 'AI解析中...' : '保存中...'}
                     </p>
                   )}
 
                   {/* 失敗 */}
                   {row.status === 'failed' && (
-                    <p className="text-[11px] text-[#C23728]">{row.errorMessage || 'エラーが発生しました'}</p>
+                    <p className="text-[11px] text-app-red">{row.errorMessage || 'エラーが発生しました'}</p>
                   )}
 
                   {/* 保存済 */}
                   {row.status === 'saved' && (
-                    <p className="text-[11px] text-[#1B4D3E]">登録しました ¥{row.amount.toLocaleString()}</p>
+                    <p className="text-[11px] text-app-green">登録しました ¥{row.amount.toLocaleString()}</p>
                   )}
 
                   {/* 編集可能フィールド */}
@@ -462,7 +462,7 @@ export default function BulkReceiptModal({
                     <div className="space-y-2">
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="text-[10px] text-[#999] block mb-0.5">日付</label>
+                          <label className="text-[10px] text-app-text-mute block mb-0.5">日付</label>
                           <input
                             type="date"
                             value={row.date}
@@ -471,7 +471,7 @@ export default function BulkReceiptModal({
                           />
                         </div>
                         <div>
-                          <label className="text-[10px] text-[#999] block mb-0.5">金額</label>
+                          <label className="text-[10px] text-app-text-mute block mb-0.5">金額</label>
                           <input
                             type="number"
                             value={row.amount || ''}
@@ -483,7 +483,7 @@ export default function BulkReceiptModal({
                       </div>
 
                       <div>
-                        <label className="text-[10px] text-[#999] block mb-0.5">取引先</label>
+                        <label className="text-[10px] text-app-text-mute block mb-0.5">取引先</label>
                         <input
                           type="text"
                           value={row.store}
@@ -495,7 +495,7 @@ export default function BulkReceiptModal({
 
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="text-[10px] text-[#999] block mb-0.5">科目</label>
+                          <label className="text-[10px] text-app-text-mute block mb-0.5">科目</label>
                           <select
                             value={row.kamoku}
                             onChange={(e) => updateRow(row.clientId, { kamoku: e.target.value })}
@@ -507,7 +507,7 @@ export default function BulkReceiptModal({
                           </select>
                         </div>
                         <div>
-                          <label className="text-[10px] text-[#999] block mb-0.5">担当者</label>
+                          <label className="text-[10px] text-app-text-mute block mb-0.5">担当者</label>
                           <select
                             value={row.owner}
                             onChange={(e) => updateRow(row.clientId, { owner: e.target.value })}
@@ -521,7 +521,7 @@ export default function BulkReceiptModal({
 
                       <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="text-[10px] text-[#999] block mb-0.5">部門</label>
+                          <label className="text-[10px] text-app-text-mute block mb-0.5">部門</label>
                           <select
                             value={row.division}
                             onChange={(e) => updateRow(row.clientId, { division: e.target.value })}
@@ -533,7 +533,7 @@ export default function BulkReceiptModal({
                           </select>
                         </div>
                         <div>
-                          <label className="text-[10px] text-[#999] block mb-0.5">
+                          <label className="text-[10px] text-app-text-mute block mb-0.5">
                             案件{KAMOKU_INPUT_GUIDE[row.kamoku]?.requireProject ? ' *' : ''}
                           </label>
                           <select
@@ -554,7 +554,7 @@ export default function BulkReceiptModal({
 
                       {KAMOKU_INPUT_GUIDE[row.kamoku]?.requireDescription && (
                         <div>
-                          <label className="text-[10px] text-[#999] block mb-0.5">内容 *</label>
+                          <label className="text-[10px] text-app-text-mute block mb-0.5">内容 *</label>
                           <input
                             type="text"
                             value={row.description}
@@ -575,12 +575,12 @@ export default function BulkReceiptModal({
         {/* ── フッター ── */}
         <div className="px-5 py-3 border-t border-gray-100 shrink-0 bg-white">
           {rows.length > 0 && (
-            <div className="flex items-center justify-between mb-2 text-[11px] text-[#666]">
+            <div className="flex items-center justify-between mb-2 text-[11px] text-app-text-sub">
               <div className="flex items-center gap-3">
                 {analyzingCount > 0 && <span>解析中 {analyzingCount}</span>}
-                {readyCount > 0 && <span className="text-[#D4A03A]">登録待ち {readyCount}</span>}
-                {savedCount > 0 && <span className="text-[#1B4D3E]">登録済 {savedCount}</span>}
-                {failedCount > 0 && <span className="text-[#C23728]">失敗 {failedCount}</span>}
+                {readyCount > 0 && <span className="text-app-gold">登録待ち {readyCount}</span>}
+                {savedCount > 0 && <span className="text-app-green">登録済 {savedCount}</span>}
+                {failedCount > 0 && <span className="text-app-red">失敗 {failedCount}</span>}
               </div>
             </div>
           )}
@@ -588,14 +588,14 @@ export default function BulkReceiptModal({
             <button
               onClick={handleClose}
               disabled={bulkSaving}
-              className="flex-1 py-2.5 text-xs text-[#666] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-30"
+              className="flex-1 py-2.5 text-xs text-app-text-sub bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-30"
             >
               {allDone ? '閉じる' : 'キャンセル'}
             </button>
             <button
               onClick={handleBulkSave}
               disabled={bulkSaving || readyCount === 0}
-              className="flex-1 py-2.5 text-xs text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+              className="flex-1 py-2.5 text-xs text-white bg-app-button rounded-lg hover:bg-app-button-hover transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
             >
               {bulkSaving ? (
                 <>

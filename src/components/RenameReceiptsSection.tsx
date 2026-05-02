@@ -98,22 +98,22 @@ export default function RenameReceiptsSection() {
   return (
     <section className="mb-10">
       <div className="flex items-center gap-2 mb-3">
-        <AlertTriangle className="w-3 h-3 text-[#C83838]" />
-        <div className="text-[10px] font-medium tracking-widest text-[#C83838]">
+        <AlertTriangle className="w-3 h-3 text-app-red" />
+        <div className="text-[10px] font-medium tracking-widest text-app-red">
           危険な操作
         </div>
       </div>
 
       <div
-        className="bg-white rounded-2xl px-5 py-5 border border-[#F3D7D7]"
+        className="bg-white rounded-2xl px-5 py-5 border border-state-error-line"
         style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}
       >
-        <h3 className="text-xs font-medium text-[#1a1a1a] mb-2">
+        <h3 className="text-xs font-medium text-app-text mb-2">
           既存領収書ファイル名の一括リネーム
         </h3>
-        <p className="text-[11px] text-[#666] mb-4 leading-relaxed">
+        <p className="text-[11px] text-app-text-sub mb-4 leading-relaxed">
           過去にアップロードされた領収書ファイルを、v0.11.0 の新しい命名規則
-          <code className="mx-1 px-1 py-0.5 bg-[#F5F5F3] rounded text-[10px]">
+          <code className="mx-1 px-1 py-0.5 bg-app-surface-alt rounded text-[10px]">
             日付_科目_支払先_担当者_摘要_連番_ラベル
           </code>
           に統一します。旧ファイル名は DB に記録され、復元可能です。
@@ -124,7 +124,7 @@ export default function RenameReceiptsSection() {
           <>
             <button
               onClick={runDryRun}
-              className="flex items-center gap-1.5 px-4 py-2 border border-[#ddd] text-[#333] rounded-lg text-xs font-medium hover:bg-[#f5f5f5] transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 border border-app-text-ghost text-app-text-strong rounded-lg text-xs font-medium hover:bg-app-surface-alt transition-colors"
             >
               <FileText className="w-3.5 h-3.5" />
               ドライラン実行（変更前の対応表を確認）
@@ -137,7 +137,7 @@ export default function RenameReceiptsSection() {
 
         {/* Phase: dry-run — ローディング */}
         {phase === 'dry-run' && (
-          <div className="flex items-center gap-2 text-xs text-[#666]">
+          <div className="flex items-center gap-2 text-xs text-app-text-sub">
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
             ドライラン実行中...
           </div>
@@ -148,56 +148,56 @@ export default function RenameReceiptsSection() {
           <div>
             <div className="mb-3 flex flex-wrap gap-4 text-[11px]">
               <div>
-                <span className="text-[#999]">対象総数: </span>
-                <span className="font-medium text-[#1a1a1a]">{dryResult.total}件</span>
+                <span className="text-app-text-mute">対象総数: </span>
+                <span className="font-medium text-app-text">{dryResult.total}件</span>
               </div>
               <div>
-                <span className="text-[#999]">リネーム対象: </span>
-                <span className="font-medium text-[#D4A03A]">{dryResult.targets.length}件</span>
+                <span className="text-app-text-mute">リネーム対象: </span>
+                <span className="font-medium text-app-gold">{dryResult.targets.length}件</span>
               </div>
               <div>
-                <span className="text-[#999]">スキップ: </span>
-                <span className="font-medium text-[#999]">{dryResult.skipped.length}件</span>
+                <span className="text-app-text-mute">スキップ: </span>
+                <span className="font-medium text-app-text-mute">{dryResult.skipped.length}件</span>
               </div>
             </div>
 
             {dryResult.targets.length > 0 ? (
-              <div className="mb-4 max-h-64 overflow-y-auto border border-[#eee] rounded-lg">
+              <div className="mb-4 max-h-64 overflow-y-auto border border-app-line-medium rounded-lg">
                 <table className="w-full text-[10px]">
-                  <thead className="bg-[#FAFAF8] sticky top-0">
+                  <thead className="bg-app-surface sticky top-0">
                     <tr>
-                      <th className="px-2 py-1.5 text-left text-[#999] font-medium w-8">#</th>
-                      <th className="px-2 py-1.5 text-left text-[#999] font-medium">旧名</th>
-                      <th className="px-2 py-1.5 text-left text-[#999] font-medium">新名</th>
+                      <th className="px-2 py-1.5 text-left text-app-text-mute font-medium w-8">#</th>
+                      <th className="px-2 py-1.5 text-left text-app-text-mute font-medium">旧名</th>
+                      <th className="px-2 py-1.5 text-left text-app-text-mute font-medium">新名</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#f5f5f5]">
+                  <tbody className="divide-y divide-app-surface-alt">
                     {dryResult.targets.map((t, i) => (
                       <tr key={t.receiptId}>
-                        <td className="px-2 py-1.5 text-[#999]">{i + 1}</td>
-                        <td className="px-2 py-1.5 text-[#999] break-all">{t.oldName}</td>
-                        <td className="px-2 py-1.5 text-[#1a1a1a] break-all">{t.newName}</td>
+                        <td className="px-2 py-1.5 text-app-text-mute">{i + 1}</td>
+                        <td className="px-2 py-1.5 text-app-text-mute break-all">{t.oldName}</td>
+                        <td className="px-2 py-1.5 text-app-text break-all">{t.newName}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             ) : (
-              <p className="mb-4 text-[11px] text-[#999]">リネーム対象がありません（全て新命名規則に統一済み）</p>
+              <p className="mb-4 text-[11px] text-app-text-mute">リネーム対象がありません（全て新命名規則に統一済み）</p>
             )}
 
             {dryResult.skipped.length > 0 && (
               <details className="mb-4">
-                <summary className="text-[10px] text-[#999] cursor-pointer select-none">
+                <summary className="text-[10px] text-app-text-mute cursor-pointer select-none">
                   スキップ {dryResult.skipped.length}件の詳細
                 </summary>
-                <div className="mt-2 max-h-40 overflow-y-auto border border-[#eee] rounded-lg">
+                <div className="mt-2 max-h-40 overflow-y-auto border border-app-line-medium rounded-lg">
                   <table className="w-full text-[10px]">
-                    <tbody className="divide-y divide-[#f5f5f5]">
+                    <tbody className="divide-y divide-app-surface-alt">
                       {dryResult.skipped.map((s, i) => (
                         <tr key={s.receiptId + i}>
-                          <td className="px-2 py-1.5 text-[#999] w-20">{s.reason}</td>
-                          <td className="px-2 py-1.5 text-[#999] break-all">{s.filename}</td>
+                          <td className="px-2 py-1.5 text-app-text-mute w-20">{s.reason}</td>
+                          <td className="px-2 py-1.5 text-app-text-mute break-all">{s.filename}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -209,14 +209,14 @@ export default function RenameReceiptsSection() {
             <div className="flex gap-2">
               <button
                 onClick={reset}
-                className="px-4 py-2 text-xs text-[#999] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors"
+                className="px-4 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors"
               >
                 キャンセル
               </button>
               {dryResult.targets.length > 0 && (
                 <button
                   onClick={runExecute}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-[#C83838] text-white rounded-lg text-xs font-medium hover:bg-[#A82828] transition-colors"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-app-red text-white rounded-lg text-xs font-medium hover:bg-app-red-hover transition-colors"
                 >
                   <Play className="w-3.5 h-3.5" />
                   本実行（{dryResult.targets.length}件をリネーム）
@@ -231,7 +231,7 @@ export default function RenameReceiptsSection() {
 
         {/* Phase: executing — 本実行中 */}
         {phase === 'executing' && (
-          <div className="flex items-center gap-2 text-xs text-[#666]">
+          <div className="flex items-center gap-2 text-xs text-app-text-sub">
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
             リネーム実行中... しばらくお待ちください
           </div>
@@ -248,19 +248,19 @@ export default function RenameReceiptsSection() {
                 </>
               ) : (
                 <>
-                  <AlertTriangle className="w-4 h-4 text-[#D4A03A]" />
-                  <span className="text-xs font-medium text-[#D4A03A]">一部成功</span>
+                  <AlertTriangle className="w-4 h-4 text-app-gold" />
+                  <span className="text-xs font-medium text-app-gold">一部成功</span>
                 </>
               )}
             </div>
 
             <div className="mb-4 flex flex-wrap gap-4 text-[11px]">
               <div>
-                <span className="text-[#999]">成功: </span>
+                <span className="text-app-text-mute">成功: </span>
                 <span className="font-medium text-emerald-600">{execResult.renamed.length}件</span>
               </div>
               <div>
-                <span className="text-[#999]">失敗: </span>
+                <span className="text-app-text-mute">失敗: </span>
                 <span className="font-medium text-red-500">{execResult.failed.length}件</span>
               </div>
             </div>
@@ -281,7 +281,7 @@ export default function RenameReceiptsSection() {
                     <tbody className="divide-y divide-red-50">
                       {execResult.failed.map((f) => (
                         <tr key={f.receiptId}>
-                          <td className="px-2 py-1.5 text-[#666] break-all">{f.oldName}</td>
+                          <td className="px-2 py-1.5 text-app-text-sub break-all">{f.oldName}</td>
                           <td className="px-2 py-1.5 text-red-500 break-all">{f.error}</td>
                         </tr>
                       ))}
@@ -293,7 +293,7 @@ export default function RenameReceiptsSection() {
 
             <button
               onClick={reset}
-              className="px-4 py-2 text-xs text-[#333] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors"
+              className="px-4 py-2 text-xs text-app-text-strong bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors"
             >
               閉じる
             </button>

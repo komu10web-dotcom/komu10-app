@@ -223,13 +223,13 @@ export default function HeaderControls() {
       {/* 担当者コンテキスト表示 */}
       <div className="flex items-center gap-1.5 mr-1">
         <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: ownerAccent }} />
-        <span className="text-xs font-medium text-[#1a1a1a]">
+        <span className="text-xs font-medium text-app-text">
           {ownerCfg.label}{pageName ? `の${pageName}` : ''}
         </span>
       </div>
 
       {/* 担当者フィルター */}
-      <div className="flex bg-[#F5F5F3] rounded-lg p-0.5">
+      <div className="flex bg-app-surface-alt rounded-lg p-0.5">
         {visibleOwners.map((key) => {
           const cfg = OWNER_CONFIG[key];
           const isActive = owner === key;
@@ -248,8 +248,8 @@ export default function HeaderControls() {
                 isActive
                   ? 'bg-white shadow-sm font-medium'
                   : key === 'all'
-                  ? 'text-[#ccc] hover:text-[#999]'
-                  : 'text-[#999] hover:text-[#6b6b6b]'
+                  ? 'text-app-text-fade hover:text-app-text-mute'
+                  : 'text-app-text-mute hover:text-app-text-sub'
               }`}
               style={isActive ? { color: btnAccent } : undefined}
             >
@@ -260,7 +260,7 @@ export default function HeaderControls() {
       </div>
 
       {/* 期間バー */}
-      <div className="flex items-center gap-1 bg-[#F5F5F3] rounded-lg p-0.5">
+      <div className="flex items-center gap-1 bg-app-surface-alt rounded-lg p-0.5">
         {([
           { mode: 'month' as PeriodMode, label: '月' },
           { mode: 'fiscal' as PeriodMode, label: '決算期' },
@@ -272,8 +272,8 @@ export default function HeaderControls() {
             onClick={() => updateParams({ mode })}
             className={`px-2.5 py-1.5 text-[10px] rounded-md transition-all duration-200 ${
               modeParam === mode
-                ? 'bg-white text-[#1a1a1a] shadow-sm font-medium'
-                : 'text-[#999] hover:text-[#6b6b6b]'
+                ? 'bg-white text-app-text shadow-sm font-medium'
+                : 'text-app-text-mute hover:text-app-text-sub'
             }`}
           >
             {label}
@@ -286,31 +286,31 @@ export default function HeaderControls() {
         {modeParam === 'month' && (
           <div className="relative" ref={monthPickerRef}>
             <div className="flex items-center">
-              <button onClick={() => shiftMonth(-1)} className="p-1 hover:bg-[#F5F5F3] rounded">
-                <ChevronLeft className="w-3.5 h-3.5 text-[#999]" />
+              <button onClick={() => shiftMonth(-1)} className="p-1 hover:bg-app-surface-alt rounded">
+                <ChevronLeft className="w-3.5 h-3.5 text-app-text-mute" />
               </button>
               <button
                 onClick={() => { setPickerYear(parseInt(ymParam.split('-')[0])); setShowMonthPicker(!showMonthPicker); }}
-                className="text-[11px] font-['Saira_Condensed'] tabular-nums text-[#1a1a1a] hover:text-[#D4A03A] transition-colors px-1 border-b border-transparent hover:border-[#D4A03A]"
+                className="text-[11px] font-['Saira_Condensed'] tabular-nums text-app-text hover:text-app-gold transition-colors px-1 border-b border-transparent hover:border-app-gold"
                 style={showMonthPicker ? { color: '#D4A03A', borderBottomColor: '#D4A03A' } : {}}
               >
                 {periodLabel}
               </button>
-              <button onClick={() => shiftMonth(1)} className="p-1 hover:bg-[#F5F5F3] rounded">
-                <ChevronRight className="w-3.5 h-3.5 text-[#999]" />
+              <button onClick={() => shiftMonth(1)} className="p-1 hover:bg-app-surface-alt rounded">
+                <ChevronRight className="w-3.5 h-3.5 text-app-text-mute" />
               </button>
             </div>
 
             {showMonthPicker && (
-              <div className="absolute top-full right-0 mt-2 bg-white rounded-xl border border-[#e5e5e3] z-50 p-3 w-[220px]"
+              <div className="absolute top-full right-0 mt-2 bg-white rounded-xl border border-app-line-medium z-50 p-3 w-[220px]"
                 style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}>
                 <div className="flex justify-between items-center mb-2.5">
-                  <button onClick={() => setPickerYear(y => y - 1)} className="p-1 hover:bg-[#F5F5F3] rounded">
-                    <ChevronLeft className="w-3 h-3 text-[#999]" />
+                  <button onClick={() => setPickerYear(y => y - 1)} className="p-1 hover:bg-app-surface-alt rounded">
+                    <ChevronLeft className="w-3 h-3 text-app-text-mute" />
                   </button>
-                  <span className="text-[13px] font-medium font-['Saira_Condensed'] tabular-nums text-[#1a1a1a]">{pickerYear}</span>
-                  <button onClick={() => setPickerYear(y => y + 1)} className="p-1 hover:bg-[#F5F5F3] rounded">
-                    <ChevronRight className="w-3 h-3 text-[#999]" />
+                  <span className="text-[13px] font-medium font-['Saira_Condensed'] tabular-nums text-app-text">{pickerYear}</span>
+                  <button onClick={() => setPickerYear(y => y + 1)} className="p-1 hover:bg-app-surface-alt rounded">
+                    <ChevronRight className="w-3 h-3 text-app-text-mute" />
                   </button>
                 </div>
                 <div className="grid grid-cols-4 gap-1">
@@ -329,12 +329,12 @@ export default function HeaderControls() {
                         }}
                         className={`py-1.5 text-[12px] rounded-md transition-all duration-150 ${
                           isSelected
-                            ? 'bg-[#D4A03A] text-white font-medium'
+                            ? 'bg-app-gold text-white font-medium'
                             : isCurrent
-                            ? 'text-[#D4A03A] font-medium hover:bg-[#F5F5F3]'
+                            ? 'text-app-gold font-medium hover:bg-app-surface-alt'
                             : isFuture
-                            ? 'text-[#ccc] hover:bg-[#F5F5F3] hover:text-[#999]'
-                            : 'text-[#666] hover:bg-[#F5F5F3]'
+                            ? 'text-app-text-fade hover:bg-app-surface-alt hover:text-app-text-mute'
+                            : 'text-app-text-sub hover:bg-app-surface-alt'
                         }`}
                       >
                         {m}月
@@ -348,7 +348,7 @@ export default function HeaderControls() {
                       updateParams({ mode: 'month', ym: `${currentYear}-${String(currentMonth).padStart(2, '0')}` });
                       setShowMonthPicker(false);
                     }}
-                    className="w-full mt-2 text-[10px] text-[#D4A03A] hover:text-[#b8882e] transition-colors"
+                    className="w-full mt-2 text-[10px] text-app-gold hover:text-app-gold-hover transition-colors"
                   >
                     今月に戻る
                   </button>
@@ -360,24 +360,24 @@ export default function HeaderControls() {
 
         {modeParam === 'fiscal' && (
           <div className="flex items-center gap-1">
-            <button onClick={() => updateParams({ fy: String(parseInt(fyParam) - 1) })} className="p-1 hover:bg-[#F5F5F3] rounded">
-              <ChevronLeft className="w-3.5 h-3.5 text-[#999]" />
+            <button onClick={() => updateParams({ fy: String(parseInt(fyParam) - 1) })} className="p-1 hover:bg-app-surface-alt rounded">
+              <ChevronLeft className="w-3.5 h-3.5 text-app-text-mute" />
             </button>
-            <span className="text-[11px] font-['Saira_Condensed'] tabular-nums text-[#1a1a1a] px-1">{periodLabel}</span>
-            <button onClick={() => updateParams({ fy: String(parseInt(fyParam) + 1) })} className="p-1 hover:bg-[#F5F5F3] rounded">
-              <ChevronRight className="w-3.5 h-3.5 text-[#999]" />
+            <span className="text-[11px] font-['Saira_Condensed'] tabular-nums text-app-text px-1">{periodLabel}</span>
+            <button onClick={() => updateParams({ fy: String(parseInt(fyParam) + 1) })} className="p-1 hover:bg-app-surface-alt rounded">
+              <ChevronRight className="w-3.5 h-3.5 text-app-text-mute" />
             </button>
           </div>
         )}
 
         {modeParam === 'year' && (
           <div className="flex items-center gap-1">
-            <button onClick={() => updateParams({ y: String(parseInt(yParam) - 1) })} className="p-1 hover:bg-[#F5F5F3] rounded">
-              <ChevronLeft className="w-3.5 h-3.5 text-[#999]" />
+            <button onClick={() => updateParams({ y: String(parseInt(yParam) - 1) })} className="p-1 hover:bg-app-surface-alt rounded">
+              <ChevronLeft className="w-3.5 h-3.5 text-app-text-mute" />
             </button>
-            <span className="text-[11px] font-['Saira_Condensed'] tabular-nums text-[#1a1a1a] px-1">{periodLabel}</span>
-            <button onClick={() => updateParams({ y: String(parseInt(yParam) + 1) })} className="p-1 hover:bg-[#F5F5F3] rounded">
-              <ChevronRight className="w-3.5 h-3.5 text-[#999]" />
+            <span className="text-[11px] font-['Saira_Condensed'] tabular-nums text-app-text px-1">{periodLabel}</span>
+            <button onClick={() => updateParams({ y: String(parseInt(yParam) + 1) })} className="p-1 hover:bg-app-surface-alt rounded">
+              <ChevronRight className="w-3.5 h-3.5 text-app-text-mute" />
             </button>
           </div>
         )}
@@ -393,7 +393,7 @@ export default function HeaderControls() {
                 return <option key={val} value={val}>{y}年{m}月</option>;
               })}
             </select>
-            <span className="text-[10px] text-[#999]">〜</span>
+            <span className="text-[10px] text-app-text-mute">〜</span>
             <select value={toParam} onChange={e => updateParams({ to: e.target.value })}
               className="text-[10px] bg-white px-1.5 py-1 rounded border-0 outline-none font-['Saira_Condensed'] tabular-nums">
               {Array.from({ length: 36 }, (_, i) => {

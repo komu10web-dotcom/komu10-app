@@ -108,15 +108,15 @@ export default function SimulationContent() {
   const simProfitRate = simRevenue > 0 ? (simProfit / simRevenue) * 100 : 0;
 
   if (loading) {
-    return <div className="p-6 text-center text-sm text-[#ccc]">読み込み中...</div>;
+    return <div className="p-6 text-center text-sm text-app-text-fade">読み込み中...</div>;
   }
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       {/* ヘッダー */}
       <div className="mb-8">
-        <h1 className="font-['Shippori_Mincho'] text-xl text-[#1a1a1a]">案件検討</h1>
-        <p className="text-[10px] font-light tracking-wider text-[#999] mt-1">SIMULATION</p>
+        <h1 className="font-['Shippori_Mincho'] text-xl text-app-text">案件検討</h1>
+        <p className="text-[10px] font-light tracking-wider text-app-text-mute mt-1">SIMULATION</p>
       </div>
 
       {/* ── 着地予測KPI ── */}
@@ -127,11 +127,11 @@ export default function SimulationContent() {
           { label: '実績利益', value: totalProfit, sim: simProfit, color: totalProfit >= 0 ? '#1B4D3E' : '#C23728' },
         ].map(kpi => (
           <div key={kpi.label} className="bg-white rounded-2xl px-5 py-5" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
-            <p className="text-[10px] tracking-wider text-[#999] mb-2">{kpi.label}</p>
-            <p className="font-['Saira_Condensed'] text-lg tabular-nums text-[#999]">{yen(kpi.value)}</p>
+            <p className="text-[10px] tracking-wider text-app-text-mute mb-2">{kpi.label}</p>
+            <p className="font-['Saira_Condensed'] text-lg tabular-nums text-app-text-mute">{yen(kpi.value)}</p>
             {hasSim && kpi.sim !== kpi.value && (
-              <div className="mt-2 pt-2 border-t border-dashed border-[#D4A03A]/20">
-                <p className="text-[9px] tracking-wider text-[#D4A03A] mb-0.5">着地見込</p>
+              <div className="mt-2 pt-2 border-t border-dashed border-app-gold/20">
+                <p className="text-[9px] tracking-wider text-app-gold mb-0.5">着地見込</p>
                 <p className="font-['Saira_Condensed'] text-2xl tabular-nums" style={{ color: kpi.label === '実績利益' ? (simProfit >= 0 ? '#1B4D3E' : '#C23728') : kpi.color }}>{yen(kpi.sim)}</p>
               </div>
             )}
@@ -143,14 +143,14 @@ export default function SimulationContent() {
       {hasSim && (
         <div className="bg-white rounded-2xl px-5 py-4 mb-8" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
           <div className="flex items-center justify-between mb-2">
-            <p className="text-[10px] tracking-wider text-[#999]">着地利益率</p>
+            <p className="text-[10px] tracking-wider text-app-text-mute">着地利益率</p>
             <div className="flex items-center gap-3">
-              <span className="font-['Saira_Condensed'] text-xs tabular-nums text-[#999]">{profitRate.toFixed(1)}%</span>
-              <span className="text-[10px] text-[#999]">→</span>
+              <span className="font-['Saira_Condensed'] text-xs tabular-nums text-app-text-mute">{profitRate.toFixed(1)}%</span>
+              <span className="text-[10px] text-app-text-mute">→</span>
               <span className="font-['Saira_Condensed'] text-sm tabular-nums font-medium" style={{ color: simProfitRate >= 0 ? '#1B4D3E' : '#C23728' }}>{simProfitRate.toFixed(1)}%</span>
             </div>
           </div>
-          <div className="w-full h-2 bg-[#F5F5F3] rounded-full overflow-hidden">
+          <div className="w-full h-2 bg-app-surface-alt rounded-full overflow-hidden">
             <div className="h-full rounded-full transition-all duration-500" style={{ width: `${Math.min(Math.max(simProfitRate, 0), 100)}%`, background: '#D4A03A' }} />
           </div>
         </div>
@@ -159,10 +159,10 @@ export default function SimulationContent() {
       {/* ── 見込み案件一覧 ── */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
-          <p className="text-[10px] font-medium tracking-widest text-[#999]">見込み案件</p>
+          <p className="text-[10px] font-medium tracking-widest text-app-text-mute">見込み案件</p>
           <button
             onClick={addSimItem}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-white bg-[#D4A03A] rounded-lg hover:bg-[#C49530] transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-medium text-white bg-app-gold rounded-lg hover:bg-app-gold-hover transition-colors"
           >
             <Plus className="w-3.5 h-3.5" /> 案件を追加
           </button>
@@ -170,8 +170,8 @@ export default function SimulationContent() {
 
         {simItems.length === 0 ? (
           <div className="bg-white rounded-2xl py-16 text-center" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
-            <p className="text-sm text-[#ccc] mb-1">見込み案件がありません</p>
-            <p className="text-[10px] text-[#ddd]">「案件を追加」で売上シミュレーションを開始できます</p>
+            <p className="text-sm text-app-text-fade mb-1">見込み案件がありません</p>
+            <p className="text-[10px] text-app-text-ghost">「案件を追加」で売上シミュレーションを開始できます</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -190,21 +190,21 @@ export default function SimulationContent() {
                         placeholder="案件名（例: KKday業務委託）"
                         value={item.name}
                         onChange={e => updateSimItem(item.id, { name: e.target.value })}
-                        className="text-sm text-[#1a1a1a] bg-transparent outline-none w-full placeholder:text-[#ccc] font-medium"
+                        className="text-sm text-app-text bg-transparent outline-none w-full placeholder:text-app-text-fade font-medium"
                       />
                       <div className="flex items-center gap-2 mt-1.5">
                         <div className="w-2 h-2 rounded-sm" style={{ background: divInfo?.color || '#C4B49A' }} />
-                        <span className="text-[10px] text-[#999]">{divInfo?.name || item.division}</span>
-                        <span className="text-[10px] text-[#999]">·</span>
-                        <span className="text-[10px] text-[#999]">{item.startMonth}月〜{item.endMonth}月</span>
+                        <span className="text-[10px] text-app-text-mute">{divInfo?.name || item.division}</span>
+                        <span className="text-[10px] text-app-text-mute">·</span>
+                        <span className="text-[10px] text-app-text-mute">{item.startMonth}月〜{item.endMonth}月</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
                       <div className="text-right">
-                        <p className="font-['Saira_Condensed'] text-xl tabular-nums text-[#D4A03A]">{yen(monthly)}<span className="text-xs text-[#999] font-sans">/月</span></p>
-                        <p className="text-[10px] text-[#999] font-['Saira_Condensed'] tabular-nums">{months}ヶ月 = {yen(total)}</p>
+                        <p className="font-['Saira_Condensed'] text-xl tabular-nums text-app-gold">{yen(monthly)}<span className="text-xs text-app-text-mute font-sans">/月</span></p>
+                        <p className="text-[10px] text-app-text-mute font-['Saira_Condensed'] tabular-nums">{months}ヶ月 = {yen(total)}</p>
                       </div>
-                      <button onClick={() => removeSimItem(item.id)} className="text-[#ddd] hover:text-[#C23728] transition-colors p-1">
+                      <button onClick={() => removeSimItem(item.id)} className="text-app-text-ghost hover:text-app-red transition-colors p-1">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -214,14 +214,14 @@ export default function SimulationContent() {
                   <div className="px-5 pb-5 pt-2 border-t border-gray-50">
                     <div className="flex items-center gap-3 flex-wrap">
                       {/* 金額タイプ */}
-                      <div className="flex items-center gap-0.5 bg-[#F5F5F3] rounded-lg p-0.5">
+                      <div className="flex items-center gap-0.5 bg-app-surface-alt rounded-lg p-0.5">
                         <button
                           onClick={() => updateSimItem(item.id, { type: 'monthly' })}
-                          className={`px-2.5 py-1 text-[10px] font-medium rounded-md transition-colors ${item.type === 'monthly' ? 'bg-white text-[#1a1a1a] shadow-sm' : 'text-[#999]'}`}
+                          className={`px-2.5 py-1 text-[10px] font-medium rounded-md transition-colors ${item.type === 'monthly' ? 'bg-white text-app-text shadow-sm' : 'text-app-text-mute'}`}
                         >月額</button>
                         <button
                           onClick={() => updateSimItem(item.id, { type: 'hourly' })}
-                          className={`px-2.5 py-1 text-[10px] font-medium rounded-md transition-colors ${item.type === 'hourly' ? 'bg-white text-[#1a1a1a] shadow-sm' : 'text-[#999]'}`}
+                          className={`px-2.5 py-1 text-[10px] font-medium rounded-md transition-colors ${item.type === 'hourly' ? 'bg-white text-app-text shadow-sm' : 'text-app-text-mute'}`}
                         >時給</button>
                       </div>
 
@@ -232,9 +232,9 @@ export default function SimulationContent() {
                             value={item.monthlyAmount || ''}
                             onChange={e => updateSimItem(item.id, { monthlyAmount: parseInt(e.target.value) || 0 })}
                             placeholder="210,000"
-                            className="w-28 text-sm font-['Saira_Condensed'] tabular-nums text-right bg-[#F5F5F3] rounded-lg px-3 py-1.5 outline-none focus:ring-1 focus:ring-[#D4A03A]/50"
+                            className="w-28 text-sm font-['Saira_Condensed'] tabular-nums text-right bg-app-surface-alt rounded-lg px-3 py-1.5 outline-none focus:ring-1 focus:ring-app-gold/50"
                           />
-                          <span className="text-[10px] text-[#999]">円/月</span>
+                          <span className="text-[10px] text-app-text-mute">円/月</span>
                         </div>
                       ) : (
                         <div className="flex items-center gap-1.5 flex-wrap">
@@ -243,44 +243,44 @@ export default function SimulationContent() {
                             value={item.hourlyRate || ''}
                             onChange={e => updateSimItem(item.id, { hourlyRate: parseInt(e.target.value) || 0 })}
                             placeholder="4,200"
-                            className="w-20 text-sm font-['Saira_Condensed'] tabular-nums text-right bg-[#F5F5F3] rounded-lg px-2 py-1.5 outline-none focus:ring-1 focus:ring-[#D4A03A]/50"
+                            className="w-20 text-sm font-['Saira_Condensed'] tabular-nums text-right bg-app-surface-alt rounded-lg px-2 py-1.5 outline-none focus:ring-1 focus:ring-app-gold/50"
                           />
-                          <span className="text-[10px] text-[#999]">円/h ×</span>
+                          <span className="text-[10px] text-app-text-mute">円/h ×</span>
                           <input
                             type="number"
                             value={item.hoursPerDay}
                             onChange={e => updateSimItem(item.id, { hoursPerDay: parseFloat(e.target.value) || 0 })}
-                            className="w-12 text-sm font-['Saira_Condensed'] tabular-nums text-right bg-[#F5F5F3] rounded-lg px-2 py-1.5 outline-none focus:ring-1 focus:ring-[#D4A03A]/50"
+                            className="w-12 text-sm font-['Saira_Condensed'] tabular-nums text-right bg-app-surface-alt rounded-lg px-2 py-1.5 outline-none focus:ring-1 focus:ring-app-gold/50"
                           />
-                          <span className="text-[10px] text-[#999]">h/日 ×</span>
+                          <span className="text-[10px] text-app-text-mute">h/日 ×</span>
                           <input
                             type="number"
                             value={item.daysPerWeek}
                             onChange={e => updateSimItem(item.id, { daysPerWeek: parseFloat(e.target.value) || 0 })}
-                            className="w-12 text-sm font-['Saira_Condensed'] tabular-nums text-right bg-[#F5F5F3] rounded-lg px-2 py-1.5 outline-none focus:ring-1 focus:ring-[#D4A03A]/50"
+                            className="w-12 text-sm font-['Saira_Condensed'] tabular-nums text-right bg-app-surface-alt rounded-lg px-2 py-1.5 outline-none focus:ring-1 focus:ring-app-gold/50"
                           />
-                          <span className="text-[10px] text-[#999]">日/週</span>
+                          <span className="text-[10px] text-app-text-mute">日/週</span>
                         </div>
                       )}
 
-                      <span className="text-[10px] text-[#ccc]">|</span>
+                      <span className="text-[10px] text-app-text-fade">|</span>
 
                       {/* 期間 */}
                       <div className="flex items-center gap-1">
                         <select
                           value={item.startMonth}
                           onChange={e => updateSimItem(item.id, { startMonth: parseInt(e.target.value) })}
-                          className="text-[11px] bg-[#F5F5F3] rounded-lg px-2 py-1.5 outline-none"
+                          className="text-[11px] bg-app-surface-alt rounded-lg px-2 py-1.5 outline-none"
                         >
                           {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
                             <option key={m} value={m}>{m}月</option>
                           ))}
                         </select>
-                        <span className="text-[10px] text-[#999]">〜</span>
+                        <span className="text-[10px] text-app-text-mute">〜</span>
                         <select
                           value={item.endMonth}
                           onChange={e => updateSimItem(item.id, { endMonth: parseInt(e.target.value) })}
-                          className="text-[11px] bg-[#F5F5F3] rounded-lg px-2 py-1.5 outline-none"
+                          className="text-[11px] bg-app-surface-alt rounded-lg px-2 py-1.5 outline-none"
                         >
                           {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
                             <option key={m} value={m}>{m}月</option>
@@ -292,7 +292,7 @@ export default function SimulationContent() {
                       <select
                         value={item.division}
                         onChange={e => updateSimItem(item.id, { division: e.target.value })}
-                        className="text-[11px] bg-[#F5F5F3] rounded-lg px-2 py-1.5 outline-none"
+                        className="text-[11px] bg-app-surface-alt rounded-lg px-2 py-1.5 outline-none"
                       >
                         {Object.entries(DIVISIONS).map(([id, d]) => (
                           <option key={id} value={id}>{d.name}</option>

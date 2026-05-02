@@ -40,11 +40,11 @@ interface ItemForm {
 // ステータスバッジスタイル
 // ============================================================
 const INV_STATUS_STYLES: Record<string, { bg: string; text: string }> = {
-  draft:   { bg: 'bg-[#F5F5F3]',    text: 'text-[#999]' },
-  issued:  { bg: 'bg-[#D4A03A]/10', text: 'text-[#D4A03A]' },
-  sent:    { bg: 'bg-[#1B4D3E]/10', text: 'text-[#1B4D3E]' },
-  paid:    { bg: 'bg-[#1B4D3E]/20', text: 'text-[#1B4D3E]' },
-  overdue: { bg: 'bg-[#C23728]/10', text: 'text-[#C23728]' },
+  draft:   { bg: 'bg-app-surface-alt',    text: 'text-app-text-mute' },
+  issued:  { bg: 'bg-app-gold/10', text: 'text-app-gold' },
+  sent:    { bg: 'bg-app-green/10', text: 'text-app-green' },
+  paid:    { bg: 'bg-app-green/20', text: 'text-app-green' },
+  overdue: { bg: 'bg-app-red/10', text: 'text-app-red' },
 };
 
 // ============================================================
@@ -225,16 +225,16 @@ export default function InvoiceTab({ owner, clients, initialTransactionId }: Inv
         <div className="flex items-center gap-2 mb-4">
           <button
             onClick={() => openEdit(null)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-[#1a1a1a] text-white rounded-lg text-xs font-medium hover:bg-[#333] transition-colors"
+            className="flex items-center gap-1.5 px-4 py-2 bg-app-button text-white rounded-lg text-xs font-medium hover:bg-app-button-hover transition-colors"
           >
             <Plus className="w-3.5 h-3.5" />
             請求書作成
           </button>
-          <div className="flex items-center gap-1 ml-auto bg-[#F5F5F3] rounded-lg p-0.5">
+          <div className="flex items-center gap-1 ml-auto bg-app-surface-alt rounded-lg p-0.5">
             <button
               onClick={() => setStatusFilter('all')}
               className={`px-2.5 py-1 text-[11px] rounded-md transition-colors ${
-                statusFilter === 'all' ? 'bg-white text-[#1a1a1a] shadow-sm' : 'text-[#999]'
+                statusFilter === 'all' ? 'bg-white text-app-text shadow-sm' : 'text-app-text-mute'
               }`}
             >
               すべて
@@ -243,7 +243,7 @@ export default function InvoiceTab({ owner, clients, initialTransactionId }: Inv
               <button key={key}
                 onClick={() => setStatusFilter(key)}
                 className={`px-2.5 py-1 text-[11px] rounded-md transition-colors ${
-                  statusFilter === key ? 'bg-white text-[#1a1a1a] shadow-sm' : 'text-[#999]'
+                  statusFilter === key ? 'bg-white text-app-text shadow-sm' : 'text-app-text-mute'
                 }`}
               >
                 {INVOICE_STATUS[key]}
@@ -256,10 +256,10 @@ export default function InvoiceTab({ owner, clients, initialTransactionId }: Inv
         <div className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
           {loading ? (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-5 h-5 text-[#D4A03A] animate-spin" />
+              <Loader2 className="w-5 h-5 text-app-gold animate-spin" />
             </div>
           ) : filtered.length === 0 ? (
-            <div className="py-20 text-center text-sm text-[#ccc]">
+            <div className="py-20 text-center text-sm text-app-text-fade">
               請求書がありません
             </div>
           ) : (
@@ -267,23 +267,23 @@ export default function InvoiceTab({ owner, clients, initialTransactionId }: Inv
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100">
-                    <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">請求書番号</th>
-                    <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">発行日</th>
-                    <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">ステータス</th>
-                    <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">取引先</th>
-                    <th className="text-right px-4 py-3 text-xs text-[#999] font-normal">合計</th>
-                    <th className="text-right px-4 py-3 text-xs text-[#999] font-normal w-24">操作</th>
+                    <th className="text-left px-4 py-3 text-xs text-app-text-mute font-normal">請求書番号</th>
+                    <th className="text-left px-4 py-3 text-xs text-app-text-mute font-normal">発行日</th>
+                    <th className="text-left px-4 py-3 text-xs text-app-text-mute font-normal">ステータス</th>
+                    <th className="text-left px-4 py-3 text-xs text-app-text-mute font-normal">取引先</th>
+                    <th className="text-right px-4 py-3 text-xs text-app-text-mute font-normal">合計</th>
+                    <th className="text-right px-4 py-3 text-xs text-app-text-mute font-normal w-24">操作</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map((inv) => {
                     const statusStyle = INV_STATUS_STYLES[inv.status] || INV_STATUS_STYLES.draft;
                     return (
-                      <tr key={inv.id} className="border-b border-gray-50 hover:bg-[#F5F5F3]/50 transition-colors">
-                        <td className="px-4 py-3 font-['Saira_Condensed'] text-xs tabular-nums text-[#1a1a1a]">
+                      <tr key={inv.id} className="border-b border-gray-50 hover:bg-app-surface-alt/50 transition-colors">
+                        <td className="px-4 py-3 font-['Saira_Condensed'] text-xs tabular-nums text-app-text">
                           {inv.invoice_number}
                         </td>
-                        <td className="px-4 py-3 font-['Saira_Condensed'] text-xs text-[#999] tabular-nums">
+                        <td className="px-4 py-3 font-['Saira_Condensed'] text-xs text-app-text-mute tabular-nums">
                           {formatDate(inv.issue_date)}
                         </td>
                         <td className="px-4 py-3">
@@ -292,31 +292,31 @@ export default function InvoiceTab({ owner, clients, initialTransactionId }: Inv
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="text-[#1a1a1a]">{inv.client_name}</div>
+                          <div className="text-app-text">{inv.client_name}</div>
                           {inv.client_number && (
-                            <div className="text-[10px] font-['Saira_Condensed'] text-[#999]">{inv.client_number}</div>
+                            <div className="text-[10px] font-['Saira_Condensed'] text-app-text-mute">{inv.client_number}</div>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right font-['Saira_Condensed'] tabular-nums text-[#1B4D3E]">
+                        <td className="px-4 py-3 text-right font-['Saira_Condensed'] tabular-nums text-app-green">
                           {formatAmount(inv.total)}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
                             <button onClick={() => openPreview(inv.id)}
                               className="p-1.5 hover:bg-black/5 rounded-md transition-colors" title="プレビュー">
-                              <Eye className="w-3.5 h-3.5 text-[#999]" />
+                              <Eye className="w-3.5 h-3.5 text-app-text-mute" />
                             </button>
                             <button onClick={() => openEdit(inv.id)}
                               className="p-1.5 hover:bg-black/5 rounded-md transition-colors" title="編集">
-                              <Pencil className="w-3.5 h-3.5 text-[#999]" />
+                              <Pencil className="w-3.5 h-3.5 text-app-text-mute" />
                             </button>
                             <button onClick={() => { setSaveAsTemplateTarget(inv.id); setTemplateName(inv.subject || ''); }}
                               className="p-1.5 hover:bg-black/5 rounded-md transition-colors" title="テンプレとして保存">
-                              <Copy className="w-3.5 h-3.5 text-[#999]" />
+                              <Copy className="w-3.5 h-3.5 text-app-text-mute" />
                             </button>
                             <button onClick={() => setDeleteTarget(inv.id)}
-                              className="p-1.5 hover:bg-[#C23728]/10 rounded-md transition-colors" title="削除">
-                              <Trash2 className="w-3.5 h-3.5 text-[#999]" />
+                              className="p-1.5 hover:bg-app-red/10 rounded-md transition-colors" title="削除">
+                              <Trash2 className="w-3.5 h-3.5 text-app-text-mute" />
                             </button>
                           </div>
                         </td>
@@ -330,21 +330,21 @@ export default function InvoiceTab({ owner, clients, initialTransactionId }: Inv
 
           {/* フッター集計 */}
           {!loading && filtered.length > 0 && (
-            <div className="flex items-center justify-end gap-4 px-4 py-3 border-t border-gray-100 bg-[#F5F5F3]/50">
+            <div className="flex items-center justify-end gap-4 px-4 py-3 border-t border-gray-100 bg-app-surface-alt/50">
               {(['draft', 'issued', 'paid'] as const).map((s) => {
                 const sum = filtered.filter(i => i.status === s).reduce((a, i) => a + i.total, 0);
                 if (sum === 0) return null;
                 const style = INV_STATUS_STYLES[s];
                 return (
                   <div key={s} className="text-xs">
-                    <span className="text-[#999]">{INVOICE_STATUS[s]}: </span>
+                    <span className="text-app-text-mute">{INVOICE_STATUS[s]}: </span>
                     <span className={`font-['Saira_Condensed'] tabular-nums ${style.text}`}>{formatAmount(sum)}</span>
                   </div>
                 );
               })}
               <div className="text-xs">
-                <span className="text-[#999]">合計: </span>
-                <span className="font-['Saira_Condensed'] text-[#1B4D3E] tabular-nums font-medium">
+                <span className="text-app-text-mute">合計: </span>
+                <span className="font-['Saira_Condensed'] text-app-green tabular-nums font-medium">
                   {formatAmount(filtered.reduce((a, i) => a + i.total, 0))}
                 </span>
               </div>
@@ -357,14 +357,14 @@ export default function InvoiceTab({ owner, clients, initialTransactionId }: Inv
           <div className="fixed inset-0 z-50 flex items-center justify-center">
             <div className="absolute inset-0 bg-black/30" onClick={() => setDeleteTarget(null)} />
             <div className="relative bg-white rounded-2xl p-6 max-w-sm mx-4" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
-              <p className="text-sm text-[#1a1a1a] mb-4">この請求書を削除しますか？</p>
+              <p className="text-sm text-app-text mb-4">この請求書を削除しますか？</p>
               <div className="flex gap-2">
                 <button onClick={() => setDeleteTarget(null)}
-                  className="flex-1 py-2 text-xs text-[#999] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors">
+                  className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors">
                   キャンセル
                 </button>
                 <button onClick={() => handleDelete(deleteTarget)}
-                  className="flex-1 py-2 text-xs text-white bg-[#C23728] rounded-lg hover:bg-[#a82e22] transition-colors">
+                  className="flex-1 py-2 text-xs text-white bg-app-red rounded-lg hover:bg-app-red-hover transition-colors">
                   削除する
                 </button>
               </div>
@@ -378,29 +378,29 @@ export default function InvoiceTab({ owner, clients, initialTransactionId }: Inv
             <div className="absolute inset-0 bg-black/30" onClick={() => { if (!templateSaving) { setSaveAsTemplateTarget(null); setTemplateName(''); } }} />
             <div className="relative bg-white rounded-2xl p-6 max-w-sm w-full mx-4" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
               {templateSaveSuccess ? (
-                <p className="text-sm text-[#1B4D3E] text-center py-3">✓ テンプレとして保存しました</p>
+                <p className="text-sm text-app-green text-center py-3">✓ テンプレとして保存しました</p>
               ) : (
                 <>
-                  <p className="text-sm text-[#1a1a1a] mb-1">テンプレとして保存</p>
-                  <p className="text-[10px] text-[#999] mb-3">この請求書の内容（明細・備考・支払条件・源泉設定）を汎用テンプレに登録します</p>
-                  <label className="block text-[10px] font-medium tracking-wider text-[#999] mb-1.5">テンプレ名</label>
+                  <p className="text-sm text-app-text mb-1">テンプレとして保存</p>
+                  <p className="text-[10px] text-app-text-mute mb-3">この請求書の内容（明細・備考・支払条件・源泉設定）を汎用テンプレに登録します</p>
+                  <label className="block text-[10px] font-medium tracking-wider text-app-text-mute mb-1.5">テンプレ名</label>
                   <input
                     type="text"
                     value={templateName}
                     onChange={(e) => setTemplateName(e.target.value)}
                     placeholder="例: 月額顧問 / 撮影スポット"
-                    className="w-full px-3 py-2 text-xs bg-[#F5F5F3] rounded-lg border-0 focus:outline-none focus:ring-2 focus:ring-[#1a1a1a]/10 mb-4"
+                    className="w-full px-3 py-2 text-xs bg-app-surface-alt rounded-lg border-0 focus:outline-none focus:ring-2 focus:ring-app-button/10 mb-4"
                     autoFocus
                   />
                   <div className="flex gap-2">
                     <button onClick={() => { setSaveAsTemplateTarget(null); setTemplateName(''); }}
                       disabled={templateSaving}
-                      className="flex-1 py-2 text-xs text-[#999] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50">
+                      className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50">
                       キャンセル
                     </button>
                     <button onClick={handleSaveAsTemplate}
                       disabled={templateSaving || !templateName.trim()}
-                      className="flex-1 py-2 text-xs text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] transition-colors disabled:opacity-50">
+                      className="flex-1 py-2 text-xs text-white bg-app-button rounded-lg hover:bg-app-button-hover transition-colors disabled:opacity-50">
                       {templateSaving ? '保存中...' : '保存'}
                     </button>
                   </div>
@@ -947,7 +947,7 @@ function InvoiceEditor({
   if (loadingData) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-5 h-5 text-[#D4A03A] animate-spin" />
+        <Loader2 className="w-5 h-5 text-app-gold animate-spin" />
       </div>
     );
   }
@@ -957,9 +957,9 @@ function InvoiceEditor({
       {/* ヘッダー */}
       <div className="flex items-center gap-3 mb-6">
         <button onClick={onBack} className="p-1 hover:bg-black/5 rounded-md transition-colors">
-          <ChevronLeft className="w-5 h-5 text-[#999]" />
+          <ChevronLeft className="w-5 h-5 text-app-text-mute" />
         </button>
-        <h2 className="text-sm font-medium text-[#1a1a1a]">
+        <h2 className="text-sm font-medium text-app-text">
           {isNew ? '請求書を作成' : `請求書を編集（${invoiceNumber}）`}
         </h2>
       </div>
@@ -968,7 +968,7 @@ function InvoiceEditor({
         {/* v0.8: テンプレから作成（新規時のみ・テンプレあるときのみ） */}
         {isNew && invoiceTemplates.length > 0 && (
           <div className="mb-6 pb-4 border-b border-gray-100">
-            <label className="block text-[10px] font-medium tracking-wider text-[#999] mb-1.5">テンプレから作成</label>
+            <label className="block text-[10px] font-medium tracking-wider text-app-text-mute mb-1.5">テンプレから作成</label>
             <select
               value={selectedTemplateId}
               onChange={(e) => {
@@ -976,7 +976,7 @@ function InvoiceEditor({
                 setSelectedTemplateId(id);
                 if (id) applyInvoiceTemplate(id);
               }}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50"
             >
               <option value="">（使わない）</option>
               {invoiceTemplates.map(t => (
@@ -992,9 +992,9 @@ function InvoiceEditor({
         <div className="grid grid-cols-2 gap-4 mb-6">
           {/* 取引先 */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">取引先 <span className="text-[#C23728]">*</span></label>
+            <label className="block text-xs text-app-text-mute mb-1">取引先 <span className="text-app-red">*</span></label>
             <select value={clientId} onChange={(e) => setClientId(e.target.value)}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50">
               <option value="">選択してください</option>
               {clients.map((cl) => (
                 <option key={cl.id} value={cl.id}>{cl.client_number} — {cl.name}</option>
@@ -1004,41 +1004,41 @@ function InvoiceEditor({
 
           {/* 発行日 */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">発行日</label>
+            <label className="block text-xs text-app-text-mute mb-1">発行日</label>
             <input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed']" />
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50 font-['Saira_Condensed']" />
           </div>
 
           {/* 支払期限 */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">お支払期限</label>
+            <label className="block text-xs text-app-text-mute mb-1">お支払期限</label>
             <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed']" />
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50 font-['Saira_Condensed']" />
           </div>
 
           {/* 件名 */}
           <div className="col-span-2">
-            <label className="block text-xs text-[#999] mb-1">件名</label>
+            <label className="block text-xs text-app-text-mute mb-1">件名</label>
             <input type="text" value={subject} onChange={(e) => setSubject(e.target.value)}
               placeholder="例: 法人営業／企画提案業務"
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50" />
           </div>
 
           {/* 振込先 — v0.6.8: 必須化 + 0件時は設定画面へ誘導 */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">
-              振込先口座 <span className="text-[#C23728]">*</span>
+            <label className="block text-xs text-app-text-mute mb-1">
+              振込先口座 <span className="text-app-red">*</span>
             </label>
             {bankAccounts.length === 0 ? (
-              <div className="bg-[#FDF4E3] border border-[#D4A03A]/30 rounded-lg px-3 py-3 text-xs text-[#666] space-y-2">
+              <div className="bg-state-warn-bg border border-app-gold/30 rounded-lg px-3 py-3 text-xs text-app-text-sub space-y-2">
                 <p>この所有者({owner})の振込先口座が未登録です。</p>
-                <a href={`/settings?owner=${owner}`} className="inline-block px-3 py-1.5 text-[11px] bg-[#1a1a1a] text-white rounded-lg hover:bg-[#333] transition-colors">
+                <a href={`/settings?owner=${owner}`} className="inline-block px-3 py-1.5 text-[11px] bg-app-button text-white rounded-lg hover:bg-app-button-hover transition-colors">
                   設定画面で口座を登録する
                 </a>
               </div>
             ) : (
               <select value={bankAccountId} onChange={(e) => setBankAccountId(e.target.value)}
-                className={`w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 ${!bankAccountId ? 'ring-1 ring-[#C23728]/30' : ''}`}>
+                className={`w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50 ${!bankAccountId ? 'ring-1 ring-app-red/30' : ''}`}>
                 <option value="">選択してください</option>
                 {bankAccounts.map((ba) => (
                   <option key={ba.id} value={ba.id}>{ba.bank_name} {ba.branch_name || ''} ({ba.name})</option>
@@ -1049,13 +1049,13 @@ function InvoiceEditor({
 
           {/* ステータス */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">ステータス</label>
+            <label className="block text-xs text-app-text-mute mb-1">ステータス</label>
             <div className="flex flex-wrap gap-1.5">
               {(Object.keys(INVOICE_STATUS) as InvoiceStatusKey[]).map((key) => (
                 <button key={key} type="button"
                   onClick={() => setStatus(key)}
                   className={`px-2.5 py-1.5 text-[11px] rounded-lg transition-colors ${
-                    status === key ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666] hover:bg-[#eee]'
+                    status === key ? 'bg-app-button text-white' : 'bg-app-surface-alt text-app-text-sub hover:bg-app-button-disabled'
                   }`}>
                   {INVOICE_STATUS[key]}
                 </button>
@@ -1065,7 +1065,7 @@ function InvoiceEditor({
             {status === 'issued' && !isNew && (
               <button type="button"
                 onClick={() => setStatus('sent')}
-                className="mt-2 text-[11px] text-[#1B4D3E] hover:underline">
+                className="mt-2 text-[11px] text-app-green hover:underline">
                 → 送付済にする
               </button>
             )}
@@ -1076,11 +1076,11 @@ function InvoiceEditor({
         <div className="mb-6 border border-gray-100 rounded-xl overflow-hidden">
           <button type="button"
             onClick={() => setSettingsOpen(v => !v)}
-            className="w-full flex items-center justify-between px-4 py-3 text-left bg-[#FAFAF8] hover:bg-[#F5F5F3] transition-colors">
-            <span className="text-xs text-[#666]">
+            className="w-full flex items-center justify-between px-4 py-3 text-left bg-app-surface hover:bg-app-surface-alt transition-colors">
+            <span className="text-xs text-app-text-sub">
               請求書設定
               {effectiveClient && (
-                <span className="text-[#bbb] ml-2">
+                <span className="text-app-text-fade ml-2">
                   （{effectiveClient.name}のデフォルト{(
                     overrideWithholdingTax !== null ||
                     overrideWithholdingBasis !== null ||
@@ -1090,23 +1090,23 @@ function InvoiceEditor({
                 </span>
               )}
             </span>
-            <span className="text-[#999] text-xs">{settingsOpen ? '閉じる' : '開く'}</span>
+            <span className="text-app-text-mute text-xs">{settingsOpen ? '閉じる' : '開く'}</span>
           </button>
           {settingsOpen && (
             <div className="p-4 space-y-4 bg-white">
               {/* 源泉徴収 */}
               <div className="flex items-center gap-3">
-                <label className="text-xs text-[#666] w-28 shrink-0">源泉徴収</label>
+                <label className="text-xs text-app-text-sub w-28 shrink-0">源泉徴収</label>
                 <div className="flex gap-1.5">
                   <button type="button"
                     onClick={() => setOverrideWithholdingTax(true)}
                     className={`px-3 py-1.5 text-[11px] rounded-lg transition-colors ${
-                      effWithholdingTax ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666]'
+                      effWithholdingTax ? 'bg-app-button text-white' : 'bg-app-surface-alt text-app-text-sub'
                     }`}>あり</button>
                   <button type="button"
                     onClick={() => setOverrideWithholdingTax(false)}
                     className={`px-3 py-1.5 text-[11px] rounded-lg transition-colors ${
-                      !effWithholdingTax ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666]'
+                      !effWithholdingTax ? 'bg-app-button text-white' : 'bg-app-surface-alt text-app-text-sub'
                     }`}>なし</button>
                 </div>
               </div>
@@ -1114,17 +1114,17 @@ function InvoiceEditor({
               {/* 源泉計算基準（源泉ありのみ） */}
               {effWithholdingTax && (
                 <div className="flex items-center gap-3">
-                  <label className="text-xs text-[#666] w-28 shrink-0">源泉計算基準</label>
+                  <label className="text-xs text-app-text-sub w-28 shrink-0">源泉計算基準</label>
                   <div className="flex gap-1.5">
                     <button type="button"
                       onClick={() => setOverrideWithholdingBasis('tax_included')}
                       className={`px-3 py-1.5 text-[11px] rounded-lg transition-colors ${
-                        effWithholdingBasis === 'tax_included' ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666]'
+                        effWithholdingBasis === 'tax_included' ? 'bg-app-button text-white' : 'bg-app-surface-alt text-app-text-sub'
                       }`}>税込</button>
                     <button type="button"
                       onClick={() => setOverrideWithholdingBasis('tax_excluded')}
                       className={`px-3 py-1.5 text-[11px] rounded-lg transition-colors ${
-                        effWithholdingBasis === 'tax_excluded' ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666]'
+                        effWithholdingBasis === 'tax_excluded' ? 'bg-app-button text-white' : 'bg-app-surface-alt text-app-text-sub'
                       }`}>税抜</button>
                   </div>
                 </div>
@@ -1132,34 +1132,34 @@ function InvoiceEditor({
 
               {/* 冒頭金額表示 */}
               <div className="flex items-center gap-3">
-                <label className="text-xs text-[#666] w-28 shrink-0">冒頭金額表示</label>
+                <label className="text-xs text-app-text-sub w-28 shrink-0">冒頭金額表示</label>
                 <div className="flex gap-1.5">
                   <button type="button"
                     onClick={() => setOverrideHeaderAmountType('total')}
                     className={`px-3 py-1.5 text-[11px] rounded-lg transition-colors ${
-                      effHeaderAmountType === 'total' ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666]'
+                      effHeaderAmountType === 'total' ? 'bg-app-button text-white' : 'bg-app-surface-alt text-app-text-sub'
                     }`}>請求総額</button>
                   <button type="button"
                     onClick={() => setOverrideHeaderAmountType('net_payment')}
                     className={`px-3 py-1.5 text-[11px] rounded-lg transition-colors ${
-                      effHeaderAmountType === 'net_payment' ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666]'
+                      effHeaderAmountType === 'net_payment' ? 'bg-app-button text-white' : 'bg-app-surface-alt text-app-text-sub'
                     }`}>差引振込額</button>
                 </div>
               </div>
 
               {/* 振込手数料 */}
               <div className="flex items-center gap-3">
-                <label className="text-xs text-[#666] w-28 shrink-0">振込手数料</label>
+                <label className="text-xs text-app-text-sub w-28 shrink-0">振込手数料</label>
                 <div className="flex gap-1.5">
                   <button type="button"
                     onClick={() => setOverrideFeeBurden('client')}
                     className={`px-3 py-1.5 text-[11px] rounded-lg transition-colors ${
-                      effFeeBurden === 'client' ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666]'
+                      effFeeBurden === 'client' ? 'bg-app-button text-white' : 'bg-app-surface-alt text-app-text-sub'
                     }`}>先方負担</button>
                   <button type="button"
                     onClick={() => setOverrideFeeBurden('self')}
                     className={`px-3 py-1.5 text-[11px] rounded-lg transition-colors ${
-                      effFeeBurden === 'self' ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666]'
+                      effFeeBurden === 'self' ? 'bg-app-button text-white' : 'bg-app-surface-alt text-app-text-sub'
                     }`}>自社負担</button>
                 </div>
               </div>
@@ -1172,7 +1172,7 @@ function InvoiceEditor({
                   setOverrideHeaderAmountType(null);
                   setOverrideFeeBurden(null);
                 }}
-                className="text-[11px] text-[#999] hover:text-[#1a1a1a] underline">
+                className="text-[11px] text-app-text-mute hover:text-app-text underline">
                 クライアント設定に戻す
               </button>
             </div>
@@ -1181,7 +1181,7 @@ function InvoiceEditor({
 
         {/* 明細行 */}
         <div className="mb-6">
-          <div className="text-xs text-[#999] mb-2">明細</div>
+          <div className="text-xs text-app-text-mute mb-2">明細</div>
           <div className="space-y-2">
             {items.map((item, idx) => (
               <div key={idx} className="flex items-start gap-2">
@@ -1189,42 +1189,42 @@ function InvoiceEditor({
                   <input type="text" value={item.description}
                     onChange={(e) => updateItem(idx, 'description', e.target.value)}
                     placeholder="品名・内容"
-                    className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+                    className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50" />
                 </div>
                 <div className="w-16">
                   <input type="text" inputMode="numeric" value={item.quantity}
                     onChange={(e) => updateItem(idx, 'quantity', e.target.value.replace(/[^\d.]/g, ''))}
                     placeholder="数量"
-                    className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 text-center font-['Saira_Condensed'] tabular-nums" />
+                    className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50 text-center font-['Saira_Condensed'] tabular-nums" />
                 </div>
                 <div className="w-16">
                   <input type="text" value={item.unit}
                     onChange={(e) => updateItem(idx, 'unit', e.target.value)}
                     placeholder="単位"
-                    className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 text-center" />
+                    className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50 text-center" />
                 </div>
                 <div className="w-28">
                   <input type="text" inputMode="numeric"
                     value={item.unit_price ? Number(item.unit_price).toLocaleString('ja-JP') : ''}
                     onChange={(e) => updateItem(idx, 'unit_price', e.target.value.replace(/[^\d]/g, ''))}
                     placeholder="単価"
-                    className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 text-right font-['Saira_Condensed'] tabular-nums" />
+                    className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50 text-right font-['Saira_Condensed'] tabular-nums" />
                 </div>
                 <div className="w-28 flex items-center justify-end">
-                  <span className="text-sm font-['Saira_Condensed'] tabular-nums text-[#1a1a1a]">
+                  <span className="text-sm font-['Saira_Condensed'] tabular-nums text-app-text">
                     {calcItemAmount(item) > 0 ? `¥${calcItemAmount(item).toLocaleString()}` : '—'}
                   </span>
                 </div>
                 <button onClick={() => removeItem(idx)}
-                  className={`p-2 rounded-md transition-colors ${items.length <= 1 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-[#C23728]/10'}`}
+                  className={`p-2 rounded-md transition-colors ${items.length <= 1 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-app-red/10'}`}
                   disabled={items.length <= 1}>
-                  <X className="w-3.5 h-3.5 text-[#999]" />
+                  <X className="w-3.5 h-3.5 text-app-text-mute" />
                 </button>
               </div>
             ))}
           </div>
           <button onClick={addItem}
-            className="flex items-center gap-1.5 text-xs text-[#D4A03A] hover:text-[#b8882e] mt-3 transition-colors">
+            className="flex items-center gap-1.5 text-xs text-app-gold hover:text-app-gold-hover mt-3 transition-colors">
             <Plus className="w-3.5 h-3.5" />行を追加
           </button>
         </div>
@@ -1233,58 +1233,58 @@ function InvoiceEditor({
         <div className="border-t border-gray-100 pt-4 mb-6">
           <div className="flex justify-end gap-8">
             <div className="text-right space-y-1">
-              <div className="text-xs text-[#999]">小計</div>
-              <div className="text-xs text-[#999]">消費税</div>
-              <div className="text-sm font-medium text-[#1a1a1a]">合計</div>
+              <div className="text-xs text-app-text-mute">小計</div>
+              <div className="text-xs text-app-text-mute">消費税</div>
+              <div className="text-sm font-medium text-app-text">合計</div>
               {effWithholdingTax && (
                 <>
-                  <div className="text-xs text-[#999]">源泉徴収額</div>
-                  <div className="text-sm font-medium text-[#1a1a1a]">差引振込額</div>
+                  <div className="text-xs text-app-text-mute">源泉徴収額</div>
+                  <div className="text-sm font-medium text-app-text">差引振込額</div>
                 </>
               )}
-              <div className="text-[11px] text-[#bbb] pt-1">冒頭表示額</div>
+              <div className="text-[11px] text-app-text-fade pt-1">冒頭表示額</div>
             </div>
             <div className="text-right space-y-1 font-['Saira_Condensed'] tabular-nums">
-              <div className="text-sm text-[#1a1a1a]">{formatYen(calc.subtotal)}</div>
-              <div className="text-sm text-[#999]">—</div>
-              <div className="text-lg font-medium text-[#1B4D3E]">{formatYen(calc.total)}</div>
+              <div className="text-sm text-app-text">{formatYen(calc.subtotal)}</div>
+              <div className="text-sm text-app-text-mute">—</div>
+              <div className="text-lg font-medium text-app-green">{formatYen(calc.total)}</div>
               {effWithholdingTax && (
                 <>
-                  <div className="text-sm text-[#C23728]">- {formatYen(calc.withholdingAmount)}</div>
-                  <div className="text-lg font-medium text-[#1B4D3E]">{formatYen(calc.netPayment)}</div>
+                  <div className="text-sm text-app-red">- {formatYen(calc.withholdingAmount)}</div>
+                  <div className="text-lg font-medium text-app-green">{formatYen(calc.netPayment)}</div>
                 </>
               )}
-              <div className="text-[11px] text-[#bbb] pt-1">{formatYen(calc.headerAmount)}</div>
+              <div className="text-[11px] text-app-text-fade pt-1">{formatYen(calc.headerAmount)}</div>
             </div>
           </div>
         </div>
 
         {/* 支払条件 */}
         <div className="mb-6">
-          <label className="block text-xs text-[#999] mb-1">お支払条件</label>
+          <label className="block text-xs text-app-text-mute mb-1">お支払条件</label>
           <input type="text" value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)}
             placeholder="契約書記載の支払条件に準ずる"
-            className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+            className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50" />
         </div>
 
         {/* 備考 */}
         <div className="mb-6">
-          <label className="block text-xs text-[#999] mb-1">備考（任意・案件固有のメモ）</label>
+          <label className="block text-xs text-app-text-mute mb-1">備考（任意・案件固有のメモ）</label>
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
             placeholder="例: 本請求書は、業務委託契約に基づく月額固定報酬の請求です。"
             rows={3}
-            className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 resize-none" />
-          <p className="text-[10px] text-[#bbb] mt-1">
+            className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50 resize-none" />
+          <p className="text-[10px] text-app-text-fade mt-1">
             ※「インボイス制度...免税事業者」「振込手数料ご負担」の2行は自動で追記されます
           </p>
         </div>
         <div className="flex gap-2">
           <button onClick={onBack}
-            className="px-6 py-2.5 text-xs text-[#999] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors">
+            className="px-6 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors">
             キャンセル
           </button>
           <button onClick={handleSave} disabled={!canSave || saving}
-            className="flex-1 py-2.5 text-xs text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
+            className="flex-1 py-2.5 text-xs text-white bg-app-button rounded-lg hover:bg-app-button-hover transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
             {saving && <Loader2 className="w-3 h-3 animate-spin" />}
             {isNew ? '作成する' : '更新する'}
           </button>
@@ -1348,7 +1348,7 @@ function InvoicePreview({
   if (loading || !invoice) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-5 h-5 text-[#D4A03A] animate-spin" />
+        <Loader2 className="w-5 h-5 text-app-gold animate-spin" />
       </div>
     );
   }
@@ -1397,20 +1397,20 @@ function InvoicePreview({
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className="p-1 hover:bg-black/5 rounded-md transition-colors">
-            <ChevronLeft className="w-5 h-5 text-[#999]" />
+            <ChevronLeft className="w-5 h-5 text-app-text-mute" />
           </button>
-          <h2 className="text-sm font-medium text-[#1a1a1a]">
+          <h2 className="text-sm font-medium text-app-text">
             請求書プレビュー
           </h2>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={handleExport} disabled={exporting}
-            className="flex items-center gap-1.5 px-4 py-2 bg-[#1a1a1a] text-white rounded-lg text-xs font-medium hover:bg-[#333] transition-colors disabled:opacity-50">
+            className="flex items-center gap-1.5 px-4 py-2 bg-app-button text-white rounded-lg text-xs font-medium hover:bg-app-button-hover transition-colors disabled:opacity-50">
             {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
             {exporting ? '作成中...' : '請求書作成'}
           </button>
           <button onClick={() => onEdit(invoiceId)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-white text-[#1a1a1a] rounded-lg text-xs border border-gray-200 hover:bg-gray-50 transition-colors">
+            className="flex items-center gap-1.5 px-4 py-2 bg-white text-app-text rounded-lg text-xs border border-gray-200 hover:bg-gray-50 transition-colors">
             <Pencil className="w-3.5 h-3.5" />編集
           </button>
         </div>
@@ -1418,11 +1418,11 @@ function InvoicePreview({
 
       {/* 出力結果リンク */}
       {exportResult && exportResult.spreadsheetUrl && (
-        <div className="bg-[#1B4D3E]/5 rounded-lg px-4 py-3 mb-4 flex items-center gap-4">
-          <span className="text-xs text-[#1B4D3E] font-medium">作成完了</span>
+        <div className="bg-app-green/5 rounded-lg px-4 py-3 mb-4 flex items-center gap-4">
+          <span className="text-xs text-app-green font-medium">作成完了</span>
           <a href={exportResult.spreadsheetUrl} target="_blank" rel="noopener noreferrer"
-            className="text-xs text-[#D4A03A] hover:underline">スプレッドシートを開く</a>
-          <span className="text-[10px] text-[#999]">※ プレビュー確認後、スプシから「ファイル→ダウンロード→PDF」で保存してください</span>
+            className="text-xs text-app-gold hover:underline">スプレッドシートを開く</a>
+          <span className="text-[10px] text-app-text-mute">※ プレビュー確認後、スプシから「ファイル→ダウンロード→PDF」で保存してください</span>
         </div>
       )}
 
@@ -1430,37 +1430,37 @@ function InvoicePreview({
       <div className="bg-white rounded-2xl p-8 max-w-2xl mx-auto" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
 
         {/* タイトル */}
-        <h1 className="text-center font-['Shippori_Mincho'] text-2xl text-[#1a1a1a] mb-8 tracking-widest">
+        <h1 className="text-center font-['Shippori_Mincho'] text-2xl text-app-text mb-8 tracking-widest">
           請　求　書
         </h1>
 
         {/* 宛先・日付・請求元 */}
         <div className="flex justify-between mb-8">
           <div>
-            <div className="text-lg font-medium text-[#1a1a1a] mb-1">
+            <div className="text-lg font-medium text-app-text mb-1">
               {client?.name || '—'} 御中
             </div>
             {client?.address && (
-              <div className="text-xs text-[#999]">
+              <div className="text-xs text-app-text-mute">
                 {client.postal_code ? `〒${client.postal_code} ` : ''}{client.address}
               </div>
             )}
           </div>
           <div className="text-right">
-            <div className="font-['Saira_Condensed'] text-sm text-[#999] tabular-nums">
+            <div className="font-['Saira_Condensed'] text-sm text-app-text-mute tabular-nums">
               {invoice.invoice_number}
             </div>
-            <div className="text-xs text-[#999] mt-1 mb-3">
+            <div className="text-xs text-app-text-mute mt-1 mb-3">
               {formatDate(invoice.issue_date)}
             </div>
             {issuer && (
-              <div className="text-xs text-[#1a1a1a] space-y-0.5">
+              <div className="text-xs text-app-text space-y-0.5">
                 {issuer.business_name && <div className="font-medium">{issuer.business_name}</div>}
                 {issuer.address && (
-                  <div className="text-[#999]">{issuer.postal_code ? `〒${issuer.postal_code} ` : ''}{issuer.address}</div>
+                  <div className="text-app-text-mute">{issuer.postal_code ? `〒${issuer.postal_code} ` : ''}{issuer.address}</div>
                 )}
-                {issuer.phone && <div className="text-[#999] font-['Saira_Condensed'] tabular-nums">TEL {issuer.phone}</div>}
-                {issuer.email && <div className="text-[#999]">{issuer.email}</div>}
+                {issuer.phone && <div className="text-app-text-mute font-['Saira_Condensed'] tabular-nums">TEL {issuer.phone}</div>}
+                {issuer.email && <div className="text-app-text-mute">{issuer.email}</div>}
               </div>
             )}
           </div>
@@ -1469,19 +1469,19 @@ function InvoicePreview({
         {/* 件名 */}
         {invoice.subject && (
           <div className="mb-4">
-            <div className="text-xs text-[#999] mb-0.5">件名</div>
-            <div className="text-sm text-[#1a1a1a]">{invoice.subject}</div>
+            <div className="text-xs text-app-text-mute mb-0.5">件名</div>
+            <div className="text-sm text-app-text">{invoice.subject}</div>
           </div>
         )}
 
         {/* 冒頭金額: header_amount_type で切替 */}
-        <div className="bg-[#F5F5F3] rounded-lg px-6 py-4 mb-4 flex items-center justify-between">
-          <span className="text-sm text-[#1a1a1a]">
+        <div className="bg-app-surface-alt rounded-lg px-6 py-4 mb-4 flex items-center justify-between">
+          <span className="text-sm text-app-text">
             {invoice.withholding_tax && invoice.header_amount_type === 'net_payment'
               ? '差引お振込額'
               : 'ご請求金額（税込）'}
           </span>
-          <span className="text-2xl font-['Saira_Condensed'] tabular-nums font-medium text-[#1B4D3E]">
+          <span className="text-2xl font-['Saira_Condensed'] tabular-nums font-medium text-app-green">
             ¥{(
               invoice.withholding_tax && invoice.header_amount_type === 'net_payment'
                 ? (invoice.net_payment ?? invoice.total)
@@ -1493,30 +1493,30 @@ function InvoicePreview({
         {/* 支払期限 */}
         {invoice.due_date && (
           <div className="mb-6 text-sm">
-            <span className="text-[#999] mr-3">お支払期限</span>
-            <span className="text-[#1a1a1a]">{formatDate(invoice.due_date)}</span>
+            <span className="text-app-text-mute mr-3">お支払期限</span>
+            <span className="text-app-text">{formatDate(invoice.due_date)}</span>
           </div>
         )}
 
         {/* 明細テーブル */}
         <table className="w-full text-sm mb-6">
           <thead>
-            <tr className="border-b-2 border-[#1a1a1a]">
-              <th className="text-left py-2 text-xs text-[#1a1a1a] font-medium" style={{ width: '45%' }}>品名・摘要</th>
-              <th className="text-center py-2 text-xs text-[#1a1a1a] font-medium w-16">数量</th>
-              <th className="text-center py-2 text-xs text-[#1a1a1a] font-medium w-14">単位</th>
-              <th className="text-right py-2 text-xs text-[#1a1a1a] font-medium w-24">単価</th>
-              <th className="text-right py-2 text-xs text-[#1a1a1a] font-medium w-28">金額</th>
+            <tr className="border-b-2 border-app-text">
+              <th className="text-left py-2 text-xs text-app-text font-medium" style={{ width: '45%' }}>品名・摘要</th>
+              <th className="text-center py-2 text-xs text-app-text font-medium w-16">数量</th>
+              <th className="text-center py-2 text-xs text-app-text font-medium w-14">単位</th>
+              <th className="text-right py-2 text-xs text-app-text font-medium w-24">単価</th>
+              <th className="text-right py-2 text-xs text-app-text font-medium w-28">金額</th>
             </tr>
           </thead>
           <tbody>
             {items.map((item) => (
               <tr key={item.id} className="border-b border-gray-100">
-                <td className="py-2.5 text-[#1a1a1a]">{item.description}</td>
-                <td className="py-2.5 text-center font-['Saira_Condensed'] tabular-nums text-[#666]">{item.quantity}</td>
-                <td className="py-2.5 text-center text-[#666]">{item.unit || '式'}</td>
-                <td className="py-2.5 text-right font-['Saira_Condensed'] tabular-nums text-[#666]">¥{item.unit_price.toLocaleString()}</td>
-                <td className="py-2.5 text-right font-['Saira_Condensed'] tabular-nums text-[#1a1a1a]">¥{item.amount.toLocaleString()}</td>
+                <td className="py-2.5 text-app-text">{item.description}</td>
+                <td className="py-2.5 text-center font-['Saira_Condensed'] tabular-nums text-app-text-sub">{item.quantity}</td>
+                <td className="py-2.5 text-center text-app-text-sub">{item.unit || '式'}</td>
+                <td className="py-2.5 text-right font-['Saira_Condensed'] tabular-nums text-app-text-sub">¥{item.unit_price.toLocaleString()}</td>
+                <td className="py-2.5 text-right font-['Saira_Condensed'] tabular-nums text-app-text">¥{item.amount.toLocaleString()}</td>
               </tr>
             ))}
           </tbody>
@@ -1526,26 +1526,26 @@ function InvoicePreview({
         <div className="flex justify-end mb-8">
           <div className="w-60">
             <div className="flex justify-between py-1.5 text-sm">
-              <span className="text-[#999]">小計</span>
+              <span className="text-app-text-mute">小計</span>
               <span className="font-['Saira_Condensed'] tabular-nums">¥{invoice.subtotal.toLocaleString()}</span>
             </div>
             <div className="flex justify-between py-1.5 text-sm">
-              <span className="text-[#999]">消費税</span>
-              <span className="font-['Saira_Condensed'] tabular-nums text-[#999]">—</span>
+              <span className="text-app-text-mute">消費税</span>
+              <span className="font-['Saira_Condensed'] tabular-nums text-app-text-mute">—</span>
             </div>
-            <div className="flex justify-between py-1.5 text-sm border-t-2 border-[#1a1a1a] mt-1 pt-2">
-              <span className="font-medium text-[#1a1a1a]">合計（税込）</span>
-              <span className="font-['Saira_Condensed'] tabular-nums font-medium text-[#1a1a1a] text-lg">¥{invoice.total.toLocaleString()}</span>
+            <div className="flex justify-between py-1.5 text-sm border-t-2 border-app-text mt-1 pt-2">
+              <span className="font-medium text-app-text">合計（税込）</span>
+              <span className="font-['Saira_Condensed'] tabular-nums font-medium text-app-text text-lg">¥{invoice.total.toLocaleString()}</span>
             </div>
             {invoice.withholding_tax && (
               <>
                 <div className="flex justify-between py-1.5 text-sm">
-                  <span className="text-[#999]">源泉徴収額</span>
-                  <span className="font-['Saira_Condensed'] tabular-nums text-[#B85450]">−¥{(invoice.withholding_amount ?? 0).toLocaleString()}</span>
+                  <span className="text-app-text-mute">源泉徴収額</span>
+                  <span className="font-['Saira_Condensed'] tabular-nums text-app-red-soft">−¥{(invoice.withholding_amount ?? 0).toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between py-1.5 text-sm border-t-2 border-[#1a1a1a] mt-1 pt-2">
-                  <span className="font-medium text-[#1a1a1a]">差引お振込額</span>
-                  <span className="font-['Saira_Condensed'] tabular-nums font-medium text-[#1B4D3E] text-lg">¥{(invoice.net_payment ?? invoice.total).toLocaleString()}</span>
+                <div className="flex justify-between py-1.5 text-sm border-t-2 border-app-text mt-1 pt-2">
+                  <span className="font-medium text-app-text">差引お振込額</span>
+                  <span className="font-['Saira_Condensed'] tabular-nums font-medium text-app-green text-lg">¥{(invoice.net_payment ?? invoice.total).toLocaleString()}</span>
                 </div>
               </>
             )}
@@ -1555,12 +1555,12 @@ function InvoicePreview({
         {/* 振込先 */}
         {bankAccount && (
           <div className="border-t border-gray-100 pt-4 mb-4">
-            <div className="text-xs text-[#999] mb-2">お振込先</div>
-            <div className="text-sm text-[#1a1a1a] space-y-0.5">
+            <div className="text-xs text-app-text-mute mb-2">お振込先</div>
+            <div className="text-sm text-app-text space-y-0.5">
               <div>{bankAccount.bank_name}{bankAccount.bank_code && !(bankAccount.bank_name || '').includes(`（${bankAccount.bank_code}）`) ? `（${bankAccount.bank_code}）` : ''}</div>
-              <div className="text-[#666]">{bankAccount.branch_name || ''}{bankAccount.branch_code && !(bankAccount.branch_name || '').includes(`（${bankAccount.branch_code}）`) ? `（${bankAccount.branch_code}）` : ''}</div>
-              <div className="text-[#666]">{({ savings: '普通', ordinary: '普通', checking: '当座' } as Record<string, string>)[bankAccount.account_type] || bankAccount.account_type} {bankAccount.account_number || ''}</div>
-              <div className="text-[#666]">{bankAccount.account_holder_kana || bankAccount.account_holder_name || bankAccount.name}</div>
+              <div className="text-app-text-sub">{bankAccount.branch_name || ''}{bankAccount.branch_code && !(bankAccount.branch_name || '').includes(`（${bankAccount.branch_code}）`) ? `（${bankAccount.branch_code}）` : ''}</div>
+              <div className="text-app-text-sub">{({ savings: '普通', ordinary: '普通', checking: '当座' } as Record<string, string>)[bankAccount.account_type] || bankAccount.account_type} {bankAccount.account_number || ''}</div>
+              <div className="text-app-text-sub">{bankAccount.account_holder_kana || bankAccount.account_holder_name || bankAccount.name}</div>
             </div>
           </div>
         )}
@@ -1568,15 +1568,15 @@ function InvoicePreview({
         {/* 支払条件 */}
         {invoice.payment_terms && (
           <div className="border-t border-gray-100 pt-4 mb-4">
-            <div className="text-xs text-[#999] mb-1">お支払条件</div>
-            <div className="text-sm text-[#666]">{invoice.payment_terms}</div>
+            <div className="text-xs text-app-text-mute mb-1">お支払条件</div>
+            <div className="text-sm text-app-text-sub">{invoice.payment_terms}</div>
           </div>
         )}
 
         {/* 備考（固定2行: インボイス免税注記 + 振込手数料負担 を必ず表示） */}
         <div className="border-t border-gray-100 pt-4">
-          <div className="text-xs text-[#999] mb-1">備考</div>
-          <div className="text-sm text-[#666] whitespace-pre-wrap">
+          <div className="text-xs text-app-text-mute mb-1">備考</div>
+          <div className="text-sm text-app-text-sub whitespace-pre-wrap">
             {[
               (invoice.notes || '').trim(),
               '本請求書は、2023年10月1日施行のインボイス制度における「適格請求書発行事業者以外の事業者」として発行するものです。',

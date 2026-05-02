@@ -1403,11 +1403,11 @@ export default function TransactionModal({
       <div className="relative bg-white rounded-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
         style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
         <div className="sticky top-0 bg-white rounded-t-2xl px-5 pt-5 pb-3 border-b border-gray-100 flex items-center justify-between z-10">
-          <h3 className="text-sm font-medium text-[#1a1a1a]">
+          <h3 className="text-sm font-medium text-app-text">
             {editData ? '経費を編集' : '経費を追加'}
           </h3>
           <button onClick={onClose} className="p-1 hover:bg-black/5 rounded-full">
-            <X className="w-4 h-4 text-[#999]" />
+            <X className="w-4 h-4 text-app-text-mute" />
           </button>
         </div>
 
@@ -1446,18 +1446,18 @@ export default function TransactionModal({
 
           {/* ① 日付 */}
           <div>
-            <label className="text-xs text-[#999] block mb-1">日付</label>
+            <label className="text-xs text-app-text-mute block mb-1">日付</label>
             <input type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-app-gold/50" />
           </div>
           {/* ② 勘定科目（日付の直後 — ここで分岐） */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-xs text-[#999]">勘定科目</label>
+              <label className="text-xs text-app-text-mute">勘定科目</label>
               <button
                 type="button"
                 onClick={() => setShowConsultation(true)}
-                className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] text-[#1a1a1a] hover:bg-black/5 transition-colors"
+                className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] text-app-text hover:bg-black/5 transition-colors"
                 title="この経費の科目をAIに相談"
               >
                 <Sparkles className="w-3 h-3" />
@@ -1465,7 +1465,7 @@ export default function TransactionModal({
               </button>
             </div>
             <select value={form.kamoku} onChange={(e) => { setForm({ ...form, kamoku: e.target.value, sub_category: '' }); setProductionHint(false); }}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-app-gold/50">
               <option value="" disabled>科目を選択してください</option>
               {topKamoku.length > 0 && (
                 <optgroup label={`${OWNER_LABEL[form.owner] || ''}の定番`}>
@@ -1487,11 +1487,11 @@ export default function TransactionModal({
 
           {/* v0.15.3: AI OCR後、一般系科目に推定された時に「制作費・取材費の可能性は？」とアナウンス */}
           {productionHint && !requiresSubCategory(form.kamoku) && (
-            <div className="bg-[#FFF9EA] border border-[#D4A03A]/30 rounded-lg p-3">
+            <div className="bg-state-warn-bg border border-app-gold/30 rounded-lg p-3">
               <div className="flex items-start gap-2">
-                <Sparkles className="w-3.5 h-3.5 text-[#D4A03A] shrink-0 mt-0.5" />
+                <Sparkles className="w-3.5 h-3.5 text-app-gold shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-[11px] text-[#8B6D1F] leading-relaxed mb-2">
+                  <p className="text-[11px] text-app-gold-deep leading-relaxed mb-2">
                     <span className="font-medium">制作費</span>か<span className="font-medium">取材費</span>の領収書ですか？
                   </p>
                   <div className="flex flex-wrap gap-1.5">
@@ -1505,7 +1505,7 @@ export default function TransactionModal({
                         setForm({ ...form, kamoku: 'production', sub_category: inferred });
                         setProductionHint(false);
                       }}
-                      className="px-2.5 py-1 rounded-full text-[10px] bg-white border border-[#D4A03A]/50 text-[#8B6D1F] hover:bg-[#D4A03A]/10"
+                      className="px-2.5 py-1 rounded-full text-[10px] bg-white border border-app-gold/50 text-app-gold-deep hover:bg-app-gold/10"
                     >
                       制作費
                     </button>
@@ -1519,14 +1519,14 @@ export default function TransactionModal({
                         setForm({ ...form, kamoku: 'torizai', sub_category: inferred });
                         setProductionHint(false);
                       }}
-                      className="px-2.5 py-1 rounded-full text-[10px] bg-white border border-[#D4A03A]/50 text-[#8B6D1F] hover:bg-[#D4A03A]/10"
+                      className="px-2.5 py-1 rounded-full text-[10px] bg-white border border-app-gold/50 text-app-gold-deep hover:bg-app-gold/10"
                     >
                       取材費
                     </button>
                     <button
                       type="button"
                       onClick={() => setProductionHint(false)}
-                      className="px-2.5 py-1 rounded-full text-[10px] text-[#999] hover:bg-white"
+                      className="px-2.5 py-1 rounded-full text-[10px] text-app-text-mute hover:bg-white"
                     >
                       そのまま
                     </button>
@@ -1540,16 +1540,16 @@ export default function TransactionModal({
           {form.kamoku !== 'travel' && (
             <>
               <div>
-                <label className="text-xs text-[#999] block mb-1">金額（税込）</label>
+                <label className="text-xs text-app-text-mute block mb-1">金額（税込）</label>
                 <input type="text" inputMode="numeric"
                   value={form.amount ? Number(form.amount.replace(/,/g, '')).toLocaleString() : ''}
                   onChange={(e) => { const v = e.target.value.replace(/,/g, ''); if (/^\d*$/.test(v)) setForm({ ...form, amount: v }); }}
-                  className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50" placeholder="15,300" />
+                  className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-app-gold/50" placeholder="15,300" />
               </div>
               <div>
-                <label className="text-xs text-[#999] block mb-1">支払先</label>
+                <label className="text-xs text-app-text-mute block mb-1">支払先</label>
                 <input type="text" value={form.store} onChange={(e) => setForm({ ...form, store: e.target.value })}
-                  className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+                  className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-app-gold/50"
                   placeholder={
                     form.kamoku === 'entertainment' ? '店名（レストラン等）' :
                     form.kamoku === 'equipment' ? 'ヨドバシカメラ / Amazon等' :
@@ -1567,8 +1567,8 @@ export default function TransactionModal({
           {/* v0.15.0: 内訳タグ選択UI（制作費・取材費のみ） */}
           {requiresSubCategory(form.kamoku) && (
             <div>
-              <label className="text-xs text-[#999] block mb-1">
-                内訳 <span className="text-[#C23728]">*必須</span>
+              <label className="text-xs text-app-text-mute block mb-1">
+                内訳 <span className="text-app-red">*必須</span>
               </label>
               <div className="flex flex-wrap gap-1.5">
                 {subCategories
@@ -1582,8 +1582,8 @@ export default function TransactionModal({
                         onClick={() => setForm({ ...form, sub_category: s.key })}
                         className={`px-3 py-1.5 rounded-full text-xs transition-colors ${
                           selected
-                            ? 'bg-[#D4A03A] text-white'
-                            : 'bg-[#F5F5F3] text-[#333] hover:bg-[#EEE]'
+                            ? 'bg-app-gold text-white'
+                            : 'bg-app-surface-alt text-app-text-strong hover:bg-app-button-disabled'
                         }`}
                       >
                         {s.label}
@@ -1644,7 +1644,7 @@ export default function TransactionModal({
                       setForm({ ...form, sub_category: (data as any).key });
                     }
                   }}
-                  className="px-3 py-1.5 rounded-full text-xs bg-white border border-dashed border-[#D4A03A]/60 text-[#D4A03A] hover:bg-[#FFF9EA]"
+                  className="px-3 py-1.5 rounded-full text-xs bg-white border border-dashed border-app-gold/60 text-app-gold hover:bg-state-warn-bg"
                 >
                   ＋ 新規追加
                 </button>
@@ -1658,7 +1658,7 @@ export default function TransactionModal({
               {/* 経費テンプレ選択（業務メタ） */}
               {templates.filter(t => t.template_type === 'transport').length > 0 && (
                 <div>
-                  <label className="text-xs text-[#999] block mb-1">経費テンプレ（業務メタ）</label>
+                  <label className="text-xs text-app-text-mute block mb-1">経費テンプレ（業務メタ）</label>
                   <select
                     value={selectedTemplate?.id || ''}
                     onChange={(e) => {
@@ -1669,7 +1669,7 @@ export default function TransactionModal({
                         setSelectedTemplate(null);
                       }
                     }}
-                    className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+                    className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-app-gold/50"
                   >
                     <option value="">（手動入力）</option>
                     {templates
@@ -1705,7 +1705,7 @@ export default function TransactionModal({
                   : selectedOutboundRoute?.id || '';
                 return (
                   <div>
-                    <label className="text-xs text-[#999] block mb-1">ルート</label>
+                    <label className="text-xs text-app-text-mute block mb-1">ルート</label>
                     <select
                       value={selectedValue}
                       onChange={(e) => {
@@ -1717,7 +1717,7 @@ export default function TransactionModal({
                         const tpl = active.find((t) => t.id === val);
                         if (tpl) applyRoute(tpl);
                       }}
-                      className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+                      className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-app-gold/50"
                     >
                       <option value="">（手動入力）</option>
                       {packages.length > 0 && (
@@ -1750,7 +1750,7 @@ export default function TransactionModal({
             const generalTpls = templates.filter(t => t.template_type === 'general' && t.kamoku === form.kamoku);
             return generalTpls.length > 0 ? (
               <div className="space-y-2">
-                <p className="text-xs text-[#999]">テンプレートから入力</p>
+                <p className="text-xs text-app-text-mute">テンプレートから入力</p>
                 <div className="flex flex-wrap gap-1.5">
                   {generalTpls.slice(0, 5).map((tpl) => (
                     <button
@@ -1758,8 +1758,8 @@ export default function TransactionModal({
                       onClick={() => applyTemplate(tpl)}
                       className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all ${
                         selectedTemplate?.id === tpl.id
-                          ? 'bg-[#1a1a1a] text-white border-[#1a1a1a]'
-                          : 'bg-[#F5F5F3] text-[#555] border-[#E0E0E0] hover:border-[#D4A03A] hover:text-[#D4A03A]'
+                          ? 'bg-app-button text-white border-app-text'
+                          : 'bg-app-surface-alt text-app-text-sub border-app-line-strong hover:border-app-gold hover:text-app-gold'
                       }`}
                     >
                       <span>{tpl.name}</span>
@@ -1800,14 +1800,14 @@ export default function TransactionModal({
                 );
                 if (onewayActives.length === 0) {
                   return (
-                    <p className="text-[11px] text-[#999]">
+                    <p className="text-[11px] text-app-text-mute">
                       片道テンプレがまだありません。「手入力」を選んでください。
                     </p>
                   );
                 }
                 return (
                   <div>
-                    <label className="text-xs text-[#999] block mb-1">復路に使う片道テンプレ</label>
+                    <label className="text-xs text-app-text-mute block mb-1">復路に使う片道テンプレ</label>
                     <select
                       value={selectedReturnRoute?.id || ''}
                       onChange={(e) => {
@@ -1819,7 +1819,7 @@ export default function TransactionModal({
                           setTransportData((prev) => ({ ...prev, return_legs: [] }));
                         }
                       }}
-                      className="w-full px-3 py-2 bg-white rounded-lg text-sm border border-[#D4A03A]/30 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+                      className="w-full px-3 py-2 bg-white rounded-lg text-sm border border-app-gold/30 outline-none focus:ring-2 focus:ring-app-gold/50"
                     >
                       <option value="">（選択してください）</option>
                       {onewayActives.map((tpl) => (
@@ -1836,22 +1836,22 @@ export default function TransactionModal({
           {form.kamoku === 'entertainment' && <EntertainmentFields data={entertainmentData} onChange={setEntertainmentData} />}
 
           {form.kamoku === 'equipment' && (
-            <div className="border border-[#D4A03A]/30 rounded-xl p-4 space-y-3 bg-[#D4A03A]/5">
-              <p className="text-xs font-medium text-[#D4A03A]">消耗品費詳細</p>
+            <div className="border border-app-gold/30 rounded-xl p-4 space-y-3 bg-app-gold/5">
+              <p className="text-xs font-medium text-app-gold">消耗品費詳細</p>
               <div>
-                <label className="text-xs text-[#999] block mb-1">品名（必須）</label>
+                <label className="text-xs text-app-text-mute block mb-1">品名（必須）</label>
                 <input type="text" value={form.item_name}
                   onChange={(e) => setForm({ ...form, item_name: e.target.value })}
-                  className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+                  className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-app-gold/50"
                   placeholder="MacBook Pro 14インチ / SDカード 128GB 等" />
               </div>
               {(parseInt(form.amount.replace(/,/g, '')) || 0) >= 10000 && (
                 <>
                   <div className="flex gap-3">
                     <div className="flex-1">
-                      <label className="text-xs text-[#999] block mb-1">カテゴリ</label>
+                      <label className="text-xs text-app-text-mute block mb-1">カテゴリ</label>
                       <select value={form.eq_category} onChange={(e) => setForm({ ...form, eq_category: e.target.value })}
-                        className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
+                        className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-app-gold/50">
                         <option value="">選択</option>
                         <option value="pc">PC</option>
                         <option value="camera">カメラ</option>
@@ -1863,35 +1863,35 @@ export default function TransactionModal({
                       </select>
                     </div>
                     <div className="flex-1">
-                      <label className="text-xs text-[#999] block mb-1">事業利用割合</label>
+                      <label className="text-xs text-app-text-mute block mb-1">事業利用割合</label>
                       <div className="flex items-center gap-1">
                         <input type="number" min={0} max={100} value={form.eq_business_ratio}
                           onChange={(e) => setForm({ ...form, eq_business_ratio: e.target.value })}
-                          className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed'] tabular-nums" />
-                        <span className="text-xs text-[#999] shrink-0">%</span>
+                          className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-app-gold/50 font-['Saira_Condensed'] tabular-nums" />
+                        <span className="text-xs text-app-text-mute shrink-0">%</span>
                       </div>
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs text-[#999] block mb-1">メーカー・型番</label>
+                    <label className="text-xs text-app-text-mute block mb-1">メーカー・型番</label>
                     <input type="text" value={form.eq_maker}
                       onChange={(e) => setForm({ ...form, eq_maker: e.target.value })}
-                      className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+                      className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-app-gold/50"
                       placeholder="Apple / SONY α7IV 等" />
                   </div>
                   <div className="flex gap-3">
                     <div className="flex-1">
-                      <label className="text-xs text-[#999] block mb-1">シリアル番号</label>
+                      <label className="text-xs text-app-text-mute block mb-1">シリアル番号</label>
                       <input type="text" value={form.eq_serial}
                         onChange={(e) => setForm({ ...form, eq_serial: e.target.value })}
-                        className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+                        className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-app-gold/50"
                         placeholder="任意" />
                     </div>
                     <div className="flex-1">
-                      <label className="text-xs text-[#999] block mb-1">保証期限</label>
+                      <label className="text-xs text-app-text-mute block mb-1">保証期限</label>
                       <input type="date" value={form.eq_warranty_date}
                         onChange={(e) => setForm({ ...form, eq_warranty_date: e.target.value })}
-                        className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+                        className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-app-gold/50" />
                     </div>
                   </div>
                 </>
@@ -1899,12 +1899,12 @@ export default function TransactionModal({
               {(() => {
                 const amt = parseInt(form.amount.replace(/,/g, '')) || 0;
                 if (amt >= 400000) return (
-                  <p className="text-[10px] text-[#C23728] flex items-center gap-1">
+                  <p className="text-[10px] text-app-red flex items-center gap-1">
                     ※ 40万円以上 → 固定資産（耐用年数で減価償却）
                   </p>
                 );
                 if (amt >= 100000) return (
-                  <p className="text-[10px] text-[#D4A03A] flex items-center gap-1">
+                  <p className="text-[10px] text-app-gold flex items-center gap-1">
                     ※ 10〜40万円未満 → 少額減価償却資産の特例で即時償却可（年間300万円枠）
                   </p>
                 );
@@ -1914,22 +1914,22 @@ export default function TransactionModal({
           )}
 
           <div>
-            <label className="text-xs text-[#999] block mb-1">担当者</label>
+            <label className="text-xs text-app-text-mute block mb-1">担当者</label>
             <select value={form.owner} onChange={(e) => setForm({ ...form, owner: e.target.value })}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-app-gold/50">
               <option value="tomo">トモ</option>
               <option value="toshiki">トシキ</option>
             </select>
           </div>
           <div>
-            <label className="text-xs text-[#999] block mb-1">
+            <label className="text-xs text-app-text-mute block mb-1">
               内容・摘要
               {(DESCRIPTION_REQUIRED_KAMOKU as readonly string[]).includes(form.kamoku) && (
-                <span className="text-[#C23728] ml-1">*必須</span>
+                <span className="text-app-red ml-1">*必須</span>
               )}
             </label>
             <input type="text" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-app-gold/50"
               placeholder={
                 form.kamoku === 'travel' ? '撮影移動 / ロケハン等' :
                 form.kamoku === 'production' ? 'シャツ2点 出演衣装 / YT〇〇編ロケのホテル代 等' :
@@ -1955,9 +1955,9 @@ export default function TransactionModal({
           <div className="pt-3 border-t border-gray-100 space-y-3">
             <div className="flex gap-3">
               <div className="flex-1">
-                <label className="text-xs text-[#999] block mb-1">ステータス</label>
+                <label className="text-xs text-app-text-mute block mb-1">ステータス</label>
                 <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}
-                  className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
+                  className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-app-gold/50">
                   <option value="settled">{TRANSACTION_STATUS.settled}</option>
                   <option value="forecast">{TRANSACTION_STATUS.forecast}</option>
                   <option value="accrued">{TRANSACTION_STATUS.accrued}</option>
@@ -1965,35 +1965,35 @@ export default function TransactionModal({
               </div>
               {form.status !== 'settled' && (
                 <div className="flex-1">
-                  <label className="text-xs text-[#999] block mb-1">支払予定日</label>
+                  <label className="text-xs text-app-text-mute block mb-1">支払予定日</label>
                   <input type="date" value={form.actual_payment_date} onChange={(e) => setForm({ ...form, actual_payment_date: e.target.value })}
-                    className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+                    className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-app-gold/50" />
                 </div>
               )}
             </div>
             {form.status === 'settled' && (
-              <p className="text-[10px] text-[#999]">利用日と同日に支払済みとして記録されます</p>
+              <p className="text-[10px] text-app-text-mute">利用日と同日に支払済みとして記録されます</p>
             )}
           </div>
 
           {/* v0.8.2: 案件タグ必須科目のヘルプボックス */}
           {KAMOKU_INPUT_GUIDE[form.kamoku] && (
-            <div className="bg-[#FFFBEB] border border-[#D4A03A]/30 rounded-lg p-3 space-y-1">
+            <div className="bg-state-warn-bg border border-app-gold/30 rounded-lg p-3 space-y-1">
               <div className="flex items-center gap-1.5">
                 <span className="text-[11px]">💡</span>
-                <span className="text-[11px] font-semibold text-[#1a1a1a]">{KAMOKU_INPUT_GUIDE[form.kamoku].title}</span>
+                <span className="text-[11px] font-semibold text-app-text">{KAMOKU_INPUT_GUIDE[form.kamoku].title}</span>
               </div>
-              <p className="text-[11px] text-[#666] leading-relaxed">{KAMOKU_INPUT_GUIDE[form.kamoku].body}</p>
-              <p className="text-[10px] text-[#999] leading-relaxed">
+              <p className="text-[11px] text-app-text-sub leading-relaxed">{KAMOKU_INPUT_GUIDE[form.kamoku].body}</p>
+              <p className="text-[10px] text-app-text-mute leading-relaxed">
                 例：{KAMOKU_INPUT_GUIDE[form.kamoku].example}
               </p>
               {KAMOKU_INPUT_GUIDE[form.kamoku].requireProject && (
-                <p className="text-[10px] text-[#C23728] font-medium pt-0.5">
+                <p className="text-[10px] text-app-red font-medium pt-0.5">
                   ※この科目は案件タグが必須です（未登録案件の場合は「{UNASSIGNED_PROJECT_LABEL}」を選択）
                 </p>
               )}
               {KAMOKU_INPUT_GUIDE[form.kamoku].requireDescription && (
-                <p className="text-[10px] text-[#C23728] font-medium">
+                <p className="text-[10px] text-app-red font-medium">
                   ※内容・摘要の記入も必須です
                 </p>
               )}
@@ -2003,16 +2003,16 @@ export default function TransactionModal({
           {/* ===== 事業・PJ割り当て（複数行按分） ===== */}
           <div className="pt-3 border-t border-gray-100">
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs text-[#999]">
+              <label className="text-xs text-app-text-mute">
                 事業・PJ割り当て
                 {(PROJECT_TAG_REQUIRED_KAMOKU as readonly string[]).includes(form.kamoku) ? (
-                  <span className="text-[#C23728] ml-1">*必須</span>
+                  <span className="text-app-red ml-1">*必須</span>
                 ) : (
                   <span className="ml-1">（任意）</span>
                 )}
               </label>
               {!hasAllocRows && (
-                <button onClick={addAllocRow} className="flex items-center gap-1 text-[10px] text-[#D4A03A] hover:underline">
+                <button onClick={addAllocRow} className="flex items-center gap-1 text-[10px] text-app-gold hover:underline">
                   <Plus className="w-3 h-3" />追加
                 </button>
               )}
@@ -2025,7 +2025,7 @@ export default function TransactionModal({
                     ? projects.filter(p => p.division === row.division_id && p.status !== 'completed')
                     : [];
                   return (
-                    <div key={idx} className="bg-[#FAFAF8] rounded-lg p-2 space-y-1.5">
+                    <div key={idx} className="bg-app-surface rounded-lg p-2 space-y-1.5">
                       {/* 1段目: 事業・PJ（スマホでも幅確保） */}
                       <div className="flex items-center gap-1.5">
                         <select value={row.division_id} onChange={e => updateAllocRow(idx, 'division_id', e.target.value)}
@@ -2049,14 +2049,14 @@ export default function TransactionModal({
                             onChange={e => updateAllocRow(idx, 'percent', parseInt(e.target.value, 10) || 0)}
                             className="w-14 px-2 py-1.5 bg-white rounded text-[11px] border-0 outline-none text-right font-['Saira_Condensed'] tabular-nums"
                             min={0} max={100} />
-                          <span className="text-[10px] text-[#999]">%</span>
+                          <span className="text-[10px] text-app-text-mute">%</span>
                         </div>
                         {txAmount > 0 && (
-                          <span className="text-[10px] font-['Saira_Condensed'] tabular-nums text-[#999] flex-1 text-right">
+                          <span className="text-[10px] font-['Saira_Condensed'] tabular-nums text-app-text-mute flex-1 text-right">
                             ¥{Math.round(txAmount * row.percent / 100).toLocaleString()}
                           </span>
                         )}
-                        <button onClick={() => removeAllocRow(idx)} className="text-[#C23728]/60 hover:text-[#C23728] p-1 shrink-0">
+                        <button onClick={() => removeAllocRow(idx)} className="text-app-red/60 hover:text-app-red p-1 shrink-0">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -2064,34 +2064,34 @@ export default function TransactionModal({
                   );
                 })}
                 <div className="flex items-center justify-between pt-1">
-                  <button onClick={addAllocRow} className="flex items-center gap-1 text-[11px] text-[#D4A03A] hover:underline">
+                  <button onClick={addAllocRow} className="flex items-center gap-1 text-[11px] text-app-gold hover:underline">
                     <Plus className="w-3 h-3" />行を追加
                   </button>
-                  <span className={`text-[11px] font-['Saira_Condensed'] tabular-nums ${totalPercent === 100 ? 'text-[#1B4D3E]' : 'text-[#C23728]'}`}>
+                  <span className={`text-[11px] font-['Saira_Condensed'] tabular-nums ${totalPercent === 100 ? 'text-app-green' : 'text-app-red'}`}>
                     合計 {totalPercent}%
                   </span>
                 </div>
               </div>
             ) : (
-              <button onClick={addAllocRow} className="flex items-center gap-1 text-[11px] text-[#D4A03A] hover:underline">
+              <button onClick={addAllocRow} className="flex items-center gap-1 text-[11px] text-app-gold hover:underline">
                 <Plus className="w-3 h-3" />事業・PJを割り当てる
               </button>
             )}
           </div>
 
-          {error && <p className="text-xs text-[#C23728]">{error}</p>}
+          {error && <p className="text-xs text-app-red">{error}</p>}
 
           {dupWarning && (
-            <div className="px-4 py-3 bg-[#D4A03A]/10 rounded-xl">
-              <p className="text-xs text-[#D4A03A] font-medium mb-2">⚠ 類似の経費があります</p>
-              <p className="text-[11px] text-[#1a1a1a] mb-3">{dupWarning}</p>
+            <div className="px-4 py-3 bg-app-gold/10 rounded-xl">
+              <p className="text-xs text-app-gold font-medium mb-2">⚠ 類似の経費があります</p>
+              <p className="text-[11px] text-app-text mb-3">{dupWarning}</p>
               <div className="flex gap-2">
                 <button onClick={() => { setDupConfirmed(true); setDupWarning(null); handleSave(); }}
-                  className="flex-1 py-2 bg-[#D4A03A] text-white rounded-lg text-xs font-medium hover:bg-[#b8882e] transition-colors">
+                  className="flex-1 py-2 bg-app-gold text-white rounded-lg text-xs font-medium hover:bg-app-gold-hover transition-colors">
                   それでも登録する
                 </button>
                 <button onClick={() => { setDupWarning(null); }}
-                  className="flex-1 py-2 bg-[#F5F5F3] text-[#999] rounded-lg text-xs font-medium hover:bg-gray-200 transition-colors">
+                  className="flex-1 py-2 bg-app-surface-alt text-app-text-mute rounded-lg text-xs font-medium hover:bg-gray-200 transition-colors">
                   キャンセル
                 </button>
               </div>
@@ -2157,9 +2157,9 @@ export default function TransactionModal({
                     name={name}
                     checked={value === true}
                     onChange={onYes}
-                    className="w-4 h-4 accent-[#1a1a1a]"
+                    className="w-4 h-4 accent-app-text"
                   />
-                  <span className="text-xs text-[#1a1a1a]">はい</span>
+                  <span className="text-xs text-app-text">はい</span>
                 </label>
                 <label className="flex items-center gap-1.5 cursor-pointer">
                   <input
@@ -2167,9 +2167,9 @@ export default function TransactionModal({
                     name={name}
                     checked={value === false}
                     onChange={onNo}
-                    className="w-4 h-4 accent-[#1a1a1a]"
+                    className="w-4 h-4 accent-app-text"
                   />
-                  <span className="text-xs text-[#1a1a1a]">いいえ</span>
+                  <span className="text-xs text-app-text">いいえ</span>
                 </label>
               </div>
             );
@@ -2178,18 +2178,18 @@ export default function TransactionModal({
               <div className="space-y-3">
                 {routeOnlyMode && !multiMode ? (
                   <>
-                    <p className="text-xs text-[#1a1a1a] font-medium">この区間をルートとして保存しますか？</p>
-                    <p className="text-[10px] text-[#999]">逆順ペアも自動で保存されます</p>
+                    <p className="text-xs text-app-text font-medium">この区間をルートとして保存しますか？</p>
+                    <p className="text-[10px] text-app-text-mute">逆順ペアも自動で保存されます</p>
                   </>
                 ) : multiMode ? (
                   <>
-                    <p className="text-xs text-[#1a1a1a] font-medium">保存提案</p>
-                    <p className="text-[10px] text-[#999]">各項目で保存するか選んでください</p>
+                    <p className="text-xs text-app-text font-medium">保存提案</p>
+                    <p className="text-[10px] text-app-text-mute">各項目で保存するか選んでください</p>
                   </>
                 ) : (
                   <>
-                    <p className="text-xs text-[#1a1a1a] font-medium">テンプレートとして保存しますか？</p>
-                    <p className="text-[10px] text-[#999]">次回から同じ内容をワンタップで入力できます</p>
+                    <p className="text-xs text-app-text font-medium">テンプレートとして保存しますか？</p>
+                    <p className="text-[10px] text-app-text-mute">次回から同じ内容をワンタップで入力できます</p>
                   </>
                 )}
 
@@ -2201,19 +2201,19 @@ export default function TransactionModal({
                     placeholder={isTransport
                       ? '経費テンプレ名（例: 出張用メタ）'
                       : 'テンプレ名（例: Adobe CC）'}
-                    className="w-full px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors"
+                    className="w-full px-3 py-2.5 text-sm border border-app-line-medium rounded-xl focus:outline-none focus:border-app-text transition-colors"
                     autoFocus
                   />
                 )}
 
                 {/* v0.14.7: multiMode (different_route/manual) — Yes/No ラジオ方式 */}
                 {multiMode && !isAutoReverse && (
-                  <div className="space-y-3 pt-2 border-t border-[#f0f0f0]">
+                  <div className="space-y-3 pt-2 border-t border-app-line">
                     {/* 往路 Yes/No — 既存テンプレ適用中は非表示 */}
                     {!outboundAlreadyLinked && (
                       <div>
-                        <p className="text-xs text-[#1a1a1a] font-medium">往路「{routeStr}」を片道テンプレ保存?</p>
-                        <p className="text-[10px] text-[#999] mt-0.5">逆順ペアも自動で保存されます</p>
+                        <p className="text-xs text-app-text font-medium">往路「{routeStr}」を片道テンプレ保存?</p>
+                        <p className="text-[10px] text-app-text-mute mt-0.5">逆順ペアも自動で保存されます</p>
                         {radioYesNo(
                           'saveOutbound',
                           saveOutboundEnabled,
@@ -2228,7 +2228,7 @@ export default function TransactionModal({
                             value={outboundTemplateName}
                             onChange={e => setOutboundTemplateName(e.target.value)}
                             placeholder="往路名（例: 自宅→四ツ谷）"
-                            className="w-full mt-2 px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors"
+                            className="w-full mt-2 px-3 py-2.5 text-sm border border-app-line-medium rounded-xl focus:outline-none focus:border-app-text transition-colors"
                           />
                         )}
                       </div>
@@ -2237,8 +2237,8 @@ export default function TransactionModal({
                     {/* 復路 Yes/No — 既存テンプレ適用中は非表示 */}
                     {!returnAlreadyLinked && (
                       <div>
-                        <p className="text-xs text-[#1a1a1a] font-medium">復路「{returnRouteStr}」を片道テンプレ保存?</p>
-                        <p className="text-[10px] text-[#999] mt-0.5">逆順ペアも自動で保存されます</p>
+                        <p className="text-xs text-app-text font-medium">復路「{returnRouteStr}」を片道テンプレ保存?</p>
+                        <p className="text-[10px] text-app-text-mute mt-0.5">逆順ペアも自動で保存されます</p>
                         {radioYesNo(
                           'saveReturn',
                           saveReturnEnabled,
@@ -2253,7 +2253,7 @@ export default function TransactionModal({
                             value={returnTemplateName}
                             onChange={e => setReturnTemplateName(e.target.value)}
                             placeholder="復路名（例: 四ツ谷→自宅（新宿経由））"
-                            className="w-full mt-2 px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors"
+                            className="w-full mt-2 px-3 py-2.5 text-sm border border-app-line-medium rounded-xl focus:outline-none focus:border-app-text transition-colors"
                           />
                         )}
                       </div>
@@ -2267,10 +2267,10 @@ export default function TransactionModal({
                         const packageEnabled = outboundAvailable && returnAvailable;
                         return (
                           <>
-                            <p className={`text-xs font-medium ${packageEnabled ? 'text-[#1a1a1a]' : 'text-[#999]'}`}>
+                            <p className={`text-xs font-medium ${packageEnabled ? 'text-app-text' : 'text-app-text-mute'}`}>
                               この往復セットをパッケージ保存?
                             </p>
-                            <p className="text-[10px] text-[#999] mt-0.5">
+                            <p className="text-[10px] text-app-text-mute mt-0.5">
                               {packageEnabled
                                 ? '次回ルート選択時に1クリックで適用できます'
                                 : '往路・復路の両方を「はい」または既存選択してください'}
@@ -2289,7 +2289,7 @@ export default function TransactionModal({
                                 value={packageTemplateName}
                                 onChange={e => setPackageTemplateName(e.target.value)}
                                 placeholder="パッケージ名（例: 自宅⇔四ツ谷）"
-                                className="w-full mt-2 px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors"
+                                className="w-full mt-2 px-3 py-2.5 text-sm border border-app-line-medium rounded-xl focus:outline-none focus:border-app-text transition-colors"
                               />
                             )}
                           </>
@@ -2301,14 +2301,14 @@ export default function TransactionModal({
 
                 {/* v0.14.7: auto_reverse — 2段構え Yes/No */}
                 {isAutoReverse && (
-                  <div className="space-y-3 pt-2 border-t border-[#f0f0f0]">
+                  <div className="space-y-3 pt-2 border-t border-app-line">
                     {/* 第1段: 逆順片道テンプレ保存 */}
                     {showAutoReverseReturnBlock && (
                       <div>
                         {outboundAlreadyLinked ? (
                           <>
-                            <p className="text-xs text-[#1a1a1a] font-medium">復路「{autoReverseStr}」を片道テンプレ保存?</p>
-                            <p className="text-[10px] text-[#999] mt-0.5">
+                            <p className="text-xs text-app-text font-medium">復路「{autoReverseStr}」を片道テンプレ保存?</p>
+                            <p className="text-[10px] text-app-text-mute mt-0.5">
                               次回、復路として選べるようになります
                             </p>
                             {radioYesNo(
@@ -2325,14 +2325,14 @@ export default function TransactionModal({
                                 value={returnTemplateName}
                                 onChange={e => setReturnTemplateName(e.target.value)}
                                 placeholder="復路テンプレ名（例: 四ツ谷→自宅）"
-                                className="w-full mt-2 px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors"
+                                className="w-full mt-2 px-3 py-2.5 text-sm border border-app-line-medium rounded-xl focus:outline-none focus:border-app-text transition-colors"
                               />
                             )}
                           </>
                         ) : (
                           <>
-                            <p className="text-xs text-[#1a1a1a] font-medium">往路「{routeStr}」を片道テンプレ保存?</p>
-                            <p className="text-[10px] text-[#999] mt-0.5">
+                            <p className="text-xs text-app-text font-medium">往路「{routeStr}」を片道テンプレ保存?</p>
+                            <p className="text-[10px] text-app-text-mute mt-0.5">
                               逆順ペアも自動で保存されます
                             </p>
                             {radioYesNo(
@@ -2349,7 +2349,7 @@ export default function TransactionModal({
                                 value={outboundTemplateName}
                                 onChange={e => setOutboundTemplateName(e.target.value)}
                                 placeholder="往路名（例: 自宅→四ツ谷）"
-                                className="w-full mt-2 px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors"
+                                className="w-full mt-2 px-3 py-2.5 text-sm border border-app-line-medium rounded-xl focus:outline-none focus:border-app-text transition-colors"
                               />
                             )}
                           </>
@@ -2369,10 +2369,10 @@ export default function TransactionModal({
                         (!outboundAlreadyLinked && saveOutboundEnabled && outboundTemplateName.trim().length > 0);
                       return (
                         <div>
-                          <p className={`text-xs font-medium ${packageEnabled ? 'text-[#1a1a1a]' : 'text-[#999]'}`}>
+                          <p className={`text-xs font-medium ${packageEnabled ? 'text-app-text' : 'text-app-text-mute'}`}>
                             この往復をパッケージ保存?
                           </p>
-                          <p className="text-[10px] text-[#999] mt-0.5">
+                          <p className="text-[10px] text-app-text-mute mt-0.5">
                             {packageEnabled
                               ? '次回ルート選択時に1クリックで適用できます'
                               : reverseAlreadyExists
@@ -2393,7 +2393,7 @@ export default function TransactionModal({
                               value={packageTemplateName}
                               onChange={e => setPackageTemplateName(e.target.value)}
                               placeholder="パッケージ名（例: 自宅⇔四ツ谷）"
-                              className="w-full mt-2 px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors"
+                              className="w-full mt-2 px-3 py-2.5 text-sm border border-app-line-medium rounded-xl focus:outline-none focus:border-app-text transition-colors"
                             />
                           )}
                         </div>
@@ -2404,17 +2404,17 @@ export default function TransactionModal({
 
                 {/* 片道 モード — 従来UI（片道1個 + 自動逆順） */}
                 {isTransport && !multiMode && !routeOnlyMode && (
-                  <div className="pt-2 border-t border-[#f0f0f0]">
+                  <div className="pt-2 border-t border-app-line">
                     <label className="flex items-start gap-2 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={alsoSaveRoute}
                         onChange={e => setAlsoSaveRoute(e.target.checked)}
-                        className="mt-0.5 w-4 h-4 accent-[#1a1a1a]"
+                        className="mt-0.5 w-4 h-4 accent-app-text"
                       />
                       <div className="flex-1">
-                        <p className="text-xs text-[#1a1a1a] font-medium">片道テンプレとして保存</p>
-                        <p className="text-[10px] text-[#999] mt-0.5">逆順ペアも自動で保存されます</p>
+                        <p className="text-xs text-app-text font-medium">片道テンプレとして保存</p>
+                        <p className="text-[10px] text-app-text-mute mt-0.5">逆順ペアも自動で保存されます</p>
                       </div>
                     </label>
                     {alsoSaveRoute && (
@@ -2422,7 +2422,7 @@ export default function TransactionModal({
                         value={routeTemplateName}
                         onChange={e => setRouteTemplateName(e.target.value)}
                         placeholder="ルート名（例: 自宅→四ツ谷）"
-                        className="w-full mt-2 px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors"
+                        className="w-full mt-2 px-3 py-2.5 text-sm border border-app-line-medium rounded-xl focus:outline-none focus:border-app-text transition-colors"
                       />
                     )}
                   </div>
@@ -2434,7 +2434,7 @@ export default function TransactionModal({
                     value={routeTemplateName}
                     onChange={e => setRouteTemplateName(e.target.value)}
                     placeholder="ルート名（例: 自宅→四ツ谷）"
-                    className="w-full px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors"
+                    className="w-full px-3 py-2.5 text-sm border border-app-line-medium rounded-xl focus:outline-none focus:border-app-text transition-colors"
                     autoFocus
                   />
                 )}
@@ -2454,7 +2454,7 @@ export default function TransactionModal({
                     setPackageTemplateName('');
                     onClose();
                   }}
-                    className="flex-1 py-2.5 text-xs text-[#999] bg-[#F5F5F3] rounded-xl hover:bg-gray-200 transition-colors">
+                    className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-xl hover:bg-gray-200 transition-colors">
                     キャンセル
                   </button>
                   <button onClick={saveAsTemplate}
@@ -2472,7 +2472,7 @@ export default function TransactionModal({
                       // 通常モード: 経費テンプレ名必須、alsoSaveRoute時はルート名も必須
                       return !templateName.trim() || (alsoSaveRoute && !routeTemplateName.trim());
                     })()}
-                    className="flex-1 py-2.5 text-xs text-white bg-[#1a1a1a] rounded-xl hover:bg-[#333] disabled:opacity-40 transition-colors">
+                    className="flex-1 py-2.5 text-xs text-white bg-app-button rounded-xl hover:bg-app-button-hover disabled:opacity-40 transition-colors">
                     登録を確定
                   </button>
                 </div>
@@ -2480,7 +2480,7 @@ export default function TransactionModal({
             );
           })() : (
             <button onClick={handleSave} disabled={saving || !form.amount || !form.date}
-              className="w-full py-3 bg-[#1a1a1a] text-white rounded-xl text-sm font-medium hover:bg-[#333] disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2">
+              className="w-full py-3 bg-app-button text-white rounded-xl text-sm font-medium hover:bg-app-button-hover disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2">
               {saving ? (<><Loader2 className="w-4 h-4 animate-spin" />保存中...</>) : editData ? '更新する' : '登録する'}
             </button>
           )}

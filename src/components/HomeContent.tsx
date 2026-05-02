@@ -145,18 +145,18 @@ export default function HomeContent() {
       <div className="max-w-lg mx-auto px-4 py-8 space-y-6">
 
         {/* ── ヘッダー(δ案語彙・明色基調・3層タイポ) ── */}
-        <header className="pb-5 border-b border-[#e8e6e3]">
-          <p className="font-['Saira_Condensed'] text-[11px] tracking-[0.3em] text-[#D4A03A] mb-6 font-medium uppercase">
+        <header className="pb-5 border-b border-app-line-medium">
+          <p className="font-['Saira_Condensed'] text-[11px] tracking-[0.3em] text-app-gold mb-6 font-medium uppercase">
             VOLUME 01 · HOME
           </p>
           <h1
-            className="font-['Cormorant_Garamond'] italic text-[#1a1a1a] mb-3.5"
+            className="font-['Cormorant_Garamond'] italic text-app-text mb-3.5"
             style={{ fontSize: 36, fontWeight: 400, letterSpacing: '0.01em', lineHeight: 1.2 }}
           >
             day by day
           </h1>
           <p
-            className="font-['Shippori_Mincho'] text-[#1a1a1a]"
+            className="font-['Shippori_Mincho'] text-app-text"
             style={{ fontSize: 22, fontWeight: 400, letterSpacing: '0.04em', lineHeight: 1.5 }}
           >
             — 昨日と、今日と、明日。
@@ -167,20 +167,20 @@ export default function HomeContent() {
         <div className="bg-white rounded-2xl p-5" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
           {loading ? (
             <div className="h-20 flex items-center justify-center">
-              <div className="w-5 h-5 border-2 border-[#D4A03A] border-t-transparent rounded-full animate-spin" />
+              <div className="w-5 h-5 border-2 border-app-gold border-t-transparent rounded-full animate-spin" />
             </div>
           ) : (
             <>
               <div className="space-y-3">
                 <div className="flex items-baseline justify-between">
-                  <span className="text-xs text-[#999]">経費</span>
-                  <span className="font-['Saira_Condensed'] text-2xl text-[#1a1a1a] tabular-nums">
+                  <span className="text-xs text-app-text-mute">経費</span>
+                  <span className="font-['Saira_Condensed'] text-2xl text-app-text tabular-nums">
                     {formatAmount(expenseTotal)}
                   </span>
                 </div>
                 <div className="flex items-baseline justify-between">
-                  <span className="text-xs text-[#999]">売上</span>
-                  <span className="font-['Saira_Condensed'] text-2xl text-[#1B4D3E] tabular-nums">
+                  <span className="text-xs text-app-text-mute">売上</span>
+                  <span className="font-['Saira_Condensed'] text-2xl text-app-green tabular-nums">
                     {formatAmount(revenueTotal)}
                   </span>
                 </div>
@@ -189,13 +189,13 @@ export default function HomeContent() {
               <div className="mt-4 pt-3 border-t border-gray-100">
                 {unconfirmedCount === 0 ? (
                   <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-[#1B4D3E]" />
-                    <span className="text-sm text-[#1B4D3E]">問題なし</span>
+                    <CheckCircle2 className="w-4 h-4 text-app-green" />
+                    <span className="text-sm text-app-green">問題なし</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 text-[#D4A03A]" />
-                    <span className="text-sm text-[#D4A03A]">
+                    <AlertTriangle className="w-4 h-4 text-app-gold" />
+                    <span className="text-sm text-app-gold">
                       確認待ち {unconfirmedCount}件
                     </span>
                   </div>
@@ -252,7 +252,7 @@ export default function HomeContent() {
                   <p className="text-sm font-medium mb-1" style={{ color: config.color }}>
                     {config.title}
                   </p>
-                  <p className="text-[11px] text-[#333] leading-relaxed mb-2">
+                  <p className="text-[11px] text-app-text-strong leading-relaxed mb-2">
                     {config.sub}
                   </p>
                   <div className="flex items-center gap-1 text-[11px]" style={{ color: config.color }}>
@@ -268,7 +268,7 @@ export default function HomeContent() {
         {/* v0.9.0: 経費追加CTAボタン（領収書・手入力の統合） */}
         <button
           onClick={() => setManualModalOpen(true)}
-          className="w-full bg-[#1a1a1a] text-white rounded-2xl py-4 px-5 flex items-center justify-center gap-2 hover:bg-[#333] transition-colors"
+          className="w-full bg-app-button text-white rounded-2xl py-4 px-5 flex items-center justify-center gap-2 hover:bg-app-button-hover transition-colors"
           style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}
         >
           <PenLine className="w-4 h-4" />
@@ -278,7 +278,7 @@ export default function HomeContent() {
         {/* v0.19.0: 複数領収書まとめてリンク */}
         <button
           onClick={() => setBulkModalOpen(true)}
-          className="w-full text-center text-[11px] text-[#999] hover:text-[#1a1a1a] transition-colors -mt-2"
+          className="w-full text-center text-[11px] text-app-text-mute hover:text-app-text transition-colors -mt-2"
         >
           領収書をまとめて取り込む
         </button>
@@ -302,14 +302,14 @@ export default function HomeContent() {
 
         {/* ── 最近の取引 ── */}
         <div className="bg-white rounded-2xl p-5" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
-          <h2 className="text-xs text-[#999] mb-3">最近の取引</h2>
+          <h2 className="text-xs text-app-text-mute mb-3">最近の取引</h2>
 
           {loading ? (
             <div className="h-20 flex items-center justify-center">
-              <div className="w-4 h-4 border-2 border-[#D4A03A] border-t-transparent rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-app-gold border-t-transparent rounded-full animate-spin" />
             </div>
           ) : recentTx.length === 0 ? (
-            <p className="text-sm text-[#ccc] py-4 text-center">取引がありません</p>
+            <p className="text-sm text-app-text-fade py-4 text-center">取引がありません</p>
           ) : (
             <div className="space-y-0">
               {recentTx.map((tx) => (
@@ -318,16 +318,16 @@ export default function HomeContent() {
                   className="flex items-center justify-between py-2.5 border-b border-gray-50 last:border-0"
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className="font-['Saira_Condensed'] text-xs text-[#999] w-10 shrink-0 tabular-nums">
+                    <span className="font-['Saira_Condensed'] text-xs text-app-text-mute w-10 shrink-0 tabular-nums">
                       {formatDate(tx.date)}
                     </span>
-                    <span className="text-sm text-[#1a1a1a] truncate">
+                    <span className="text-sm text-app-text truncate">
                       {tx.store || tx.description || KAMOKU[tx.kamoku as keyof typeof KAMOKU]?.name || '—'}
                     </span>
                   </div>
                   <span
                     className={`font-['Saira_Condensed'] text-sm tabular-nums shrink-0 ml-3 ${
-                      tx.tx_type === 'revenue' ? 'text-[#1B4D3E]' : 'text-[#1a1a1a]'
+                      tx.tx_type === 'revenue' ? 'text-app-green' : 'text-app-text'
                     }`}
                   >
                     {tx.tx_type === 'revenue' ? '+' : ''}{formatAmount(tx.amount)}
@@ -339,7 +339,7 @@ export default function HomeContent() {
 
           <Link
             href="/expenses"
-            className="flex items-center justify-center gap-1 mt-3 pt-3 border-t border-gray-100 text-xs text-[#999] hover:text-[#D4A03A] transition-colors"
+            className="flex items-center justify-center gap-1 mt-3 pt-3 border-t border-gray-100 text-xs text-app-text-mute hover:text-app-gold transition-colors"
           >
             経費ページで全て見る
             <ArrowRight className="w-3 h-3" />

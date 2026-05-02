@@ -24,7 +24,7 @@ export default function RootLayout({
             <div className="px-6 py-4 flex items-center justify-between">
               {/* 左: ロゴ */}
               <div className="flex items-center gap-3">
-                <div className="font-['Questrial'] text-lg text-[#1B4D3E]">komu10</div>
+                <div className="font-['Questrial'] text-lg text-app-green">komu10</div>
                 <div className="text-[10px] font-light tracking-wider text-gray-400">ACCOUNTING</div>
               </div>
               

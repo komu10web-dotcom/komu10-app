@@ -5,7 +5,7 @@ import SimulationContent from '@/components/SimulationContent';
 
 export default function SimulationPage() {
   return (
-    <Suspense fallback={<div className="p-6 text-center text-sm text-[#ccc]">読み込み中...</div>}>
+    <Suspense fallback={<div className="p-6 text-center text-sm text-app-text-fade">読み込み中...</div>}>
       <SimulationContent />
     </Suspense>
   );

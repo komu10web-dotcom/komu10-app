@@ -9,10 +9,10 @@ import InvoiceTab from './InvoiceTab';
 
 // ステータスバッジの色定義
 const STATUS_STYLES: Record<string, { bg: string; text: string }> = {
-  forecast: { bg: 'bg-[#F5F5F3]', text: 'text-[#999]' },
-  accrued:  { bg: 'bg-[#81D8D0]/10', text: 'text-[#1B4D3E]' },
-  billed:   { bg: 'bg-[#D4A03A]/10', text: 'text-[#D4A03A]' },
-  settled:  { bg: 'bg-[#1B4D3E]/10', text: 'text-[#1B4D3E]' },
+  forecast: { bg: 'bg-app-surface-alt', text: 'text-app-text-mute' },
+  accrued:  { bg: 'bg-content-scene-notes/10', text: 'text-app-green' },
+  billed:   { bg: 'bg-app-gold/10', text: 'text-app-gold' },
+  settled:  { bg: 'bg-app-green/10', text: 'text-app-green' },
 };
 import { Plus, Upload, Pencil, Trash2, Search, Loader2, X } from 'lucide-react';
 import { usePeriodRange } from './HeaderControls';
@@ -271,20 +271,20 @@ export default function IncomeContent() {
       <div className="max-w-5xl mx-auto px-6 py-8">
 
         {/* ── ヘッダー + タブ(δ案語彙・明色基調・縦積み構造) ── */}
-        <div className="mb-8 pb-5 border-b border-[#e8e6e3]">
+        <div className="mb-8 pb-5 border-b border-app-line-medium">
           <div>
-            <p className="font-['Saira_Condensed'] text-[11px] tracking-[0.3em] text-[#D4A03A] mb-3 font-medium">
+            <p className="font-['Saira_Condensed'] text-[11px] tracking-[0.3em] text-app-gold mb-3 font-medium">
               VOLUME 03 · SALES
             </p>
-            <h1 className="font-['Shippori_Mincho'] text-[26px] font-normal text-[#1a1a1a] leading-[1.4] tracking-[0.03em]">
+            <h1 className="font-['Shippori_Mincho'] text-[26px] font-normal text-app-text leading-[1.4] tracking-[0.03em]">
               いくら、稼げているか。
             </h1>
           </div>
-          <div className="mt-6 flex items-center gap-1 bg-[#F5F5F3] rounded-lg p-0.5 w-fit">
+          <div className="mt-6 flex items-center gap-1 bg-app-surface-alt rounded-lg p-0.5 w-fit">
             <button
               onClick={() => setActiveTab('sales')}
               className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
-                activeTab === 'sales' ? 'bg-white text-[#1a1a1a] shadow-sm font-medium' : 'text-[#999] hover:text-[#666]'
+                activeTab === 'sales' ? 'bg-white text-app-text shadow-sm font-medium' : 'text-app-text-mute hover:text-app-text-sub'
               }`}
             >
               売上一覧
@@ -292,7 +292,7 @@ export default function IncomeContent() {
             <button
               onClick={() => setActiveTab('invoices')}
               className={`px-3 py-1.5 text-xs rounded-md transition-colors ${
-                activeTab === 'invoices' ? 'bg-white text-[#1a1a1a] shadow-sm font-medium' : 'text-[#999] hover:text-[#666]'
+                activeTab === 'invoices' ? 'bg-white text-app-text shadow-sm font-medium' : 'text-app-text-mute hover:text-app-text-sub'
               }`}
             >
               請求書
@@ -310,12 +310,12 @@ export default function IncomeContent() {
         <div className="flex items-center gap-2 mb-4">
           <button
             onClick={() => { setEditTarget(null); setModalOpen(true); }}
-            className="flex items-center gap-1.5 px-4 py-2 bg-[#1a1a1a] text-white rounded-lg text-xs font-medium hover:bg-[#333] transition-colors"
+            className="flex items-center gap-1.5 px-4 py-2 bg-app-button text-white rounded-lg text-xs font-medium hover:bg-app-button-hover transition-colors"
           >
             <Plus className="w-3.5 h-3.5" />
             売上入力
           </button>
-          <label className="flex items-center gap-1.5 px-4 py-2 bg-white text-[#1a1a1a] rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors cursor-pointer border border-gray-200">
+          <label className="flex items-center gap-1.5 px-4 py-2 bg-white text-app-text rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors cursor-pointer border border-gray-200">
             <Upload className="w-3.5 h-3.5" />
             {importing ? 'インポート中...' : 'CSV'}
             <input
@@ -330,16 +330,16 @@ export default function IncomeContent() {
             />
           </label>
           <div className="relative ml-auto">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#999]" />
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-app-text-mute" />
             <input
               type="text"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               placeholder="検索..."
-              className="pl-8 pr-3 py-2 bg-white rounded-lg text-xs border border-gray-200 outline-none focus:ring-2 focus:ring-[#D4A03A]/50 w-40"
+              className="pl-8 pr-3 py-2 bg-white rounded-lg text-xs border border-gray-200 outline-none focus:ring-2 focus:ring-app-gold/50 w-40"
             />
           </div>
-          <span className="text-xs text-[#999]">
+          <span className="text-xs text-app-text-mute">
             {filtered.length}件
           </span>
         </div>
@@ -348,10 +348,10 @@ export default function IncomeContent() {
         <div className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
           {loading ? (
             <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-5 h-5 text-[#D4A03A] animate-spin" />
+              <Loader2 className="w-5 h-5 text-app-gold animate-spin" />
             </div>
           ) : filtered.length === 0 ? (
-            <div className="py-20 text-center text-sm text-[#ccc]">
+            <div className="py-20 text-center text-sm text-app-text-fade">
               売上がありません
             </div>
           ) : (
@@ -359,15 +359,15 @@ export default function IncomeContent() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100">
-                    <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">日付</th>
-                    <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">ステータス</th>
-                    <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">取引先</th>
-                    <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">事業</th>
-                    <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">契約区分</th>
-                    <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">収益タイプ</th>
-                    <th className="text-left px-4 py-3 text-xs text-[#999] font-normal">PJ</th>
-                    <th className="text-right px-4 py-3 text-xs text-[#999] font-normal">金額</th>
-                    <th className="text-right px-4 py-3 text-xs text-[#999] font-normal w-20">操作</th>
+                    <th className="text-left px-4 py-3 text-xs text-app-text-mute font-normal">日付</th>
+                    <th className="text-left px-4 py-3 text-xs text-app-text-mute font-normal">ステータス</th>
+                    <th className="text-left px-4 py-3 text-xs text-app-text-mute font-normal">取引先</th>
+                    <th className="text-left px-4 py-3 text-xs text-app-text-mute font-normal">事業</th>
+                    <th className="text-left px-4 py-3 text-xs text-app-text-mute font-normal">契約区分</th>
+                    <th className="text-left px-4 py-3 text-xs text-app-text-mute font-normal">収益タイプ</th>
+                    <th className="text-left px-4 py-3 text-xs text-app-text-mute font-normal">PJ</th>
+                    <th className="text-right px-4 py-3 text-xs text-app-text-mute font-normal">金額</th>
+                    <th className="text-right px-4 py-3 text-xs text-app-text-mute font-normal w-20">操作</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -379,8 +379,8 @@ export default function IncomeContent() {
                     const effStatus = getEffectiveStatus(tx.status);
                     const statusStyle = STATUS_STYLES[effStatus] || STATUS_STYLES.settled;
                     return (
-                      <tr key={tx.id} className="border-b border-gray-50 hover:bg-[#F5F5F3]/50 transition-colors">
-                        <td className="px-4 py-3 font-['Saira_Condensed'] text-xs text-[#999] tabular-nums">
+                      <tr key={tx.id} className="border-b border-gray-50 hover:bg-app-surface-alt/50 transition-colors">
+                        <td className="px-4 py-3 font-['Saira_Condensed'] text-xs text-app-text-mute tabular-nums">
                           {formatDate(tx.date)}
                         </td>
                         <td className="px-4 py-3">
@@ -389,14 +389,14 @@ export default function IncomeContent() {
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="text-[#1a1a1a]">{tx.store || '—'}</div>
+                          <div className="text-app-text">{tx.store || '—'}</div>
                           {tx.description && (
-                            <div className="text-xs text-[#999] mt-0.5">{tx.description}</div>
+                            <div className="text-xs text-app-text-mute mt-0.5">{tx.description}</div>
                           )}
                         </td>
                         <td className="px-4 py-3">
                           {div ? (
-                            <span className="inline-flex items-center gap-1 text-xs text-[#6b6b6b]">
+                            <span className="inline-flex items-center gap-1 text-xs text-app-text-sub">
                               <span
                                 className="w-2 h-2 rounded-full inline-block"
                                 style={{ backgroundColor: div.color }}
@@ -404,13 +404,13 @@ export default function IncomeContent() {
                               {div.label}
                             </span>
                           ) : (
-                            <span className="text-xs text-[#999]">—</span>
+                            <span className="text-xs text-app-text-mute">—</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-xs text-[#6b6b6b]">{ctName}</td>
-                        <td className="px-4 py-3 text-xs text-[#6b6b6b]">{rtName}</td>
-                        <td className="px-4 py-3 text-xs text-[#6b6b6b] max-w-[120px] truncate" title={pjName !== '—' ? pjName : undefined}>{pjName}</td>
-                        <td className="px-4 py-3 text-right font-['Saira_Condensed'] tabular-nums text-[#1B4D3E]">
+                        <td className="px-4 py-3 text-xs text-app-text-sub">{ctName}</td>
+                        <td className="px-4 py-3 text-xs text-app-text-sub">{rtName}</td>
+                        <td className="px-4 py-3 text-xs text-app-text-sub max-w-[120px] truncate" title={pjName !== '—' ? pjName : undefined}>{pjName}</td>
+                        <td className="px-4 py-3 text-right font-['Saira_Condensed'] tabular-nums text-app-green">
                           {formatAmount(tx.amount)}
                         </td>
                         <td className="px-4 py-3 text-right">
@@ -420,14 +420,14 @@ export default function IncomeContent() {
                               className="p-1.5 hover:bg-black/5 rounded-md transition-colors"
                               title="編集"
                             >
-                              <Pencil className="w-3.5 h-3.5 text-[#999]" />
+                              <Pencil className="w-3.5 h-3.5 text-app-text-mute" />
                             </button>
                             <button
                               onClick={() => setDeleteTarget(tx.id)}
-                              className="p-1.5 hover:bg-[#C23728]/10 rounded-md transition-colors"
+                              className="p-1.5 hover:bg-app-red/10 rounded-md transition-colors"
                               title="削除"
                             >
-                              <Trash2 className="w-3.5 h-3.5 text-[#999]" />
+                              <Trash2 className="w-3.5 h-3.5 text-app-text-mute" />
                             </button>
                           </div>
                         </td>
@@ -445,28 +445,28 @@ export default function IncomeContent() {
             const settledSum = filtered.filter(t => getEffectiveStatus(t.status) === 'settled').reduce((s, t) => s + t.amount, 0);
             const otherSum = revenueSum - forecastSum - settledSum;
             return (
-              <div className="flex items-center justify-end gap-4 px-4 py-3 border-t border-gray-100 bg-[#F5F5F3]/50">
+              <div className="flex items-center justify-end gap-4 px-4 py-3 border-t border-gray-100 bg-app-surface-alt/50">
                 {forecastSum > 0 && (
                   <div className="text-xs">
-                    <span className="text-[#999]">見込み: </span>
-                    <span className="font-['Saira_Condensed'] text-[#999] tabular-nums">{formatAmount(forecastSum)}</span>
+                    <span className="text-app-text-mute">見込み: </span>
+                    <span className="font-['Saira_Condensed'] text-app-text-mute tabular-nums">{formatAmount(forecastSum)}</span>
                   </div>
                 )}
                 {otherSum > 0 && (
                   <div className="text-xs">
-                    <span className="text-[#999]">確定未入金: </span>
-                    <span className="font-['Saira_Condensed'] text-[#D4A03A] tabular-nums">{formatAmount(otherSum)}</span>
+                    <span className="text-app-text-mute">確定未入金: </span>
+                    <span className="font-['Saira_Condensed'] text-app-gold tabular-nums">{formatAmount(otherSum)}</span>
                   </div>
                 )}
                 {settledSum > 0 && (
                   <div className="text-xs">
-                    <span className="text-[#999]">入金済: </span>
-                    <span className="font-['Saira_Condensed'] text-[#1B4D3E] tabular-nums">{formatAmount(settledSum)}</span>
+                    <span className="text-app-text-mute">入金済: </span>
+                    <span className="font-['Saira_Condensed'] text-app-green tabular-nums">{formatAmount(settledSum)}</span>
                   </div>
                 )}
                 <div className="text-xs">
-                  <span className="text-[#999]">合計: </span>
-                  <span className="font-['Saira_Condensed'] text-[#1B4D3E] tabular-nums font-medium">{formatAmount(revenueSum)}</span>
+                  <span className="text-app-text-mute">合計: </span>
+                  <span className="font-['Saira_Condensed'] text-app-green tabular-nums font-medium">{formatAmount(revenueSum)}</span>
                 </div>
               </div>
             );
@@ -494,17 +494,17 @@ export default function IncomeContent() {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/30" onClick={() => setDeleteTarget(null)} />
           <div className="relative bg-white rounded-2xl p-6 max-w-sm mx-4" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
-            <p className="text-sm text-[#1a1a1a] mb-4">この売上を削除しますか？</p>
+            <p className="text-sm text-app-text mb-4">この売上を削除しますか？</p>
             <div className="flex gap-2">
               <button
                 onClick={() => setDeleteTarget(null)}
-                className="flex-1 py-2 text-xs text-[#999] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors"
+                className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors"
               >
                 キャンセル
               </button>
               <button
                 onClick={() => handleDelete(deleteTarget)}
-                className="flex-1 py-2 text-xs text-white bg-[#C23728] rounded-lg hover:bg-[#a82e22] transition-colors"
+                className="flex-1 py-2 text-xs text-white bg-app-red rounded-lg hover:bg-app-red-hover transition-colors"
               >
                 削除する
               </button>
@@ -848,11 +848,11 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
       >
         {/* ヘッダー */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-sm font-medium text-[#1a1a1a]">
+          <h2 className="text-sm font-medium text-app-text">
             {editData ? '売上を編集' : '売上を入力'}
           </h2>
           <button onClick={onClose} className="p-1 hover:bg-black/5 rounded-md transition-colors">
-            <X className="w-4 h-4 text-[#999]" />
+            <X className="w-4 h-4 text-app-text-mute" />
           </button>
         </div>
 
@@ -860,11 +860,11 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
         <div className="px-5 py-4 space-y-4">
           {/* ステータス */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">ステータス</label>
+            <label className="block text-xs text-app-text-mute mb-1">ステータス</label>
             <select
               value={form.status}
               onChange={(e) => handleChange('status', e.target.value)}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50"
             >
               {Object.entries(TRANSACTION_STATUS).map(([key, label]) => (
                 <option key={key} value={key}>{label}</option>
@@ -874,42 +874,42 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
 
           {/* 計上日（PL） */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">計上日（納品日・役務提供日）</label>
+            <label className="block text-xs text-app-text-mute mb-1">計上日（納品日・役務提供日）</label>
             <input
               type="date"
               value={form.date}
               onChange={(e) => handleChange('date', e.target.value)}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50"
             />
           </div>
 
           {/* 入金予定日 */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">入金予定日（任意）</label>
+            <label className="block text-xs text-app-text-mute mb-1">入金予定日（任意）</label>
             <input
               type="date"
               value={form.expected_payment_date}
               onChange={(e) => handleChange('expected_payment_date', e.target.value)}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50"
             />
           </div>
 
           {/* 入金日（settledの場合のみ表示） */}
           {form.status === 'settled' && (
             <div>
-              <label className="block text-xs text-[#999] mb-1">入金日</label>
+              <label className="block text-xs text-app-text-mute mb-1">入金日</label>
               <input
                 type="date"
                 value={form.actual_payment_date}
                 onChange={(e) => handleChange('actual_payment_date', e.target.value)}
-                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+                className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50"
               />
             </div>
           )}
 
           {/* 金額 */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">金額（円）</label>
+            <label className="block text-xs text-app-text-mute mb-1">金額（円）</label>
             <input
               type="text"
               inputMode="numeric"
@@ -919,17 +919,17 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
                 handleChange('amount', raw);
               }}
               placeholder="0"
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed'] tabular-nums"
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50 font-['Saira_Condensed'] tabular-nums"
             />
           </div>
 
           {/* 取引先 */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">取引先</label>
+            <label className="block text-xs text-app-text-mute mb-1">取引先</label>
             <select
               value={form.client_id}
               onChange={(e) => handleChange('client_id', e.target.value)}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50"
             >
               <option value="">未選択（手入力）</option>
               {filteredClients.map((cl) => (
@@ -942,18 +942,18 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
                 value={form.store}
                 onChange={(e) => handleChange('store', e.target.value)}
                 placeholder="例: 長崎市DMO"
-                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 mt-2"
+                className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50 mt-2"
               />
             )}
           </div>
 
           {/* 事業（部門） */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">部門 <span className="text-[#C23728]">*</span></label>
+            <label className="block text-xs text-app-text-mute mb-1">部門 <span className="text-app-red">*</span></label>
             <select
               value={form.division}
               onChange={(e) => handleChange('division', e.target.value)}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50"
             >
               <option value="">未選択</option>
               {DIVISION_OPTIONS.map((d) => (
@@ -964,18 +964,18 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
 
           {/* ─── 分類（経営分析用）ディバイダ ─── */}
           <div className="pt-1">
-            <div className="text-[10px] font-medium tracking-widest text-[#bbb] mb-2 border-t border-[#f0f0f0] pt-3">
+            <div className="text-[10px] font-medium tracking-widest text-app-text-fade mb-2 border-t border-app-line pt-3">
               分類（経営分析用）
             </div>
           </div>
 
           {/* 契約形態（軸A・必須） */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">契約形態 <span className="text-[#C23728]">*</span></label>
+            <label className="block text-xs text-app-text-mute mb-1">契約形態 <span className="text-app-red">*</span></label>
             <select
               value={form.contract_type_id}
               onChange={(e) => handleChange('contract_type_id', e.target.value)}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50"
             >
               <option value="">選択してください</option>
               {contractTypes.map((ct) => (
@@ -986,11 +986,11 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
 
           {/* 事業領域（軸B・必須） */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">事業領域 <span className="text-[#C23728]">*</span></label>
+            <label className="block text-xs text-app-text-mute mb-1">事業領域 <span className="text-app-red">*</span></label>
             <select
               value={form.business_domain}
               onChange={(e) => handleChange('business_domain', e.target.value)}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50"
             >
               <option value="">選択してください</option>
               {businessDomains.map((bd) => (
@@ -1001,10 +1001,10 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
 
           {/* 案件管理名（軸C・必須・サジェスト） */}
           <div className="relative">
-            <label className="block text-xs text-[#999] mb-1">
-              案件管理名（内部管理用） <span className="text-[#C23728]">*</span>
+            <label className="block text-xs text-app-text-mute mb-1">
+              案件管理名（内部管理用） <span className="text-app-red">*</span>
               {form.project_id && (
-                <span className="ml-2 text-[10px] text-[#1B4D3E]">（既存案件に紐付け済）</span>
+                <span className="ml-2 text-[10px] text-app-green">（既存案件に紐付け済）</span>
               )}
             </label>
             <input
@@ -1014,20 +1014,20 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
               onFocus={() => { if (projectSuggestions.length > 0) setShowSuggestions(true); }}
               onBlur={() => { setTimeout(() => setShowSuggestions(false), 150); }}
               placeholder="例: KKDAY_自治体DMO関連事業支援_2026Q2"
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50"
               autoComplete="off"
             />
             {showSuggestions && projectSuggestions.length > 0 && (
-              <div className="absolute z-10 left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-[#f0f0f0] overflow-hidden">
+              <div className="absolute z-10 left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-app-line overflow-hidden">
                 {projectSuggestions.map((pj) => (
                   <button
                     key={pj.id}
                     type="button"
                     onMouseDown={(e) => { e.preventDefault(); handleSelectSuggestion(pj); }}
-                    className="w-full px-3 py-2 text-left text-xs text-[#333] hover:bg-[#F5F5F3] border-b border-[#f0f0f0] last:border-b-0"
+                    className="w-full px-3 py-2 text-left text-xs text-app-text-strong hover:bg-app-surface-alt border-b border-app-line last:border-b-0"
                   >
                     {pj.name}
-                    <span className="ml-2 text-[10px] text-[#999]">
+                    <span className="ml-2 text-[10px] text-app-text-mute">
                       {DIVISIONS[pj.division as keyof typeof DIVISIONS]?.label || pj.division}
                     </span>
                   </button>
@@ -1035,13 +1035,13 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
               </div>
             )}
             {!form.project_id && form.project_name_input.trim() && projectSuggestions.length === 0 && (
-              <p className="text-[10px] text-[#bbb] mt-1">＋ 新しい案件として登録されます</p>
+              <p className="text-[10px] text-app-text-fade mt-1">＋ 新しい案件として登録されます</p>
             )}
           </div>
 
           {/* 請求書の件名（v0.5.6: インライン編集可能・既存案件も新規案件も統一UI） */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">
+            <label className="block text-xs text-app-text-mute mb-1">
               請求書の件名（先方が見る表記・任意）
             </label>
             <input
@@ -1049,9 +1049,9 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
               value={form.invoice_display_name_input}
               onChange={(e) => handleChange('invoice_display_name_input', e.target.value)}
               placeholder="例: 自治体DMO関連事業支援（空欄なら案件管理名を使用）"
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50"
             />
-            <p className="text-[10px] text-[#bbb] mt-1">
+            <p className="text-[10px] text-app-text-fade mt-1">
               {form.project_id
                 ? '※ この案件の全ての売上・請求書に反映されます（案件単位で保存）'
                 : '請求書を発行しない場合は空欄で構いません'}
@@ -1060,10 +1060,10 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
 
           {/* 品名・摘要（v0.5.4追加・常に必須） */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">
-              品名・摘要（個別売上・請求書明細） <span className="text-[#C23728]">*</span>
+            <label className="block text-xs text-app-text-mute mb-1">
+              品名・摘要（個別売上・請求書明細） <span className="text-app-red">*</span>
               {editData && !(editData as any).item_description && (
-                <span className="ml-2 text-[10px] text-[#D4A03A] bg-[#D4A03A]/10 px-1.5 py-0.5 rounded">摘要未記入</span>
+                <span className="ml-2 text-[10px] text-app-gold bg-app-gold/10 px-1.5 py-0.5 rounded">摘要未記入</span>
               )}
             </label>
             <input
@@ -1071,9 +1071,9 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
               value={form.item_description}
               onChange={(e) => handleChange('item_description', e.target.value)}
               placeholder="例: 2026年4月度 業務委託報酬（4/1〜4/30）"
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50"
             />
-            <p className="text-[10px] text-[#999] mt-1">請求書の明細行にそのまま使われます</p>
+            <p className="text-[10px] text-app-text-mute mt-1">請求書の明細行にそのまま使われます</p>
             {/* サジェスト（案件選択時のみ、直近3件） */}
             {form.project_id && itemDescSuggestions.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-1.5">
@@ -1082,7 +1082,7 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
                     key={i}
                     type="button"
                     onClick={() => handleChange('item_description', s)}
-                    className="text-[10px] text-[#666] bg-[#F5F5F3] hover:bg-[#D4A03A]/10 hover:text-[#D4A03A] px-2 py-1 rounded-full border border-[#f0f0f0] transition-colors"
+                    className="text-[10px] text-app-text-sub bg-app-surface-alt hover:bg-app-gold/10 hover:text-app-gold px-2 py-1 rounded-full border border-app-line transition-colors"
                   >
                     {s}
                   </button>
@@ -1093,12 +1093,12 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
 
           {/* 収益タイプ（任意・マスタ空時は無効化） */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">収益タイプ（任意）</label>
+            <label className="block text-xs text-app-text-mute mb-1">収益タイプ（任意）</label>
             <select
               value={form.revenue_type}
               onChange={(e) => handleChange('revenue_type', e.target.value)}
               disabled={revenueTypes.length === 0}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 disabled:opacity-50"
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50 disabled:opacity-50"
             >
               <option value="">{revenueTypes.length === 0 ? '（未登録）' : '未選択'}</option>
               {filteredRT.map((rt) => (
@@ -1109,11 +1109,11 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
 
           {/* 担当者 */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">担当者</label>
+            <label className="block text-xs text-app-text-mute mb-1">担当者</label>
             <select
               value={form.owner}
               onChange={(e) => handleChange('owner', e.target.value)}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50"
             >
               <option value="tomo">トモ</option>
               <option value="toshiki">トシキ</option>
@@ -1126,17 +1126,17 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
 
           {/* 請求書発行トグル（新規作成時のみ） */}
           {!editData && (
-            <div className="flex items-center gap-2 p-3 bg-[#F5F5F3] rounded-lg">
+            <div className="flex items-center gap-2 p-3 bg-app-surface-alt rounded-lg">
               <input
                 type="checkbox"
                 id="issue_invoice"
                 checked={form.issue_invoice}
                 onChange={(e) => handleChange('issue_invoice', e.target.checked)}
-                className="w-4 h-4 accent-[#D4A03A] cursor-pointer"
+                className="w-4 h-4 accent-app-gold cursor-pointer"
               />
-              <label htmlFor="issue_invoice" className="text-xs text-[#1a1a1a] cursor-pointer flex-1">
+              <label htmlFor="issue_invoice" className="text-xs text-app-text cursor-pointer flex-1">
                 この売上の請求書を発行する
-                <span className="block text-[10px] text-[#999] mt-0.5">
+                <span className="block text-[10px] text-app-text-mute mt-0.5">
                   登録後、請求書作成画面に移動します
                 </span>
               </label>
@@ -1145,7 +1145,7 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
 
           {/* エラー */}
           {error && (
-            <p className="text-xs text-[#C23728]">{error}</p>
+            <p className="text-xs text-app-red">{error}</p>
           )}
         </div>
 
@@ -1153,14 +1153,14 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
         <div className="px-5 py-4 border-t border-gray-100 flex gap-2">
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 text-xs text-[#999] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors"
+            className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors"
           >
             キャンセル
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex-1 py-2.5 text-xs text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+            className="flex-1 py-2.5 text-xs text-white bg-app-button rounded-lg hover:bg-app-button-hover transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
           >
             {saving && <Loader2 className="w-3 h-3 animate-spin" />}
             {editData ? '更新する' : '登録する'}

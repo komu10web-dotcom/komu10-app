@@ -29,7 +29,7 @@ interface EntertainmentFieldsProps {
   onChange: (data: EntertainmentData) => void;
 }
 
-const inputClass = "w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50";
+const inputClass = "w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-0 outline-none focus:ring-2 focus:ring-app-gold/50";
 
 export default function EntertainmentFields({ data, onChange }: EntertainmentFieldsProps) {
   const set = (key: keyof EntertainmentData, value: string) => {
@@ -37,12 +37,12 @@ export default function EntertainmentFields({ data, onChange }: EntertainmentFie
   };
 
   return (
-    <div className="border border-[#D4A03A]/30 rounded-xl p-4 space-y-3 bg-[#D4A03A]/5">
-      <p className="text-xs font-medium text-[#D4A03A]">接待交際費詳細</p>
+    <div className="border border-app-gold/30 rounded-xl p-4 space-y-3 bg-app-gold/5">
+      <p className="text-xs font-medium text-app-gold">接待交際費詳細</p>
 
       <div className="flex gap-2">
         <div className="flex-1">
-          <label className="text-xs text-[#999] block mb-1">相手先名</label>
+          <label className="text-xs text-app-text-mute block mb-1">相手先名</label>
           <input
             type="text"
             value={data.guest_name}
@@ -52,7 +52,7 @@ export default function EntertainmentFields({ data, onChange }: EntertainmentFie
           />
         </div>
         <div className="flex-1">
-          <label className="text-xs text-[#999] block mb-1">会社・所属</label>
+          <label className="text-xs text-app-text-mute block mb-1">会社・所属</label>
           <input
             type="text"
             value={data.guest_company}
@@ -65,7 +65,7 @@ export default function EntertainmentFields({ data, onChange }: EntertainmentFie
 
       <div className="flex gap-2">
         <div className="w-20">
-          <label className="text-xs text-[#999] block mb-1">人数</label>
+          <label className="text-xs text-app-text-mute block mb-1">人数</label>
           <input
             type="text"
             inputMode="numeric"
@@ -78,7 +78,7 @@ export default function EntertainmentFields({ data, onChange }: EntertainmentFie
           />
         </div>
         <div className="flex-1">
-          <label className="text-xs text-[#999] block mb-1">関係性</label>
+          <label className="text-xs text-app-text-mute block mb-1">関係性</label>
           <select
             value={data.relationship}
             onChange={(e) => set('relationship', e.target.value)}
@@ -90,7 +90,7 @@ export default function EntertainmentFields({ data, onChange }: EntertainmentFie
           </select>
         </div>
         <div className="flex-1">
-          <label className="text-xs text-[#999] block mb-1">目的</label>
+          <label className="text-xs text-app-text-mute block mb-1">目的</label>
           <select
             value={data.purpose}
             onChange={(e) => set('purpose', e.target.value)}

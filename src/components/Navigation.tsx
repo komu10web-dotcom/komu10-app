@@ -37,14 +37,14 @@ export default function Navigation() {
               className={`
                 relative py-3 font-['Shippori_Mincho'] text-[13px] transition-colors
                 ${isActive 
-                  ? 'text-[#0a0a0b]' 
+                  ? 'text-x-black' 
                   : 'text-gray-400 hover:text-gray-600'
                 }
               `}
             >
               {item.label}
               {isActive && (
-                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#0a0a0b]" />
+                <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-x-black" />
               )}
             </Link>
           );

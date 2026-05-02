@@ -111,7 +111,7 @@ interface TransportFieldsProps {
 }
 
 // スマホ最適化: 16px以上でiOSのズーム防止、タッチターゲット44px以上
-const inputClass = "w-full px-3 py-2.5 bg-[#F5F5F3] rounded-lg text-[16px] sm:text-sm border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50";
+const inputClass = "w-full px-3 py-2.5 bg-app-surface-alt rounded-lg text-[16px] sm:text-sm border-0 outline-none focus:ring-2 focus:ring-app-gold/50";
 
 // ── コンポーネント ──────────────────────────────────────────
 export default function TransportFields({ data, onChange, onAmountChange, mode = 'entry', returnRouteSelector, hidePurpose = false }: TransportFieldsProps) {
@@ -232,28 +232,28 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
   const isUpperClass = data.class_value !== '普通席' && data.class_value !== '自由席' && data.class_value !== 'クラスJ' && data.class_value !== '';
 
   return (
-    <div className="border border-[#D4A03A]/30 rounded-xl p-4 space-y-3 bg-[#D4A03A]/5">
-      <p className="text-xs font-medium text-[#D4A03A]">{isTemplate ? '交通費テンプレート' : '交通費詳細'}</p>
+    <div className="border border-app-gold/30 rounded-xl p-4 space-y-3 bg-app-gold/5">
+      <p className="text-xs font-medium text-app-gold">{isTemplate ? '交通費テンプレート' : '交通費詳細'}</p>
 
       {/* 注意書き（v0.15.6: 1目的地=1件の原則準拠に再構成） */}
       {!isTemplate && (
-      <div className="leading-relaxed space-y-4 border-l-2 border-[#D4A03A]/30 pl-3">
+      <div className="leading-relaxed space-y-4 border-l-2 border-app-gold/30 pl-3">
         <div className="space-y-1">
-          <p className="text-[12px] font-semibold text-[#D4A03A]">1件の単位</p>
-          <p className="text-[11px] text-[#888]">1つの目的地への移動を1件として登録してください（往復も1件）。</p>
-          <p className="text-[11px] text-[#888]">途中の乗り継ぎや経由は「区間を追加」で繋げていきます。</p>
-          <p className="text-[11px] text-[#888]">領収書もまとめて添付できます。</p>
+          <p className="text-[12px] font-semibold text-app-gold">1件の単位</p>
+          <p className="text-[11px] text-app-text-sub">1つの目的地への移動を1件として登録してください（往復も1件）。</p>
+          <p className="text-[11px] text-app-text-sub">途中の乗り継ぎや経由は「区間を追加」で繋げていきます。</p>
+          <p className="text-[11px] text-app-text-sub">領収書もまとめて添付できます。</p>
         </div>
         <div className="space-y-1">
-          <p className="text-[12px] font-semibold text-[#D4A03A]">領収書</p>
-          <p className="text-[11px] text-[#888]">電車・バス・近距離の鉄道は領収書なしでOK。</p>
-          <p className="text-[11px] text-[#888]">新幹線・特急は領収書を取得可能な場合は添付してください（3万円以上は必須）。</p>
-          <p className="text-[11px] text-[#888]">タクシーは領収書必須。</p>
-          <p className="text-[11px] text-[#888]">飛行機は購入時の領収書(eチケット)を添付してください。</p>
+          <p className="text-[12px] font-semibold text-app-gold">領収書</p>
+          <p className="text-[11px] text-app-text-sub">電車・バス・近距離の鉄道は領収書なしでOK。</p>
+          <p className="text-[11px] text-app-text-sub">新幹線・特急は領収書を取得可能な場合は添付してください（3万円以上は必須）。</p>
+          <p className="text-[11px] text-app-text-sub">タクシーは領収書必須。</p>
+          <p className="text-[11px] text-app-text-sub">飛行機は購入時の領収書(eチケット)を添付してください。</p>
         </div>
         <div className="space-y-1">
-          <p className="text-[12px] font-semibold text-[#D4A03A]">区間や座席クラスの入力</p>
-          <p className="text-[11px] text-[#888]">新幹線・特急・飛行機など座席クラスがある手段は、区間ごとに手段・運賃・グリーン/普通席を入力してください。</p>
+          <p className="text-[12px] font-semibold text-app-gold">区間や座席クラスの入力</p>
+          <p className="text-[11px] text-app-text-sub">新幹線・特急・飛行機など座席クラスがある手段は、区間ごとに手段・運賃・グリーン/普通席を入力してください。</p>
         </div>
       </div>
       )}
@@ -262,7 +262,7 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
       {/* v0.15.2: hidePurpose=true の時は非表示（制作費/取材費では科目+案件で目的が明確なため） */}
       {!isTemplate && !hidePurpose && (
       <div>
-        <label className="text-xs text-[#999] block mb-1">目的</label>
+        <label className="text-xs text-app-text-mute block mb-1">目的</label>
         <select
           value={data.purpose}
           onChange={(e) => setField('purpose', e.target.value)}
@@ -279,7 +279,7 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
       {data.route_legs.map((leg, idx) => (
         <div key={idx} className="space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] text-[#999] font-medium tracking-wide">区間 {idx + 1}</span>
+            <span className="text-[10px] text-app-text-mute font-medium tracking-wide">区間 {idx + 1}</span>
             {idx > 0 && (
               <button
                 type="button"
@@ -298,12 +298,12 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
                 type="text"
                 value={leg.from}
                 onChange={(e) => updateLeg(idx, 'from', e.target.value)}
-                className={`${inputClass} ${idx > 0 ? 'bg-[#EDEDEB] text-[#999]' : ''}`}
+                className={`${inputClass} ${idx > 0 ? 'bg-app-surface-hover text-app-text-mute' : ''}`}
                 placeholder="出発地"
                 readOnly={idx > 0}
               />
             </div>
-            <span className="text-xs text-[#999] shrink-0">→</span>
+            <span className="text-xs text-app-text-mute shrink-0">→</span>
             <div className="flex-1">
               <input
                 type="text"
@@ -355,11 +355,11 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
             <label className="flex items-center gap-2.5 cursor-pointer py-1">
               <div
                 onClick={() => updateLeg(idx, 'green', !leg.green)}
-                className={`relative w-9 h-5 rounded-full transition-colors ${leg.green ? 'bg-[#1B4D3E]' : 'bg-[#DDD]'}`}
+                className={`relative w-9 h-5 rounded-full transition-colors ${leg.green ? 'bg-app-green' : 'bg-app-text-ghost'}`}
               >
                 <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${leg.green ? 'translate-x-4' : 'translate-x-0.5'}`} />
               </div>
-              <span className="text-sm text-[#555]">グリーン車</span>
+              <span className="text-sm text-app-text-sub">グリーン車</span>
             </label>
           )}
         </div>
@@ -369,7 +369,7 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
       <button
         type="button"
         onClick={addLeg}
-        className="flex items-center gap-1.5 text-sm text-[#D4A03A] hover:text-[#B8862D] transition-colors py-1"
+        className="flex items-center gap-1.5 text-sm text-app-gold hover:text-app-gold-hover transition-colors py-1"
       >
         <Plus className="w-4 h-4" />
         区間を追加
@@ -378,7 +378,7 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
       {/* ⑥ 片道/往復 */}
       {!isTemplate && (
       <div>
-        <label className="text-xs text-[#999] block mb-1">片道 / 往復</label>
+        <label className="text-xs text-app-text-mute block mb-1">片道 / 往復</label>
         <div className="flex gap-2">
           {(['one_way', 'round_trip'] as const).map((v) => (
             <button
@@ -397,8 +397,8 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
               }}
               className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
                 data.round_trip === v
-                  ? 'bg-[#1a1a1a] text-white'
-                  : 'bg-[#F5F5F3] text-[#999] hover:text-[#555]'
+                  ? 'bg-app-button text-white'
+                  : 'bg-app-surface-alt text-app-text-mute hover:text-app-text-sub'
               }`}
             >
               {v === 'one_way' ? '片道' : '往復'}
@@ -451,8 +451,8 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
           }
         };
         return (
-          <div className="rounded-xl border-2 border-[#D4A03A]/50 bg-[#D4A03A]/5 p-4 space-y-3">
-            <p className="text-sm font-semibold text-[#1a1a1a]">帰りのルート</p>
+          <div className="rounded-xl border-2 border-app-gold/50 bg-app-gold/5 p-4 space-y-3">
+            <p className="text-sm font-semibold text-app-text">帰りのルート</p>
 
             {/* 3択ラジオ */}
             <div className="space-y-2">
@@ -462,9 +462,9 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
                   name="return_mode"
                   checked={mode === 'auto_reverse'}
                   onChange={() => setMode('auto_reverse')}
-                  className="w-4 h-4 accent-[#D4A03A]"
+                  className="w-4 h-4 accent-app-gold"
                 />
-                <span className="text-sm text-[#1a1a1a]">往路の逆順（自動生成）</span>
+                <span className="text-sm text-app-text">往路の逆順（自動生成）</span>
               </label>
               <label className="flex items-center gap-2.5 cursor-pointer">
                 <input
@@ -472,9 +472,9 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
                   name="return_mode"
                   checked={mode === 'different_route'}
                   onChange={() => setMode('different_route')}
-                  className="w-4 h-4 accent-[#D4A03A]"
+                  className="w-4 h-4 accent-app-gold"
                 />
-                <span className="text-sm text-[#1a1a1a]">別の片道テンプレを選ぶ</span>
+                <span className="text-sm text-app-text">別の片道テンプレを選ぶ</span>
               </label>
               <label className="flex items-center gap-2.5 cursor-pointer">
                 <input
@@ -482,27 +482,27 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
                   name="return_mode"
                   checked={mode === 'manual'}
                   onChange={() => setMode('manual')}
-                  className="w-4 h-4 accent-[#D4A03A]"
+                  className="w-4 h-4 accent-app-gold"
                 />
-                <span className="text-sm text-[#1a1a1a]">手入力</span>
+                <span className="text-sm text-app-text">手入力</span>
               </label>
             </div>
 
             {/* different_route モード: 親から注入されるセレクタ */}
             {mode === 'different_route' && returnRouteSelector && (
-              <div className="pt-2 border-t border-[#D4A03A]/20">
+              <div className="pt-2 border-t border-app-gold/20">
                 {returnRouteSelector}
               </div>
             )}
 
             {/* manual モード: 区間入力UI */}
             {mode === 'manual' && (
-              <div className="space-y-2 pt-2 border-t border-[#D4A03A]/20">
-                <p className="text-[10px] text-[#999] font-medium tracking-wide">帰りの区間</p>
+              <div className="space-y-2 pt-2 border-t border-app-gold/20">
+                <p className="text-[10px] text-app-text-mute font-medium tracking-wide">帰りの区間</p>
                 {(data.return_legs || []).map((leg, idx) => (
                   <div key={idx} className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] text-[#999] font-medium tracking-wide">区間 {idx + 1}</span>
+                      <span className="text-[10px] text-app-text-mute font-medium tracking-wide">区間 {idx + 1}</span>
                       {idx > 0 && (
                         <button
                           type="button"
@@ -518,10 +518,10 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
                       <div className="flex-1">
                         <input type="text" value={leg.from}
                           onChange={(e) => updateReturnLeg(idx, 'from', e.target.value)}
-                          className={`${inputClass} ${idx > 0 ? 'bg-[#EDEDEB] text-[#999]' : ''}`}
+                          className={`${inputClass} ${idx > 0 ? 'bg-app-surface-hover text-app-text-mute' : ''}`}
                           placeholder="出発地" readOnly={idx > 0} />
                       </div>
-                      <span className="text-xs text-[#999] shrink-0">→</span>
+                      <span className="text-xs text-app-text-mute shrink-0">→</span>
                       <div className="flex-1">
                         <input type="text" value={leg.to}
                           onChange={(e) => updateReturnLeg(idx, 'to', e.target.value)}
@@ -555,11 +555,11 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
                       <label className="flex items-center gap-2.5 cursor-pointer py-1">
                         <div
                           onClick={() => updateReturnLeg(idx, 'green', !leg.green)}
-                          className={`relative w-9 h-5 rounded-full transition-colors ${leg.green ? 'bg-[#1B4D3E]' : 'bg-[#DDD]'}`}
+                          className={`relative w-9 h-5 rounded-full transition-colors ${leg.green ? 'bg-app-green' : 'bg-app-text-ghost'}`}
                         >
                           <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${leg.green ? 'translate-x-4' : 'translate-x-0.5'}`} />
                         </div>
-                        <span className="text-sm text-[#555]">グリーン車</span>
+                        <span className="text-sm text-app-text-sub">グリーン車</span>
                       </label>
                     )}
                   </div>
@@ -568,7 +568,7 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
                 <button
                   type="button"
                   onClick={addReturnLeg}
-                  className="flex items-center gap-1.5 text-sm text-[#D4A03A] hover:text-[#B8862D] transition-colors py-1"
+                  className="flex items-center gap-1.5 text-sm text-app-gold hover:text-app-gold-hover transition-colors py-1"
                 >
                   <Plus className="w-4 h-4" />
                   区間を追加
@@ -578,10 +578,10 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
 
             {/* different_route モード: テンプレ選択後の legs プレビュー（編集不可） */}
             {mode === 'different_route' && data.return_legs.length > 0 && (
-              <div className="pt-2 border-t border-[#D4A03A]/20 space-y-1">
-                <p className="text-[10px] text-[#999] font-medium tracking-wide">選択中の復路区間</p>
+              <div className="pt-2 border-t border-app-gold/20 space-y-1">
+                <p className="text-[10px] text-app-text-mute font-medium tracking-wide">選択中の復路区間</p>
                 {data.return_legs.map((leg, idx) => (
-                  <p key={idx} className="text-xs text-[#555]">
+                  <p key={idx} className="text-xs text-app-text-sub">
                     {leg.from} → {leg.to}
                     {leg.method && leg.method !== '電車' && ` (${leg.method})`}
                     {leg.amount > 0 && ` / ¥${leg.amount.toLocaleString()}`}
@@ -596,7 +596,7 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
       {/* ⑩ 支払方法 */}
       {!isTemplate && (
       <div>
-        <label className="text-xs text-[#999] block mb-1">支払方法</label>
+        <label className="text-xs text-app-text-mute block mb-1">支払方法</label>
         <select value={data.payment_method} onChange={(e) => setField('payment_method', e.target.value)}
           className={inputClass}>
           <option value="ic">IC（Suica等）</option>
@@ -610,20 +610,20 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
       {/* ルートプレビュー + 合計 */}
       {routePreview && (
         <div className="bg-white/60 rounded-lg px-3 py-2.5 space-y-1">
-          <p className="text-xs text-[#999]">
+          <p className="text-xs text-app-text-mute">
             {routePreview}
             {data.round_trip === 'round_trip' && ' (往復)'}
           </p>
           {data.round_trip === 'round_trip' && (data.return_mode === 'different_route' || data.return_mode === 'manual' || (!data.return_mode && !data.same_amount)) && (
-            <p className="text-[10px] text-[#999]">
+            <p className="text-[10px] text-app-text-mute">
               往路 ¥{oneWayTotal.toLocaleString()} + 復路 ¥{returnTotal.toLocaleString()}
             </p>
           )}
-          <p className="text-base font-medium font-['Saira_Condensed'] tabular-nums text-[#1a1a1a]">
+          <p className="text-base font-medium font-['Saira_Condensed'] tabular-nums text-app-text">
             合計 ¥{total.toLocaleString()}
           </p>
           {!isTemplate && total >= 30000 && (
-            <p className="text-[11px] text-[#E07A3A]">
+            <p className="text-[11px] text-app-warn">
               3万円以上の交通費は領収書の添付が必須です
             </p>
           )}
@@ -635,7 +635,7 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
       <button
         type="button"
         onClick={() => setShowDetail(!showDetail)}
-        className="flex items-center gap-1.5 text-sm text-[#999] hover:text-[#6b6b6b] transition-colors py-1"
+        className="flex items-center gap-1.5 text-sm text-app-text-mute hover:text-app-text-sub transition-colors py-1"
       >
         {showDetail ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         詳細を追加
@@ -645,7 +645,7 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
       {!isTemplate && showDetail && (
         <div className="space-y-3 pt-1">
           <div>
-            <label className="text-xs text-[#999] block mb-1">座席クラス</label>
+            <label className="text-xs text-app-text-mute block mb-1">座席クラス</label>
             <select
               value={data.class_value}
               onChange={(e) => setField('class_value', e.target.value)}
@@ -657,7 +657,7 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
 
           {isUpperClass && (
             <div>
-              <label className="text-xs text-[#999] block mb-1">上位クラス理由</label>
+              <label className="text-xs text-app-text-mute block mb-1">上位クラス理由</label>
               <select
                 value={data.class_reason}
                 onChange={(e) => setField('class_reason', e.target.value)}
@@ -670,7 +670,7 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
           )}
 
           <div>
-            <label className="text-xs text-[#999] block mb-1">同行者</label>
+            <label className="text-xs text-app-text-mute block mb-1">同行者</label>
             <input
               type="text"
               value={data.companion}
@@ -681,7 +681,7 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
           </div>
 
           <div>
-            <label className="text-xs text-[#999] block mb-1">便名・列車名</label>
+            <label className="text-xs text-app-text-mute block mb-1">便名・列車名</label>
             <input
               type="text"
               value={data.flight_train_no}
@@ -692,7 +692,7 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
           </div>
 
           <div>
-            <label className="text-xs text-[#999] block mb-1">経路メモ</label>
+            <label className="text-xs text-app-text-mute block mb-1">経路メモ</label>
             <input
               type="text"
               value={data.route_note}

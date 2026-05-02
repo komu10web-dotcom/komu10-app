@@ -1966,7 +1966,7 @@ export default function SettingsContent() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-5 h-5 text-[#D4A03A] animate-spin" />
+        <Loader2 className="w-5 h-5 text-app-gold animate-spin" />
       </div>
     );
   }
@@ -1979,10 +1979,10 @@ export default function SettingsContent() {
           <div
             className={`px-4 py-2.5 rounded-xl text-xs shadow-lg flex items-center gap-2 ${
               flash.type === 'success'
-                ? 'bg-[#1B4D3E] text-white'
+                ? 'bg-app-green text-white'
                 : flash.type === 'warning'
-                ? 'bg-[#D4A03A] text-white'
-                : 'bg-[#C23728] text-white'
+                ? 'bg-app-gold text-white'
+                : 'bg-app-red text-white'
             }`}
             style={{ minWidth: '220px', boxShadow: '0 8px 24px rgba(0,0,0,0.15)' }}
           >
@@ -1993,39 +1993,39 @@ export default function SettingsContent() {
       )}
       <div className="max-w-3xl mx-auto px-6 py-8">
         {/* ヘッダー + タブ(δ案語彙・明色基調) */}
-        <div className="mb-8 pb-5 border-b border-[#e8e6e3]">
-          <p className="font-['Saira_Condensed'] text-[11px] tracking-[0.3em] text-[#D4A03A] mb-3 font-medium">
+        <div className="mb-8 pb-5 border-b border-app-line-medium">
+          <p className="font-['Saira_Condensed'] text-[11px] tracking-[0.3em] text-app-gold mb-3 font-medium">
             VOLUME 06 · SETTINGS · {ownerLabel}
           </p>
-          <h1 className="font-['Shippori_Mincho'] text-[26px] font-normal text-[#1a1a1a] leading-[1.4] tracking-[0.03em]">
+          <h1 className="font-['Shippori_Mincho'] text-[26px] font-normal text-app-text leading-[1.4] tracking-[0.03em]">
             ここで、ルールを決める。
           </h1>
-          <div className="flex gap-6 mt-6 border-b border-[#e8e6e3] -mb-5">
+          <div className="flex gap-6 mt-6 border-b border-app-line-medium -mb-5">
             <button
               onClick={() => setSettingsTab('common')}
               className={`pb-2.5 text-xs tracking-wide transition-colors relative ${
                 settingsTab === 'common'
-                  ? 'text-[#1a1a1a] font-medium'
-                  : 'text-[#999] hover:text-[#666]'
+                  ? 'text-app-text font-medium'
+                  : 'text-app-text-mute hover:text-app-text-sub'
               }`}
             >
               共通設定
               {settingsTab === 'common' && (
-                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#D4A03A]" />
+                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-app-gold" />
               )}
             </button>
             <button
               onClick={() => setSettingsTab('personal')}
               className={`pb-2.5 text-xs tracking-wide transition-colors relative ${
                 settingsTab === 'personal'
-                  ? 'text-[#1a1a1a] font-medium'
-                  : 'text-[#999] hover:text-[#666]'
+                  ? 'text-app-text font-medium'
+                  : 'text-app-text-mute hover:text-app-text-sub'
               }`}
             >
               個人設定
-              <span className="ml-1.5 text-[10px] text-[#bbb]">— {ownerLabel}</span>
+              <span className="ml-1.5 text-[10px] text-app-text-fade">— {ownerLabel}</span>
               {settingsTab === 'personal' && (
-                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#D4A03A]" />
+                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-app-gold" />
               )}
             </button>
           </div>
@@ -2036,26 +2036,26 @@ export default function SettingsContent() {
 
         {/* ── プロジェクト管理 ── */}
         <section className="mb-10">
-          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+          <div className="text-[10px] font-medium tracking-widest text-app-text-mute mb-3">
             プロジェクト管理
           </div>
           <div className="bg-white rounded-xl shadow-sm p-5">
             {/* 接続済みソース */}
             {syncSources.length > 0 && (
               <div className="mb-4">
-                <p className="text-[10px] text-[#999] mb-2">接続済みソース</p>
+                <p className="text-[10px] text-app-text-mute mb-2">接続済みソース</p>
                 <div className="space-y-1.5">
                   {syncSources.map(ss => (
-                    <div key={ss.id} className="flex items-center justify-between py-1.5 px-3 bg-[#F5F5F3] rounded-lg">
+                    <div key={ss.id} className="flex items-center justify-between py-1.5 px-3 bg-app-surface-alt rounded-lg">
                       <div className="flex items-center gap-2">
-                        <FolderOpen className="w-3.5 h-3.5 text-[#D4A03A]" />
-                        <span className="text-xs text-[#1a1a1a]">{ss.name}</span>
-                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${ss.is_active ? 'bg-[#1B4D3E]/10 text-[#1B4D3E]' : 'bg-[#999]/10 text-[#999]'}`}>
+                        <FolderOpen className="w-3.5 h-3.5 text-app-gold" />
+                        <span className="text-xs text-app-text">{ss.name}</span>
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${ss.is_active ? 'bg-app-green/10 text-app-green' : 'bg-app-text-mute/10 text-app-text-mute'}`}>
                           {ss.is_active ? '有効' : '無効'}
                         </span>
                       </div>
                       {ss.last_synced_at && (
-                        <span className="text-[9px] text-[#999]">
+                        <span className="text-[9px] text-app-text-mute">
                           最終: {new Date(ss.last_synced_at).toLocaleDateString('ja-JP')}
                         </span>
                       )}
@@ -2069,20 +2069,20 @@ export default function SettingsContent() {
               <button
                 onClick={syncProjects}
                 disabled={syncing}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[#1a1a1a] bg-[#F5F5F3] rounded-lg hover:bg-[#eee] transition-colors disabled:opacity-40"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-app-text bg-app-surface-alt rounded-lg hover:bg-app-button-disabled transition-colors disabled:opacity-40"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
                 {syncing ? '同期中...' : 'スプレッドシートから同期'}
               </button>
               <button
                 onClick={() => { setEditingProject(null); setProjectModalOpen(true); }}
-                className="flex items-center gap-1.5 text-xs text-[#D4A03A] hover:text-[#b8882e] transition-colors"
+                className="flex items-center gap-1.5 text-xs text-app-gold hover:text-app-gold-hover transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" />手動追加
               </button>
             </div>
             {syncResult && (
-              <div className={`text-[11px] mb-3 px-3 py-2 rounded-lg ${syncResult.success ? 'bg-[#1B4D3E]/5 text-[#1B4D3E]' : 'bg-[#C23728]/5 text-[#C23728]'}`}>
+              <div className={`text-[11px] mb-3 px-3 py-2 rounded-lg ${syncResult.success ? 'bg-app-green/5 text-app-green' : 'bg-app-red/5 text-app-red'}`}>
                 {syncResult.message}
               </div>
             )}
@@ -2094,8 +2094,8 @@ export default function SettingsContent() {
                   onClick={() => setPjStatusFilter(f.key)}
                   className={`px-2.5 py-1 text-[10px] rounded-full border transition-colors ${
                     pjStatusFilter === f.key
-                      ? 'bg-[#1a1a1a] text-white border-[#1a1a1a]'
-                      : 'text-[#999] border-[#e0e0e0] hover:border-[#bbb]'
+                      ? 'bg-app-button text-white border-app-text'
+                      : 'text-app-text-mute border-app-line-strong hover:border-app-text-fade'
                   }`}
                 >
                   {f.label}
@@ -2104,7 +2104,7 @@ export default function SettingsContent() {
             </div>
             {/* PJ一覧（事業別アコーディオン） */}
             {projects.length === 0 ? (
-              <p className="text-[11px] text-[#999]">プロジェクトが登録されていません</p>
+              <p className="text-[11px] text-app-text-mute">プロジェクトが登録されていません</p>
             ) : (
               <div className="space-y-1">
                 {Object.entries(DIVISIONS).map(([divId, divVal]) => {
@@ -2118,7 +2118,7 @@ export default function SettingsContent() {
                   const hasMore = filteredProjects.length > visibleCount;
 
                   return (
-                    <div key={divId} className="border border-[#f0f0f0] rounded-lg overflow-hidden">
+                    <div key={divId} className="border border-app-line rounded-lg overflow-hidden">
                       <button
                         onClick={() => {
                           setPjOpenDivisions(prev =>
@@ -2128,7 +2128,7 @@ export default function SettingsContent() {
                             setPjVisibleCount(prev => ({ ...prev, [divId]: PJ_PAGE_SIZE }));
                           }
                         }}
-                        className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-[#fafafa] transition-colors"
+                        className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-app-line-soft transition-colors"
                       >
                         <div className="flex items-center gap-2">
                           <span
@@ -2137,31 +2137,31 @@ export default function SettingsContent() {
                           >
                             {divVal.label}
                           </span>
-                          <span className="text-[11px] text-[#666]">{divVal.name}</span>
-                          <span className="text-[10px] text-[#bbb]">
+                          <span className="text-[11px] text-app-text-sub">{divVal.name}</span>
+                          <span className="text-[10px] text-app-text-fade">
                             {filteredProjects.length}{pjStatusFilter !== 'all' ? `/${allDivProjects.length}` : ''}件
                           </span>
                         </div>
                         {isOpen ? (
-                          <ChevronUp className="w-3.5 h-3.5 text-[#ccc]" />
+                          <ChevronUp className="w-3.5 h-3.5 text-app-text-fade" />
                         ) : (
-                          <ChevronDown className="w-3.5 h-3.5 text-[#ccc]" />
+                          <ChevronDown className="w-3.5 h-3.5 text-app-text-fade" />
                         )}
                       </button>
                       {isOpen && (
-                        <div className="border-t border-[#f0f0f0]">
+                        <div className="border-t border-app-line">
                           {filteredProjects.length === 0 ? (
-                            <p className="text-[10px] text-[#ccc] px-3 py-3">
+                            <p className="text-[10px] text-app-text-fade px-3 py-3">
                               {pjStatusFilter !== 'all' ? `${PROJECT_STATUS[pjStatusFilter]}のプロジェクトなし` : 'プロジェクトなし'}
                             </p>
                           ) : (
                             <>
-                              <div className="divide-y divide-[#f5f5f3]">
+                              <div className="divide-y divide-app-surface-alt">
                                 {visibleProjects.map((pj) => (
                                   <div key={pj.id} className="flex items-center justify-between py-2 px-3">
                                     <div className="min-w-0">
-                                      <div className="text-sm text-[#1a1a1a] truncate">{pj.name}</div>
-                                      <div className="text-[10px] text-[#999]">
+                                      <div className="text-sm text-app-text truncate">{pj.name}</div>
+                                      <div className="text-[10px] text-app-text-mute">
                                         {pj.owner === 'tomo' ? 'トモ' : 'トシキ'}
                                         {pj.client ? ` · ${pj.client}` : ''}
                                         {' · '}{PROJECT_STATUS[pj.status] || pj.status}
@@ -2169,9 +2169,9 @@ export default function SettingsContent() {
                                     </div>
                                     <div className="flex items-center gap-1 shrink-0">
                                       <button onClick={() => { setEditingProject(pj); setProjectModalOpen(true); }}
-                                        className="p-1 hover:bg-black/5 rounded-md"><Pencil className="w-3.5 h-3.5 text-[#999]" /></button>
+                                        className="p-1 hover:bg-black/5 rounded-md"><Pencil className="w-3.5 h-3.5 text-app-text-mute" /></button>
                                       <button onClick={() => setProjectDeleteTarget(pj.id)}
-                                        className="p-1 hover:bg-[#C23728]/10 rounded-md"><Trash2 className="w-3.5 h-3.5 text-[#999]" /></button>
+                                        className="p-1 hover:bg-app-red/10 rounded-md"><Trash2 className="w-3.5 h-3.5 text-app-text-mute" /></button>
                                     </div>
                                   </div>
                                 ))}
@@ -2179,7 +2179,7 @@ export default function SettingsContent() {
                               {hasMore && (
                                 <button
                                   onClick={() => setPjVisibleCount(prev => ({ ...prev, [divId]: visibleCount + PJ_PAGE_SIZE }))}
-                                  className="w-full py-2 text-[10px] text-[#D4A03A] hover:text-[#b8882e] hover:bg-[#fafafa] transition-colors border-t border-[#f0f0f0]"
+                                  className="w-full py-2 text-[10px] text-app-gold hover:text-app-gold-hover hover:bg-app-line-soft transition-colors border-t border-app-line"
                                 >
                                   さらに{Math.min(PJ_PAGE_SIZE, filteredProjects.length - visibleCount)}件表示
                                 </button>
@@ -2198,37 +2198,37 @@ export default function SettingsContent() {
 
         {/* ── 契約区分管理 ── */}
         <section className="mb-10">
-          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+          <div className="text-[10px] font-medium tracking-widest text-app-text-mute mb-3">
             契約区分
           </div>
           <div className="bg-white rounded-xl shadow-sm">
             {contractTypes.map((ct) => (
-              <div key={ct.id} className="flex items-center gap-2 px-5 py-3 border-b border-[#f0f0f0] last:border-b-0">
+              <div key={ct.id} className="flex items-center gap-2 px-5 py-3 border-b border-app-line last:border-b-0">
                 {ctEditId === ct.id ? (
                   <>
                     <input
                       type="text"
                       value={ctEditName}
                       onChange={(e) => setCtEditName(e.target.value)}
-                      className="flex-1 px-2 py-1 text-sm border border-[#D4A03A] rounded-md outline-none"
+                      className="flex-1 px-2 py-1 text-sm border border-app-gold rounded-md outline-none"
                       onKeyDown={(e) => { if (e.key === 'Enter') updateContractType(ct.id); if (e.key === 'Escape') setCtEditId(null); }}
                       autoFocus
                     />
                     <button onClick={() => updateContractType(ct.id)} disabled={ctSaving} className="p-1 hover:bg-black/5 rounded-md">
-                      <Save className="w-3.5 h-3.5 text-[#1B4D3E]" />
+                      <Save className="w-3.5 h-3.5 text-app-green" />
                     </button>
                     <button onClick={() => setCtEditId(null)} className="p-1 hover:bg-black/5 rounded-md">
-                      <X className="w-3.5 h-3.5 text-[#999]" />
+                      <X className="w-3.5 h-3.5 text-app-text-mute" />
                     </button>
                   </>
                 ) : (
                   <>
-                    <span className="flex-1 text-sm text-[#333]">{ct.name}</span>
+                    <span className="flex-1 text-sm text-app-text-strong">{ct.name}</span>
                     <button onClick={() => { setCtEditId(ct.id); setCtEditName(ct.name); }} className="p-1 hover:bg-black/5 rounded-md">
-                      <Pencil className="w-3.5 h-3.5 text-[#999]" />
+                      <Pencil className="w-3.5 h-3.5 text-app-text-mute" />
                     </button>
-                    <button onClick={() => deleteContractType(ct.id)} className="p-1 hover:bg-[#C23728]/10 rounded-md">
-                      <Trash2 className="w-3.5 h-3.5 text-[#999]" />
+                    <button onClick={() => deleteContractType(ct.id)} className="p-1 hover:bg-app-red/10 rounded-md">
+                      <Trash2 className="w-3.5 h-3.5 text-app-text-mute" />
                     </button>
                   </>
                 )}
@@ -2241,13 +2241,13 @@ export default function SettingsContent() {
                 value={ctNewName}
                 onChange={(e) => setCtNewName(e.target.value)}
                 placeholder="新しい契約区分..."
-                className="flex-1 px-2 py-1 text-sm bg-[#F5F5F3] rounded-md outline-none focus:ring-1 focus:ring-[#D4A03A]/50"
+                className="flex-1 px-2 py-1 text-sm bg-app-surface-alt rounded-md outline-none focus:ring-1 focus:ring-app-gold/50"
                 onKeyDown={(e) => { if (e.key === 'Enter') addContractType(); }}
               />
               <button
                 onClick={addContractType}
                 disabled={!ctNewName.trim() || ctSaving}
-                className="p-1.5 bg-[#1a1a1a] text-white rounded-md disabled:opacity-30"
+                className="p-1.5 bg-app-button text-white rounded-md disabled:opacity-30"
               >
                 <Plus className="w-3.5 h-3.5" />
               </button>
@@ -2257,48 +2257,48 @@ export default function SettingsContent() {
 
         {/* ── 事業領域管理（軸B） ── */}
         <section className="mb-10">
-          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+          <div className="text-[10px] font-medium tracking-widest text-app-text-mute mb-3">
             事業領域
           </div>
-          <div className="text-[11px] text-[#999] mb-3 leading-relaxed">
+          <div className="text-[11px] text-app-text-mute mb-3 leading-relaxed">
             売上を「ブランディング受託 / 経営マーケ受託 / 自主事業」で分類するための軸です。初期3区分は削除できません（名前の編集のみ可能）。
           </div>
           <div className="bg-white rounded-xl shadow-sm">
             {businessDomains.map((bd) => {
               const protectedFlag = isProtectedDomain(bd.id);
               return (
-                <div key={bd.id} className="flex items-center gap-2 px-5 py-3 border-b border-[#f0f0f0] last:border-b-0">
+                <div key={bd.id} className="flex items-center gap-2 px-5 py-3 border-b border-app-line last:border-b-0">
                   {bdEditId === bd.id ? (
                     <>
                       <input
                         type="text"
                         value={bdEditName}
                         onChange={(e) => setBdEditName(e.target.value)}
-                        className="flex-1 px-2 py-1 text-sm border border-[#D4A03A] rounded-md outline-none"
+                        className="flex-1 px-2 py-1 text-sm border border-app-gold rounded-md outline-none"
                         onKeyDown={(e) => { if (e.key === 'Enter') updateBusinessDomain(bd.id); if (e.key === 'Escape') setBdEditId(null); }}
                         autoFocus
                       />
                       <button onClick={() => updateBusinessDomain(bd.id)} disabled={bdSaving} className="p-1 hover:bg-black/5 rounded-md">
-                        <Save className="w-3.5 h-3.5 text-[#1B4D3E]" />
+                        <Save className="w-3.5 h-3.5 text-app-green" />
                       </button>
                       <button onClick={() => setBdEditId(null)} className="p-1 hover:bg-black/5 rounded-md">
-                        <X className="w-3.5 h-3.5 text-[#999]" />
+                        <X className="w-3.5 h-3.5 text-app-text-mute" />
                       </button>
                     </>
                   ) : (
                     <>
-                      <span className="flex-1 text-sm text-[#333]">{bd.name}</span>
-                      <span className="text-[10px] text-[#bbb] font-mono mr-1">{bd.id}</span>
+                      <span className="flex-1 text-sm text-app-text-strong">{bd.name}</span>
+                      <span className="text-[10px] text-app-text-fade font-mono mr-1">{bd.id}</span>
                       <button onClick={() => startEditBusinessDomain(bd)} className="p-1 hover:bg-black/5 rounded-md">
-                        <Pencil className="w-3.5 h-3.5 text-[#999]" />
+                        <Pencil className="w-3.5 h-3.5 text-app-text-mute" />
                       </button>
                       {protectedFlag ? (
                         <span className="p-1 opacity-30 cursor-not-allowed" title="初期3区分は削除できません">
-                          <Trash2 className="w-3.5 h-3.5 text-[#ccc]" />
+                          <Trash2 className="w-3.5 h-3.5 text-app-text-fade" />
                         </span>
                       ) : (
-                        <button onClick={() => deleteBusinessDomain(bd.id)} className="p-1 hover:bg-[#C23728]/10 rounded-md">
-                          <Trash2 className="w-3.5 h-3.5 text-[#999]" />
+                        <button onClick={() => deleteBusinessDomain(bd.id)} className="p-1 hover:bg-app-red/10 rounded-md">
+                          <Trash2 className="w-3.5 h-3.5 text-app-text-mute" />
                         </button>
                       )}
                     </>
@@ -2315,28 +2315,28 @@ export default function SettingsContent() {
                   onChange={(e) => setBdNewName(e.target.value)}
                   onFocus={openBdNewForm}
                   placeholder="新しい事業領域の名前..."
-                  className="flex-1 px-2 py-1 text-sm bg-[#F5F5F3] rounded-md outline-none focus:ring-1 focus:ring-[#D4A03A]/50"
+                  className="flex-1 px-2 py-1 text-sm bg-app-surface-alt rounded-md outline-none focus:ring-1 focus:ring-app-gold/50"
                   onKeyDown={(e) => { if (e.key === 'Enter') addBusinessDomain(); }}
                 />
                 <button
                   onClick={addBusinessDomain}
                   disabled={!bdNewName.trim() || !bdNewId.trim() || bdSaving}
-                  className="p-1.5 bg-[#1a1a1a] text-white rounded-md disabled:opacity-30"
+                  className="p-1.5 bg-app-button text-white rounded-md disabled:opacity-30"
                 >
                   <Plus className="w-3.5 h-3.5" />
                 </button>
               </div>
               {bdNewName.trim() && (
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-[#999] font-mono w-10 shrink-0">ID:</span>
+                  <span className="text-[10px] text-app-text-mute font-mono w-10 shrink-0">ID:</span>
                   <input
                     type="text"
                     value={bdNewId}
                     onChange={(e) => setBdNewId(e.target.value)}
                     placeholder="domain_4"
-                    className="flex-1 px-2 py-1 text-xs font-mono bg-[#F5F5F3] rounded-md outline-none focus:ring-1 focus:ring-[#D4A03A]/50"
+                    className="flex-1 px-2 py-1 text-xs font-mono bg-app-surface-alt rounded-md outline-none focus:ring-1 focus:ring-app-gold/50"
                   />
-                  <span className="text-[10px] text-[#bbb]">英数字・_のみ</span>
+                  <span className="text-[10px] text-app-text-fade">英数字・_のみ</span>
                 </div>
               )}
             </div>
@@ -2345,12 +2345,12 @@ export default function SettingsContent() {
 
         {/* ── 収益タイプ管理 ── */}
         <section className="mb-10">
-          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+          <div className="text-[10px] font-medium tracking-widest text-app-text-mute mb-3">
             収益タイプ
           </div>
           <div className="bg-white rounded-xl shadow-sm">
             {revenueTypes.length === 0 && (
-              <div className="px-5 py-4 text-xs text-[#999] italic leading-relaxed">
+              <div className="px-5 py-4 text-xs text-app-text-mute italic leading-relaxed">
                 収益タイプはまだ登録されていません。運用の中で必要性が見えてから追加してください。
               </div>
             )}
@@ -2359,7 +2359,7 @@ export default function SettingsContent() {
               const isEditing = rtEditId === rt.id;
 
               return (
-                <div key={rt.id} className="px-5 py-3 border-b border-[#f0f0f0] last:border-b-0">
+                <div key={rt.id} className="px-5 py-3 border-b border-app-line last:border-b-0">
                   {isEditing ? (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
@@ -2367,14 +2367,14 @@ export default function SettingsContent() {
                           type="text"
                           value={rtEditName}
                           onChange={(e) => setRtEditName(e.target.value)}
-                          className="flex-1 px-2 py-1 text-sm border border-[#D4A03A] rounded-md outline-none"
+                          className="flex-1 px-2 py-1 text-sm border border-app-gold rounded-md outline-none"
                           autoFocus
                         />
                         <button onClick={() => updateRevenueType(rt.id)} disabled={rtSaving} className="p-1 hover:bg-black/5 rounded-md">
-                          <Save className="w-3.5 h-3.5 text-[#1B4D3E]" />
+                          <Save className="w-3.5 h-3.5 text-app-green" />
                         </button>
                         <button onClick={() => setRtEditId(null)} className="p-1 hover:bg-black/5 rounded-md">
-                          <X className="w-3.5 h-3.5 text-[#999]" />
+                          <X className="w-3.5 h-3.5 text-app-text-mute" />
                         </button>
                       </div>
                       <div className="flex flex-wrap gap-1.5">
@@ -2385,7 +2385,7 @@ export default function SettingsContent() {
                             className={`px-2 py-0.5 text-[10px] rounded-full border transition-colors ${
                               rtEditDivisions.includes(divId)
                                 ? 'text-white border-transparent'
-                                : 'text-[#999] border-[#e0e0e0] bg-white'
+                                : 'text-app-text-mute border-app-line-strong bg-white'
                             }`}
                             style={rtEditDivisions.includes(divId) ? { backgroundColor: divVal.color } : undefined}
                           >
@@ -2397,7 +2397,7 @@ export default function SettingsContent() {
                   ) : (
                     <div className="flex items-center gap-2">
                       <div className="flex-1">
-                        <span className="text-sm text-[#333]">{rt.name}</span>
+                        <span className="text-sm text-app-text-strong">{rt.name}</span>
                         {linkedDivs.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-1">
                             {linkedDivs.map(divId => {
@@ -2416,10 +2416,10 @@ export default function SettingsContent() {
                         )}
                       </div>
                       <button onClick={() => startEditRevenueType(rt)} className="p-1 hover:bg-black/5 rounded-md">
-                        <Pencil className="w-3.5 h-3.5 text-[#999]" />
+                        <Pencil className="w-3.5 h-3.5 text-app-text-mute" />
                       </button>
-                      <button onClick={() => deleteRevenueType(rt.id)} className="p-1 hover:bg-[#C23728]/10 rounded-md">
-                        <Trash2 className="w-3.5 h-3.5 text-[#999]" />
+                      <button onClick={() => deleteRevenueType(rt.id)} className="p-1 hover:bg-app-red/10 rounded-md">
+                        <Trash2 className="w-3.5 h-3.5 text-app-text-mute" />
                       </button>
                     </div>
                   )}
@@ -2434,12 +2434,12 @@ export default function SettingsContent() {
                   value={rtNewName}
                   onChange={(e) => setRtNewName(e.target.value)}
                   placeholder="新しい収益タイプ..."
-                  className="flex-1 px-2 py-1 text-sm bg-[#F5F5F3] rounded-md outline-none focus:ring-1 focus:ring-[#D4A03A]/50"
+                  className="flex-1 px-2 py-1 text-sm bg-app-surface-alt rounded-md outline-none focus:ring-1 focus:ring-app-gold/50"
                 />
                 <button
                   onClick={addRevenueType}
                   disabled={!rtNewName.trim() || rtSaving}
-                  className="p-1.5 bg-[#1a1a1a] text-white rounded-md disabled:opacity-30"
+                  className="p-1.5 bg-app-button text-white rounded-md disabled:opacity-30"
                 >
                   <Plus className="w-3.5 h-3.5" />
                 </button>
@@ -2453,7 +2453,7 @@ export default function SettingsContent() {
                       className={`px-2 py-0.5 text-[10px] rounded-full border transition-colors ${
                         rtNewDivisions.includes(divId)
                           ? 'text-white border-transparent'
-                          : 'text-[#999] border-[#e0e0e0] bg-white'
+                          : 'text-app-text-mute border-app-line-strong bg-white'
                       }`}
                       style={rtNewDivisions.includes(divId) ? { backgroundColor: divVal.color } : undefined}
                     >
@@ -2468,7 +2468,7 @@ export default function SettingsContent() {
 
         {/* ── テーマ ── */}
         <section className="mb-10">
-          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+          <div className="text-[10px] font-medium tracking-widest text-app-text-mute mb-3">
             テーマ
           </div>
           <div className="bg-white rounded-xl shadow-sm p-5">
@@ -2480,16 +2480,16 @@ export default function SettingsContent() {
                   disabled={themeSaving}
                   className={`flex-1 p-4 rounded-xl border-2 transition-all ${
                     currentTheme === t.value
-                      ? 'border-[#D4A03A] shadow-sm'
-                      : 'border-[#e0e0e0] hover:border-[#ccc]'
+                      ? 'border-app-gold shadow-sm'
+                      : 'border-app-line-strong hover:border-app-text-fade'
                   }`}
                 >
                   <div
                     className="w-full h-8 rounded-lg mb-2"
                     style={{ backgroundColor: t.color }}
                   />
-                  <div className="text-sm text-[#333] font-medium">{t.label}</div>
-                  <div className="text-[10px] text-[#999] mt-0.5">{t.desc}</div>
+                  <div className="text-sm text-app-text-strong font-medium">{t.label}</div>
+                  <div className="text-[10px] text-app-text-mute mt-0.5">{t.desc}</div>
                 </button>
               ))}
             </div>
@@ -2498,11 +2498,11 @@ export default function SettingsContent() {
 
         {/* ── 決算期 ── */}
         <section className="mb-10">
-          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">決算期</div>
+          <div className="text-[10px] font-medium tracking-widest text-app-text-mute mb-3">決算期</div>
           <div className="bg-white rounded-2xl px-5 py-5" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
             <div className="flex items-center gap-4 mb-3">
               <div>
-                <label className="text-xs text-[#999] block mb-1">決算期の開始月</label>
+                <label className="text-xs text-app-text-mute block mb-1">決算期の開始月</label>
                 <select
                   value={fiscalStartMonth}
                   onChange={(e) => {
@@ -2514,21 +2514,21 @@ export default function SettingsContent() {
                       saveFiscalMonth(1);
                     }
                   }}
-                  className="px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-0 outline-none"
+                  className="px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-0 outline-none"
                 >
                   {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
                     <option key={m} value={m}>{m}月</option>
                   ))}
                 </select>
               </div>
-              <div className="text-xs text-[#666] pt-4">
+              <div className="text-xs text-app-text-sub pt-4">
                 {fiscalStartMonth === 1
                   ? '1月〜12月（暦年・個人事業主の標準）'
                   : `${fiscalStartMonth}月〜${fiscalStartMonth === 1 ? 12 : fiscalStartMonth - 1 + 12 > 12 ? fiscalStartMonth - 1 : fiscalStartMonth + 11}月`
                 }
               </div>
             </div>
-            <p className="text-[10px] text-[#999]">個人事業主は暦年（1月〜12月）が法定です。法人化した場合のみ変更してください。</p>
+            <p className="text-[10px] text-app-text-mute">個人事業主は暦年（1月〜12月）が法定です。法人化した場合のみ変更してください。</p>
           </div>
         </section>
 
@@ -2538,17 +2538,17 @@ export default function SettingsContent() {
             <div className="absolute inset-0 bg-black/30" onClick={() => setFiscalConfirmOpen(false)} />
             <div className="relative bg-white rounded-2xl p-6 max-w-sm mx-4" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
               <div className="mb-4">
-                <p className="text-sm font-medium text-[#1a1a1a] mb-2">決算期を変更しますか？</p>
-                <div className="bg-[#C23728]/5 rounded-lg px-3 py-2 mb-3">
-                  <p className="text-xs text-[#C23728]">個人事業主は暦年（1月〜12月）が税法で定められています。変更不可です。</p>
+                <p className="text-sm font-medium text-app-text mb-2">決算期を変更しますか？</p>
+                <div className="bg-app-red/5 rounded-lg px-3 py-2 mb-3">
+                  <p className="text-xs text-app-red">個人事業主は暦年（1月〜12月）が税法で定められています。変更不可です。</p>
                 </div>
-                <p className="text-xs text-[#666]">法人（合同会社等）として届出済みの場合のみ、決算期を変更してください。</p>
+                <p className="text-xs text-app-text-sub">法人（合同会社等）として届出済みの場合のみ、決算期を変更してください。</p>
               </div>
-              <p className="text-xs text-[#999] mb-4">開始月を <strong>{fiscalPendingMonth}月</strong> に変更します。本当に変更しますか？</p>
+              <p className="text-xs text-app-text-mute mb-4">開始月を <strong>{fiscalPendingMonth}月</strong> に変更します。本当に変更しますか？</p>
               <div className="flex gap-2">
                 <button
                   onClick={() => setFiscalConfirmOpen(false)}
-                  className="flex-1 py-2 rounded-lg text-xs text-[#999] bg-[#F5F5F3] hover:bg-gray-200 transition-colors"
+                  className="flex-1 py-2 rounded-lg text-xs text-app-text-mute bg-app-surface-alt hover:bg-gray-200 transition-colors"
                 >
                   キャンセル
                 </button>
@@ -2558,7 +2558,7 @@ export default function SettingsContent() {
                     setFiscalConfirmOpen(false);
                   }}
                   disabled={fiscalSaving}
-                  className="flex-1 py-2 rounded-lg text-xs text-white bg-[#C23728] hover:bg-[#a02020] transition-colors disabled:opacity-40"
+                  className="flex-1 py-2 rounded-lg text-xs text-white bg-app-red hover:bg-app-red-hover transition-colors disabled:opacity-40"
                 >
                   {fiscalSaving ? '保存中...' : '変更する'}
                 </button>
@@ -2569,9 +2569,9 @@ export default function SettingsContent() {
 
         {/* ── データバックアップ ── */}
         <section className="mb-10">
-          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">データバックアップ</div>
+          <div className="text-[10px] font-medium tracking-widest text-app-text-mute mb-3">データバックアップ</div>
           <div className="bg-white rounded-2xl px-5 py-5" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
-            <p className="text-xs text-[#666] mb-3">
+            <p className="text-xs text-app-text-sub mb-3">
               全テーブルのデータをJSON形式で保存します。Google Driveへの保存、またはローカルへのダウンロードが選べます。
             </p>
             <div className="flex items-center gap-3 flex-wrap">
@@ -2597,7 +2597,7 @@ export default function SettingsContent() {
                   }
                 }}
                 disabled={driveBackupStatus === 'loading'}
-                className="flex items-center gap-1.5 px-4 py-2 bg-[#1a1a1a] text-white rounded-lg text-xs font-medium hover:bg-[#333] transition-colors disabled:opacity-50"
+                className="flex items-center gap-1.5 px-4 py-2 bg-app-button text-white rounded-lg text-xs font-medium hover:bg-app-button-hover transition-colors disabled:opacity-50"
               >
                 {driveBackupStatus === 'loading' ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -2611,7 +2611,7 @@ export default function SettingsContent() {
               <a
                 href="/api/backup"
                 download
-                className="flex items-center gap-1.5 px-4 py-2 border border-[#ddd] text-[#333] rounded-lg text-xs font-medium hover:bg-[#f5f5f5] transition-colors"
+                className="flex items-center gap-1.5 px-4 py-2 border border-app-text-ghost text-app-text-strong rounded-lg text-xs font-medium hover:bg-app-surface-alt transition-colors"
               >
                 <Save className="w-3.5 h-3.5" />
                 ローカルにダウンロード
@@ -2632,28 +2632,28 @@ export default function SettingsContent() {
         {/* ── Q&A ── */}
         <section className="mb-10">
           <div className="flex items-center gap-2 mb-3">
-            <div className="text-[10px] font-medium tracking-widest text-[#999]">
+            <div className="text-[10px] font-medium tracking-widest text-app-text-mute">
               Q&A
             </div>
-            <HelpCircle className="w-3 h-3 text-[#ccc]" />
+            <HelpCircle className="w-3 h-3 text-app-text-fade" />
           </div>
-          <div className="bg-white rounded-xl shadow-sm divide-y divide-[#f0f0f0]">
+          <div className="bg-white rounded-xl shadow-sm divide-y divide-app-line">
             {QA_ITEMS.map((item, i) => (
               <div key={i}>
                 <button
                   onClick={() => setOpenQA(openQA === i ? null : i)}
-                  className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-[#fafafa] transition-colors"
+                  className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-app-line-soft transition-colors"
                 >
-                  <span className="text-sm text-[#333]">{item.q}</span>
+                  <span className="text-sm text-app-text-strong">{item.q}</span>
                   {openQA === i ? (
-                    <ChevronUp className="w-4 h-4 text-[#999] shrink-0" />
+                    <ChevronUp className="w-4 h-4 text-app-text-mute shrink-0" />
                   ) : (
-                    <ChevronDown className="w-4 h-4 text-[#999] shrink-0" />
+                    <ChevronDown className="w-4 h-4 text-app-text-mute shrink-0" />
                   )}
                 </button>
                 {openQA === i && (
                   <div className="px-5 pb-4">
-                    <p className="text-xs text-[#666] leading-relaxed">{item.a}</p>
+                    <p className="text-xs text-app-text-sub leading-relaxed">{item.a}</p>
                   </div>
                 )}
               </div>
@@ -2668,51 +2668,51 @@ export default function SettingsContent() {
 
         {/* ── 請求元情報 ── */}
         <section className="mb-10">
-          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+          <div className="text-[10px] font-medium tracking-widest text-app-text-mute mb-3">
             請求元情報
           </div>
           <div className="bg-white rounded-xl shadow-sm p-5">
-            <p className="text-[11px] text-[#999] mb-4">
+            <p className="text-[11px] text-app-text-mute mb-4">
               請求書に印字される{ownerLabel}の情報です。
             </p>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs text-[#999] mb-1">屋号・名前</label>
+                <label className="block text-xs text-app-text-mute mb-1">屋号・名前</label>
                 <input type="text" value={billingName}
                   onChange={(e) => setBillingName(e.target.value)}
                   placeholder="例: komu10"
-                  className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+                  className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50" />
               </div>
               <div className="flex gap-3">
                 <div className="w-28">
-                  <label className="block text-xs text-[#999] mb-1">郵便番号</label>
+                  <label className="block text-xs text-app-text-mute mb-1">郵便番号</label>
                   <input type="text" value={billingPostalCode}
                     onChange={(e) => setBillingPostalCode(e.target.value)}
                     placeholder="000-0000"
-                    className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed'] tabular-nums" />
+                    className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50 font-['Saira_Condensed'] tabular-nums" />
                 </div>
                 <div className="flex-1">
-                  <label className="block text-xs text-[#999] mb-1">住所</label>
+                  <label className="block text-xs text-app-text-mute mb-1">住所</label>
                   <input type="text" value={billingAddress}
                     onChange={(e) => setBillingAddress(e.target.value)}
                     placeholder="東京都渋谷区…"
-                    className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+                    className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50" />
                 </div>
               </div>
               <div className="flex gap-3">
                 <div className="flex-1">
-                  <label className="block text-xs text-[#999] mb-1">電話番号</label>
+                  <label className="block text-xs text-app-text-mute mb-1">電話番号</label>
                   <input type="tel" value={billingPhone}
                     onChange={(e) => setBillingPhone(e.target.value)}
                     placeholder="090-0000-0000"
-                    className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed'] tabular-nums" />
+                    className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50 font-['Saira_Condensed'] tabular-nums" />
                 </div>
                 <div className="flex-1">
-                  <label className="block text-xs text-[#999] mb-1">メールアドレス</label>
+                  <label className="block text-xs text-app-text-mute mb-1">メールアドレス</label>
                   <input type="email" value={billingEmail}
                     onChange={(e) => setBillingEmail(e.target.value)}
                     placeholder="tomo@komu10.jp"
-                    className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+                    className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50" />
                 </div>
               </div>
             </div>
@@ -2732,7 +2732,7 @@ export default function SettingsContent() {
                 finally { setBillingSaving(false); }
               }}
               disabled={billingSaving}
-              className="mt-4 px-4 py-2 text-xs text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] transition-colors disabled:opacity-50 flex items-center gap-1.5"
+              className="mt-4 px-4 py-2 text-xs text-white bg-app-button rounded-lg hover:bg-app-button-hover transition-colors disabled:opacity-50 flex items-center gap-1.5"
             >
               {billingSaving && <Loader2 className="w-3 h-3 animate-spin" />}
               保存する
@@ -2742,11 +2742,11 @@ export default function SettingsContent() {
 
         {/* ── v0.17.0: 事業者ステータス ── */}
         <section className="mb-10">
-          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+          <div className="text-[10px] font-medium tracking-widest text-app-text-mute mb-3">
             事業者ステータス
           </div>
           <div className="bg-white rounded-xl shadow-sm p-5">
-            <p className="text-[11px] text-[#666] leading-relaxed mb-4 whitespace-pre-line">
+            <p className="text-[11px] text-app-text-sub leading-relaxed mb-4 whitespace-pre-line">
               {`${ownerLabel}が、消費税を納める立場（課税事業者）かどうかを設定します。
 インボイス（取引先が経費精算で使う「正式な請求書」を発行できる）登録の有無もここで管理します。
 
@@ -2759,7 +2759,7 @@ export default function SettingsContent() {
             <div className="space-y-4">
               {/* インボイス登録 */}
               <div>
-                <label className="block text-xs text-[#999] mb-2">インボイス登録</label>
+                <label className="block text-xs text-app-text-mute mb-2">インボイス登録</label>
                 <div className="flex gap-2">
                   <button
                     type="button"
@@ -2769,8 +2769,8 @@ export default function SettingsContent() {
                     }}
                     className={`flex-1 px-3 py-2 text-xs rounded-lg transition-colors ${
                       !invoiceRegistered
-                        ? 'bg-[#1a1a1a] text-white'
-                        : 'bg-[#F5F5F3] text-[#666] hover:bg-[#ECECE9]'
+                        ? 'bg-app-button text-white'
+                        : 'bg-app-surface-alt text-app-text-sub hover:bg-app-surface-hover'
                     }`}
                   >
                     未登録
@@ -2783,8 +2783,8 @@ export default function SettingsContent() {
                     }}
                     className={`flex-1 px-3 py-2 text-xs rounded-lg transition-colors ${
                       invoiceRegistered
-                        ? 'bg-[#1a1a1a] text-white'
-                        : 'bg-[#F5F5F3] text-[#666] hover:bg-[#ECECE9]'
+                        ? 'bg-app-button text-white'
+                        : 'bg-app-surface-alt text-app-text-sub hover:bg-app-surface-hover'
                     }`}
                   >
                     登録済
@@ -2795,15 +2795,15 @@ export default function SettingsContent() {
               {/* 登録番号（インボイス登録済の場合のみ表示） */}
               {invoiceRegistered && (
                 <div>
-                  <label className="block text-xs text-[#999] mb-1">登録番号</label>
+                  <label className="block text-xs text-app-text-mute mb-1">登録番号</label>
                   <input
                     type="text"
                     value={invoiceNumber}
                     onChange={(e) => setInvoiceNumber(e.target.value)}
                     placeholder="T1234567890123"
-                    className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed'] tabular-nums"
+                    className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50 font-['Saira_Condensed'] tabular-nums"
                   />
-                  <p className="text-[10px] text-[#999] mt-1">
+                  <p className="text-[10px] text-app-text-mute mt-1">
                     適格請求書発行事業者の登録番号（Tから始まる14桁）
                   </p>
                 </div>
@@ -2811,10 +2811,10 @@ export default function SettingsContent() {
 
               {/* 課税事業者 */}
               <div>
-                <label className="block text-xs text-[#999] mb-2">
+                <label className="block text-xs text-app-text-mute mb-2">
                   課税事業者
                   {invoiceRegistered && (
-                    <span className="ml-2 text-[10px] text-[#999]">
+                    <span className="ml-2 text-[10px] text-app-text-mute">
                       （インボイス登録済のため自動で「はい」）
                     </span>
                   )}
@@ -2826,8 +2826,8 @@ export default function SettingsContent() {
                     onClick={() => setIsTaxable(false)}
                     className={`flex-1 px-3 py-2 text-xs rounded-lg transition-colors ${
                       !isTaxable
-                        ? 'bg-[#1a1a1a] text-white'
-                        : 'bg-[#F5F5F3] text-[#666] hover:bg-[#ECECE9]'
+                        ? 'bg-app-button text-white'
+                        : 'bg-app-surface-alt text-app-text-sub hover:bg-app-surface-hover'
                     } ${invoiceRegistered ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     いいえ（免税事業者）
@@ -2838,8 +2838,8 @@ export default function SettingsContent() {
                     onClick={() => setIsTaxable(true)}
                     className={`flex-1 px-3 py-2 text-xs rounded-lg transition-colors ${
                       isTaxable
-                        ? 'bg-[#1a1a1a] text-white'
-                        : 'bg-[#F5F5F3] text-[#666] hover:bg-[#ECECE9]'
+                        ? 'bg-app-button text-white'
+                        : 'bg-app-surface-alt text-app-text-sub hover:bg-app-surface-hover'
                     } ${invoiceRegistered ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     はい（課税事業者）
@@ -2862,7 +2862,7 @@ export default function SettingsContent() {
                 finally { setBizStatusSaving(false); }
               }}
               disabled={bizStatusSaving}
-              className="mt-4 px-4 py-2 text-xs text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] transition-colors disabled:opacity-50 flex items-center gap-1.5"
+              className="mt-4 px-4 py-2 text-xs text-white bg-app-button rounded-lg hover:bg-app-button-hover transition-colors disabled:opacity-50 flex items-center gap-1.5"
             >
               {bizStatusSaving && <Loader2 className="w-3 h-3 animate-spin" />}
               保存する
@@ -2872,11 +2872,11 @@ export default function SettingsContent() {
 
         {/* ── 背景色 ── */}
         <section className="mb-10">
-          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+          <div className="text-[10px] font-medium tracking-widest text-app-text-mute mb-3">
             背景色
           </div>
           <div className="bg-white rounded-xl shadow-sm p-5">
-            <p className="text-[11px] text-[#999] mb-3">
+            <p className="text-[11px] text-app-text-mute mb-3">
               {ownerLabel}のページ背景色を選択します。担当者切替で自動的に反映されます。
             </p>
             <div className="flex gap-3 mb-4">
@@ -2909,14 +2909,14 @@ export default function SettingsContent() {
                     }}
                     disabled={ownerColorSaving}
                     className={`flex-1 p-3 rounded-xl border-2 transition-all ${
-                      isSelected ? 'border-[#D4A03A] shadow-sm' : 'border-[#e0e0e0] hover:border-[#ccc]'
+                      isSelected ? 'border-app-gold shadow-sm' : 'border-app-line-strong hover:border-app-text-fade'
                     }`}
                   >
                     <div
                       className="w-full h-10 rounded-lg mb-2 border border-black/5"
                       style={{ backgroundColor: preset.value }}
                     />
-                    <div className={`text-[11px] font-medium ${isDark ? 'text-[#666]' : 'text-[#333]'}`}>
+                    <div className={`text-[11px] font-medium ${isDark ? 'text-app-text-sub' : 'text-app-text-strong'}`}>
                       {preset.label}
                     </div>
                   </button>
@@ -2926,7 +2926,7 @@ export default function SettingsContent() {
 
             {/* カスタムカラー */}
             <div className="pt-3 border-t border-gray-100">
-              <p className="text-[10px] text-[#999] mb-2">カスタムカラー</p>
+              <p className="text-[10px] text-app-text-mute mb-2">カスタムカラー</p>
               <div className="flex items-center gap-3">
                 <input
                   type="color"
@@ -2941,7 +2941,7 @@ export default function SettingsContent() {
                     const v = e.target.value;
                     if (/^#[0-9A-Fa-f]{0,6}$/.test(v) || v === '') setOwnerColor(v);
                   }}
-                  className="w-28 px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm font-['Saira_Condensed'] tabular-nums border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+                  className="w-28 px-3 py-2 bg-app-surface-alt rounded-lg text-sm font-['Saira_Condensed'] tabular-nums border-0 outline-none focus:ring-2 focus:ring-app-gold/50"
                   placeholder="#F5F5F3"
                 />
                 <button
@@ -2964,7 +2964,7 @@ export default function SettingsContent() {
                     window.dispatchEvent(new Event('ownerColorChanged'));
                   }}
                   disabled={ownerColorSaving || !ownerColor || !/^#[0-9A-Fa-f]{6}$/.test(ownerColor)}
-                  className="px-3 py-2 bg-[#1a1a1a] text-white rounded-lg text-[10px] font-medium hover:bg-[#333] disabled:opacity-40 transition-colors"
+                  className="px-3 py-2 bg-app-button text-white rounded-lg text-[10px] font-medium hover:bg-app-button-hover disabled:opacity-40 transition-colors"
                 >
                   適用
                 </button>
@@ -2978,7 +2978,7 @@ export default function SettingsContent() {
                         setOwnerColor(firstPreset.value);
                       }
                     }}
-                    className="text-[10px] text-[#999] hover:text-[#666] underline"
+                    className="text-[10px] text-app-text-mute hover:text-app-text-sub underline"
                   >
                     初期色に戻す
                   </button>
@@ -2990,31 +2990,31 @@ export default function SettingsContent() {
 
         {/* ── 事業用口座 ── */}
         <section className="mb-10">
-          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+          <div className="text-[10px] font-medium tracking-widest text-app-text-mute mb-3">
             事業用口座
           </div>
           <div className="bg-white rounded-xl shadow-sm p-5">
             {bankAccounts.length === 0 ? (
-              <p className="text-[11px] text-[#999] mb-3">口座が登録されていません</p>
+              <p className="text-[11px] text-app-text-mute mb-3">口座が登録されていません</p>
             ) : (
               <div className="space-y-2 mb-4">
                 {bankAccounts.map((ba) => (
-                  <div key={ba.id} className="flex items-center justify-between py-2 px-3 bg-[#F5F5F3] rounded-lg">
+                  <div key={ba.id} className="flex items-center justify-between py-2 px-3 bg-app-surface-alt rounded-lg">
                     <div>
-                      <div className="text-sm text-[#1a1a1a] font-medium">{ba.name}</div>
-                      <div className="text-[11px] text-[#999]">
+                      <div className="text-sm text-app-text font-medium">{ba.name}</div>
+                      <div className="text-[11px] text-app-text-mute">
                         {ba.bank_name}{ba.branch_name ? ` ${ba.branch_name}` : ''} / {ba.account_type === 'checking' ? '当座' : '普通'}{ba.account_number_last4 ? ` ****${ba.account_number_last4}` : ''}
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="font-['Saira_Condensed'] tabular-nums text-sm text-[#1a1a1a]">
+                      <span className="font-['Saira_Condensed'] tabular-nums text-sm text-app-text">
                         ¥{ba.balance.toLocaleString()}
                       </span>
                       <div className="flex items-center gap-1">
                         <button onClick={() => { setEditingBank(ba); setBankModalOpen(true); }}
-                          className="p-1 hover:bg-black/5 rounded-md"><Pencil className="w-3.5 h-3.5 text-[#999]" /></button>
+                          className="p-1 hover:bg-black/5 rounded-md"><Pencil className="w-3.5 h-3.5 text-app-text-mute" /></button>
                         <button onClick={() => setBankDeleteTarget(ba.id)}
-                          className="p-1 hover:bg-[#C23728]/10 rounded-md"><Trash2 className="w-3.5 h-3.5 text-[#999]" /></button>
+                          className="p-1 hover:bg-app-red/10 rounded-md"><Trash2 className="w-3.5 h-3.5 text-app-text-mute" /></button>
                       </div>
                     </div>
                   </div>
@@ -3023,7 +3023,7 @@ export default function SettingsContent() {
             )}
             <button
               onClick={() => { setEditingBank(null); setBankModalOpen(true); }}
-              className="flex items-center gap-1.5 text-xs text-[#D4A03A] hover:text-[#b8882e] transition-colors"
+              className="flex items-center gap-1.5 text-xs text-app-gold hover:text-app-gold-hover transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />口座を追加
             </button>
@@ -3032,12 +3032,12 @@ export default function SettingsContent() {
 
         {/* ── 取引先管理 ── */}
         <section className="mb-10">
-          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+          <div className="text-[10px] font-medium tracking-widest text-app-text-mute mb-3">
             取引先
           </div>
           <div className="bg-white rounded-xl shadow-sm p-5">
             {clients.length === 0 ? (
-              <p className="text-[11px] text-[#999] mb-3">取引先が登録されていません</p>
+              <p className="text-[11px] text-app-text-mute mb-3">取引先が登録されていません</p>
             ) : (
               <div className="space-y-2 mb-4">
                 {clients.map((cl) => {
@@ -3045,15 +3045,15 @@ export default function SettingsContent() {
                   const isExpanded = expandedClientId === cl.id;
                   return (
                     <div key={cl.id}>
-                      <div className={`flex items-center justify-between py-2 px-3 rounded-lg ${cl.is_active ? 'bg-[#F5F5F3]' : 'bg-[#F5F5F3]/50 opacity-60'}`}>
+                      <div className={`flex items-center justify-between py-2 px-3 rounded-lg ${cl.is_active ? 'bg-app-surface-alt' : 'bg-app-surface-alt/50 opacity-60'}`}>
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-['Saira_Condensed'] text-[#999] tabular-nums">{cl.client_number}</span>
-                            <span className="text-sm text-[#1a1a1a] font-medium">{cl.name}</span>
-                            {cl.short_name && <span className="text-[11px] text-[#999]">({cl.short_name})</span>}
-                            {!cl.is_active && <span className="text-[9px] bg-[#999] text-white px-1.5 py-0.5 rounded">停止</span>}
+                            <span className="text-[10px] font-['Saira_Condensed'] text-app-text-mute tabular-nums">{cl.client_number}</span>
+                            <span className="text-sm text-app-text font-medium">{cl.name}</span>
+                            {cl.short_name && <span className="text-[11px] text-app-text-mute">({cl.short_name})</span>}
+                            {!cl.is_active && <span className="text-[9px] bg-app-text-mute text-white px-1.5 py-0.5 rounded">停止</span>}
                           </div>
-                          <div className="text-[11px] text-[#999]">
+                          <div className="text-[11px] text-app-text-mute">
                             {cl.payment_terms || '支払いサイト未設定'}
                             {cl.contact_name ? ` / ${cl.contact_name}` : ''}
                           </div>
@@ -3062,21 +3062,21 @@ export default function SettingsContent() {
                           {hasNote && (
                             <button
                               onClick={() => setExpandedClientId(isExpanded ? null : cl.id)}
-                              className={`p-1 rounded-md transition-colors ${isExpanded ? 'bg-[#D4A03A]/15' : 'hover:bg-black/5'}`}
+                              className={`p-1 rounded-md transition-colors ${isExpanded ? 'bg-app-gold/15' : 'hover:bg-black/5'}`}
                               title="メモを表示">
-                              <StickyNote className={`w-3.5 h-3.5 ${isExpanded ? 'text-[#D4A03A]' : 'text-[#999]'}`} />
+                              <StickyNote className={`w-3.5 h-3.5 ${isExpanded ? 'text-app-gold' : 'text-app-text-mute'}`} />
                             </button>
                           )}
                           <button onClick={() => { setEditingClient(cl); setClientModalOpen(true); }}
-                            className="p-1 hover:bg-black/5 rounded-md"><Pencil className="w-3.5 h-3.5 text-[#999]" /></button>
+                            className="p-1 hover:bg-black/5 rounded-md"><Pencil className="w-3.5 h-3.5 text-app-text-mute" /></button>
                           <button onClick={() => setClientDeleteTarget(cl.id)}
-                            className="p-1 hover:bg-[#C23728]/10 rounded-md"><Trash2 className="w-3.5 h-3.5 text-[#999]" /></button>
+                            className="p-1 hover:bg-app-red/10 rounded-md"><Trash2 className="w-3.5 h-3.5 text-app-text-mute" /></button>
                         </div>
                       </div>
                       {isExpanded && hasNote && (
-                        <div className="mt-1 mx-3 px-3 py-2 bg-[#FAFAF8] border-l-2 border-[#D4A03A]/40 rounded-r-md">
-                          <div className="text-[10px] text-[#bbb] mb-1 tracking-wider">MEMO</div>
-                          <p className="text-[12px] text-[#333] whitespace-pre-wrap leading-relaxed">{cl.notes}</p>
+                        <div className="mt-1 mx-3 px-3 py-2 bg-app-surface border-l-2 border-app-gold/40 rounded-r-md">
+                          <div className="text-[10px] text-app-text-fade mb-1 tracking-wider">MEMO</div>
+                          <p className="text-[12px] text-app-text-strong whitespace-pre-wrap leading-relaxed">{cl.notes}</p>
                         </div>
                       )}
                     </div>
@@ -3086,7 +3086,7 @@ export default function SettingsContent() {
             )}
             <button
               onClick={() => { setEditingClient(null); setClientModalOpen(true); }}
-              className="flex items-center gap-1.5 text-xs text-[#D4A03A] hover:text-[#b8882e] transition-colors"
+              className="flex items-center gap-1.5 text-xs text-app-gold hover:text-app-gold-hover transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />取引先を追加
             </button>
@@ -3095,44 +3095,44 @@ export default function SettingsContent() {
 
         {/* ── 開発者メニュー（v0.6.1: シードデータ操作） ── */}
         <section className="mb-10">
-          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+          <div className="text-[10px] font-medium tracking-widest text-app-text-mute mb-3">
             開発者メニュー
           </div>
           <div className="bg-white rounded-xl shadow-sm p-5">
             <button
               onClick={() => setDeveloperOpen(v => !v)}
               className="w-full flex items-center justify-between text-left">
-              <span className="text-xs text-[#666]">
+              <span className="text-xs text-app-text-sub">
                 検証用ダミーデータの投入・削除
-                <span className="text-[#bbb] ml-2">（本番データに影響なし）</span>
+                <span className="text-app-text-fade ml-2">（本番データに影響なし）</span>
               </span>
-              <span className="text-[#999] text-xs">{developerOpen ? '閉じる' : '開く'}</span>
+              <span className="text-app-text-mute text-xs">{developerOpen ? '閉じる' : '開く'}</span>
             </button>
             {developerOpen && (
               <div className="mt-4 space-y-3">
-                <p className="text-[11px] text-[#999] leading-relaxed">
+                <p className="text-[11px] text-app-text-mute leading-relaxed">
                   検証用のダミー取引先（源泉あり／源泉なし各1件）と請求書（各1件）を一括投入します。
-                  全データに識別子 <code className="bg-[#F5F5F3] px-1 rounded text-[10px]">__SEED__</code> が付与され、
+                  全データに識別子 <code className="bg-app-surface-alt px-1 rounded text-[10px]">__SEED__</code> が付与され、
                   削除時は識別子で厳密マッチするため本番データは影響を受けません。
                 </p>
                 <div className="flex gap-2">
                   <button
                     onClick={handleSeedInsert}
                     disabled={seedLoading}
-                    className="flex items-center gap-1.5 px-3 py-2 text-[11px] bg-[#1B4D3E] text-white rounded-lg hover:bg-[#1a3d32] transition-colors disabled:opacity-50">
+                    className="flex items-center gap-1.5 px-3 py-2 text-[11px] bg-app-green text-white rounded-lg hover:bg-app-green-hover transition-colors disabled:opacity-50">
                     {seedLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
                     シードデータを投入
                   </button>
                   <button
                     onClick={handleSeedDelete}
                     disabled={seedLoading}
-                    className="flex items-center gap-1.5 px-3 py-2 text-[11px] bg-[#C23728] text-white rounded-lg hover:bg-[#a92e22] transition-colors disabled:opacity-50">
+                    className="flex items-center gap-1.5 px-3 py-2 text-[11px] bg-app-red text-white rounded-lg hover:bg-app-red-hover transition-colors disabled:opacity-50">
                     {seedLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
                     シードデータを削除
                   </button>
                 </div>
                 {seedMsg && (
-                  <p className={`text-[11px] ${seedMsg.startsWith('✓') ? 'text-[#1B4D3E]' : 'text-[#C23728]'}`}>
+                  <p className={`text-[11px] ${seedMsg.startsWith('✓') ? 'text-app-green' : 'text-app-red'}`}>
                     {seedMsg}
                   </p>
                 )}
@@ -3143,12 +3143,12 @@ export default function SettingsContent() {
 
         {/* ── 固定契約 ── */}
         <section className="mb-10">
-          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+          <div className="text-[10px] font-medium tracking-widest text-app-text-mute mb-3">
             固定契約（売上・経費）
           </div>
           <div className="bg-white rounded-xl shadow-sm p-5">
             {recurringExpenses.length === 0 ? (
-              <p className="text-[11px] text-[#999] mb-3">固定契約が登録されていません</p>
+              <p className="text-[11px] text-app-text-mute mb-3">固定契約が登録されていません</p>
             ) : (
               <div className="space-y-2 mb-4">
                 {recurringExpenses.map((re) => {
@@ -3156,26 +3156,26 @@ export default function SettingsContent() {
                   const divDef = DIVISIONS[re.division as keyof typeof DIVISIONS];
                   const clientName = clients.find(c => c.id === re.client_id)?.name;
                   return (
-                    <div key={re.id} className="flex items-center justify-between py-2 px-3 bg-[#F5F5F3] rounded-lg">
+                    <div key={re.id} className="flex items-center justify-between py-2 px-3 bg-app-surface-alt rounded-lg">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${isSales ? 'bg-[#1B4D3E]/10 text-[#1B4D3E]' : 'bg-[#C23728]/10 text-[#C23728]'}`}>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${isSales ? 'bg-app-green/10 text-app-green' : 'bg-app-red/10 text-app-red'}`}>
                             {isSales ? '売上' : '経費'}
                           </span>
-                          <span className="text-sm text-[#1a1a1a] font-medium truncate">{re.description}</span>
+                          <span className="text-sm text-app-text font-medium truncate">{re.description}</span>
                         </div>
-                        <div className="text-[11px] text-[#999] mt-0.5">
+                        <div className="text-[11px] text-app-text-mute mt-0.5">
                           ¥{re.amount.toLocaleString()} / {RECURRING_FREQUENCY[re.frequency as keyof typeof RECURRING_FREQUENCY]}
                           {divDef ? ` · ${divDef.name}` : ''}
                           {clientName ? ` · ${clientName}` : ''}
-                          {!re.is_active && <span className="ml-1 text-[#C23728]">（停止中）</span>}
+                          {!re.is_active && <span className="ml-1 text-app-red">（停止中）</span>}
                         </div>
                       </div>
                       <div className="flex items-center gap-1 ml-2">
                         <button onClick={() => { setEditingRecurring(re); setRecurringModalOpen(true); }}
-                          className="p-1 hover:bg-black/5 rounded-md"><Pencil className="w-3.5 h-3.5 text-[#999]" /></button>
+                          className="p-1 hover:bg-black/5 rounded-md"><Pencil className="w-3.5 h-3.5 text-app-text-mute" /></button>
                         <button onClick={() => setRecurringDeleteTarget(re.id)}
-                          className="p-1 hover:bg-[#C23728]/10 rounded-md"><Trash2 className="w-3.5 h-3.5 text-[#999]" /></button>
+                          className="p-1 hover:bg-app-red/10 rounded-md"><Trash2 className="w-3.5 h-3.5 text-app-text-mute" /></button>
                       </div>
                     </div>
                   );
@@ -3184,7 +3184,7 @@ export default function SettingsContent() {
             )}
             <button
               onClick={() => { setEditingRecurring(null); setRecurringModalOpen(true); }}
-              className="flex items-center gap-1.5 text-xs text-[#D4A03A] hover:text-[#b8882e] transition-colors"
+              className="flex items-center gap-1.5 text-xs text-app-gold hover:text-app-gold-hover transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />固定契約を追加
             </button>
@@ -3193,11 +3193,11 @@ export default function SettingsContent() {
 
         {/* ── 按分設定 ── */}
         <section className="mb-10">
-          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+          <div className="text-[10px] font-medium tracking-widest text-app-text-mute mb-3">
             按分設定
           </div>
           <div className="bg-white rounded-xl shadow-sm p-5">
-            <p className="text-[11px] text-[#999] mb-4 leading-relaxed">
+            <p className="text-[11px] text-app-text-mute mb-4 leading-relaxed">
               事業とプライベート兼用の費目について、事業利用割合を設定します。
               確定申告の経費計算に反映されます。
             </p>
@@ -3208,7 +3208,7 @@ export default function SettingsContent() {
 
                 return (
                   <div key={k} className="flex items-center gap-3">
-                    <span className="text-sm text-[#333] w-32 shrink-0">
+                    <span className="text-sm text-app-text-strong w-32 shrink-0">
                       {kamokuDef?.name || k}
                     </span>
                     <div className="flex items-center gap-1">
@@ -3223,9 +3223,9 @@ export default function SettingsContent() {
                             [k]: { ...prev[k], ratio: parseInt(e.target.value) || 0 },
                           }))
                         }
-                        className="w-16 px-2 py-1.5 border border-[#e0e0e0] rounded-lg text-right text-sm font-['Saira_Condensed'] focus:outline-none focus:border-[#D4A03A] transition-colors"
+                        className="w-16 px-2 py-1.5 border border-app-line-strong rounded-lg text-right text-sm font-['Saira_Condensed'] focus:outline-none focus:border-app-gold transition-colors"
                       />
-                      <span className="text-xs text-[#999]">%</span>
+                      <span className="text-xs text-app-text-mute">%</span>
                     </div>
                     <input
                       type="text"
@@ -3237,7 +3237,7 @@ export default function SettingsContent() {
                         }))
                       }
                       placeholder="根拠メモ（例：作業部屋15㎡/全体60㎡）"
-                      className="flex-1 px-2 py-1.5 border border-[#e0e0e0] rounded-lg text-xs text-[#666] placeholder:text-[#ccc] focus:outline-none focus:border-[#D4A03A] transition-colors"
+                      className="flex-1 px-2 py-1.5 border border-app-line-strong rounded-lg text-xs text-app-text-sub placeholder:text-app-text-fade focus:outline-none focus:border-app-gold transition-colors"
                     />
                   </div>
                 );
@@ -3245,21 +3245,21 @@ export default function SettingsContent() {
             </div>
 
             {/* 按分の目安 */}
-            <div className="mt-4 p-3 bg-[#FFFBF0] rounded-lg border border-[#F5E6C8]">
-              <p className="text-[10px] text-[#B8860B] font-medium mb-1">按分の目安</p>
-              <p className="text-[10px] text-[#8B7355] leading-relaxed">
+            <div className="mt-4 p-3 bg-state-warn-bg rounded-lg border border-state-warn-line">
+              <p className="text-[10px] text-app-gold-deep font-medium mb-1">按分の目安</p>
+              <p className="text-[10px] text-app-warn-text leading-relaxed">
                 携帯: 50% / WiFi: 50〜70% / 家賃: 面積割合 / 光熱費: 面積割合 / 車両: ロケ使用割合
               </p>
             </div>
 
             <div className="mt-4 flex items-center justify-end gap-3">
               {anbunSaved && (
-                <span className="text-xs text-[#1B4D3E]">✓ 保存しました</span>
+                <span className="text-xs text-app-green">✓ 保存しました</span>
               )}
               <button
                 onClick={saveAnbun}
                 disabled={anbunSaving}
-                className="flex items-center gap-1.5 px-4 py-2 bg-[#1a1a1a] text-white text-xs rounded-lg hover:bg-[#333] disabled:opacity-50 transition-colors"
+                className="flex items-center gap-1.5 px-4 py-2 bg-app-button text-white text-xs rounded-lg hover:bg-app-button-hover disabled:opacity-50 transition-colors"
               >
                 {anbunSaving ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -3274,7 +3274,7 @@ export default function SettingsContent() {
 
         {/* ── 備品台帳 ── */}
         <section className="mb-10">
-          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+          <div className="text-[10px] font-medium tracking-widest text-app-text-mute mb-3">
             備品台帳
           </div>
           <div className="bg-white rounded-xl shadow-sm p-5">
@@ -3286,12 +3286,12 @@ export default function SettingsContent() {
                 { key: '50000', label: '¥50,000+' },
               ].map(f => (
                 <button key={f.key} onClick={() => setEqFilter(f.key as typeof eqFilter)}
-                  className={`px-3 py-1 rounded-full text-[10px] transition-colors ${eqFilter === f.key ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666] hover:bg-[#eee]'}`}>
+                  className={`px-3 py-1 rounded-full text-[10px] transition-colors ${eqFilter === f.key ? 'bg-app-button text-white' : 'bg-app-surface-alt text-app-text-sub hover:bg-app-button-disabled'}`}>
                   {f.label}
                 </button>
               ))}
               <select value={eqCatFilter} onChange={(e) => setEqCatFilter(e.target.value)}
-                className="ml-auto px-2 py-1 bg-[#F5F5F3] rounded-lg text-[10px] border-0 outline-none">
+                className="ml-auto px-2 py-1 bg-app-surface-alt rounded-lg text-[10px] border-0 outline-none">
                 <option value="all">全カテゴリ</option>
                 {Object.entries(EQUIPMENT_CATEGORIES).map(([k, v]) => (
                   <option key={k} value={k}>{v}</option>
@@ -3309,30 +3309,30 @@ export default function SettingsContent() {
               if (eqCatFilter !== 'all') filtered = filtered.filter(eq => eq.category === eqCatFilter);
 
               return filtered.length === 0 ? (
-                <p className="text-[11px] text-[#999] py-4 text-center">
+                <p className="text-[11px] text-app-text-mute py-4 text-center">
                   備品が登録されていません。経費登録時に消耗品費（¥10,000以上）を入力すると自動追加されます。
                 </p>
               ) : (
                 <div className="space-y-2">
                   {filtered.map(eq => (
-                    <div key={eq.id} className="flex items-center justify-between py-2.5 px-3 bg-[#F5F5F3] rounded-lg">
+                    <div key={eq.id} className="flex items-center justify-between py-2.5 px-3 bg-app-surface-alt rounded-lg">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text-[#1a1a1a] font-medium truncate">{eq.name}</span>
+                          <span className="text-sm text-app-text font-medium truncate">{eq.name}</span>
                           {eq.category && (
-                            <span className="text-[9px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full shrink-0">
+                            <span className="text-[9px] px-1.5 py-0.5 bg-app-gold/10 text-app-gold rounded-full shrink-0">
                               {EQUIPMENT_CATEGORIES[eq.category] || eq.category}
                             </span>
                           )}
                           <span className={`text-[9px] px-1.5 py-0.5 rounded-full shrink-0 ${
-                            eq.status === 'active' ? 'bg-[#1B4D3E]/10 text-[#1B4D3E]' :
-                            eq.status === 'disposed' ? 'bg-[#C23728]/10 text-[#C23728]' :
-                            'bg-[#999]/10 text-[#999]'
+                            eq.status === 'active' ? 'bg-app-green/10 text-app-green' :
+                            eq.status === 'disposed' ? 'bg-app-red/10 text-app-red' :
+                            'bg-app-text-mute/10 text-app-text-mute'
                           }`}>
                             {EQUIPMENT_STATUS[eq.status] || eq.status}
                           </span>
                         </div>
-                        <div className="text-[10px] text-[#999] mt-0.5 flex items-center gap-3">
+                        <div className="text-[10px] text-app-text-mute mt-0.5 flex items-center gap-3">
                           {eq.maker && <span>{eq.maker}</span>}
                           {eq.serial && <span>S/N: {eq.serial}</span>}
                           {eq.business_ratio < 100 && <span>事業{eq.business_ratio}%</span>}
@@ -3341,9 +3341,9 @@ export default function SettingsContent() {
                       </div>
                       <div className="flex items-center gap-1 shrink-0 ml-2">
                         <button onClick={() => { setEqEditModal(eq); setEqEditModalOpen(true); }}
-                          className="p-1 hover:bg-black/5 rounded-md"><Pencil className="w-3.5 h-3.5 text-[#999]" /></button>
+                          className="p-1 hover:bg-black/5 rounded-md"><Pencil className="w-3.5 h-3.5 text-app-text-mute" /></button>
                         <button onClick={() => setEqDeleteTarget(eq.id)}
-                          className="p-1 hover:bg-[#C23728]/10 rounded-md"><Trash2 className="w-3.5 h-3.5 text-[#999]" /></button>
+                          className="p-1 hover:bg-app-red/10 rounded-md"><Trash2 className="w-3.5 h-3.5 text-app-text-mute" /></button>
                       </div>
                     </div>
                   ))}
@@ -3356,7 +3356,7 @@ export default function SettingsContent() {
         {/* ── 固定資産台帳 ── */}
         <section className="mb-10">
           <div className="flex items-center justify-between mb-3">
-            <div className="text-[10px] font-medium tracking-widest text-[#999]">
+            <div className="text-[10px] font-medium tracking-widest text-app-text-mute">
               固定資産台帳
             </div>
             <button
@@ -3364,7 +3364,7 @@ export default function SettingsContent() {
                 setEditingAsset(null);
                 setAssetModalOpen(true);
               }}
-              className="flex items-center gap-1 text-xs text-[#D4A03A] hover:text-[#b8862e] transition-colors"
+              className="flex items-center gap-1 text-xs text-app-gold hover:text-app-gold-hover transition-colors"
             >
               <Plus className="w-3.5 h-3.5" />
               追加
@@ -3373,21 +3373,21 @@ export default function SettingsContent() {
 
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             {assets.length === 0 ? (
-              <div className="px-5 py-8 text-center text-sm text-[#999]">
+              <div className="px-5 py-8 text-center text-sm text-app-text-mute">
                 固定資産が登録されていません
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="border-b border-[#f0f0f0]">
-                      <th className="text-left px-4 py-2.5 text-[10px] font-medium tracking-wider text-[#999]">資産名</th>
-                      <th className="text-left px-4 py-2.5 text-[10px] font-medium tracking-wider text-[#999]">種類</th>
-                      <th className="text-left px-4 py-2.5 text-[10px] font-medium tracking-wider text-[#999]">取得日</th>
-                      <th className="text-right px-4 py-2.5 text-[10px] font-medium tracking-wider text-[#999]">取得価額</th>
-                      <th className="text-right px-4 py-2.5 text-[10px] font-medium tracking-wider text-[#999]">耐用年数</th>
-                      <th className="text-right px-4 py-2.5 text-[10px] font-medium tracking-wider text-[#999]">事業割合</th>
-                      <th className="text-right px-4 py-2.5 text-[10px] font-medium tracking-wider text-[#999]">年間償却</th>
+                    <tr className="border-b border-app-line">
+                      <th className="text-left px-4 py-2.5 text-[10px] font-medium tracking-wider text-app-text-mute">資産名</th>
+                      <th className="text-left px-4 py-2.5 text-[10px] font-medium tracking-wider text-app-text-mute">種類</th>
+                      <th className="text-left px-4 py-2.5 text-[10px] font-medium tracking-wider text-app-text-mute">取得日</th>
+                      <th className="text-right px-4 py-2.5 text-[10px] font-medium tracking-wider text-app-text-mute">取得価額</th>
+                      <th className="text-right px-4 py-2.5 text-[10px] font-medium tracking-wider text-app-text-mute">耐用年数</th>
+                      <th className="text-right px-4 py-2.5 text-[10px] font-medium tracking-wider text-app-text-mute">事業割合</th>
+                      <th className="text-right px-4 py-2.5 text-[10px] font-medium tracking-wider text-app-text-mute">年間償却</th>
                       <th className="px-4 py-2.5"></th>
                     </tr>
                   </thead>
@@ -3399,14 +3399,14 @@ export default function SettingsContent() {
                       const catLabel = ASSET_CATEGORIES.find(c => c.value === a.category)?.label || a.category;
 
                       return (
-                        <tr key={a.id} className="border-b border-[#fafafa] hover:bg-[#fafafa] transition-colors">
-                          <td className="px-4 py-2.5 text-[#333]">{a.name}</td>
-                          <td className="px-4 py-2.5 text-[#666]">{catLabel}</td>
-                          <td className="px-4 py-2.5 text-[#666]">{a.acquisition_date}</td>
+                        <tr key={a.id} className="border-b border-app-line-soft hover:bg-app-line-soft transition-colors">
+                          <td className="px-4 py-2.5 text-app-text-strong">{a.name}</td>
+                          <td className="px-4 py-2.5 text-app-text-sub">{catLabel}</td>
+                          <td className="px-4 py-2.5 text-app-text-sub">{a.acquisition_date}</td>
                           <td className="px-4 py-2.5 text-right font-['Saira_Condensed'] text-sm">{yen(a.acquisition_cost)}</td>
-                          <td className="px-4 py-2.5 text-right text-[#666]">{a.useful_life}年</td>
-                          <td className="px-4 py-2.5 text-right text-[#666]">{a.business_use_ratio}%</td>
-                          <td className="px-4 py-2.5 text-right font-['Saira_Condensed'] text-sm text-[#C23728]">{yen(annualDep)}/年</td>
+                          <td className="px-4 py-2.5 text-right text-app-text-sub">{a.useful_life}年</td>
+                          <td className="px-4 py-2.5 text-right text-app-text-sub">{a.business_use_ratio}%</td>
+                          <td className="px-4 py-2.5 text-right font-['Saira_Condensed'] text-sm text-app-red">{yen(annualDep)}/年</td>
                           <td className="px-4 py-2.5">
                             <div className="flex items-center gap-1 justify-end">
                               <button
@@ -3414,15 +3414,15 @@ export default function SettingsContent() {
                                   setEditingAsset(a);
                                   setAssetModalOpen(true);
                                 }}
-                                className="p-1 rounded hover:bg-[#eee] transition-colors"
+                                className="p-1 rounded hover:bg-app-button-disabled transition-colors"
                               >
-                                <Pencil className="w-3 h-3 text-[#999]" />
+                                <Pencil className="w-3 h-3 text-app-text-mute" />
                               </button>
                               <button
                                 onClick={() => setDeleteTarget(a.id)}
-                                className="p-1 rounded hover:bg-[#fee] transition-colors"
+                                className="p-1 rounded hover:bg-state-error-bg transition-colors"
                               >
-                                <Trash2 className="w-3 h-3 text-[#C23728]" />
+                                <Trash2 className="w-3 h-3 text-app-red" />
                               </button>
                             </div>
                           </td>
@@ -3438,7 +3438,7 @@ export default function SettingsContent() {
 
         {/* ── 経費テンプレート ── */}
         <section className="mb-10">
-          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+          <div className="text-[10px] font-medium tracking-widest text-app-text-mute mb-3">
             経費テンプレート
           </div>
 
@@ -3446,51 +3446,51 @@ export default function SettingsContent() {
           <div className="bg-white rounded-xl shadow-sm p-5 mb-4">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-xs font-medium text-[#1a1a1a] mb-0.5">交通費（業務）</p>
-                <p className="text-[10px] text-[#999]">目的・摘要・事業PJをまとめた業務シーン</p>
+                <p className="text-xs font-medium text-app-text mb-0.5">交通費（業務）</p>
+                <p className="text-[10px] text-app-text-mute">目的・摘要・事業PJをまとめた業務シーン</p>
               </div>
               <button
                 onClick={() => { setEditingTemplate(null); setTemplateModalOpen('transport'); }}
-                className="flex items-center gap-1 px-3 py-1.5 text-[11px] text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] transition-colors whitespace-nowrap ml-3"
+                className="flex items-center gap-1 px-3 py-1.5 text-[11px] text-white bg-app-button rounded-lg hover:bg-app-button-hover transition-colors whitespace-nowrap ml-3"
               >
                 <Plus className="w-3.5 h-3.5" />追加
               </button>
             </div>
             {expenseTemplates.filter(t => t.template_type === 'transport').length === 0 ? (
-              <p className="text-xs text-[#bbb] text-center py-4">交通費テンプレートがまだありません</p>
+              <p className="text-xs text-app-text-fade text-center py-4">交通費テンプレートがまだありません</p>
             ) : (
               <div className="space-y-3">
                 {expenseTemplates.filter(t => t.template_type === 'transport').map(tmpl => {
                   const purposeLabel = tmpl.transport_purpose || '';
                   const descLabel = tmpl.description || '';
                   return (
-                    <div key={tmpl.id} className="flex items-start justify-between py-3 px-4 bg-[#F5F5F3] rounded-xl">
+                    <div key={tmpl.id} className="flex items-start justify-between py-3 px-4 bg-app-surface-alt rounded-xl">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <span className="text-xs font-medium text-[#1a1a1a]">{tmpl.name}</span>
+                          <span className="text-xs font-medium text-app-text">{tmpl.name}</span>
                           {purposeLabel && (
-                            <span className="text-[9px] px-1.5 py-0.5 bg-[#1a1a1a]/5 text-[#666] rounded-full">{purposeLabel}</span>
+                            <span className="text-[9px] px-1.5 py-0.5 bg-app-button/5 text-app-text-sub rounded-full">{purposeLabel}</span>
                           )}
                           {tmpl.use_count > 0 && (
-                            <span className="text-[9px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full">{tmpl.use_count}回使用</span>
+                            <span className="text-[9px] px-1.5 py-0.5 bg-app-gold/10 text-app-gold rounded-full">{tmpl.use_count}回使用</span>
                           )}
                         </div>
                         {descLabel && (
-                          <p className="text-[10px] text-[#999] truncate mt-1">{descLabel}</p>
+                          <p className="text-[10px] text-app-text-mute truncate mt-1">{descLabel}</p>
                         )}
                       </div>
                       <div className="flex items-center gap-1 ml-3">
                         <button
                           onClick={() => { setEditingTemplate(tmpl); setTemplateModalOpen('transport'); }}
-                          className="p-1.5 rounded-lg hover:bg-[#eee] transition-colors"
+                          className="p-1.5 rounded-lg hover:bg-app-button-disabled transition-colors"
                         >
-                          <Pencil className="w-3 h-3 text-[#999]" />
+                          <Pencil className="w-3 h-3 text-app-text-mute" />
                         </button>
                         <button
                           onClick={() => setTemplateDeleteTarget(tmpl.id)}
-                          className="p-1.5 rounded-lg hover:bg-[#fee] transition-colors"
+                          className="p-1.5 rounded-lg hover:bg-state-error-bg transition-colors"
                         >
-                          <Trash2 className="w-3 h-3 text-[#C23728]" />
+                          <Trash2 className="w-3 h-3 text-app-red" />
                         </button>
                       </div>
                     </div>
@@ -3504,20 +3504,20 @@ export default function SettingsContent() {
           <div className="bg-white rounded-xl shadow-sm p-5 mb-4">
             <div className="flex items-start justify-between mb-4 gap-3">
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-[#1a1a1a] mb-0.5">ルート</p>
-                <p className="text-[10px] text-[#999]">片道＋逆順ペアの基本単位、または往復パッケージ</p>
+                <p className="text-xs font-medium text-app-text mb-0.5">ルート</p>
+                <p className="text-[10px] text-app-text-mute">片道＋逆順ペアの基本単位、または往復パッケージ</p>
               </div>
               <div className="flex gap-1.5 shrink-0">
                 <button
                   onClick={() => { setEditingRoute(null); setRouteModalOpen(true); }}
-                  className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] transition-colors whitespace-nowrap"
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] text-white bg-app-button rounded-lg hover:bg-app-button-hover transition-colors whitespace-nowrap"
                   title="片道テンプレを追加"
                 >
                   <Plus className="w-3 h-3" />片道
                 </button>
                 <button
                   onClick={() => { setEditingRoute(null); setPackageModalOpen(true); }}
-                  className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] text-[#1a1a1a] bg-[#D4A03A]/15 border border-[#D4A03A]/30 rounded-lg hover:bg-[#D4A03A]/25 transition-colors whitespace-nowrap"
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] text-app-text bg-app-gold/15 border border-app-gold/30 rounded-lg hover:bg-app-gold/25 transition-colors whitespace-nowrap"
                   title="往復パッケージを追加（片道テンプレを2つ組み合わせ）"
                 >
                   <Plus className="w-3 h-3" />パッケージ
@@ -3525,7 +3525,7 @@ export default function SettingsContent() {
               </div>
             </div>
             {routeTemplates.length === 0 ? (
-              <p className="text-xs text-[#bbb] text-center py-4">ルートテンプレートがまだありません</p>
+              <p className="text-xs text-app-text-fade text-center py-4">ルートテンプレートがまだありません</p>
             ) : (() => {
               // v0.14.0 Phase 5-A: パッケージと片道を分離表示
               const packages = routeTemplates.filter(r => r.template_kind === 'roundtrip_package');
@@ -3536,7 +3536,7 @@ export default function SettingsContent() {
                   {/* ── 往復パッケージ ── */}
                   {packages.length > 0 && (
                     <div>
-                      <p className="text-[10px] text-[#999] font-medium tracking-wide uppercase mb-2">往復パッケージ</p>
+                      <p className="text-[10px] text-app-text-mute font-medium tracking-wide uppercase mb-2">往復パッケージ</p>
                       <div className="space-y-3">
                         {packages.map(pkg => {
                           const outbound = pkg.outbound_route_id ? onewayById.get(pkg.outbound_route_id) : null;
@@ -3548,49 +3548,49 @@ export default function SettingsContent() {
                           const returnLabel = ret ? (ret.route_legs || []).map(l => l.from).concat((ret.route_legs || []).slice(-1).map(l => l.to)).filter(Boolean).join(' → ') : '';
                           const brokenRef = !outbound || !ret;
                           return (
-                            <div key={pkg.id} className={`flex items-start justify-between py-3 px-4 rounded-xl ${brokenRef ? 'bg-[#FEF5E7]' : 'bg-[#F5F5F3]'}`}>
+                            <div key={pkg.id} className={`flex items-start justify-between py-3 px-4 rounded-xl ${brokenRef ? 'bg-state-warn-bg' : 'bg-app-surface-alt'}`}>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                  <span className="text-xs font-medium text-[#1a1a1a]">{pkg.name}</span>
-                                  <span className="text-[9px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full">往復パッケージ</span>
+                                  <span className="text-xs font-medium text-app-text">{pkg.name}</span>
+                                  <span className="text-[9px] px-1.5 py-0.5 bg-app-gold/10 text-app-gold rounded-full">往復パッケージ</span>
                                   {pkg.use_count > 0 && (
-                                    <span className="text-[9px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full">{pkg.use_count}回使用</span>
+                                    <span className="text-[9px] px-1.5 py-0.5 bg-app-gold/10 text-app-gold rounded-full">{pkg.use_count}回使用</span>
                                   )}
                                   {brokenRef && (
-                                    <span className="text-[9px] px-1.5 py-0.5 bg-[#C23728]/10 text-[#C23728] rounded-full">参照先アーカイブ</span>
+                                    <span className="text-[9px] px-1.5 py-0.5 bg-app-red/10 text-app-red rounded-full">参照先アーカイブ</span>
                                   )}
                                 </div>
                                 {outbound && outboundLabel && (
-                                  <p className="text-[10px] text-[#999] truncate">往路: {outboundLabel}</p>
+                                  <p className="text-[10px] text-app-text-mute truncate">往路: {outboundLabel}</p>
                                 )}
                                 {ret && returnLabel && (
-                                  <p className="text-[10px] text-[#999] truncate">復路: {returnLabel}</p>
+                                  <p className="text-[10px] text-app-text-mute truncate">復路: {returnLabel}</p>
                                 )}
                                 {!outbound && (
-                                  <p className="text-[10px] text-[#C23728]">往路テンプレが見つかりません</p>
+                                  <p className="text-[10px] text-app-red">往路テンプレが見つかりません</p>
                                 )}
                                 {!ret && (
-                                  <p className="text-[10px] text-[#C23728]">復路テンプレが見つかりません</p>
+                                  <p className="text-[10px] text-app-red">復路テンプレが見つかりません</p>
                                 )}
                                 {!brokenRef && (
                                   <div className="flex items-center gap-2 mt-1">
-                                    <span className="text-[11px] font-medium text-[#1a1a1a]">¥{total.toLocaleString()}</span>
-                                    <span className="text-[9px] text-[#bbb]">往復合計</span>
+                                    <span className="text-[11px] font-medium text-app-text">¥{total.toLocaleString()}</span>
+                                    <span className="text-[9px] text-app-text-fade">往復合計</span>
                                   </div>
                                 )}
                               </div>
                               <div className="flex items-center gap-1 ml-3">
                                 <button
                                   onClick={() => { setEditingRoute(pkg); setPackageModalOpen(true); }}
-                                  className="p-1.5 rounded-lg hover:bg-[#eee] transition-colors"
+                                  className="p-1.5 rounded-lg hover:bg-app-button-disabled transition-colors"
                                 >
-                                  <Pencil className="w-3 h-3 text-[#999]" />
+                                  <Pencil className="w-3 h-3 text-app-text-mute" />
                                 </button>
                                 <button
                                   onClick={() => setRouteDeleteTarget(pkg.id)}
-                                  className="p-1.5 rounded-lg hover:bg-[#fee] transition-colors"
+                                  className="p-1.5 rounded-lg hover:bg-state-error-bg transition-colors"
                                 >
-                                  <Trash2 className="w-3 h-3 text-[#C23728]" />
+                                  <Trash2 className="w-3 h-3 text-app-red" />
                                 </button>
                               </div>
                             </div>
@@ -3603,7 +3603,7 @@ export default function SettingsContent() {
                   {/* ── 片道 ── */}
                   {oneways.length > 0 && (
                     <div>
-                      <p className="text-[10px] text-[#999] font-medium tracking-wide uppercase mb-2">片道</p>
+                      <p className="text-[10px] text-app-text-mute font-medium tracking-wide uppercase mb-2">片道</p>
                       <div className="space-y-3">
                         {oneways.map(route => {
                           const total = (route.route_legs || []).reduce((s, l) => s + (l.amount || 0), 0);
@@ -3612,48 +3612,48 @@ export default function SettingsContent() {
                             : '';
                           const pair = route.paired_reverse_id ? onewayById.get(route.paired_reverse_id) : null;
                           return (
-                            <div key={route.id} className="flex items-start justify-between py-3 px-4 bg-[#F5F5F3] rounded-xl">
+                            <div key={route.id} className="flex items-start justify-between py-3 px-4 bg-app-surface-alt rounded-xl">
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                  <span className="text-xs font-medium text-[#1a1a1a]">{route.name}</span>
+                                  <span className="text-xs font-medium text-app-text">{route.name}</span>
                                   {pair ? (
-                                    <span className="text-[9px] px-1.5 py-0.5 bg-[#1B4D3E]/10 text-[#1B4D3E] rounded-full">⇔ ペアあり</span>
+                                    <span className="text-[9px] px-1.5 py-0.5 bg-app-green/10 text-app-green rounded-full">⇔ ペアあり</span>
                                   ) : (
                                     <button
                                       onClick={() => createReversePair(route)}
-                                      className="text-[9px] px-1.5 py-0.5 bg-[#999]/10 text-[#666] rounded-full hover:bg-[#D4A03A]/20 hover:text-[#D4A03A] transition-colors"
+                                      className="text-[9px] px-1.5 py-0.5 bg-app-text-mute/10 text-app-text-sub rounded-full hover:bg-app-gold/20 hover:text-app-gold transition-colors"
                                       title="逆順ペアを作成"
                                     >
                                       ＋ ペアを作成
                                     </button>
                                   )}
                                   {route.use_count > 0 && (
-                                    <span className="text-[9px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full">{route.use_count}回使用</span>
+                                    <span className="text-[9px] px-1.5 py-0.5 bg-app-gold/10 text-app-gold rounded-full">{route.use_count}回使用</span>
                                   )}
                                 </div>
                                 {routeLabel && (
-                                  <p className="text-[10px] text-[#999] truncate">{routeLabel}</p>
+                                  <p className="text-[10px] text-app-text-mute truncate">{routeLabel}</p>
                                 )}
                                 {pair && (
-                                  <p className="text-[10px] text-[#1B4D3E]/70 truncate">ペア: {pair.name}</p>
+                                  <p className="text-[10px] text-app-green/70 truncate">ペア: {pair.name}</p>
                                 )}
                                 <div className="flex items-center gap-2 mt-1">
-                                  <span className="text-[11px] font-medium text-[#1a1a1a]">¥{total.toLocaleString()}</span>
-                                  <span className="text-[9px] text-[#bbb]">{(route.route_legs || []).length}区間</span>
+                                  <span className="text-[11px] font-medium text-app-text">¥{total.toLocaleString()}</span>
+                                  <span className="text-[9px] text-app-text-fade">{(route.route_legs || []).length}区間</span>
                                 </div>
                               </div>
                               <div className="flex items-center gap-1 ml-3">
                                 <button
                                   onClick={() => { setEditingRoute(route); setRouteModalOpen(true); }}
-                                  className="p-1.5 rounded-lg hover:bg-[#eee] transition-colors"
+                                  className="p-1.5 rounded-lg hover:bg-app-button-disabled transition-colors"
                                 >
-                                  <Pencil className="w-3 h-3 text-[#999]" />
+                                  <Pencil className="w-3 h-3 text-app-text-mute" />
                                 </button>
                                 <button
                                   onClick={() => setRouteDeleteTarget(route.id)}
-                                  className="p-1.5 rounded-lg hover:bg-[#fee] transition-colors"
+                                  className="p-1.5 rounded-lg hover:bg-state-error-bg transition-colors"
                                 >
-                                  <Trash2 className="w-3 h-3 text-[#C23728]" />
+                                  <Trash2 className="w-3 h-3 text-app-red" />
                                 </button>
                               </div>
                             </div>
@@ -3664,20 +3664,20 @@ export default function SettingsContent() {
                   )}
 
                   {/* v0.14.0 Phase 5-E: アーカイブ済みテンプレの表示・復元 */}
-                  <div className="mt-5 pt-4 border-t border-[#f0f0f0]">
+                  <div className="mt-5 pt-4 border-t border-app-line">
                     <button
                       onClick={() => setShowArchivedRoutes(!showArchivedRoutes)}
-                      className="text-[10px] text-[#999] hover:text-[#1a1a1a] transition-colors"
+                      className="text-[10px] text-app-text-mute hover:text-app-text transition-colors"
                     >
                       {showArchivedRoutes ? '▼' : '▶'} アーカイブ済みを表示
                       {showArchivedRoutes && archivedRouteTemplates.length > 0 && (
-                        <span className="ml-1 text-[#bbb]">({archivedRouteTemplates.length})</span>
+                        <span className="ml-1 text-app-text-fade">({archivedRouteTemplates.length})</span>
                       )}
                     </button>
                     {showArchivedRoutes && (
                       <div className="mt-3 space-y-2">
                         {archivedRouteTemplates.length === 0 ? (
-                          <p className="text-[10px] text-[#bbb] text-center py-3">アーカイブ済みのルートテンプレはありません</p>
+                          <p className="text-[10px] text-app-text-fade text-center py-3">アーカイブ済みのルートテンプレはありません</p>
                         ) : (
                           archivedRouteTemplates.map(route => {
                             const isPackage = route.template_kind === 'roundtrip_package';
@@ -3686,24 +3686,24 @@ export default function SettingsContent() {
                               ? (route.route_legs[0]?.from || '') + ' → ' + (route.route_legs[route.route_legs.length - 1]?.to || '')
                               : '';
                             return (
-                              <div key={route.id} className="flex items-start justify-between py-2.5 px-3 bg-[#F5F5F3]/60 rounded-lg opacity-60">
+                              <div key={route.id} className="flex items-start justify-between py-2.5 px-3 bg-app-surface-alt/60 rounded-lg opacity-60">
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                                    <span className="text-[11px] text-[#999] line-through">{route.name}</span>
-                                    <span className="text-[9px] px-1.5 py-0.5 bg-[#999]/10 text-[#666] rounded-full">
+                                    <span className="text-[11px] text-app-text-mute line-through">{route.name}</span>
+                                    <span className="text-[9px] px-1.5 py-0.5 bg-app-text-mute/10 text-app-text-sub rounded-full">
                                       {isPackage ? 'パッケージ' : '片道'}
                                     </span>
                                   </div>
                                   {!isPackage && routeLabel && (
-                                    <p className="text-[10px] text-[#bbb] truncate line-through">{routeLabel}</p>
+                                    <p className="text-[10px] text-app-text-fade truncate line-through">{routeLabel}</p>
                                   )}
                                   {!isPackage && total > 0 && (
-                                    <span className="text-[10px] text-[#bbb]">¥{total.toLocaleString()}</span>
+                                    <span className="text-[10px] text-app-text-fade">¥{total.toLocaleString()}</span>
                                   )}
                                 </div>
                                 <button
                                   onClick={() => restoreRouteTemplate(route.id)}
-                                  className="ml-3 px-2.5 py-1 text-[10px] text-[#1a1a1a] bg-white border border-[#e8e8e8] rounded-lg hover:bg-[#F5F5F3] transition-colors whitespace-nowrap"
+                                  className="ml-3 px-2.5 py-1 text-[10px] text-app-text bg-white border border-app-line-medium rounded-lg hover:bg-app-surface-alt transition-colors whitespace-nowrap"
                                 >
                                   復元
                                 </button>
@@ -3723,52 +3723,52 @@ export default function SettingsContent() {
           <div className="bg-white rounded-xl shadow-sm p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-xs font-medium text-[#1a1a1a] mb-0.5">汎用</p>
-                <p className="text-[10px] text-[#999]">よく使う経費パターンを登録→科目選択時にチップ表示</p>
+                <p className="text-xs font-medium text-app-text mb-0.5">汎用</p>
+                <p className="text-[10px] text-app-text-mute">よく使う経費パターンを登録→科目選択時にチップ表示</p>
               </div>
               <button
                 onClick={() => { setEditingTemplate(null); setTemplateModalOpen('general'); }}
-                className="flex items-center gap-1 px-3 py-1.5 text-[11px] text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] transition-colors whitespace-nowrap ml-3"
+                className="flex items-center gap-1 px-3 py-1.5 text-[11px] text-white bg-app-button rounded-lg hover:bg-app-button-hover transition-colors whitespace-nowrap ml-3"
               >
                 <Plus className="w-3.5 h-3.5" />追加
               </button>
             </div>
             {expenseTemplates.filter(t => t.template_type === 'general').length === 0 ? (
-              <p className="text-xs text-[#bbb] text-center py-4">汎用テンプレートがまだありません</p>
+              <p className="text-xs text-app-text-fade text-center py-4">汎用テンプレートがまだありません</p>
             ) : (
               <div className="space-y-3">
                 {expenseTemplates.filter(t => t.template_type === 'general').map(tmpl => {
                   const kamokuName = tmpl.kamoku ? (KAMOKU[tmpl.kamoku as keyof typeof KAMOKU]?.name || tmpl.kamoku) : '—';
                   return (
-                    <div key={tmpl.id} className="flex items-start justify-between py-3 px-4 bg-[#F5F5F3] rounded-xl">
+                    <div key={tmpl.id} className="flex items-start justify-between py-3 px-4 bg-app-surface-alt rounded-xl">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-medium text-[#1a1a1a]">{tmpl.name}</span>
-                          <span className="text-[9px] px-1.5 py-0.5 bg-[#eee] text-[#999] rounded-full">{kamokuName}</span>
+                          <span className="text-xs font-medium text-app-text">{tmpl.name}</span>
+                          <span className="text-[9px] px-1.5 py-0.5 bg-app-button-disabled text-app-text-mute rounded-full">{kamokuName}</span>
                           {tmpl.use_count > 0 && (
-                            <span className="text-[9px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full">{tmpl.use_count}回使用</span>
+                            <span className="text-[9px] px-1.5 py-0.5 bg-app-gold/10 text-app-gold rounded-full">{tmpl.use_count}回使用</span>
                           )}
                         </div>
                         {tmpl.store && (
-                          <p className="text-[10px] text-[#999] truncate">{tmpl.store}</p>
+                          <p className="text-[10px] text-app-text-mute truncate">{tmpl.store}</p>
                         )}
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[11px] font-medium text-[#1a1a1a]">¥{(tmpl.amount || 0).toLocaleString()}</span>
-                          <span className="text-[9px] text-[#bbb]">{tmpl.payment_method === 'bank_account' ? '口座' : '個人'}</span>
+                          <span className="text-[11px] font-medium text-app-text">¥{(tmpl.amount || 0).toLocaleString()}</span>
+                          <span className="text-[9px] text-app-text-fade">{tmpl.payment_method === 'bank_account' ? '口座' : '個人'}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-1 ml-3">
                         <button
                           onClick={() => { setEditingTemplate(tmpl); setTemplateModalOpen('general'); }}
-                          className="p-1.5 rounded-lg hover:bg-[#eee] transition-colors"
+                          className="p-1.5 rounded-lg hover:bg-app-button-disabled transition-colors"
                         >
-                          <Pencil className="w-3 h-3 text-[#999]" />
+                          <Pencil className="w-3 h-3 text-app-text-mute" />
                         </button>
                         <button
                           onClick={() => setTemplateDeleteTarget(tmpl.id)}
-                          className="p-1.5 rounded-lg hover:bg-[#fee] transition-colors"
+                          className="p-1.5 rounded-lg hover:bg-state-error-bg transition-colors"
                         >
-                          <Trash2 className="w-3 h-3 text-[#C23728]" />
+                          <Trash2 className="w-3 h-3 text-app-red" />
                         </button>
                       </div>
                     </div>
@@ -3781,62 +3781,62 @@ export default function SettingsContent() {
 
         {/* ── v0.8: 請求書テンプレ ── */}
         <section className="mb-10">
-          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+          <div className="text-[10px] font-medium tracking-widest text-app-text-mute mb-3">
             請求書テンプレ
           </div>
 
           <div className="bg-white rounded-xl shadow-sm p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-xs font-medium text-[#1a1a1a] mb-0.5">汎用</p>
-                <p className="text-[10px] text-[#999]">請求書新規作成時に呼び出せる雛形（明細・備考・支払条件・源泉設定）</p>
+                <p className="text-xs font-medium text-app-text mb-0.5">汎用</p>
+                <p className="text-[10px] text-app-text-mute">請求書新規作成時に呼び出せる雛形（明細・備考・支払条件・源泉設定）</p>
               </div>
               <button
                 onClick={() => { setEditingInvTpl(null); setInvTplModalOpen(true); }}
-                className="flex items-center gap-1 px-3 py-1.5 text-[11px] text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] transition-colors whitespace-nowrap ml-3"
+                className="flex items-center gap-1 px-3 py-1.5 text-[11px] text-white bg-app-button rounded-lg hover:bg-app-button-hover transition-colors whitespace-nowrap ml-3"
               >
                 <Plus className="w-3.5 h-3.5" />追加
               </button>
             </div>
             {invoiceTemplates.length === 0 ? (
-              <p className="text-xs text-[#bbb] text-center py-4">請求書テンプレがまだありません</p>
+              <p className="text-xs text-app-text-fade text-center py-4">請求書テンプレがまだありません</p>
             ) : (
               <div className="space-y-3">
                 {invoiceTemplates.map(tmpl => {
                   const items = invoiceTemplateItems[tmpl.id] || [];
                   const subtotal = items.reduce((s: number, it: any) => s + Number(it.amount || 0), 0);
                   return (
-                    <div key={tmpl.id} className="flex items-start justify-between py-3 px-4 bg-[#F5F5F3] rounded-xl">
+                    <div key={tmpl.id} className="flex items-start justify-between py-3 px-4 bg-app-surface-alt rounded-xl">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-medium text-[#1a1a1a]">{tmpl.name}</span>
+                          <span className="text-xs font-medium text-app-text">{tmpl.name}</span>
                           {tmpl.withholding_tax && (
-                            <span className="text-[9px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full">源泉あり</span>
+                            <span className="text-[9px] px-1.5 py-0.5 bg-app-gold/10 text-app-gold rounded-full">源泉あり</span>
                           )}
                           {tmpl.use_count > 0 && (
-                            <span className="text-[9px] px-1.5 py-0.5 bg-[#eee] text-[#999] rounded-full">{tmpl.use_count}回使用</span>
+                            <span className="text-[9px] px-1.5 py-0.5 bg-app-button-disabled text-app-text-mute rounded-full">{tmpl.use_count}回使用</span>
                           )}
                         </div>
                         {tmpl.subject && (
-                          <p className="text-[10px] text-[#999] truncate">{tmpl.subject}</p>
+                          <p className="text-[10px] text-app-text-mute truncate">{tmpl.subject}</p>
                         )}
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[11px] font-medium text-[#1a1a1a]">¥{subtotal.toLocaleString()}</span>
-                          <span className="text-[9px] text-[#bbb]">{items.length}明細</span>
+                          <span className="text-[11px] font-medium text-app-text">¥{subtotal.toLocaleString()}</span>
+                          <span className="text-[9px] text-app-text-fade">{items.length}明細</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-1 ml-3">
                         <button
                           onClick={() => { setEditingInvTpl(tmpl); setInvTplModalOpen(true); }}
-                          className="p-1.5 rounded-lg hover:bg-[#eee] transition-colors"
+                          className="p-1.5 rounded-lg hover:bg-app-button-disabled transition-colors"
                         >
-                          <Pencil className="w-3 h-3 text-[#999]" />
+                          <Pencil className="w-3 h-3 text-app-text-mute" />
                         </button>
                         <button
                           onClick={() => setInvTplDeleteTarget(tmpl.id)}
-                          className="p-1.5 rounded-lg hover:bg-[#fee] transition-colors"
+                          className="p-1.5 rounded-lg hover:bg-state-error-bg transition-colors"
                         >
-                          <Trash2 className="w-3 h-3 text-[#C23728]" />
+                          <Trash2 className="w-3 h-3 text-app-red" />
                         </button>
                       </div>
                     </div>
@@ -3851,16 +3851,16 @@ export default function SettingsContent() {
 
         {/* v0.15.0: 内訳の項目管理（制作費・取材費） */}
         <section className="mb-6 mt-4">
-          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+          <div className="text-[10px] font-medium tracking-widest text-app-text-mute mb-3">
             内訳の項目管理
           </div>
           <div className="bg-white rounded-xl shadow-sm p-4 space-y-4">
-            <p className="text-[11px] text-[#666] leading-relaxed">
+            <p className="text-[11px] text-app-text-sub leading-relaxed">
               制作費・取材費を入力する際に選択する「内訳」を管理できます。<br />
               撮影・取材の実態に合わせて自由に項目を追加・編集してください。
             </p>
-            <div className="bg-[#FFF9EA] border border-[#D4A03A]/30 rounded-lg px-3 py-2">
-              <p className="text-[10px] text-[#8B6D1F] leading-relaxed">
+            <div className="bg-state-warn-bg border border-app-gold/30 rounded-lg px-3 py-2">
+              <p className="text-[10px] text-app-gold-deep leading-relaxed">
                 💡 <span className="font-medium">ラベルの編集について</span><br />
                 日本語ラベルのみの変更です。内訳項目の意味合いや既存取引の集計・紐付けは維持されます。
               </p>
@@ -3871,10 +3871,10 @@ export default function SettingsContent() {
               const activeItems = subCategories.filter(s => s.parent_kamoku === parent && s.is_active);
               const archivedItems = subCategories.filter(s => s.parent_kamoku === parent && !s.is_active);
               return (
-                <div key={parent} className="border border-[#EEE] rounded-lg p-3">
+                <div key={parent} className="border border-app-line-medium rounded-lg p-3">
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-[12px] font-medium text-[#1a1a1a]">{parentLabel}の内訳</h3>
-                    <span className="text-[10px] text-[#999]">{activeItems.length}件</span>
+                    <h3 className="text-[12px] font-medium text-app-text">{parentLabel}の内訳</h3>
+                    <span className="text-[10px] text-app-text-mute">{activeItems.length}件</span>
                   </div>
 
                   <div className="flex flex-wrap gap-1.5">
@@ -3882,7 +3882,7 @@ export default function SettingsContent() {
                       const isEditing = subCatEditTarget?.id === s.id;
                       if (isEditing) {
                         return (
-                          <div key={s.id} className="flex items-center gap-1 bg-[#FFF9EA] border border-[#D4A03A]/50 rounded-full px-2 py-0.5">
+                          <div key={s.id} className="flex items-center gap-1 bg-state-warn-bg border border-app-gold/50 rounded-full px-2 py-0.5">
                             <input
                               type="text"
                               value={subCatEditTarget.label}
@@ -3897,26 +3897,26 @@ export default function SettingsContent() {
                             <button
                               type="button"
                               onClick={() => handleSubCatRename(s.id, subCatEditTarget.label)}
-                              className="text-[10px] text-[#1B4D3E] px-1"
+                              className="text-[10px] text-app-green px-1"
                             >保存</button>
                             <button
                               type="button"
                               onClick={() => setSubCatEditTarget(null)}
-                              className="text-[10px] text-[#999] px-1"
+                              className="text-[10px] text-app-text-mute px-1"
                             >×</button>
                           </div>
                         );
                       }
                       return (
-                        <div key={s.id} className="group relative flex items-center gap-1 bg-[#F5F5F3] rounded-full px-3 py-1 text-[11px]">
-                          <span className="text-[#333]">{s.label}</span>
+                        <div key={s.id} className="group relative flex items-center gap-1 bg-app-surface-alt rounded-full px-3 py-1 text-[11px]">
+                          <span className="text-app-text-strong">{s.label}</span>
                           {s.is_system && (
-                            <span className="text-[8px] text-[#999] bg-white rounded px-1">システム</span>
+                            <span className="text-[8px] text-app-text-mute bg-white rounded px-1">システム</span>
                           )}
                           <button
                             type="button"
                             onClick={() => setSubCatEditTarget({ id: s.id, label: s.label })}
-                            className="ml-1 text-[#999] hover:text-[#D4A03A]"
+                            className="ml-1 text-app-text-mute hover:text-app-gold"
                             title="編集"
                           >
                             <Pencil className="w-2.5 h-2.5" />
@@ -3924,7 +3924,7 @@ export default function SettingsContent() {
                           <button
                             type="button"
                             onClick={() => handleSubCatDeleteClick(s.id, s.label, s.is_system)}
-                            className="text-[#999] hover:text-[#C23728]"
+                            className="text-app-text-mute hover:text-app-red"
                             title="削除"
                           >
                             <Trash2 className="w-2.5 h-2.5" />
@@ -3934,7 +3934,7 @@ export default function SettingsContent() {
                     })}
 
                     {subCatAddingFor === parent ? (
-                      <div className="flex items-center gap-1 bg-white border border-dashed border-[#D4A03A]/60 rounded-full px-2 py-0.5">
+                      <div className="flex items-center gap-1 bg-white border border-dashed border-app-gold/60 rounded-full px-2 py-0.5">
                         <input
                           type="text"
                           value={subCatInputValue}
@@ -3953,19 +3953,19 @@ export default function SettingsContent() {
                         <button
                           type="button"
                           onClick={() => handleSubCatAdd(parent, subCatInputValue)}
-                          className="text-[10px] text-[#1B4D3E] px-1"
+                          className="text-[10px] text-app-green px-1"
                         >追加</button>
                         <button
                           type="button"
                           onClick={() => { setSubCatAddingFor(null); setSubCatInputValue(''); }}
-                          className="text-[10px] text-[#999] px-1"
+                          className="text-[10px] text-app-text-mute px-1"
                         >×</button>
                       </div>
                     ) : (
                       <button
                         type="button"
                         onClick={() => { setSubCatAddingFor(parent); setSubCatInputValue(''); }}
-                        className="px-3 py-1 rounded-full text-[11px] bg-white border border-dashed border-[#D4A03A]/60 text-[#D4A03A] hover:bg-[#FFF9EA]"
+                        className="px-3 py-1 rounded-full text-[11px] bg-white border border-dashed border-app-gold/60 text-app-gold hover:bg-state-warn-bg"
                       >
                         ＋ 新規追加
                       </button>
@@ -3974,17 +3974,17 @@ export default function SettingsContent() {
 
                   {archivedItems.length > 0 && (
                     <details className="mt-3">
-                      <summary className="text-[10px] text-[#999] cursor-pointer">
+                      <summary className="text-[10px] text-app-text-mute cursor-pointer">
                         削除済み（{archivedItems.length}件）
                       </summary>
                       <div className="flex flex-wrap gap-1.5 mt-2">
                         {archivedItems.map((s) => (
-                          <div key={s.id} className="flex items-center gap-1 bg-[#FAFAF8] rounded-full px-3 py-1 text-[11px] text-[#999]">
+                          <div key={s.id} className="flex items-center gap-1 bg-app-surface rounded-full px-3 py-1 text-[11px] text-app-text-mute">
                             <span className="line-through">{s.label}</span>
                             <button
                               type="button"
                               onClick={() => handleSubCatRestore(s.id)}
-                              className="text-[10px] text-[#1B4D3E] hover:underline"
+                              className="text-[10px] text-app-green hover:underline"
                             >復元</button>
                           </div>
                         ))}
@@ -4026,10 +4026,10 @@ export default function SettingsContent() {
                 {usageCount === 0 ? (
                   /* 0件時: シンプル削除モーダル */
                   <>
-                    <h3 className="text-[14px] font-medium text-[#1a1a1a] mb-3">
-                      「<span className="text-[#1a1a1a]">{subCatDeleteTarget.label}</span>」を削除しますか？
+                    <h3 className="text-[14px] font-medium text-app-text mb-3">
+                      「<span className="text-app-text">{subCatDeleteTarget.label}</span>」を削除しますか？
                     </h3>
-                    <p className="text-[11px] text-[#666] mb-4">
+                    <p className="text-[11px] text-app-text-sub mb-4">
                       この項目を使っている取引はありません。
                     </p>
                     <div className="flex gap-2 justify-end">
@@ -4037,7 +4037,7 @@ export default function SettingsContent() {
                         type="button"
                         onClick={closeModal}
                         disabled={subCatDeleteInProgress}
-                        className="px-3 py-1.5 text-[11px] text-[#666] hover:bg-[#F5F5F3] rounded-lg disabled:opacity-50"
+                        className="px-3 py-1.5 text-[11px] text-app-text-sub hover:bg-app-surface-alt rounded-lg disabled:opacity-50"
                       >
                         キャンセル
                       </button>
@@ -4045,7 +4045,7 @@ export default function SettingsContent() {
                         type="button"
                         onClick={handleSubCatDeleteConfirm}
                         disabled={subCatDeleteInProgress}
-                        className="px-3 py-1.5 text-[11px] bg-[#C23728] text-white hover:bg-[#A82C1F] rounded-lg disabled:opacity-50"
+                        className="px-3 py-1.5 text-[11px] bg-app-red text-white hover:bg-app-red-hover rounded-lg disabled:opacity-50"
                       >
                         {subCatDeleteInProgress ? '削除中…' : '削除する'}
                       </button>
@@ -4054,11 +4054,11 @@ export default function SettingsContent() {
                 ) : (
                   /* 1件以上時: 移行付き削除モーダル */
                   <>
-                    <h3 className="text-[14px] font-medium text-[#1a1a1a] mb-3">
-                      「<span className="text-[#1a1a1a]">{subCatDeleteTarget.label}</span>」を削除しますか？
+                    <h3 className="text-[14px] font-medium text-app-text mb-3">
+                      「<span className="text-app-text">{subCatDeleteTarget.label}</span>」を削除しますか？
                     </h3>
-                    <p className="text-[11px] text-[#666] mb-3">
-                      この項目で登録されている経費が <span className="font-medium text-[#C23728]">{usageCount}件</span> あります。<br />
+                    <p className="text-[11px] text-app-text-sub mb-3">
+                      この項目で登録されている経費が <span className="font-medium text-app-red">{usageCount}件</span> あります。<br />
                       削除する場合は別の項目への移行する必要があります。
                     </p>
 
@@ -4076,7 +4076,7 @@ export default function SettingsContent() {
                           disabled={migrationCandidates.length === 0 || subCatDeleteInProgress}
                         />
                         <div className="flex-1 min-w-0">
-                          <div className="text-[12px] text-[#333] mb-1">既存の項目に置き換え</div>
+                          <div className="text-[12px] text-app-text-strong mb-1">既存の項目に置き換え</div>
                           <select
                             value={subCatMigrateTargetKey}
                             onChange={(e) => {
@@ -4084,7 +4084,7 @@ export default function SettingsContent() {
                               setSubCatMigrateMode('existing');
                             }}
                             disabled={subCatMigrateMode !== 'existing' || migrationCandidates.length === 0 || subCatDeleteInProgress}
-                            className="w-full px-2 py-1.5 bg-[#F5F5F3] rounded text-[11px] border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50 disabled:opacity-50"
+                            className="w-full px-2 py-1.5 bg-app-surface-alt rounded text-[11px] border-0 outline-none focus:ring-2 focus:ring-app-gold/50 disabled:opacity-50"
                           >
                             {migrationCandidates.length === 0 ? (
                               <option value="">（他に項目がありません）</option>
@@ -4109,7 +4109,7 @@ export default function SettingsContent() {
                           disabled={subCatDeleteInProgress}
                         />
                         <div className="flex-1 min-w-0">
-                          <div className="text-[12px] text-[#333] mb-1">新規項目を作成して置き換え</div>
+                          <div className="text-[12px] text-app-text-strong mb-1">新規項目を作成して置き換え</div>
                           <input
                             type="text"
                             value={subCatMigrateNewLabel}
@@ -4119,7 +4119,7 @@ export default function SettingsContent() {
                             }}
                             disabled={subCatMigrateMode !== 'new' || subCatDeleteInProgress}
                             placeholder="項目名"
-                            className="w-full px-2 py-1.5 bg-[#F5F5F3] rounded text-[11px] border-0 outline-none focus:ring-2 focus:ring-[#D4A03A]/50 disabled:opacity-50"
+                            className="w-full px-2 py-1.5 bg-app-surface-alt rounded text-[11px] border-0 outline-none focus:ring-2 focus:ring-app-gold/50 disabled:opacity-50"
                           />
                         </div>
                       </label>
@@ -4130,7 +4130,7 @@ export default function SettingsContent() {
                         type="button"
                         onClick={closeModal}
                         disabled={subCatDeleteInProgress}
-                        className="px-3 py-1.5 text-[11px] text-[#666] hover:bg-[#F5F5F3] rounded-lg disabled:opacity-50"
+                        className="px-3 py-1.5 text-[11px] text-app-text-sub hover:bg-app-surface-alt rounded-lg disabled:opacity-50"
                       >
                         キャンセル
                       </button>
@@ -4138,7 +4138,7 @@ export default function SettingsContent() {
                         type="button"
                         onClick={handleSubCatDeleteConfirm}
                         disabled={subCatDeleteInProgress || (subCatMigrateMode === 'existing' && !subCatMigrateTargetKey) || (subCatMigrateMode === 'new' && !subCatMigrateNewLabel.trim())}
-                        className="px-3 py-1.5 text-[11px] bg-[#C23728] text-white hover:bg-[#A82C1F] rounded-lg disabled:opacity-50"
+                        className="px-3 py-1.5 text-[11px] bg-app-red text-white hover:bg-app-red-hover rounded-lg disabled:opacity-50"
                       >
                         {subCatDeleteInProgress ? '実行中…' : '移行して削除'}
                       </button>
@@ -4152,21 +4152,21 @@ export default function SettingsContent() {
 
         {/* リリースノート */}
         <section className="mb-6 mt-4">
-          <div className="text-[10px] font-medium tracking-widest text-[#999] mb-3">
+          <div className="text-[10px] font-medium tracking-widest text-app-text-mute mb-3">
             リリースノート
           </div>
           <div className="space-y-3">
             {/* v0.30.0 */}
             <div className="bg-white rounded-xl shadow-sm p-4">
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.30.0</span>
-                <span className="text-[9px] text-[#999]">2026.04.27</span>
-                <span className="text-[8px] px-1.5 py-0.5 bg-[#D4A03A]/10 text-[#D4A03A] rounded-full font-medium">LATEST</span>
+                <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.30.0</span>
+                <span className="text-[9px] text-app-text-mute">2026.04.27</span>
+                <span className="text-[8px] px-1.5 py-0.5 bg-app-gold/10 text-app-gold rounded-full font-medium">LATEST</span>
               </div>
               <ul className="space-y-1">
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>所得控除タブの基盤を構築(社会保険料・小規模企業共済等・医療費控除のデータ層)</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>医療費控除はセルフメディケーション税制との自動有利判定に対応</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#666]">·</span>本UIは次回以降のリリースで実装します</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>所得控除タブの基盤を構築(社会保険料・小規模企業共済等・医療費控除のデータ層)</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>医療費控除はセルフメディケーション税制との自動有利判定に対応</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-text-sub">·</span>本UIは次回以降のリリースで実装します</li>
               </ul>
             </div>
 
@@ -4174,16 +4174,16 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.29.0</span>
-                  <span className="text-[9px] text-[#999]">2026.04.27</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.29.0</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.27</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
                 <ul className="space-y-1">
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>福利厚生費を一時非表示に変更(個人事業主期間中は計上できないため・税務レビュー結果)</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>取材費・制作費の入力ガイドを強化(税務調査時の証跡作法を追記)</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>会議費・研修費の入力ガイドを新規追加</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#666]">·</span>法人化(2027年予定)後は福利厚生費を再表示します</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>福利厚生費を一時非表示に変更(個人事業主期間中は計上できないため・税務レビュー結果)</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>取材費・制作費の入力ガイドを強化(税務調査時の証跡作法を追記)</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>会議費・研修費の入力ガイドを新規追加</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-text-sub">·</span>法人化(2027年予定)後は福利厚生費を再表示します</li>
                 </ul>
               </div>
             </details>
@@ -4192,14 +4192,14 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.16.1</span>
-                  <span className="text-[9px] text-[#999]">2026.04.25</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.16.1</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.25</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
                 <ul className="space-y-1">
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>内訳項目の削除・移行・新規作成の操作履歴を audit_log に自動記録(優良な電子帳簿保存 要件①への対応開始)</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#666]">·</span>記録される情報: 操作種別 / 移行元と移行先 / 影響件数 / 操作日時</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>内訳項目の削除・移行・新規作成の操作履歴を audit_log に自動記録(優良な電子帳簿保存 要件①への対応開始)</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-text-sub">·</span>記録される情報: 操作種別 / 移行元と移行先 / 影響件数 / 操作日時</li>
                 </ul>
               </div>
             </details>
@@ -4208,18 +4208,18 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.16.0</span>
-                  <span className="text-[9px] text-[#999]">2026.04.25</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.16.0</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.25</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
                 <ul className="space-y-1">
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>カメラ購入のFAQを令和8年度税制改正に対応（少額減価償却資産の特例30万円→40万円）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>FAQ全8項目の文言を見直し、より自然で読みやすい日本語に統一</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>交通費の合計3万円以上アラートを「保管が推奨」から「添付が必須」に修正(税務上の正確化)</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>削除モーダルの使用状況確認エラー文を、状況と対処が一目で分かる文面に変更</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>内訳項目の追加・編集・削除に関する全エラー文言を見直し(取引データの安全性を明示)</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>確定申告FAQの「E-TAX」を国税庁公式表記の「e-Tax」に統一</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>カメラ購入のFAQを令和8年度税制改正に対応（少額減価償却資産の特例30万円→40万円）</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>FAQ全8項目の文言を見直し、より自然で読みやすい日本語に統一</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>交通費の合計3万円以上アラートを「保管が推奨」から「添付が必須」に修正(税務上の正確化)</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>削除モーダルの使用状況確認エラー文を、状況と対処が一目で分かる文面に変更</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>内訳項目の追加・編集・削除に関する全エラー文言を見直し(取引データの安全性を明示)</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>確定申告FAQの「E-TAX」を国税庁公式表記の「e-Tax」に統一</li>
                 </ul>
               </div>
             </details>
@@ -4228,13 +4228,13 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.15.8</span>
-                  <span className="text-[9px] text-[#999]">2026.04.25</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.15.8</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.25</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
                 <ul className="space-y-1">
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>内部リファクタ：交通費の区間データ型を一本化（動作影響なし）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>内部リファクタ：交通費の区間データ型を一本化（動作影響なし）</li>
                 </ul>
               </div>
             </details>
@@ -4243,13 +4243,13 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.15.7</span>
-                  <span className="text-[9px] text-[#999]">2026.04.25</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.15.7</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.25</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
                 <ul className="space-y-1">
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>設定画面のQ&A「交通費に領収書は必要？」をv0.15.6の交通費ヘルプと同じ文言に揃えた</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>設定画面のQ&A「交通費に領収書は必要？」をv0.15.6の交通費ヘルプと同じ文言に揃えた</li>
                 </ul>
               </div>
             </details>
@@ -4258,14 +4258,14 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.15.6</span>
-                  <span className="text-[9px] text-[#999]">2026.04.25</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.15.6</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.25</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
                 <ul className="space-y-1">
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>交通費入力のヘルプ文を「1つの目的地への移動を1件」の原則で再整理</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>領収書の要否を電車・新幹線・タクシー・飛行機ごとに明記</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>交通費入力のヘルプ文を「1つの目的地への移動を1件」の原則で再整理</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>領収書の要否を電車・新幹線・タクシー・飛行機ごとに明記</li>
                 </ul>
               </div>
             </details>
@@ -4274,14 +4274,14 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.15.5</span>
-                  <span className="text-[9px] text-[#999]">2026.04.25</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.15.5</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.25</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
                 <ul className="space-y-1">
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>内訳の項目を削除する際、使っている取引がある場合は移行先を選べるように変更</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>移行先は「既存の項目」または「新しく作る項目」から選択可能</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>内訳の項目を削除する際、使っている取引がある場合は移行先を選べるように変更</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>移行先は「既存の項目」または「新しく作る項目」から選択可能</li>
                 </ul>
               </div>
             </details>
@@ -4290,14 +4290,14 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.15.4</span>
-                  <span className="text-[9px] text-[#999]">2026.04.25</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.15.4</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.25</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
                 <ul className="space-y-1">
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>AI領収書読み取り時、制作費・取材費に推定した場合は内訳の項目も自動選択</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>アナウンスバナーから制作費・取材費に変更した時も内訳の項目を自動反映</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>AI領収書読み取り時、制作費・取材費に推定した場合は内訳の項目も自動選択</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>アナウンスバナーから制作費・取材費に変更した時も内訳の項目を自動反映</li>
                 </ul>
               </div>
             </details>
@@ -4306,15 +4306,15 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.15.3</span>
-                  <span className="text-[9px] text-[#999]">2026.04.25</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.15.3</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.25</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
                 <ul className="space-y-1">
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>AI領収書読み取りが一般科目に推定した時「制作費・取材費の可能性は？」とアナウンス</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>内訳の項目に「興行・観戦」「体験・施設」「季節イベント」を追加（制作費・取材費それぞれに）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>設定画面の内訳の項目管理セクションに「ラベル編集しても既存取引の集計は維持」アナウンス追加</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>AI領収書読み取りが一般科目に推定した時「制作費・取材費の可能性は？」とアナウンス</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>内訳の項目に「興行・観戦」「体験・施設」「季節イベント」を追加（制作費・取材費それぞれに）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>設定画面の内訳の項目管理セクションに「ラベル編集しても既存取引の集計は維持」アナウンス追加</li>
                 </ul>
               </div>
             </details>
@@ -4323,13 +4323,13 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.15.2</span>
-                  <span className="text-[9px] text-[#999]">2026.04.25</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.15.2</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.25</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
                 <ul className="space-y-1">
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>制作費・取材費の交通費詳細で「目的」プルダウンを非表示（案件で目的は明確なため）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>制作費・取材費の交通費詳細で「目的」プルダウンを非表示（案件で目的は明確なため）</li>
                 </ul>
               </div>
             </details>
@@ -4338,14 +4338,14 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.15.1</span>
-                  <span className="text-[9px] text-[#999]">2026.04.25</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.15.1</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.25</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
                 <ul className="space-y-1">
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>制作費・取材費も複数領収書OKに変更（トモが2人分決済等の実運用対応）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>1枚制限時の文言を「この勘定科目では領収書は1枚のみ添付できます」に修正</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>制作費・取材費も複数領収書OKに変更（トモが2人分決済等の実運用対応）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>1枚制限時の文言を「この勘定科目では領収書は1枚のみ添付できます」に修正</li>
                 </ul>
               </div>
             </details>
@@ -4354,17 +4354,17 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.15.0</span>
-                  <span className="text-[9px] text-[#999]">2026.04.25</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.15.0</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.25</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
                 <ul className="space-y-1">
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>制作費・取材費に「内訳」機能を追加（移動/宿泊/飲食/衣装/小道具など）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>初期項目26種類を用意（制作費17種・取材費9種）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>経費入力画面から「＋新規追加」で独自の項目を即時作成可能</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>設定画面に「内訳の項目管理」セクションを新設（追加・編集・削除・復元）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>制作費・取材費で交通費詳細フィールドを「内訳=移動」選択時のみ展開に変更</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>制作費・取材費に「内訳」機能を追加（移動/宿泊/飲食/衣装/小道具など）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>初期項目26種類を用意（制作費17種・取材費9種）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>経費入力画面から「＋新規追加」で独自の項目を即時作成可能</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>設定画面に「内訳の項目管理」セクションを新設（追加・編集・削除・復元）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>制作費・取材費で交通費詳細フィールドを「内訳=移動」選択時のみ展開に変更</li>
                 </ul>
               </div>
             </details>
@@ -4373,18 +4373,18 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.14.7</span>
-                  <span className="text-[9px] text-[#999]">2026.04.24</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.14.7</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.24</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
                 <ul className="space-y-1">
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>勘定科目のデフォルトを空に変更（雑費の誤保存防止・プレースホルダ表示）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>「トシキの定番」「トモの定番」セクションを追加（直近3ヶ月の使用頻度上位3件を自動表示）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>往路既存テンプレ＋自動逆順モードで「この往復をパッケージ保存?」を提案（2段構え）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>逆順片道テンプレがない場合、保存提案モーダル第1段で片道として保存可能に</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>保存提案モーダル全体を Yes/No ラジオボタンに統一（各項目を独立判断可能に）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>下部ボタン文言を「キャンセル / 登録を確定」に変更</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>勘定科目のデフォルトを空に変更（雑費の誤保存防止・プレースホルダ表示）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>「トシキの定番」「トモの定番」セクションを追加（直近3ヶ月の使用頻度上位3件を自動表示）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>往路既存テンプレ＋自動逆順モードで「この往復をパッケージ保存?」を提案（2段構え）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>逆順片道テンプレがない場合、保存提案モーダル第1段で片道として保存可能に</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>保存提案モーダル全体を Yes/No ラジオボタンに統一（各項目を独立判断可能に）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>下部ボタン文言を「キャンセル / 登録を確定」に変更</li>
                 </ul>
               </div>
             </details>
@@ -4393,13 +4393,13 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.14.6</span>
-                  <span className="text-[9px] text-[#999]">2026.04.24</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.14.6</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.24</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
                 <ul className="space-y-1">
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>既存パッケージ適用時の無駄な「この往復セットをパッケージ保存?」提案を削除</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>既存パッケージ適用時の無駄な「この往復セットをパッケージ保存?」提案を削除</li>
                 </ul>
               </div>
             </details>
@@ -4408,13 +4408,13 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.14.5</span>
-                  <span className="text-[9px] text-[#999]">2026.04.24</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.14.5</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.24</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
                 <ul className="space-y-1">
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#C23728]">!</span>Vercel本番ビルド失敗を修復（RouteLeg型の二重定義問題を解消）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-red">!</span>Vercel本番ビルド失敗を修復（RouteLeg型の二重定義問題を解消）</li>
                 </ul>
               </div>
             </details>
@@ -4423,13 +4423,13 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.14.4</span>
-                  <span className="text-[9px] text-[#999]">2026.04.24</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.14.4</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.24</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
                 <ul className="space-y-1">
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>TransactionModalに useRef 連打ガードを追加（モバイル二重タップ対策）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>TransactionModalに useRef 連打ガードを追加（モバイル二重タップ対策）</li>
                 </ul>
               </div>
             </details>
@@ -4438,14 +4438,14 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.14.3</span>
-                  <span className="text-[9px] text-[#999]">2026.04.24</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.14.3</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.24</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
                 <ul className="space-y-1">
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>往復交通費を1レコード保存に統一（これまで往復別金額は2行に分かれていたが、1取引として合計金額表示に）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>transport_details テーブルに return_legs・return_amount 等の復路カラムを追加</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>往復交通費を1レコード保存に統一（これまで往復別金額は2行に分かれていたが、1取引として合計金額表示に）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>transport_details テーブルに return_legs・return_amount 等の復路カラムを追加</li>
                 </ul>
               </div>
             </details>
@@ -4454,15 +4454,15 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.14.2</span>
-                  <span className="text-[9px] text-[#999]">2026.04.24</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.14.2</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.24</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
                 <ul className="space-y-1">
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>ルート・パッケージ保存の連打による二重登録を防止（useRefベース連打ガード）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>同名・同内容のルートテンプレ重複作成をブロック（正規化チェック）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>フラッシュメッセージUI追加（保存成功=緑・警告=黄・エラー=赤、2.5秒自動消滅）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>ルート・パッケージ保存の連打による二重登録を防止（useRefベース連打ガード）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>同名・同内容のルートテンプレ重複作成をブロック（正規化チェック）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>フラッシュメッセージUI追加（保存成功=緑・警告=黄・エラー=赤、2.5秒自動消滅）</li>
                 </ul>
               </div>
             </details>
@@ -4471,13 +4471,13 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.14.1</span>
-                  <span className="text-[9px] text-[#999]">2026.04.24</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.14.1</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.24</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
                 <ul className="space-y-1">
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>パッケージ追加ボタンを常時押下可能に(モーダル内で片道不足警告を表示)</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>パッケージ追加ボタンを常時押下可能に(モーダル内で片道不足警告を表示)</li>
                 </ul>
               </div>
             </details>
@@ -4486,18 +4486,18 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.14.0</span>
-                  <span className="text-[9px] text-[#999]">2026.04.24</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.14.0</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.24</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
                 <ul className="space-y-1">
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>ルートテンプレ体系を刷新：片道テンプレ＋往復パッケージの2層構造に</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>片道テンプレ保存時に逆順ペアを自動生成（次回復路として1タップ選択可能）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>往復パッケージ機能（往路＋復路の組合せを保存し、1クリックで適用）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>往復時の復路モード選択UI：自動逆順／別ルート／手入力の3択</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>保存提案モーダルで「往路・復路・パッケージ」を独立に保存可能</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>設定画面にアーカイブ復元UI追加（論理削除されたテンプレを薄字で表示・1タップ復元）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>ルートテンプレ体系を刷新：片道テンプレ＋往復パッケージの2層構造に</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>片道テンプレ保存時に逆順ペアを自動生成（次回復路として1タップ選択可能）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>往復パッケージ機能（往路＋復路の組合せを保存し、1クリックで適用）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>往復時の復路モード選択UI：自動逆順／別ルート／手入力の3択</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>保存提案モーダルで「往路・復路・パッケージ」を独立に保存可能</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>設定画面にアーカイブ復元UI追加（論理削除されたテンプレを薄字で表示・1タップ復元）</li>
                 </ul>
               </div>
             </details>
@@ -4506,16 +4506,16 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.13.0</span>
-                  <span className="text-[9px] text-[#999]">2026.04.22</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.13.0</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.22</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
               <ul className="space-y-1">
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>制作費・取材費でも交通費詳細フィールドを入力可能に（YouTube撮影移動・取材移動の証跡強化）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>制作費・取材費で内容・摘要を必須化（業務関連性の証跡担保）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>PJ選択に「{UNASSIGNED_PROJECT_LABEL}」選択肢を追加（企画段階の制作費・取材費でもPJ必須をクリア可能）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>記入ポイントガイドボックスに摘要必須アナウンス追加</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>制作費・取材費でも交通費詳細フィールドを入力可能に（YouTube撮影移動・取材移動の証跡強化）</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>制作費・取材費で内容・摘要を必須化（業務関連性の証跡担保）</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>PJ選択に「{UNASSIGNED_PROJECT_LABEL}」選択肢を追加（企画段階の制作費・取材費でもPJ必須をクリア可能）</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>記入ポイントガイドボックスに摘要必須アナウンス追加</li>
               </ul>
               </div>
             </details>
@@ -4524,14 +4524,14 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.12.1</span>
-                  <span className="text-[9px] text-[#999]">2026.04.22</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.12.1</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.22</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
               <ul className="space-y-1">
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>座席クラスに「プレミアムエコノミー」「クラスJ」を追加（旅費交通費）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>クラスJは国内線準上位席のため上位クラス理由入力を不要化</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>座席クラスに「プレミアムエコノミー」「クラスJ」を追加（旅費交通費）</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>クラスJは国内線準上位席のため上位クラス理由入力を不要化</li>
               </ul>
               </div>
             </details>
@@ -4540,16 +4540,16 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.12.0</span>
-                  <span className="text-[9px] text-[#999]">2026.04.22</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.12.0</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.22</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
               <ul className="space-y-1">
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>既存領収書ファイル一括リネーム機能（Sprint 3）：過去のlegacy_*.binファイルをv0.11.0命名規則に統一</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>ドライラン機能：変更前に旧名→新名の対応表を画面で確認可能</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>旧ファイル名のDB記録（old_filenameカラム）により復元可能性を担保</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>失敗スキップ続行＋詳細レポート表示（Drive API障害時も全体停止しない）</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>既存領収書ファイル一括リネーム機能（Sprint 3）：過去のlegacy_*.binファイルをv0.11.0命名規則に統一</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>ドライラン機能：変更前に旧名→新名の対応表を画面で確認可能</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>旧ファイル名のDB記録（old_filenameカラム）により復元可能性を担保</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>失敗スキップ続行＋詳細レポート表示（Drive API障害時も全体停止しない）</li>
               </ul>
               </div>
             </details>
@@ -4558,20 +4558,20 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.11.0</span>
-                  <span className="text-[9px] text-[#999]">2026.04.22</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.11.0</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.22</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
                 <ul className="space-y-1">
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>複数領収書添付機能（1経費に最大10枚・ラベル付与可）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>領収書ファイル名の自動命名ルール（日付_科目_支払先_担当者_摘要_連番_ラベル）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>Drive保存タイミングを「登録ボタン押下時」に変更（孤児ファイルゼロ化）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>経費削除時、紐づく領収書をDriveのゴミ箱に自動移動（30日間復元可）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>領収書合計金額の自動合算＋経費金額セットボタン（差分1円以内=緑）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>経費一覧に領収書件数バッジ（📎N）表示</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>編集モーダルで既存領収書の閲覧・ラベル変更・削除に対応</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>expense_receiptsテーブル新設＋既存データ自動マイグレ・監査ログ連動</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>複数領収書添付機能（1経費に最大10枚・ラベル付与可）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>領収書ファイル名の自動命名ルール（日付_科目_支払先_担当者_摘要_連番_ラベル）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>Drive保存タイミングを「登録ボタン押下時」に変更（孤児ファイルゼロ化）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>経費削除時、紐づく領収書をDriveのゴミ箱に自動移動（30日間復元可）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>領収書合計金額の自動合算＋経費金額セットボタン（差分1円以内=緑）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>経費一覧に領収書件数バッジ（📎N）表示</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>編集モーダルで既存領収書の閲覧・ラベル変更・削除に対応</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>expense_receiptsテーブル新設＋既存データ自動マイグレ・監査ログ連動</li>
                 </ul>
               </div>
             </details>
@@ -4580,18 +4580,18 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.10.2</span>
-                  <span className="text-[9px] text-[#999]">2026.04.21</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.10.2</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.21</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
                 <ul className="space-y-1">
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>領収書AIをClaude Sonnet 4.6にアップグレード（最新世代・OCR精度さらに向上）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>AI会計相談をClaude Opus 4.7にアップグレード（最高位モデル・推論精度大幅向上）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>接待・会議・取材費の領収書から利用人数を自動入力</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>物品購入の領収書から型番を自動抽出し品名に併記</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>サブスク・通信費・ソフトウェアの領収書から請求期間を自動抽出し説明欄に追記</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>合計金額の優先順位を明文化（ご請求金額 &gt; 税込合計 &gt; 合計）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>領収書AIをClaude Sonnet 4.6にアップグレード（最新世代・OCR精度さらに向上）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>AI会計相談をClaude Opus 4.7にアップグレード（最高位モデル・推論精度大幅向上）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>接待・会議・取材費の領収書から利用人数を自動入力</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>物品購入の領収書から型番を自動抽出し品名に併記</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>サブスク・通信費・ソフトウェアの領収書から請求期間を自動抽出し説明欄に追記</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>合計金額の優先順位を明文化（ご請求金額 &gt; 税込合計 &gt; 合計）</li>
                 </ul>
               </div>
             </details>
@@ -4600,15 +4600,15 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.10.1</span>
-                  <span className="text-[9px] text-[#999]">2026.04.21</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.10.1</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.21</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
                 <ul className="space-y-1">
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>領収書AI読み取りを強化。交通費（JR・新幹線・特急券・飛行機）の場合、出発地・到着地・往復区分・支払方法を自動入力</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>AIモデルをClaude Sonnet 4.5にアップグレード（OCR精度向上）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>プロンプト改善：「お預り・お釣り」と「合計金額」の取り違えを防止／和暦の自動正規化</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>領収書AI読み取りを強化。交通費（JR・新幹線・特急券・飛行機）の場合、出発地・到着地・往復区分・支払方法を自動入力</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>AIモデルをClaude Sonnet 4.5にアップグレード（OCR精度向上）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>プロンプト改善：「お預り・お釣り」と「合計金額」の取り違えを防止／和暦の自動正規化</li>
                 </ul>
               </div>
             </details>
@@ -4617,15 +4617,15 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.10.0</span>
-                  <span className="text-[9px] text-[#999]">2026.04.21</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.10.0</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.21</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
                 <ul className="space-y-1">
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>AI会計相談機能を追加。経費入力画面の科目選択横と経費一覧の各行から呼び出し可能</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>相談時に同じ支払先の過去処理を自動参照。「この科目で確定」ワンタップで科目反映</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>相談履歴を経費に紐づけて保存（audit証跡）。再現性のためAIモデルバージョンも記録</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>AI会計相談機能を追加。経費入力画面の科目選択横と経費一覧の各行から呼び出し可能</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>相談時に同じ支払先の過去処理を自動参照。「この科目で確定」ワンタップで科目反映</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>相談履歴を経費に紐づけて保存（audit証跡）。再現性のためAIモデルバージョンも記録</li>
                 </ul>
               </div>
             </details>
@@ -4634,16 +4634,16 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.9.0</span>
-                  <span className="text-[9px] text-[#999]">2026.04.21</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.9.0</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.21</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
                 <ul className="space-y-1">
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>領収書アップロードを経費入力画面に統合。ホームの「撮影/手入力」タブを廃止し「経費を追加」ボタンに一本化</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>経費入力画面に領収書添付セクション追加（AI抽出＋Drive保存）。取材費・制作費も領収書経由で登録可能に</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>経費一覧に「未紐付け」フィルター追加。取材費・制作費で案件タグ未付与の行をフラグ表示</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>Uploader画面を廃止（機能はTransactionModalに統合）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>領収書アップロードを経費入力画面に統合。ホームの「撮影/手入力」タブを廃止し「経費を追加」ボタンに一本化</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>経費入力画面に領収書添付セクション追加（AI抽出＋Drive保存）。取材費・制作費も領収書経由で登録可能に</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>経費一覧に「未紐付け」フィルター追加。取材費・制作費で案件タグ未付与の行をフラグ表示</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>Uploader画面を廃止（機能はTransactionModalに統合）</li>
                 </ul>
               </div>
             </details>
@@ -4652,16 +4652,16 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.8.2</span>
-                  <span className="text-[9px] text-[#999]">2026.04.21</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.8.2</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.21</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
                 <ul className="space-y-1">
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>取材費・制作費は案件タグ（PJ）必須化。未入力時はバリデーションエラー</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>取材費・制作費を選択した際、記入ポイント説明ボックスを表示</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>領収書アップロード画面では取材費・制作費を選択不可に変更（手入力画面で案件タグ付きで登録）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>次回リリース(v0.9.0)で領収書アップロードを手入力画面に統合予定</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>取材費・制作費は案件タグ（PJ）必須化。未入力時はバリデーションエラー</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>取材費・制作費を選択した際、記入ポイント説明ボックスを表示</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>領収書アップロード画面では取材費・制作費を選択不可に変更（手入力画面で案件タグ付きで登録）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>次回リリース(v0.9.0)で領収書アップロードを手入力画面に統合予定</li>
                 </ul>
               </div>
             </details>
@@ -4670,14 +4670,14 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.8.1</span>
-                  <span className="text-[9px] text-[#999]">2026.04.21</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.8.1</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.21</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
                 <ul className="space-y-1">
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>勘定科目に「取材費」「制作費」「会議費」「福利厚生費」「研修費」「支払手数料」を追加</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>AI領収書抽出の勘定科目判定を新科目に対応（YT撮影関連の切り分け精度向上）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>勘定科目に「取材費」「制作費」「会議費」「福利厚生費」「研修費」「支払手数料」を追加</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>AI領収書抽出の勘定科目判定を新科目に対応（YT撮影関連の切り分け精度向上）</li>
                 </ul>
               </div>
             </details>
@@ -4686,17 +4686,17 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.5.7</span>
-                  <span className="text-[9px] text-[#999]">2026.04.19</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.5.7</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.19</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
                 <ul className="space-y-1">
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>請求書作成フロー全面刷新：テンプレスプシをコピーして値を流し込む方式に変更</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>「PDF & シート出力」ボタンを「請求書作成」に変更（デザイン崩れ撲滅）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>明細5行まで対応（6行以上はエラー表示）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>作成後、スプシを自動で新規タブで開く（プレビュー確認→PDFダウンロード運用）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>備考の固定2行（インボイス／振込手数料）はテンプレ側に書き込み、動的備考のみ入力可</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>請求書作成フロー全面刷新：テンプレスプシをコピーして値を流し込む方式に変更</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>「PDF & シート出力」ボタンを「請求書作成」に変更（デザイン崩れ撲滅）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>明細5行まで対応（6行以上はエラー表示）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>作成後、スプシを自動で新規タブで開く（プレビュー確認→PDFダウンロード運用）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>備考の固定2行（インボイス／振込手数料）はテンプレ側に書き込み、動的備考のみ入力可</li>
                 </ul>
               </div>
             </details>
@@ -4705,14 +4705,14 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.5.6</span>
-                  <span className="text-[9px] text-[#999]">2026.04.19</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.5.6</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.19</span>
                 </div>
               </summary>
               <ul className="space-y-1 px-4 pb-4">
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>売上モーダルの「請求書の件名」をインライン編集可能化</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>金額入力欄に3桁カンマ自動整形（売上モーダル・請求書エディタ単価欄）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>請求書の件名編集で案件マスタのinvoice_display_nameを自動更新</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>売上モーダルの「請求書の件名」をインライン編集可能化</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>金額入力欄に3桁カンマ自動整形（売上モーダル・請求書エディタ単価欄）</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>請求書の件名編集で案件マスタのinvoice_display_nameを自動更新</li>
               </ul>
             </details>
 
@@ -4720,16 +4720,16 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.5.5</span>
-                  <span className="text-[9px] text-[#999]">2026.04.19</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.5.5</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.19</span>
                 </div>
               </summary>
               <ul className="space-y-1 px-4 pb-4">
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>売上モーダルの「案件名」を「案件管理名（内部管理用）」にラベル変更</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#C23728]">-</span>売上モーダルから旧「摘要」欄を削除（品名・摘要に統合）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>請求書プレビュー・PDF出力の銀行名／支店名重複括弧を防御（既に括弧内コードが含まれる場合は追記しない）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>口座種別 account_type='savings' を「普通」に正しく表示（英語残留バグ修正）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>PDF出力時のSheets APIエラーハンドリング強化（失敗時に詳細メッセージを返す）</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>売上モーダルの「案件名」を「案件管理名（内部管理用）」にラベル変更</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-red">-</span>売上モーダルから旧「摘要」欄を削除（品名・摘要に統合）</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>請求書プレビュー・PDF出力の銀行名／支店名重複括弧を防御（既に括弧内コードが含まれる場合は追記しない）</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>口座種別 account_type='savings' を「普通」に正しく表示（英語残留バグ修正）</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>PDF出力時のSheets APIエラーハンドリング強化（失敗時に詳細メッセージを返す）</li>
               </ul>
             </details>
 
@@ -4737,16 +4737,16 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.5.4</span>
-                  <span className="text-[9px] text-[#999]">2026.04.19</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.5.4</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.19</span>
                 </div>
               </summary>
               <ul className="space-y-1 px-4 pb-4">
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>案件名・請求書件名・品名摘要の3層分離（内部管理名／対外件名／明細行摘要を別フィールドに）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>品名・摘要サジェスト（案件紐付きの直近3件をワンタップで再利用）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>案件管理の「請求書の件名（任意）」欄（未設定時は案件名フォールバック）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>売上モーダルの案件選択時に請求書の件名をプレビュー表示</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>既存売上に品名未記入がある場合は黄色バッジで警告表示</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>案件名・請求書件名・品名摘要の3層分離（内部管理名／対外件名／明細行摘要を別フィールドに）</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>品名・摘要サジェスト（案件紐付きの直近3件をワンタップで再利用）</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>案件管理の「請求書の件名（任意）」欄（未設定時は案件名フォールバック）</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>売上モーダルの案件選択時に請求書の件名をプレビュー表示</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>既存売上に品名未記入がある場合は黄色バッジで警告表示</li>
               </ul>
             </details>
 
@@ -4754,18 +4754,18 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.5.0</span>
-                  <span className="text-[9px] text-[#999]">2026.04.15</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.5.0</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.15</span>
                 </div>
               </summary>
               <ul className="space-y-1 px-4 pb-4">
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>交通費入力フロー全面再設計（片道/往復・経由地・分割保存）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>請求書管理(作成・PDF出力・Drive自動保存・売上仕訳連携)</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>取引先マスタ（設定ページCRUD・自動採番）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>科目分岐の基盤設計（日付→科目→専用フォーム切替）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>交通費支払方法（IC/現金/クレカ/請求書払い）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>交通費注意書き（経営企画本部校閲済み）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>テンプレ適用時の摘要復元修正</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>交通費入力フロー全面再設計（片道/往復・経由地・分割保存）</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>請求書管理(作成・PDF出力・Drive自動保存・売上仕訳連携)</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>取引先マスタ（設定ページCRUD・自動採番）</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>科目分岐の基盤設計（日付→科目→専用フォーム切替）</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>交通費支払方法（IC/現金/クレカ/請求書払い）</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>交通費注意書き（経営企画本部校閲済み）</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>テンプレ適用時の摘要復元修正</li>
               </ul>
             </details>
 
@@ -4773,16 +4773,16 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.4.0</span>
-                  <span className="text-[9px] text-[#999]">2026.04.12</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.4.0</span>
+                  <span className="text-[9px] text-app-text-mute">2026.04.12</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
               <ul className="space-y-1">
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>経費テンプレート（交通費ルート＋汎用パターン）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>経営ページ「資金」タブ（口座残高・資金移動・手数料管理）</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>支払方法（個人/口座）+ 仕訳自動分岐</li>
-                <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>セマンティックバージョニング導入</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>経費テンプレート（交通費ルート＋汎用パターン）</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>経営ページ「資金」タブ（口座残高・資金移動・手数料管理）</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>支払方法（個人/口座）+ 仕訳自動分岐</li>
+                <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>セマンティックバージョニング導入</li>
               </ul>
               </div>
             </details>
@@ -4791,19 +4791,19 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.3.x</span>
-                  <span className="text-[9px] text-[#999]">2026.03 – 04</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.3.x</span>
+                  <span className="text-[9px] text-app-text-mute">2026.03 – 04</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
                 <ul className="space-y-1">
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>令和8年度税制改正対応（少額減価償却40万円）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>備品台帳（写真D&D・リサイズ・Supabase Storage）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>同期ソース管理</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>オーナー背景色カスタマイズ（HEX入力・プリセット）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>重複経費チェック（日付×金額×取引先）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>Driveフォルダ自動振り分け（オーナー別→年月）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>AI抽出プロンプト強化（item_name / kamoku_hint）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>令和8年度税制改正対応（少額減価償却40万円）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>備品台帳（写真D&D・リサイズ・Supabase Storage）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>同期ソース管理</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>オーナー背景色カスタマイズ（HEX入力・プリセット）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>重複経費チェック（日付×金額×取引先）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>Driveフォルダ自動振り分け（オーナー別→年月）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>AI抽出プロンプト強化（item_name / kamoku_hint）</li>
                 </ul>
               </div>
             </details>
@@ -4812,17 +4812,17 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.2.x</span>
-                  <span className="text-[9px] text-[#999]">2026.02 – 03</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.2.x</span>
+                  <span className="text-[9px] text-app-text-mute">2026.02 – 03</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
                 <ul className="space-y-1">
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>CFビュー（キャッシュフロー / ランウェイ計算）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>PL/CF トグル経営ダッシュボード</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>利益予測線（forecast分離表示）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>プロジェクト5段階ステータス管理</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#1B4D3E]">↑</span>設定ページ「共通設定」「個人設定」タブ分割</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>CFビュー（キャッシュフロー / ランウェイ計算）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>PL/CF トグル経営ダッシュボード</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>利益予測線（forecast分離表示）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>プロジェクト5段階ステータス管理</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-green">↑</span>設定ページ「共通設定」「個人設定」タブ分割</li>
                 </ul>
               </div>
             </details>
@@ -4831,19 +4831,19 @@ export default function SettingsContent() {
             <details className="bg-white rounded-xl shadow-sm">
               <summary className="p-4 cursor-pointer select-none">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-[#1a1a1a]">v0.1.x</span>
-                  <span className="text-[9px] text-[#999]">2026.01 – 02</span>
+                  <span className="text-[11px] font-['Saira_Condensed'] font-semibold tracking-wider text-app-text">v0.1.x</span>
+                  <span className="text-[9px] text-app-text-mute">2026.01 – 02</span>
                 </div>
               </summary>
               <div className="px-4 pb-4">
                 <ul className="space-y-1">
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>経費・売上管理（CRUD）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>領収書AI読み取り + Google Drive保存</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>クレカCSVインポート</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>複式簿記自動生成（確定申告ページ）</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>PJ別損益 / 按分設定</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>YouTube管理スプレッドシート連携</li>
-                  <li className="text-[11px] text-[#666] flex gap-1.5"><span className="text-[#D4A03A]">+</span>AIヘルプ・Q&A</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>経費・売上管理（CRUD）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>領収書AI読み取り + Google Drive保存</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>クレカCSVインポート</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>複式簿記自動生成（確定申告ページ）</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>PJ別損益 / 按分設定</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>YouTube管理スプレッドシート連携</li>
+                  <li className="text-[11px] text-app-text-sub flex gap-1.5"><span className="text-app-gold">+</span>AIヘルプ・Q&A</li>
                 </ul>
               </div>
             </details>
@@ -4852,7 +4852,7 @@ export default function SettingsContent() {
 
         {/* バージョン */}
         <div className="text-center py-8">
-          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-[#ccc]">v0.16.1</span>
+          <span className="text-[10px] font-['Saira_Condensed'] tracking-widest text-app-text-fade">v0.16.1</span>
         </div>
 
       </div>{/* end max-w-3xl */}
@@ -4873,17 +4873,17 @@ export default function SettingsContent() {
       {deleteTarget && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 max-w-sm mx-4 shadow-lg">
-            <p className="text-sm text-[#333] mb-4">この固定資産を削除しますか？</p>
+            <p className="text-sm text-app-text-strong mb-4">この固定資産を削除しますか？</p>
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setDeleteTarget(null)}
-                className="px-4 py-2 text-xs text-[#666] bg-[#F5F5F3] rounded-lg hover:bg-[#eee] transition-colors"
+                className="px-4 py-2 text-xs text-app-text-sub bg-app-surface-alt rounded-lg hover:bg-app-button-disabled transition-colors"
               >
                 キャンセル
               </button>
               <button
                 onClick={() => deleteAsset(deleteTarget)}
-                className="px-4 py-2 text-xs text-white bg-[#C23728] rounded-lg hover:bg-[#a82e21] transition-colors"
+                className="px-4 py-2 text-xs text-white bg-app-red rounded-lg hover:bg-app-red-hover transition-colors"
               >
                 削除
               </button>
@@ -4906,14 +4906,14 @@ export default function SettingsContent() {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/30" onClick={() => setBankDeleteTarget(null)} />
           <div className="relative bg-white rounded-2xl p-6 max-w-sm mx-4" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
-            <p className="text-sm text-[#1a1a1a] mb-4">この口座を削除しますか？</p>
+            <p className="text-sm text-app-text mb-4">この口座を削除しますか？</p>
             <div className="flex gap-2">
               <button onClick={() => setBankDeleteTarget(null)}
-                className="flex-1 py-2 text-xs text-[#999] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors">
+                className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors">
                 キャンセル
               </button>
               <button onClick={() => deleteBank(bankDeleteTarget)}
-                className="flex-1 py-2 text-xs text-white bg-[#C23728] rounded-lg hover:bg-[#a82e21] transition-colors">
+                className="flex-1 py-2 text-xs text-white bg-app-red rounded-lg hover:bg-app-red-hover transition-colors">
                 削除
               </button>
             </div>
@@ -4935,14 +4935,14 @@ export default function SettingsContent() {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/30" onClick={() => setEqDeleteTarget(null)} />
           <div className="relative bg-white rounded-2xl p-6 max-w-sm mx-4" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
-            <p className="text-sm text-[#1a1a1a] mb-4">この備品を台帳から削除しますか？</p>
+            <p className="text-sm text-app-text mb-4">この備品を台帳から削除しますか？</p>
             <div className="flex gap-2">
               <button onClick={() => setEqDeleteTarget(null)}
-                className="flex-1 py-2 text-xs text-[#999] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors">
+                className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors">
                 キャンセル
               </button>
               <button onClick={() => deleteEquipmentItem(eqDeleteTarget)}
-                className="flex-1 py-2 text-xs text-white bg-[#C23728] rounded-lg hover:bg-[#a82e21] transition-colors">
+                className="flex-1 py-2 text-xs text-white bg-app-red rounded-lg hover:bg-app-red-hover transition-colors">
                 削除
               </button>
             </div>
@@ -4967,14 +4967,14 @@ export default function SettingsContent() {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/30" onClick={() => setTemplateDeleteTarget(null)} />
           <div className="relative bg-white rounded-2xl p-6 max-w-sm mx-4" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
-            <p className="text-sm text-[#1a1a1a] mb-4">このテンプレートを削除しますか？</p>
+            <p className="text-sm text-app-text mb-4">このテンプレートを削除しますか？</p>
             <div className="flex gap-2">
               <button onClick={() => setTemplateDeleteTarget(null)}
-                className="flex-1 py-2 text-xs text-[#999] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors">
+                className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors">
                 キャンセル
               </button>
               <button onClick={() => deleteTemplate(templateDeleteTarget)}
-                className="flex-1 py-2 text-xs text-white bg-[#C23728] rounded-lg hover:bg-[#a82e21] transition-colors">
+                className="flex-1 py-2 text-xs text-white bg-app-red rounded-lg hover:bg-app-red-hover transition-colors">
                 削除
               </button>
             </div>
@@ -5007,14 +5007,14 @@ export default function SettingsContent() {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/30" onClick={() => setRouteDeleteTarget(null)} />
           <div className="relative bg-white rounded-2xl p-6 max-w-sm mx-4" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
-            <p className="text-sm text-[#1a1a1a] mb-4">このルートテンプレートを削除しますか？</p>
+            <p className="text-sm text-app-text mb-4">このルートテンプレートを削除しますか？</p>
             <div className="flex gap-2">
               <button onClick={() => setRouteDeleteTarget(null)}
-                className="flex-1 py-2 text-xs text-[#999] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors">
+                className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors">
                 キャンセル
               </button>
               <button onClick={() => deleteRouteTemplate(routeDeleteTarget)}
-                className="flex-1 py-2 text-xs text-white bg-[#C23728] rounded-lg hover:bg-[#a82e21] transition-colors">
+                className="flex-1 py-2 text-xs text-white bg-app-red rounded-lg hover:bg-app-red-hover transition-colors">
                 削除
               </button>
             </div>
@@ -5038,14 +5038,14 @@ export default function SettingsContent() {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/30" onClick={() => setInvTplDeleteTarget(null)} />
           <div className="relative bg-white rounded-2xl p-6 max-w-sm mx-4" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
-            <p className="text-sm text-[#1a1a1a] mb-4">この請求書テンプレを削除しますか？</p>
+            <p className="text-sm text-app-text mb-4">この請求書テンプレを削除しますか？</p>
             <div className="flex gap-2">
               <button onClick={() => setInvTplDeleteTarget(null)}
-                className="flex-1 py-2 text-xs text-[#999] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors">
+                className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors">
                 キャンセル
               </button>
               <button onClick={() => deleteInvoiceTemplate(invTplDeleteTarget)}
-                className="flex-1 py-2 text-xs text-white bg-[#C23728] rounded-lg hover:bg-[#a82e21] transition-colors">
+                className="flex-1 py-2 text-xs text-white bg-app-red rounded-lg hover:bg-app-red-hover transition-colors">
                 削除
               </button>
             </div>
@@ -5067,14 +5067,14 @@ export default function SettingsContent() {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/30" onClick={() => setClientDeleteTarget(null)} />
           <div className="relative bg-white rounded-2xl p-6 max-w-sm mx-4" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
-            <p className="text-sm text-[#1a1a1a] mb-4">この取引先を削除しますか？</p>
+            <p className="text-sm text-app-text mb-4">この取引先を削除しますか？</p>
             <div className="flex gap-2">
               <button onClick={() => setClientDeleteTarget(null)}
-                className="flex-1 py-2 text-xs text-[#999] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors">
+                className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors">
                 キャンセル
               </button>
               <button onClick={() => deleteClient(clientDeleteTarget)}
-                className="flex-1 py-2 text-xs text-white bg-[#C23728] rounded-lg hover:bg-[#a82e21] transition-colors">
+                className="flex-1 py-2 text-xs text-white bg-app-red rounded-lg hover:bg-app-red-hover transition-colors">
                 削除
               </button>
             </div>
@@ -5097,14 +5097,14 @@ export default function SettingsContent() {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/30" onClick={() => setRecurringDeleteTarget(null)} />
           <div className="relative bg-white rounded-2xl p-6 max-w-sm mx-4" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
-            <p className="text-sm text-[#1a1a1a] mb-4">この固定契約を削除しますか？<br /><span className="text-[11px] text-[#999]">紐づく見込み売上も削除されます</span></p>
+            <p className="text-sm text-app-text mb-4">この固定契約を削除しますか？<br /><span className="text-[11px] text-app-text-mute">紐づく見込み売上も削除されます</span></p>
             <div className="flex gap-2">
               <button onClick={() => setRecurringDeleteTarget(null)}
-                className="flex-1 py-2 text-xs text-[#999] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors">
+                className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors">
                 キャンセル
               </button>
               <button onClick={() => deleteRecurring(recurringDeleteTarget)}
-                className="flex-1 py-2 text-xs text-white bg-[#C23728] rounded-lg hover:bg-[#a82e21] transition-colors">
+                className="flex-1 py-2 text-xs text-white bg-app-red rounded-lg hover:bg-app-red-hover transition-colors">
                 削除
               </button>
             </div>
@@ -5126,14 +5126,14 @@ export default function SettingsContent() {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/30" onClick={() => setProjectDeleteTarget(null)} />
           <div className="relative bg-white rounded-2xl p-6 max-w-sm mx-4" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
-            <p className="text-sm text-[#1a1a1a] mb-4">このプロジェクトを削除しますか？</p>
+            <p className="text-sm text-app-text mb-4">このプロジェクトを削除しますか？</p>
             <div className="flex gap-2">
               <button onClick={() => setProjectDeleteTarget(null)}
-                className="flex-1 py-2 text-xs text-[#999] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors">
+                className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors">
                 キャンセル
               </button>
               <button onClick={() => deleteProject(projectDeleteTarget)}
-                className="flex-1 py-2 text-xs text-white bg-[#C23728] rounded-lg hover:bg-[#a82e21] transition-colors">
+                className="flex-1 py-2 text-xs text-white bg-app-red rounded-lg hover:bg-app-red-hover transition-colors">
                 削除
               </button>
             </div>
@@ -5201,34 +5201,34 @@ function AssetModal({
     <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-lg">
         <div className="flex items-center justify-between mb-5">
-          <h3 className="text-sm font-medium text-[#333]">
+          <h3 className="text-sm font-medium text-app-text-strong">
             {asset ? '固定資産を編集' : '固定資産を追加'}
           </h3>
-          <button onClick={onClose} className="p-1 rounded hover:bg-[#eee] transition-colors">
-            <X className="w-4 h-4 text-[#999]" />
+          <button onClick={onClose} className="p-1 rounded hover:bg-app-button-disabled transition-colors">
+            <X className="w-4 h-4 text-app-text-mute" />
           </button>
         </div>
 
         <div className="space-y-4">
           {/* 資産名 */}
           <div>
-            <label className="block text-[10px] font-medium text-[#999] mb-1">資産名</label>
+            <label className="block text-[10px] font-medium text-app-text-mute mb-1">資産名</label>
             <input
               type="text"
               value={form.name}
               onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
               placeholder="例：Sony α7IV"
-              className="w-full px-3 py-2 border border-[#e0e0e0] rounded-lg text-sm focus:outline-none focus:border-[#D4A03A] transition-colors"
+              className="w-full px-3 py-2 border border-app-line-strong rounded-lg text-sm focus:outline-none focus:border-app-gold transition-colors"
             />
           </div>
 
           {/* 種類 */}
           <div>
-            <label className="block text-[10px] font-medium text-[#999] mb-1">種類</label>
+            <label className="block text-[10px] font-medium text-app-text-mute mb-1">種類</label>
             <select
               value={form.category}
               onChange={e => handleCategoryChange(e.target.value)}
-              className="w-full px-3 py-2 border border-[#e0e0e0] rounded-lg text-sm focus:outline-none focus:border-[#D4A03A] transition-colors bg-white"
+              className="w-full px-3 py-2 border border-app-line-strong rounded-lg text-sm focus:outline-none focus:border-app-gold transition-colors bg-white"
             >
               {ASSET_CATEGORIES.map(c => (
                 <option key={c.value} value={c.value}>{c.label}</option>
@@ -5238,31 +5238,31 @@ function AssetModal({
 
           {/* 取得日 */}
           <div>
-            <label className="block text-[10px] font-medium text-[#999] mb-1">取得日</label>
+            <label className="block text-[10px] font-medium text-app-text-mute mb-1">取得日</label>
             <input
               type="date"
               value={form.acquisitionDate}
               onChange={e => setForm(prev => ({ ...prev, acquisitionDate: e.target.value }))}
-              className="w-full px-3 py-2 border border-[#e0e0e0] rounded-lg text-sm focus:outline-none focus:border-[#D4A03A] transition-colors"
+              className="w-full px-3 py-2 border border-app-line-strong rounded-lg text-sm focus:outline-none focus:border-app-gold transition-colors"
             />
           </div>
 
           {/* 取得価額 */}
           <div>
-            <label className="block text-[10px] font-medium text-[#999] mb-1">取得価額（円）</label>
+            <label className="block text-[10px] font-medium text-app-text-mute mb-1">取得価額（円）</label>
             <input
               type="number"
               value={form.acquisitionCost || ''}
               onChange={e => setForm(prev => ({ ...prev, acquisitionCost: parseInt(e.target.value) || 0 }))}
               placeholder="350000"
-              className="w-full px-3 py-2 border border-[#e0e0e0] rounded-lg text-sm font-['Saira_Condensed'] focus:outline-none focus:border-[#D4A03A] transition-colors"
+              className="w-full px-3 py-2 border border-app-line-strong rounded-lg text-sm font-['Saira_Condensed'] focus:outline-none focus:border-app-gold transition-colors"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             {/* 耐用年数 */}
             <div>
-              <label className="block text-[10px] font-medium text-[#999] mb-1">耐用年数</label>
+              <label className="block text-[10px] font-medium text-app-text-mute mb-1">耐用年数</label>
               <div className="flex items-center gap-1">
                 <input
                   type="number"
@@ -5270,15 +5270,15 @@ function AssetModal({
                   max={50}
                   value={form.usefulLife}
                   onChange={e => setForm(prev => ({ ...prev, usefulLife: parseInt(e.target.value) || 1 }))}
-                  className="w-full px-3 py-2 border border-[#e0e0e0] rounded-lg text-sm font-['Saira_Condensed'] focus:outline-none focus:border-[#D4A03A] transition-colors"
+                  className="w-full px-3 py-2 border border-app-line-strong rounded-lg text-sm font-['Saira_Condensed'] focus:outline-none focus:border-app-gold transition-colors"
                 />
-                <span className="text-xs text-[#999]">年</span>
+                <span className="text-xs text-app-text-mute">年</span>
               </div>
             </div>
 
             {/* 事業使用割合 */}
             <div>
-              <label className="block text-[10px] font-medium text-[#999] mb-1">事業使用割合</label>
+              <label className="block text-[10px] font-medium text-app-text-mute mb-1">事業使用割合</label>
               <div className="flex items-center gap-1">
                 <input
                   type="number"
@@ -5286,18 +5286,18 @@ function AssetModal({
                   max={100}
                   value={form.businessUseRatio}
                   onChange={e => setForm(prev => ({ ...prev, businessUseRatio: parseInt(e.target.value) || 0 }))}
-                  className="w-full px-3 py-2 border border-[#e0e0e0] rounded-lg text-sm font-['Saira_Condensed'] focus:outline-none focus:border-[#D4A03A] transition-colors"
+                  className="w-full px-3 py-2 border border-app-line-strong rounded-lg text-sm font-['Saira_Condensed'] focus:outline-none focus:border-app-gold transition-colors"
                 />
-                <span className="text-xs text-[#999]">%</span>
+                <span className="text-xs text-app-text-mute">%</span>
               </div>
             </div>
           </div>
 
           {/* 年間償却額プレビュー */}
           {form.acquisitionCost > 0 && (
-            <div className="p-3 bg-[#F5F5F3] rounded-lg">
-              <span className="text-[10px] text-[#999]">年間償却額（定額法）：</span>
-              <span className="font-['Saira_Condensed'] text-sm text-[#C23728] ml-1">
+            <div className="p-3 bg-app-surface-alt rounded-lg">
+              <span className="text-[10px] text-app-text-mute">年間償却額（定額法）：</span>
+              <span className="font-['Saira_Condensed'] text-sm text-app-red ml-1">
                 {yen(Math.floor((form.acquisitionCost / form.usefulLife) * (form.businessUseRatio / 100)))}
               </span>
             </div>
@@ -5307,14 +5307,14 @@ function AssetModal({
         <div className="flex justify-end gap-2 mt-6">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-xs text-[#666] bg-[#F5F5F3] rounded-lg hover:bg-[#eee] transition-colors"
+            className="px-4 py-2 text-xs text-app-text-sub bg-app-surface-alt rounded-lg hover:bg-app-button-disabled transition-colors"
           >
             キャンセル
           </button>
           <button
             onClick={() => onSave(form)}
             disabled={!canSave}
-            className="px-4 py-2 text-xs text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] disabled:opacity-30 transition-colors"
+            className="px-4 py-2 text-xs text-white bg-app-button rounded-lg hover:bg-app-button-hover disabled:opacity-30 transition-colors"
           >
             {asset ? '更新' : '追加'}
           </button>
@@ -5381,105 +5381,105 @@ function BankModal({
       <div className="relative bg-white rounded-2xl w-full max-w-md mx-4 max-h-[85vh] overflow-y-auto"
         style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-sm font-medium text-[#1a1a1a]">
+          <h2 className="text-sm font-medium text-app-text">
             {bank ? '口座を編集' : '口座を追加'}
           </h2>
           <button onClick={onClose} className="p-1 hover:bg-black/5 rounded-md transition-colors">
-            <X className="w-4 h-4 text-[#999]" />
+            <X className="w-4 h-4 text-app-text-mute" />
           </button>
         </div>
 
         <div className="px-5 py-4 space-y-4">
           <div>
-            <label className="block text-xs text-[#999] mb-1">口座名（通称）</label>
+            <label className="block text-xs text-app-text-mute mb-1">口座名（通称）</label>
             <input type="text" value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="例: メイン口座"
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50" />
           </div>
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="block text-xs text-[#999] mb-1">銀行名</label>
+              <label className="block text-xs text-app-text-mute mb-1">銀行名</label>
               <input type="text" value={form.bank_name}
                 onChange={(e) => setForm({ ...form, bank_name: e.target.value })}
                 placeholder="例: GMOあおぞらネット銀行"
-                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+                className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50" />
             </div>
             <div className="w-24">
-              <label className="block text-xs text-[#999] mb-1">金融機関コード</label>
+              <label className="block text-xs text-app-text-mute mb-1">金融機関コード</label>
               <input type="text" inputMode="numeric" value={form.bank_code}
                 onChange={(e) => { const v = e.target.value.replace(/\D/g, '').slice(0, 4); setForm({ ...form, bank_code: v }); }}
                 placeholder="0310"
                 maxLength={4}
-                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed'] tabular-nums text-center" />
+                className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50 font-['Saira_Condensed'] tabular-nums text-center" />
             </div>
           </div>
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="block text-xs text-[#999] mb-1">支店名</label>
+              <label className="block text-xs text-app-text-mute mb-1">支店名</label>
               <input type="text" value={form.branch_name}
                 onChange={(e) => setForm({ ...form, branch_name: e.target.value })}
                 placeholder="例: ビジネス第二支店"
-                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+                className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50" />
             </div>
             <div className="w-24">
-              <label className="block text-xs text-[#999] mb-1">支店コード</label>
+              <label className="block text-xs text-app-text-mute mb-1">支店コード</label>
               <input type="text" inputMode="numeric" value={form.branch_code}
                 onChange={(e) => { const v = e.target.value.replace(/\D/g, '').slice(0, 3); setForm({ ...form, branch_code: v }); }}
                 placeholder="202"
                 maxLength={3}
-                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed'] tabular-nums text-center" />
+                className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50 font-['Saira_Condensed'] tabular-nums text-center" />
             </div>
           </div>
           <div className="flex gap-3">
             <div className="w-28">
-              <label className="block text-xs text-[#999] mb-1">口座種別</label>
+              <label className="block text-xs text-app-text-mute mb-1">口座種別</label>
               <select value={form.account_type}
                 onChange={(e) => setForm({ ...form, account_type: e.target.value })}
-                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
+                className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50">
                 <option value="savings">普通</option>
                 <option value="checking">当座</option>
               </select>
             </div>
             <div className="flex-1">
-              <label className="block text-xs text-[#999] mb-1">口座番号</label>
+              <label className="block text-xs text-app-text-mute mb-1">口座番号</label>
               <input type="text" inputMode="numeric" value={form.account_number}
                 onChange={(e) => { const v = e.target.value.replace(/\D/g, ''); setForm({ ...form, account_number: v }); }}
                 placeholder="1108530"
-                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed'] tabular-nums" />
+                className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50 font-['Saira_Condensed'] tabular-nums" />
             </div>
           </div>
           <div>
-            <label className="block text-xs text-[#999] mb-1">口座名義（漢字）</label>
+            <label className="block text-xs text-app-text-mute mb-1">口座名義（漢字）</label>
             <input type="text" value={form.account_holder_name}
               onChange={(e) => setForm({ ...form, account_holder_name: e.target.value })}
               placeholder="例: komu10 小林 寿樹"
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50" />
           </div>
           <div>
-            <label className="block text-xs text-[#999] mb-1">口座名義（カナ）</label>
+            <label className="block text-xs text-app-text-mute mb-1">口座名義（カナ）</label>
             <input type="text" value={form.account_holder_kana}
               onChange={(e) => setForm({ ...form, account_holder_kana: e.target.value })}
               placeholder="例: コウムテン コバヤシ トシキ"
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50" />
           </div>
           <div>
-            <label className="block text-xs text-[#999] mb-1">現在残高（円）</label>
+            <label className="block text-xs text-app-text-mute mb-1">現在残高（円）</label>
             <input type="text" inputMode="numeric"
               value={form.balance ? Number(form.balance.replace(/,/g, '')).toLocaleString() : ''}
               onChange={(e) => { const v = e.target.value.replace(/,/g, ''); if (/^\d*$/.test(v)) setForm({ ...form, balance: v }); }}
               placeholder="0"
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed'] tabular-nums" />
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50 font-['Saira_Condensed'] tabular-nums" />
           </div>
         </div>
 
         <div className="px-5 py-4 border-t border-gray-100 flex gap-2">
           <button onClick={onClose}
-            className="flex-1 py-2.5 text-xs text-[#999] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors">
+            className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors">
             キャンセル
           </button>
           <button onClick={handleSave} disabled={!canSave || saving}
-            className="flex-1 py-2.5 text-xs text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
+            className="flex-1 py-2.5 text-xs text-white bg-app-button rounded-lg hover:bg-app-button-hover transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
             {saving && <Loader2 className="w-3 h-3 animate-spin" />}
             {bank ? '更新する' : '追加する'}
           </button>
@@ -5566,80 +5566,80 @@ function ClientModal({
       <div className="relative bg-white rounded-2xl w-full max-w-md mx-4 max-h-[85vh] overflow-y-auto"
         style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-sm font-medium text-[#1a1a1a]">
+          <h2 className="text-sm font-medium text-app-text">
             {client ? `取引先を編集（${client.client_number}）` : '取引先を追加'}
           </h2>
           <button onClick={onClose} className="p-1 hover:bg-black/5 rounded-md transition-colors">
-            <X className="w-4 h-4 text-[#999]" />
+            <X className="w-4 h-4 text-app-text-mute" />
           </button>
         </div>
 
         <div className="px-5 py-4 space-y-4">
           {/* 取引先名 */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">取引先名 <span className="text-[#C23728]">*</span></label>
+            <label className="block text-xs text-app-text-mute mb-1">取引先名 <span className="text-app-red">*</span></label>
             <input type="text" value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="例: KKDAY JAPAN"
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50" />
           </div>
 
           {/* 略称 */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">略称（任意）</label>
+            <label className="block text-xs text-app-text-mute mb-1">略称（任意）</label>
             <input type="text" value={form.short_name}
               onChange={(e) => setForm({ ...form, short_name: e.target.value })}
               placeholder="例: KKDAY"
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50" />
           </div>
 
           {/* 住所 */}
           <div className="flex gap-3">
             <div className="w-28">
-              <label className="block text-xs text-[#999] mb-1">郵便番号</label>
+              <label className="block text-xs text-app-text-mute mb-1">郵便番号</label>
               <input type="text" value={form.postal_code}
                 onChange={(e) => setForm({ ...form, postal_code: e.target.value })}
                 placeholder="000-0000"
-                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed'] tabular-nums" />
+                className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50 font-['Saira_Condensed'] tabular-nums" />
             </div>
             <div className="flex-1">
-              <label className="block text-xs text-[#999] mb-1">住所</label>
+              <label className="block text-xs text-app-text-mute mb-1">住所</label>
               <input type="text" value={form.address}
                 onChange={(e) => setForm({ ...form, address: e.target.value })}
                 placeholder="東京都渋谷区…"
-                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+                className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50" />
             </div>
           </div>
 
           {/* 担当者 */}
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="block text-xs text-[#999] mb-1">担当者名</label>
+              <label className="block text-xs text-app-text-mute mb-1">担当者名</label>
               <input type="text" value={form.contact_name}
                 onChange={(e) => setForm({ ...form, contact_name: e.target.value })}
                 placeholder="田中太郎"
-                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+                className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50" />
             </div>
             <div className="flex-1">
-              <label className="block text-xs text-[#999] mb-1">メール</label>
+              <label className="block text-xs text-app-text-mute mb-1">メール</label>
               <input type="email" value={form.contact_email}
                 onChange={(e) => setForm({ ...form, contact_email: e.target.value })}
                 placeholder="tanaka@example.com"
-                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+                className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50" />
             </div>
           </div>
 
           {/* 支払いサイト */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">支払いサイト</label>
+            <label className="block text-xs text-app-text-mute mb-1">支払いサイト</label>
             <div className="flex gap-1.5 mb-2">
               {PAYMENT_TERMS_PRESETS.map((p) => (
                 <button key={p.label} type="button"
                   onClick={() => setForm(prev => ({ ...prev, payment_terms: p.terms }))}
                   className={`px-2.5 py-1 text-[11px] rounded-md transition-colors ${
                     form.payment_terms === p.terms
-                      ? 'bg-[#1a1a1a] text-white'
-                      : 'bg-[#F5F5F3] text-[#666] hover:bg-[#eee]'
+                      ? 'bg-app-button text-white'
+                      : 'bg-app-surface-alt text-app-text-sub hover:bg-app-button-disabled'
                   }`}>
                   {p.label}
                 </button>
@@ -5648,19 +5648,19 @@ function ClientModal({
             <input type="text" value={form.payment_terms}
               onChange={(e) => setForm({ ...form, payment_terms: e.target.value })}
               placeholder="表示名（月末締翌月末 等）"
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50" />
           </div>
 
           {/* v0.6.0 請求書設定 */}
           <div className="border-t border-gray-100 pt-4 space-y-3">
-            <div className="text-xs font-medium text-[#1a1a1a]">請求書設定</div>
+            <div className="text-xs font-medium text-app-text">請求書設定</div>
 
             {/* 支払サイト種別（自動期限算出用） */}
             <div>
-              <label className="block text-xs text-[#999] mb-1">支払サイト種別</label>
+              <label className="block text-xs text-app-text-mute mb-1">支払サイト種別</label>
               <select value={form.payment_terms_type}
                 onChange={(e) => setForm({ ...form, payment_terms_type: e.target.value })}
-                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
+                className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50">
                 <option value="month_end_next_month_end">月末締翌月末払い（期限自動算出）</option>
                 <option value="other">その他（個別・手動入力）</option>
               </select>
@@ -5668,17 +5668,17 @@ function ClientModal({
 
             {/* 源泉徴収 */}
             <div className="flex items-center gap-3">
-              <label className="text-xs text-[#999] w-24 shrink-0">源泉徴収</label>
+              <label className="text-xs text-app-text-mute w-24 shrink-0">源泉徴収</label>
               <div className="flex gap-1.5">
                 <button type="button"
                   onClick={() => setForm({ ...form, withholding_tax: true })}
                   className={`px-3 py-1.5 text-[11px] rounded-md transition-colors ${
-                    form.withholding_tax ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666] hover:bg-[#eee]'
+                    form.withholding_tax ? 'bg-app-button text-white' : 'bg-app-surface-alt text-app-text-sub hover:bg-app-button-disabled'
                   }`}>あり</button>
                 <button type="button"
                   onClick={() => setForm({ ...form, withholding_tax: false })}
                   className={`px-3 py-1.5 text-[11px] rounded-md transition-colors ${
-                    !form.withholding_tax ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666] hover:bg-[#eee]'
+                    !form.withholding_tax ? 'bg-app-button text-white' : 'bg-app-surface-alt text-app-text-sub hover:bg-app-button-disabled'
                   }`}>なし</button>
               </div>
             </div>
@@ -5686,17 +5686,17 @@ function ClientModal({
             {/* 源泉計算基準（源泉ありのみ） */}
             {form.withholding_tax && (
               <div className="flex items-center gap-3">
-                <label className="text-xs text-[#999] w-24 shrink-0">源泉計算基準</label>
+                <label className="text-xs text-app-text-mute w-24 shrink-0">源泉計算基準</label>
                 <div className="flex gap-1.5">
                   <button type="button"
                     onClick={() => setForm({ ...form, withholding_basis: 'tax_included' })}
                     className={`px-3 py-1.5 text-[11px] rounded-md transition-colors ${
-                      form.withholding_basis === 'tax_included' ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666] hover:bg-[#eee]'
+                      form.withholding_basis === 'tax_included' ? 'bg-app-button text-white' : 'bg-app-surface-alt text-app-text-sub hover:bg-app-button-disabled'
                     }`}>税込</button>
                   <button type="button"
                     onClick={() => setForm({ ...form, withholding_basis: 'tax_excluded' })}
                     className={`px-3 py-1.5 text-[11px] rounded-md transition-colors ${
-                      form.withholding_basis === 'tax_excluded' ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666] hover:bg-[#eee]'
+                      form.withholding_basis === 'tax_excluded' ? 'bg-app-button text-white' : 'bg-app-surface-alt text-app-text-sub hover:bg-app-button-disabled'
                     }`}>税抜</button>
                 </div>
               </div>
@@ -5704,34 +5704,34 @@ function ClientModal({
 
             {/* 冒頭金額表示 */}
             <div className="flex items-center gap-3">
-              <label className="text-xs text-[#999] w-24 shrink-0">冒頭金額表示</label>
+              <label className="text-xs text-app-text-mute w-24 shrink-0">冒頭金額表示</label>
               <div className="flex gap-1.5">
                 <button type="button"
                   onClick={() => setForm({ ...form, header_amount_type: 'total' })}
                   className={`px-3 py-1.5 text-[11px] rounded-md transition-colors ${
-                    form.header_amount_type === 'total' ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666] hover:bg-[#eee]'
+                    form.header_amount_type === 'total' ? 'bg-app-button text-white' : 'bg-app-surface-alt text-app-text-sub hover:bg-app-button-disabled'
                   }`}>請求総額</button>
                 <button type="button"
                   onClick={() => setForm({ ...form, header_amount_type: 'net_payment' })}
                   className={`px-3 py-1.5 text-[11px] rounded-md transition-colors ${
-                    form.header_amount_type === 'net_payment' ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666] hover:bg-[#eee]'
+                    form.header_amount_type === 'net_payment' ? 'bg-app-button text-white' : 'bg-app-surface-alt text-app-text-sub hover:bg-app-button-disabled'
                   }`}>差引振込額</button>
               </div>
             </div>
 
             {/* 振込手数料 */}
             <div className="flex items-center gap-3">
-              <label className="text-xs text-[#999] w-24 shrink-0">振込手数料</label>
+              <label className="text-xs text-app-text-mute w-24 shrink-0">振込手数料</label>
               <div className="flex gap-1.5">
                 <button type="button"
                   onClick={() => setForm({ ...form, fee_burden: 'client' })}
                   className={`px-3 py-1.5 text-[11px] rounded-md transition-colors ${
-                    form.fee_burden === 'client' ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666] hover:bg-[#eee]'
+                    form.fee_burden === 'client' ? 'bg-app-button text-white' : 'bg-app-surface-alt text-app-text-sub hover:bg-app-button-disabled'
                   }`}>先方負担</button>
                 <button type="button"
                   onClick={() => setForm({ ...form, fee_burden: 'self' })}
                   className={`px-3 py-1.5 text-[11px] rounded-md transition-colors ${
-                    form.fee_burden === 'self' ? 'bg-[#1a1a1a] text-white' : 'bg-[#F5F5F3] text-[#666] hover:bg-[#eee]'
+                    form.fee_burden === 'self' ? 'bg-app-button text-white' : 'bg-app-surface-alt text-app-text-sub hover:bg-app-button-disabled'
                   }`}>自社負担</button>
               </div>
             </div>
@@ -5739,21 +5739,21 @@ function ClientModal({
 
           {/* メモ */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">メモ（任意）</label>
+            <label className="block text-xs text-app-text-mute mb-1">メモ（任意）</label>
             <textarea value={form.notes}
               onChange={(e) => setForm({ ...form, notes: e.target.value })}
               placeholder="契約条件や備考など"
               rows={2}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 resize-none" />
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50 resize-none" />
           </div>
 
           {/* ステータス（編集時のみ） */}
           {client && (
             <div className="flex items-center gap-2">
-              <label className="text-xs text-[#999]">有効</label>
+              <label className="text-xs text-app-text-mute">有効</label>
               <button type="button"
                 onClick={() => setForm(prev => ({ ...prev, is_active: !prev.is_active }))}
-                className={`relative w-9 h-5 rounded-full transition-colors ${form.is_active ? 'bg-[#1B4D3E]' : 'bg-[#ccc]'}`}>
+                className={`relative w-9 h-5 rounded-full transition-colors ${form.is_active ? 'bg-app-green' : 'bg-app-text-fade'}`}>
                 <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${form.is_active ? 'left-[18px]' : 'left-0.5'}`} />
               </button>
             </div>
@@ -5762,11 +5762,11 @@ function ClientModal({
 
         <div className="px-5 py-4 border-t border-gray-100 flex gap-2">
           <button onClick={onClose}
-            className="flex-1 py-2.5 text-xs text-[#999] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors">
+            className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors">
             キャンセル
           </button>
           <button onClick={handleSave} disabled={!canSave || saving}
-            className="flex-1 py-2.5 text-xs text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
+            className="flex-1 py-2.5 text-xs text-white bg-app-button rounded-lg hover:bg-app-button-hover transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
             {saving && <Loader2 className="w-3 h-3 animate-spin" />}
             {client ? '更新する' : '追加する'}
           </button>
@@ -5851,25 +5851,25 @@ function RecurringModal({
       <div className="relative bg-white rounded-2xl w-full max-w-md mx-4 max-h-[85vh] overflow-y-auto"
         style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-sm font-medium text-[#1a1a1a]">
+          <h2 className="text-sm font-medium text-app-text">
             {recurring ? '固定契約を編集' : '固定契約を追加'}
           </h2>
           <button onClick={onClose} className="p-1 hover:bg-black/5 rounded-md transition-colors">
-            <X className="w-4 h-4 text-[#999]" />
+            <X className="w-4 h-4 text-app-text-mute" />
           </button>
         </div>
 
         <div className="px-5 py-4 space-y-4">
           {/* 売上/経費切替 */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">種別</label>
+            <label className="block text-xs text-app-text-mute mb-1">種別</label>
             <div className="flex gap-2">
               <button type="button" onClick={() => handleTypeToggle(true)}
-                className={`flex-1 py-2 text-xs rounded-lg transition-colors ${isSales ? 'bg-[#1B4D3E] text-white' : 'bg-[#F5F5F3] text-[#666] hover:bg-[#eee]'}`}>
+                className={`flex-1 py-2 text-xs rounded-lg transition-colors ${isSales ? 'bg-app-green text-white' : 'bg-app-surface-alt text-app-text-sub hover:bg-app-button-disabled'}`}>
                 売上
               </button>
               <button type="button" onClick={() => handleTypeToggle(false)}
-                className={`flex-1 py-2 text-xs rounded-lg transition-colors ${!isSales ? 'bg-[#C23728] text-white' : 'bg-[#F5F5F3] text-[#666] hover:bg-[#eee]'}`}>
+                className={`flex-1 py-2 text-xs rounded-lg transition-colors ${!isSales ? 'bg-app-red text-white' : 'bg-app-surface-alt text-app-text-sub hover:bg-app-button-disabled'}`}>
                 経費
               </button>
             </div>
@@ -5877,29 +5877,29 @@ function RecurringModal({
 
           {/* 内容 */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">内容 <span className="text-[#C23728]">*</span></label>
+            <label className="block text-xs text-app-text-mute mb-1">内容 <span className="text-app-red">*</span></label>
             <input type="text" value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               placeholder={isSales ? '例: KKday コンサルティング月額' : '例: Adobe CC'}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50" />
           </div>
 
           {/* 金額 */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">金額（税込） <span className="text-[#C23728]">*</span></label>
+            <label className="block text-xs text-app-text-mute mb-1">金額（税込） <span className="text-app-red">*</span></label>
             <input type="text" inputMode="numeric" value={form.amount}
               onChange={(e) => { const v = e.target.value.replace(/[^\d]/g, ''); setForm({ ...form, amount: v }); }}
               placeholder="0"
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed'] tabular-nums" />
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50 font-['Saira_Condensed'] tabular-nums" />
           </div>
 
           {/* 科目（経費のみ） */}
           {!isSales && (
             <div>
-              <label className="block text-xs text-[#999] mb-1">科目</label>
+              <label className="block text-xs text-app-text-mute mb-1">科目</label>
               <select value={form.kamoku}
                 onChange={(e) => setForm({ ...form, kamoku: e.target.value })}
-                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
+                className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50">
                 {EXPENSE_KAMOKU_OPTIONS.map(k => (
                   <option key={k.id} value={k.id}>{k.name}</option>
                 ))}
@@ -5909,10 +5909,10 @@ function RecurringModal({
 
           {/* 事業 */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">事業</label>
+            <label className="block text-xs text-app-text-mute mb-1">事業</label>
             <select value={form.division}
               onChange={(e) => setForm({ ...form, division: e.target.value })}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50">
               <option value="">未選択</option>
               {DIVISION_OPTIONS.map(d => (
                 <option key={d.id} value={d.id}>{d.name}</option>
@@ -5922,10 +5922,10 @@ function RecurringModal({
 
           {/* 取引先 */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">取引先</label>
+            <label className="block text-xs text-app-text-mute mb-1">取引先</label>
             <select value={form.client_id}
               onChange={(e) => setForm({ ...form, client_id: e.target.value })}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50">
               <option value="">未選択</option>
               {clients.map(cl => (
                 <option key={cl.id} value={cl.id}>{cl.name}</option>
@@ -5936,37 +5936,37 @@ function RecurringModal({
           {/* 頻度・期間 */}
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="block text-xs text-[#999] mb-1">頻度</label>
+              <label className="block text-xs text-app-text-mute mb-1">頻度</label>
               <select value={form.frequency}
                 onChange={(e) => setForm({ ...form, frequency: e.target.value as any })}
-                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
+                className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50">
                 <option value="monthly">毎月</option>
                 <option value="quarterly">四半期</option>
                 <option value="annual">年次</option>
               </select>
             </div>
             <div className="w-20">
-              <label className="block text-xs text-[#999] mb-1">支払日</label>
+              <label className="block text-xs text-app-text-mute mb-1">支払日</label>
               <input type="text" inputMode="numeric" value={form.payment_day}
                 onChange={(e) => { const v = e.target.value.replace(/\D/g, '').slice(0, 2); setForm({ ...form, payment_day: v }); }}
                 placeholder="28"
-                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed'] tabular-nums text-center" />
-              <span className="text-[10px] text-[#999] mt-0.5 block text-center">日</span>
+                className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50 font-['Saira_Condensed'] tabular-nums text-center" />
+              <span className="text-[10px] text-app-text-mute mt-0.5 block text-center">日</span>
             </div>
           </div>
 
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="block text-xs text-[#999] mb-1">開始月</label>
+              <label className="block text-xs text-app-text-mute mb-1">開始月</label>
               <input type="month" value={form.start_date}
                 onChange={(e) => setForm({ ...form, start_date: e.target.value })}
-                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+                className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50" />
             </div>
             <div className="flex-1">
-              <label className="block text-xs text-[#999] mb-1">終了月（任意）</label>
+              <label className="block text-xs text-app-text-mute mb-1">終了月（任意）</label>
               <input type="month" value={form.end_date}
                 onChange={(e) => setForm({ ...form, end_date: e.target.value })}
-                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+                className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50" />
             </div>
           </div>
 
@@ -5974,20 +5974,20 @@ function RecurringModal({
           <div className="flex items-center gap-2">
             <button type="button"
               onClick={() => setForm(prev => ({ ...prev, is_active: !prev.is_active }))}
-              className={`relative w-10 h-5 rounded-full transition-colors ${form.is_active ? 'bg-[#1B4D3E]' : 'bg-[#ccc]'}`}>
+              className={`relative w-10 h-5 rounded-full transition-colors ${form.is_active ? 'bg-app-green' : 'bg-app-text-fade'}`}>
               <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${form.is_active ? 'left-5' : 'left-0.5'}`} />
             </button>
-            <span className="text-xs text-[#666]">{form.is_active ? '有効' : '停止中'}</span>
+            <span className="text-xs text-app-text-sub">{form.is_active ? '有効' : '停止中'}</span>
           </div>
         </div>
 
         <div className="px-5 py-4 border-t border-gray-100 flex gap-2">
           <button onClick={onClose}
-            className="flex-1 py-2.5 text-xs text-[#999] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors">
+            className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors">
             キャンセル
           </button>
           <button onClick={handleSave} disabled={!canSave || saving}
-            className="flex-1 py-2.5 text-xs text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
+            className="flex-1 py-2.5 text-xs text-white bg-app-button rounded-lg hover:bg-app-button-hover transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
             {saving && <Loader2 className="w-3 h-3 animate-spin" />}
             {recurring ? '更新する' : '追加する'}
           </button>
@@ -6032,46 +6032,46 @@ function ProjectModal({
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
       <div className="relative bg-white rounded-2xl w-full max-w-md mx-4 overflow-hidden" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
         <div className="px-5 py-4 border-b border-gray-100">
-          <h2 className="text-sm font-medium text-[#1a1a1a]">
+          <h2 className="text-sm font-medium text-app-text">
             {project ? 'プロジェクト編集' : 'プロジェクト追加'}
           </h2>
         </div>
 
         <div className="px-5 py-4 space-y-4">
           <div>
-            <label className="block text-xs text-[#999] mb-1">案件名（内部管理用） <span className="text-[#C23728]">*</span></label>
+            <label className="block text-xs text-app-text-mute mb-1">案件名（内部管理用） <span className="text-app-red">*</span></label>
             <input type="text" value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               placeholder="例: KKDAY_自治体DMO関連事業支援_2026Q2"
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
-            <p className="text-[11px] text-[#999] mt-1">社内で案件を識別するための名前です</p>
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50" />
+            <p className="text-[11px] text-app-text-mute mt-1">社内で案件を識別するための名前です</p>
           </div>
 
           <div>
-            <label className="block text-xs text-[#999] mb-1">請求書の件名（先方が見る表記）</label>
+            <label className="block text-xs text-app-text-mute mb-1">請求書の件名（先方が見る表記）</label>
             <input type="text" value={form.invoice_display_name}
               onChange={(e) => setForm({ ...form, invoice_display_name: e.target.value })}
               placeholder="例: 自治体DMO関連事業支援"
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
-            <p className="text-[11px] text-[#999] mt-1">未設定の場合、案件名がそのまま使われます</p>
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50" />
+            <p className="text-[11px] text-app-text-mute mt-1">未設定の場合、案件名がそのまま使われます</p>
           </div>
 
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="block text-xs text-[#999] mb-1">事業部門</label>
+              <label className="block text-xs text-app-text-mute mb-1">事業部門</label>
               <select value={form.division}
                 onChange={(e) => setForm({ ...form, division: e.target.value })}
-                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
+                className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50">
                 {Object.entries(DIVISIONS).map(([key, val]) => (
                   <option key={key} value={key}>{val.name}</option>
                 ))}
               </select>
             </div>
             <div className="flex-1">
-              <label className="block text-xs text-[#999] mb-1">担当者</label>
+              <label className="block text-xs text-app-text-mute mb-1">担当者</label>
               <select value={form.owner}
                 onChange={(e) => setForm({ ...form, owner: e.target.value })}
-                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
+                className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50">
                 <option value="tomo">トモ</option>
                 <option value="toshiki">トシキ</option>
               </select>
@@ -6080,10 +6080,10 @@ function ProjectModal({
 
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="block text-xs text-[#999] mb-1">ステータス</label>
+              <label className="block text-xs text-app-text-mute mb-1">ステータス</label>
               <select value={form.status}
                 onChange={(e) => setForm({ ...form, status: e.target.value })}
-                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
+                className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50">
                 <option value="planning">企画</option>
                 <option value="ordered">受注済</option>
                 <option value="active">進行中</option>
@@ -6092,29 +6092,29 @@ function ProjectModal({
               </select>
             </div>
             <div className="flex-1">
-              <label className="block text-xs text-[#999] mb-1">クライアント（任意）</label>
+              <label className="block text-xs text-app-text-mute mb-1">クライアント（任意）</label>
               <input type="text" value={form.client}
                 onChange={(e) => setForm({ ...form, client: e.target.value })}
-                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+                className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50" />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs text-[#999] mb-1">メモ（任意）</label>
+            <label className="block text-xs text-app-text-mute mb-1">メモ（任意）</label>
             <textarea value={form.note}
               onChange={(e) => setForm({ ...form, note: e.target.value })}
               rows={2}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 resize-none" />
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50 resize-none" />
           </div>
         </div>
 
         <div className="px-5 py-4 border-t border-gray-100 flex gap-2">
           <button onClick={onClose}
-            className="flex-1 py-2.5 text-xs text-[#999] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors">
+            className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors">
             キャンセル
           </button>
           <button onClick={handleSave} disabled={!form.name.trim() || saving}
-            className="flex-1 py-2.5 text-xs text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
+            className="flex-1 py-2.5 text-xs text-white bg-app-button rounded-lg hover:bg-app-button-hover transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
             {saving && <Loader2 className="w-3 h-3 animate-spin" />}
             {project ? '更新する' : '追加する'}
           </button>
@@ -6208,23 +6208,23 @@ function EquipmentEditModal({
       <div className="relative bg-white rounded-2xl w-full max-w-md mx-4 max-h-[85vh] overflow-y-auto"
         style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="text-sm font-medium text-[#1a1a1a]">備品を編集</h2>
+          <h2 className="text-sm font-medium text-app-text">備品を編集</h2>
           <button onClick={onClose} className="p-1 hover:bg-black/5 rounded-md transition-colors">
-            <X className="w-4 h-4 text-[#999]" />
+            <X className="w-4 h-4 text-app-text-mute" />
           </button>
         </div>
 
         <div className="px-5 py-4 space-y-4">
-          <div className="px-3 py-2 bg-[#F5F5F3] rounded-lg">
-            <p className="text-xs text-[#999]">品名</p>
-            <p className="text-sm text-[#1a1a1a] font-medium">{item.name}</p>
+          <div className="px-3 py-2 bg-app-surface-alt rounded-lg">
+            <p className="text-xs text-app-text-mute">品名</p>
+            <p className="text-sm text-app-text font-medium">{item.name}</p>
           </div>
 
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="block text-xs text-[#999] mb-1">カテゴリ</label>
+              <label className="block text-xs text-app-text-mute mb-1">カテゴリ</label>
               <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}
-                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
+                className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50">
                 <option value="">未分類</option>
                 {Object.entries(EQUIPMENT_CATEGORIES).map(([k, v]) => (
                   <option key={k} value={k}>{v}</option>
@@ -6232,9 +6232,9 @@ function EquipmentEditModal({
               </select>
             </div>
             <div className="flex-1">
-              <label className="block text-xs text-[#999] mb-1">ステータス</label>
+              <label className="block text-xs text-app-text-mute mb-1">ステータス</label>
               <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}
-                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50">
+                className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50">
                 {Object.entries(EQUIPMENT_STATUS).map(([k, v]) => (
                   <option key={k} value={k}>{v}</option>
                 ))}
@@ -6243,53 +6243,53 @@ function EquipmentEditModal({
           </div>
 
           <div>
-            <label className="block text-xs text-[#999] mb-1">メーカー・型番</label>
+            <label className="block text-xs text-app-text-mute mb-1">メーカー・型番</label>
             <input type="text" value={form.maker}
               onChange={(e) => setForm({ ...form, maker: e.target.value })}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50"
               placeholder="Apple / SONY α7IV 等" />
           </div>
 
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="block text-xs text-[#999] mb-1">シリアル番号</label>
+              <label className="block text-xs text-app-text-mute mb-1">シリアル番号</label>
               <input type="text" value={form.serial}
                 onChange={(e) => setForm({ ...form, serial: e.target.value })}
-                className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+                className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50"
                 placeholder="任意" />
             </div>
             <div className="flex-1">
-              <label className="block text-xs text-[#999] mb-1">事業利用割合</label>
+              <label className="block text-xs text-app-text-mute mb-1">事業利用割合</label>
               <div className="flex items-center gap-1">
                 <input type="number" min={0} max={100} value={form.business_ratio}
                   onChange={(e) => setForm({ ...form, business_ratio: e.target.value })}
-                  className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50 font-['Saira_Condensed'] tabular-nums" />
-                <span className="text-xs text-[#999] shrink-0">%</span>
+                  className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50 font-['Saira_Condensed'] tabular-nums" />
+                <span className="text-xs text-app-text-mute shrink-0">%</span>
               </div>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs text-[#999] mb-1">保証期限</label>
+            <label className="block text-xs text-app-text-mute mb-1">保証期限</label>
             <input type="date" value={form.warranty_date}
               onChange={(e) => setForm({ ...form, warranty_date: e.target.value })}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50" />
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50" />
           </div>
 
           <div>
-            <label className="block text-xs text-[#999] mb-1">メモ</label>
+            <label className="block text-xs text-app-text-mute mb-1">メモ</label>
             <input type="text" value={form.note}
               onChange={(e) => setForm({ ...form, note: e.target.value })}
-              className="w-full px-3 py-2 bg-[#F5F5F3] rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-[#D4A03A]/50"
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50"
               placeholder="任意" />
           </div>
 
           {/* 写真 */}
           <div>
-            <label className="block text-xs text-[#999] mb-1">写真（最大5枚）</label>
+            <label className="block text-xs text-app-text-mute mb-1">写真（最大5枚）</label>
             <div className="flex flex-wrap gap-2 mb-2">
               {(photos).map((url, i) => (
-                <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden bg-[#F5F5F3] group">
+                <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden bg-app-surface-alt group">
                   <img src={url} alt="" className="w-full h-full object-cover" />
                   <button
                     onClick={() => handleDeletePhoto(url)}
@@ -6300,27 +6300,27 @@ function EquipmentEditModal({
                 </div>
               ))}
               {photos.length < 5 && (
-                <label className="w-16 h-16 rounded-lg border-2 border-dashed border-[#D4A03A]/30 flex items-center justify-center cursor-pointer hover:border-[#D4A03A]/60 transition-colors">
+                <label className="w-16 h-16 rounded-lg border-2 border-dashed border-app-gold/30 flex items-center justify-center cursor-pointer hover:border-app-gold/60 transition-colors">
                   {photoUploading ? (
-                    <Loader2 className="w-4 h-4 text-[#D4A03A] animate-spin" />
+                    <Loader2 className="w-4 h-4 text-app-gold animate-spin" />
                   ) : (
-                    <Camera className="w-4 h-4 text-[#D4A03A]" />
+                    <Camera className="w-4 h-4 text-app-gold" />
                   )}
                   <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} disabled={photoUploading} />
                 </label>
               )}
             </div>
-            {photoError && <p className="text-[10px] text-[#C23728]">{photoError}</p>}
+            {photoError && <p className="text-[10px] text-app-red">{photoError}</p>}
           </div>
         </div>
 
         <div className="px-5 py-4 border-t border-gray-100 flex gap-2">
           <button onClick={onClose}
-            className="flex-1 py-2.5 text-xs text-[#999] bg-[#F5F5F3] rounded-lg hover:bg-gray-200 transition-colors">
+            className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors">
             キャンセル
           </button>
           <button onClick={handleSave} disabled={saving}
-            className="flex-1 py-2.5 text-xs text-white bg-[#1a1a1a] rounded-lg hover:bg-[#333] transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
+            className="flex-1 py-2.5 text-xs text-white bg-app-button rounded-lg hover:bg-app-button-hover transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
             {saving && <Loader2 className="w-3 h-3 animate-spin" />}
             更新する
           </button>
@@ -6451,22 +6451,22 @@ function TemplateModal({
       <div className="relative bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl p-6 max-h-[90vh] overflow-y-auto"
         style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
         <div className="flex items-center justify-between mb-5">
-          <h3 className="text-sm font-medium text-[#1a1a1a]">
+          <h3 className="text-sm font-medium text-app-text">
             {template ? 'テンプレートを編集' : templateType === 'transport' ? '交通費テンプレートを追加' : '汎用テンプレートを追加'}
           </h3>
-          <button onClick={onClose} className="p-1 rounded hover:bg-[#F5F5F3]">
-            <X className="w-4 h-4 text-[#999]" />
+          <button onClick={onClose} className="p-1 rounded hover:bg-app-surface-alt">
+            <X className="w-4 h-4 text-app-text-mute" />
           </button>
         </div>
 
         {/* テンプレート名 */}
         <div className="mb-5">
-          <label className="text-[10px] font-medium tracking-wider text-[#999] block mb-1.5">テンプレート名</label>
+          <label className="text-[10px] font-medium tracking-wider text-app-text-mute block mb-1.5">テンプレート名</label>
           <input
             value={name}
             onChange={e => setName(e.target.value)}
             placeholder={templateType === 'transport' ? '例: 自宅→四ツ谷' : '例: Adobe CC月額'}
-            className="w-full px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors"
+            className="w-full px-3 py-2.5 text-sm border border-app-line-medium rounded-xl focus:outline-none focus:border-app-text transition-colors"
           />
         </div>
 
@@ -6475,27 +6475,27 @@ function TemplateModal({
             {/* v0.7: 業務メタUI（目的・摘要・支払方法） */}
             <div className="space-y-4 mb-5">
               <div>
-                <label className="text-[10px] font-medium tracking-wider text-[#999] block mb-1.5">目的</label>
+                <label className="text-[10px] font-medium tracking-wider text-app-text-mute block mb-1.5">目的</label>
                 <select value={transportPurpose} onChange={e => setTransportPurpose(e.target.value)}
-                  className="w-full px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors">
+                  className="w-full px-3 py-2.5 text-sm border border-app-line-medium rounded-xl focus:outline-none focus:border-app-text transition-colors">
                   <option value="">（未指定）</option>
                   {transportPurposes.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="text-[10px] font-medium tracking-wider text-[#999] block mb-1.5">摘要（任意）</label>
+                <label className="text-[10px] font-medium tracking-wider text-app-text-mute block mb-1.5">摘要（任意）</label>
                 <input value={description} onChange={e => setDescription(e.target.value)} placeholder="例: 四ツ谷オフィスでの定例打合せ"
-                  className="w-full px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors" />
+                  className="w-full px-3 py-2.5 text-sm border border-app-line-medium rounded-xl focus:outline-none focus:border-app-text transition-colors" />
               </div>
               <div>
-                <label className="text-[10px] font-medium tracking-wider text-[#999] block mb-1.5">支払方法</label>
+                <label className="text-[10px] font-medium tracking-wider text-app-text-mute block mb-1.5">支払方法</label>
                 <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}
-                  className="w-full px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors">
+                  className="w-full px-3 py-2.5 text-sm border border-app-line-medium rounded-xl focus:outline-none focus:border-app-text transition-colors">
                   <option value="personal">個人（事業主借）</option>
                   <option value="bank_account">口座</option>
                 </select>
               </div>
-              <p className="text-[10px] text-[#bbb] leading-relaxed">
+              <p className="text-[10px] text-app-text-fade leading-relaxed">
                 ※ 区間は「ルート」テンプレで別管理します。経費登録時に業務メタ+ルートを独立選択。
               </p>
             </div>
@@ -6505,31 +6505,31 @@ function TemplateModal({
             {/* 汎用テンプレート入力フィールド */}
             <div className="space-y-4 mb-5">
               <div>
-                <label className="text-[10px] font-medium tracking-wider text-[#999] block mb-1.5">勘定科目</label>
+                <label className="text-[10px] font-medium tracking-wider text-app-text-mute block mb-1.5">勘定科目</label>
                 <select value={kamoku} onChange={e => setKamoku(e.target.value)}
-                  className="w-full px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors">
+                  className="w-full px-3 py-2.5 text-sm border border-app-line-medium rounded-xl focus:outline-none focus:border-app-text transition-colors">
                   {GENERAL_KAMOKU.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="text-[10px] font-medium tracking-wider text-[#999] block mb-1.5">取引先</label>
+                <label className="text-[10px] font-medium tracking-wider text-app-text-mute block mb-1.5">取引先</label>
                 <input value={store} onChange={e => setStore(e.target.value)} placeholder="例: Adobe / AWS"
-                  className="w-full px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors" />
+                  className="w-full px-3 py-2.5 text-sm border border-app-line-medium rounded-xl focus:outline-none focus:border-app-text transition-colors" />
               </div>
               <div>
-                <label className="text-[10px] font-medium tracking-wider text-[#999] block mb-1.5">金額（円）</label>
+                <label className="text-[10px] font-medium tracking-wider text-app-text-mute block mb-1.5">金額（円）</label>
                 <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="例: 7780"
-                  className="w-full px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors" />
+                  className="w-full px-3 py-2.5 text-sm border border-app-line-medium rounded-xl focus:outline-none focus:border-app-text transition-colors" />
               </div>
               <div>
-                <label className="text-[10px] font-medium tracking-wider text-[#999] block mb-1.5">摘要（任意）</label>
+                <label className="text-[10px] font-medium tracking-wider text-app-text-mute block mb-1.5">摘要（任意）</label>
                 <input value={description} onChange={e => setDescription(e.target.value)} placeholder="例: Creative Cloud年間サブスク"
-                  className="w-full px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors" />
+                  className="w-full px-3 py-2.5 text-sm border border-app-line-medium rounded-xl focus:outline-none focus:border-app-text transition-colors" />
               </div>
               <div>
-                <label className="text-[10px] font-medium tracking-wider text-[#999] block mb-1.5">支払方法</label>
+                <label className="text-[10px] font-medium tracking-wider text-app-text-mute block mb-1.5">支払方法</label>
                 <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}
-                  className="w-full px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors">
+                  className="w-full px-3 py-2.5 text-sm border border-app-line-medium rounded-xl focus:outline-none focus:border-app-text transition-colors">
                   <option value="personal">個人（事業主借）</option>
                   <option value="bank_account">口座</option>
                 </select>
@@ -6541,10 +6541,10 @@ function TemplateModal({
         {/* 事業・PJ割り当て（交通費・汎用共通） */}
         <div className="mb-5">
           <div className="flex items-center justify-between mb-2">
-            <label className="text-[10px] font-medium tracking-wider text-[#999]">事業・プロジェクト割り当て（任意）</label>
+            <label className="text-[10px] font-medium tracking-wider text-app-text-mute">事業・プロジェクト割り当て（任意）</label>
             <span className={`text-[10px] tabular-nums ${
               allocRows.reduce((s, r) => s + (r.percent || 0), 0) === 100 || allocRows.length === 0
-                ? 'text-[#999]' : 'text-[#C23728]'
+                ? 'text-app-text-mute' : 'text-app-red'
             }`}>
               計 {allocRows.reduce((s, r) => s + (r.percent || 0), 0)}%
             </span>
@@ -6554,10 +6554,10 @@ function TemplateModal({
             {allocRows.map((row, idx) => {
               const divProjects = projects.filter(p => (p as any).division === row.division_id && (p as any).is_active !== false);
               return (
-                <div key={idx} className="bg-[#F5F5F3] rounded-xl p-3 space-y-2">
+                <div key={idx} className="bg-app-surface-alt rounded-xl p-3 space-y-2">
                   <div className="flex items-center gap-2">
                     <select value={row.division_id} onChange={e => updateAllocRow(idx, 'division_id', e.target.value)}
-                      className="flex-1 px-2 py-2 text-xs bg-white border border-[#e8e8e8] rounded-lg focus:outline-none focus:border-[#1a1a1a]">
+                      className="flex-1 px-2 py-2 text-xs bg-white border border-app-line-medium rounded-lg focus:outline-none focus:border-app-text">
                       <option value="">事業を選択</option>
                       {Object.entries(DIVISIONS).map(([divId, divVal]) => (
                         <option key={divId} value={divId}>{divVal.name}</option>
@@ -6565,15 +6565,15 @@ function TemplateModal({
                     </select>
                     <input type="number" value={row.percent || ''} onChange={e => updateAllocRow(idx, 'percent', e.target.value)}
                       placeholder="%" min={0} max={100}
-                      className="w-16 px-2 py-2 text-xs text-right tabular-nums bg-white border border-[#e8e8e8] rounded-lg focus:outline-none focus:border-[#1a1a1a]" />
-                    <span className="text-[10px] text-[#999]">%</span>
+                      className="w-16 px-2 py-2 text-xs text-right tabular-nums bg-white border border-app-line-medium rounded-lg focus:outline-none focus:border-app-text" />
+                    <span className="text-[10px] text-app-text-mute">%</span>
                     <button onClick={() => removeAllocRow(idx)} className="p-1 rounded hover:bg-gray-200">
-                      <X className="w-3.5 h-3.5 text-[#C23728]" />
+                      <X className="w-3.5 h-3.5 text-app-red" />
                     </button>
                   </div>
                   <select value={row.project_id} onChange={e => updateAllocRow(idx, 'project_id', e.target.value)}
                     disabled={!row.division_id}
-                    className="w-full px-2 py-2 text-xs bg-white border border-[#e8e8e8] rounded-lg focus:outline-none focus:border-[#1a1a1a] disabled:opacity-50">
+                    className="w-full px-2 py-2 text-xs bg-white border border-app-line-medium rounded-lg focus:outline-none focus:border-app-text disabled:opacity-50">
                     <option value="">（PJ未指定）</option>
                     {divProjects.map(p => (
                       <option key={p.id} value={p.id}>
@@ -6587,15 +6587,15 @@ function TemplateModal({
           </div>
 
           <button onClick={addAllocRow}
-            className="w-full mt-2 py-2 text-[10px] text-[#666] border border-dashed border-[#e8e8e8] rounded-xl hover:bg-[#F5F5F3] transition-colors flex items-center justify-center gap-1">
+            className="w-full mt-2 py-2 text-[10px] text-app-text-sub border border-dashed border-app-line-medium rounded-xl hover:bg-app-surface-alt transition-colors flex items-center justify-center gap-1">
             <Plus className="w-3 h-3" />事業を追加
           </button>
-          <p className="text-[10px] text-[#bbb] mt-1.5">※ 未設定の場合、このテンプレ適用時は手動で割り当てしてください</p>
+          <p className="text-[10px] text-app-text-fade mt-1.5">※ 未設定の場合、このテンプレ適用時は手動で割り当てしてください</p>
         </div>
 
         <div className="flex gap-2 mt-4">
           <button onClick={onClose}
-            className="flex-1 py-2.5 text-xs text-[#999] bg-[#F5F5F3] rounded-xl hover:bg-gray-200 transition-colors">
+            className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-xl hover:bg-gray-200 transition-colors">
             キャンセル
           </button>
           <button
@@ -6607,7 +6607,7 @@ function TemplateModal({
                   ? false
                   : !Number(amount))
             }
-            className="flex-1 py-2.5 text-xs text-white bg-[#1a1a1a] rounded-xl hover:bg-[#333] transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5">
+            className="flex-1 py-2.5 text-xs text-white bg-app-button rounded-xl hover:bg-app-button-hover transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5">
             {saving && <Loader2 className="w-3 h-3 animate-spin" />}
             {template ? '更新する' : '登録する'}
           </button>
@@ -6688,42 +6688,42 @@ function RouteTemplateModal({
       <div className="relative bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl p-6 max-h-[90vh] overflow-y-auto"
         style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
         <div className="flex items-center justify-between mb-5">
-          <h3 className="text-sm font-medium text-[#1a1a1a]">
+          <h3 className="text-sm font-medium text-app-text">
             {route ? 'ルートを編集' : 'ルートを追加'}
           </h3>
-          <button onClick={onClose} className="p-1 rounded hover:bg-[#F5F5F3]">
-            <X className="w-4 h-4 text-[#999]" />
+          <button onClick={onClose} className="p-1 rounded hover:bg-app-surface-alt">
+            <X className="w-4 h-4 text-app-text-mute" />
           </button>
         </div>
 
         {/* ルート名 */}
         <div className="mb-5">
-          <label className="text-[10px] font-medium tracking-wider text-[#999] block mb-1.5">ルート名</label>
+          <label className="text-[10px] font-medium tracking-wider text-app-text-mute block mb-1.5">ルート名</label>
           <input
             value={name}
             onChange={e => setName(e.target.value)}
             placeholder="例: 東京ルートJR 四ツ谷⇄藤沢"
-            className="w-full px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors"
+            className="w-full px-3 py-2.5 text-sm border border-app-line-medium rounded-xl focus:outline-none focus:border-app-text transition-colors"
           />
         </div>
 
         {/* v0.14.0 仕様D: ペア情報表示（編集時のみ）— 方向UIは廃止 */}
         {route && (
-          <div className="mb-5 px-3 py-2.5 bg-[#F5F5F3] rounded-xl">
+          <div className="mb-5 px-3 py-2.5 bg-app-surface-alt rounded-xl">
             {pair ? (
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] px-1.5 py-0.5 bg-[#1B4D3E]/10 text-[#1B4D3E] rounded-full">⇔ ペアあり</span>
-                  <span className="text-[11px] text-[#666] truncate">{pair.name}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 bg-app-green/10 text-app-green rounded-full">⇔ ペアあり</span>
+                  <span className="text-[11px] text-app-text-sub truncate">{pair.name}</span>
                 </div>
-                <p className="text-[10px] text-[#999]">
+                <p className="text-[10px] text-app-text-mute">
                   ※ 区間を編集するとペアも自動で逆順同期されます（名前は独立）
                 </p>
               </div>
             ) : route.template_kind === 'roundtrip_package' ? (
-              <p className="text-[10px] text-[#999]">往復パッケージ（参照型）</p>
+              <p className="text-[10px] text-app-text-mute">往復パッケージ（参照型）</p>
             ) : (
-              <p className="text-[10px] text-[#999]">ペア未作成 — 一覧から「＋ ペアを作成」ボタンで生成できます</p>
+              <p className="text-[10px] text-app-text-mute">ペア未作成 — 一覧から「＋ ペアを作成」ボタンで生成できます</p>
             )}
           </div>
         )}
@@ -6739,7 +6739,7 @@ function RouteTemplateModal({
 
         <div className="flex gap-2 mt-4">
           <button onClick={onClose}
-            className="flex-1 py-2.5 text-xs text-[#999] bg-[#F5F5F3] rounded-xl hover:bg-gray-200 transition-colors">
+            className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-xl hover:bg-gray-200 transition-colors">
             キャンセル
           </button>
           <button
@@ -6749,7 +6749,7 @@ function RouteTemplateModal({
               || !name.trim()
               || !(transportData.route_legs || []).some(l => l.from && l.to && Number(l.amount) > 0)
             }
-            className="flex-1 py-2.5 text-xs text-white bg-[#1a1a1a] rounded-xl hover:bg-[#333] transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5">
+            className="flex-1 py-2.5 text-xs text-white bg-app-button rounded-xl hover:bg-app-button-hover transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5">
             {saving && <Loader2 className="w-3 h-3 animate-spin" />}
             {route ? '更新する' : '登録する'}
           </button>
@@ -6825,43 +6825,43 @@ function PackageTemplateModal({
         style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}
       >
         <div className="flex items-center justify-between mb-5">
-          <h3 className="text-sm font-medium text-[#1a1a1a]">
+          <h3 className="text-sm font-medium text-app-text">
             {pkg ? '往復パッケージを編集' : '往復パッケージを追加'}
           </h3>
-          <button onClick={onClose} className="p-1 rounded hover:bg-[#F5F5F3]">
-            <X className="w-4 h-4 text-[#999]" />
+          <button onClick={onClose} className="p-1 rounded hover:bg-app-surface-alt">
+            <X className="w-4 h-4 text-app-text-mute" />
           </button>
         </div>
 
         {onewayOptions.length < 2 ? (
-          <div className="mb-5 px-3 py-4 bg-[#FEF5E7] border border-[#D4A03A]/30 rounded-xl text-center">
-            <p className="text-xs text-[#1a1a1a] mb-1">片道テンプレが2つ以上必要です</p>
-            <p className="text-[10px] text-[#999]">先に片道テンプレを作成してください</p>
+          <div className="mb-5 px-3 py-4 bg-state-warn-bg border border-app-gold/30 rounded-xl text-center">
+            <p className="text-xs text-app-text mb-1">片道テンプレが2つ以上必要です</p>
+            <p className="text-[10px] text-app-text-mute">先に片道テンプレを作成してください</p>
           </div>
         ) : (
           <>
             {/* パッケージ名 */}
             <div className="mb-5">
-              <label className="text-[10px] font-medium tracking-wider text-[#999] block mb-1.5">
+              <label className="text-[10px] font-medium tracking-wider text-app-text-mute block mb-1.5">
                 パッケージ名
               </label>
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="例: 実家⇔自宅（新宿経由）"
-                className="w-full px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors"
+                className="w-full px-3 py-2.5 text-sm border border-app-line-medium rounded-xl focus:outline-none focus:border-app-text transition-colors"
               />
             </div>
 
             {/* 往路 */}
             <div className="mb-4">
-              <label className="text-[10px] font-medium tracking-wider text-[#999] block mb-1.5">
+              <label className="text-[10px] font-medium tracking-wider text-app-text-mute block mb-1.5">
                 往路
               </label>
               <select
                 value={outboundId}
                 onChange={(e) => setOutboundId(e.target.value)}
-                className="w-full px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors bg-white"
+                className="w-full px-3 py-2.5 text-sm border border-app-line-medium rounded-xl focus:outline-none focus:border-app-text transition-colors bg-white"
               >
                 <option value="">（選択してください）</option>
                 {onewayOptions.map((r) => (
@@ -6871,12 +6871,12 @@ function PackageTemplateModal({
                 ))}
               </select>
               {!outboundExists && (
-                <p className="text-[10px] text-[#C23728] mt-1">
+                <p className="text-[10px] text-app-red mt-1">
                   ※ 往路に指定されていたテンプレが見つかりません（アーカイブされた可能性）
                 </p>
               )}
               {outboundTpl && (outboundTpl.route_legs || []).length > 0 && (
-                <p className="text-[10px] text-[#999] mt-1.5 truncate">
+                <p className="text-[10px] text-app-text-mute mt-1.5 truncate">
                   {(outboundTpl.route_legs || [])[0]?.from || ''}
                   {' → '}
                   {(outboundTpl.route_legs || [])[outboundTpl.route_legs!.length - 1]?.to || ''}
@@ -6888,13 +6888,13 @@ function PackageTemplateModal({
 
             {/* 復路 */}
             <div className="mb-5">
-              <label className="text-[10px] font-medium tracking-wider text-[#999] block mb-1.5">
+              <label className="text-[10px] font-medium tracking-wider text-app-text-mute block mb-1.5">
                 復路
               </label>
               <select
                 value={returnId}
                 onChange={(e) => setReturnId(e.target.value)}
-                className="w-full px-3 py-2.5 text-sm border border-[#e8e8e8] rounded-xl focus:outline-none focus:border-[#1a1a1a] transition-colors bg-white"
+                className="w-full px-3 py-2.5 text-sm border border-app-line-medium rounded-xl focus:outline-none focus:border-app-text transition-colors bg-white"
               >
                 <option value="">（選択してください）</option>
                 {onewayOptions.map((r) => (
@@ -6905,12 +6905,12 @@ function PackageTemplateModal({
                 ))}
               </select>
               {!returnExists && (
-                <p className="text-[10px] text-[#C23728] mt-1">
+                <p className="text-[10px] text-app-red mt-1">
                   ※ 復路に指定されていたテンプレが見つかりません（アーカイブされた可能性）
                 </p>
               )}
               {returnTpl && (returnTpl.route_legs || []).length > 0 && (
-                <p className="text-[10px] text-[#999] mt-1.5 truncate">
+                <p className="text-[10px] text-app-text-mute mt-1.5 truncate">
                   {(returnTpl.route_legs || [])[0]?.from || ''}
                   {' → '}
                   {(returnTpl.route_legs || [])[returnTpl.route_legs!.length - 1]?.to || ''}
@@ -6922,9 +6922,9 @@ function PackageTemplateModal({
 
             {/* 往復合計プレビュー */}
             {outboundTpl && returnTpl && (
-              <div className="mb-5 px-3 py-2.5 bg-[#F5F5F3] rounded-xl">
-                <p className="text-[10px] text-[#999] mb-0.5">往復合計</p>
-                <p className="text-sm font-medium text-[#1a1a1a] font-['Saira_Condensed'] tabular-nums">
+              <div className="mb-5 px-3 py-2.5 bg-app-surface-alt rounded-xl">
+                <p className="text-[10px] text-app-text-mute mb-0.5">往復合計</p>
+                <p className="text-sm font-medium text-app-text font-['Saira_Condensed'] tabular-nums">
                   ¥{(outboundTotal + returnTotal).toLocaleString()}
                 </p>
               </div>
@@ -6935,7 +6935,7 @@ function PackageTemplateModal({
         <div className="flex gap-2 mt-4">
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 text-xs text-[#999] bg-[#F5F5F3] rounded-xl hover:bg-gray-200 transition-colors"
+            className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-xl hover:bg-gray-200 transition-colors"
           >
             キャンセル
           </button>
@@ -6949,7 +6949,7 @@ function PackageTemplateModal({
               outboundId === returnId ||
               onewayOptions.length < 2
             }
-            className="flex-1 py-2.5 text-xs text-white bg-[#1a1a1a] rounded-xl hover:bg-[#333] transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5"
+            className="flex-1 py-2.5 text-xs text-white bg-app-button rounded-xl hover:bg-app-button-hover transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5"
           >
             {saving && <Loader2 className="w-3 h-3 animate-spin" />}
             {pkg ? '更新する' : '登録する'}
