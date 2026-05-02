@@ -73,7 +73,6 @@ module.exports = {
         jp:      ['Shippori Mincho', 'serif'],
         'x-logo':   ['Questrial', 'sans-serif'],
         'x-mincho': ['Shippori Mincho', 'serif'],
-        'x-bi':     ['Cormorant Garamond', 'serif'],
         'x-num':    ['Saira Condensed', 'sans-serif'],
         'x-ui':     ['Inter', 'sans-serif'],
         'x-ui-jp':  ['Noto Sans JP', 'sans-serif'],

@@ -112,10 +112,11 @@ export const SEMANTIC = {
 export const FONTS = {
   logo:    "'Questrial', sans-serif",         // X ロゴ
   mincho:  "'Shippori Mincho', serif",         // X 明朝
-  bi:      "'Cormorant Garamond', serif",      // X 美
   num:     "'Saira Condensed', sans-serif",    // X 数字
   ui:      "'Inter', sans-serif",              // X UI
   uiJp:    "'Noto Sans JP', sans-serif",       // X UI 和
+  // Cormorant Garamond は失敗事例#1 で全廃済(session52-53 / Paula Scher 整合性違反)
+  // 規定書 v1.4-rev6 の正規書体は上記5系統のみ。bi: の復活禁止。
 } as const;
 
 // ============================================================

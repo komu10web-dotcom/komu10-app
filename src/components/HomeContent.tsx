@@ -150,7 +150,7 @@ export default function HomeContent() {
             VOLUME 01 · HOME
           </p>
           <h1
-            className="font-['Cormorant_Garamond'] italic text-app-text mb-3.5"
+            className="font-['Shippori_Mincho'] italic text-app-text mb-3.5"
             style={{ fontSize: 36, fontWeight: 400, letterSpacing: '0.01em', lineHeight: 1.2 }}
           >
             day by day
