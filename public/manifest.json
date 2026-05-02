@@ -4,8 +4,8 @@
   "description": "komu10 の本(books)— 経費・売上・経営を一冊に。",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0A0A0B",
-  "theme_color": "#0A0A0B",
+  "background_color": "#14213D",
+  "theme_color": "#14213D",
   "orientation": "portrait-primary",
   "icons": [
     {

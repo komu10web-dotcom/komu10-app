@@ -1,16 +1,6 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!--
-  komu10 favicon — 主シンボル X 精密版
-  規定: Step Glyph 別冊 v1.1-rev1 主記号 / Step 10 完成形
-  viewBox: 0 0 200 200(正方形 / 黒地に金 X)
-  stroke: 14, linecap: butt, 4線・中央階段
-  色: 黒地 X Black #0A0A0B / X グリフ X Gold #B8893A
-  裁定: Hedi(CEO) / Saville(CBO) / Paula Scher(CDO) / Maureen Stone(色彩科学)
-  session77 / 2026-05-02
--->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="512" height="512">
-  <rect width="200" height="200" fill="#0A0A0B"/>
-  <g stroke="#B8893A" stroke-width="14" stroke-linecap="butt" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <rect width="200" height="200" fill="#14213D"/>
+  <g stroke="#FFFFFF" stroke-width="14" stroke-linecap="butt">
     <line x1="45" y1="40" x2="87" y2="82"/>
     <line x1="155" y1="40" x2="113" y2="82"/>
     <line x1="45" y1="160" x2="87" y2="118"/>
