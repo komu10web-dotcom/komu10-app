@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Suspense } from 'react';
 import './globals.css';
 import Navigation from '@/components/Navigation';
@@ -7,6 +7,27 @@ import HeaderControls from '@/components/HeaderControls';
 export const metadata: Metadata = {
   title: 'THE MONEY BOOK · komu10',
   description: 'komu10 の本(books)— 経費・売上・経営を一冊に。',
+  // session77 確定 favicon — 主シンボル X 単一グリフ
+  // 規定: Step Glyph 別冊 v1.1-rev1 主記号(中央階段4線・stroke 14)
+  // 裁定: Hedi(CEO) / Saville(CBO) / Paula Scher(CDO) / Maureen Stone(色彩)
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/icon-16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/icon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/apple-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+    shortcut: '/favicon.ico',
+  },
+  manifest: '/manifest.json',
+};
+
+export const viewport: Viewport = {
+  themeColor: '#0A0A0B',
 };
 
 export default function RootLayout({

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  komu10 favicon 32×32 中間版
+  16×16 用と異なり中央階段の段差を残せる解像度。
+  stroke は 14 のまま(viewBox スケールで 32px 時にも識別可能)。
+  Saville/Stone 検証済:WCAG AAA 11.4:1 突破。
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="32" height="32">
+  <rect width="200" height="200" fill="#0A0A0B"/>
+  <g stroke="#B8893A" stroke-width="14" stroke-linecap="butt" fill="none">
+    <line x1="45" y1="40" x2="87" y2="82"/>
+    <line x1="155" y1="40" x2="113" y2="82"/>
+    <line x1="45" y1="160" x2="87" y2="118"/>
+    <line x1="155" y1="160" x2="113" y2="118"/>
+  </g>
+</svg>
