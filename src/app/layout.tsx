@@ -47,11 +47,11 @@ export default function RootLayout({
                   - 中央以下の各画面 = 本の章(Chapter)
                 裁定: Hedi(CEO) / Saville(CBO) / Paula(CDO) */}
             <div className="px-6 py-4 flex items-center justify-between">
-              {/* 左: komu10 運営表記 · THE MONEY BOOK アプリ名
-                  session78 確定: 出版界伝統表記 `komu10 · THE MONEY BOOK`
-                    - komu10(運営者)= X Black #0a0a0b・Questrial 14px
-                    - middle dot · = X Black 14px(構造の彫刻・装飾ではない)
-                    - THE MONEY BOOK(作品)= ミッドナイトインク #14213D・Big Shoulders Display Black 22px
+              {/* 左: komu10 運営表記 + THE MONEY BOOK アプリ名
+                  session78 確定: 4軸の差で主従関係を完全に語る(区切り記号は不要)
+                    - komu10(運営者)= X Black #0a0a0b・Questrial Regular・14px
+                    - THE MONEY BOOK(作品)= ミッドナイトインク #14213D・Big Shoulders Display Black 900・22px
+                  4軸(書体・重量・サイズ・色)で主従関係を表現するため middle dot は廃止。
                   裁定: Hedi(CEO) / Saville(CBO) / Paula(CDO) / Maureen Stone(色彩) */}
               <div className="flex items-baseline gap-2">
                 <div
@@ -64,18 +64,6 @@ export default function RootLayout({
                   }}
                 >
                   komu10
-                </div>
-                {/* middle dot (U+00B7) — 運営者と作品の関係を1文字で構造化 */}
-                <div
-                  className="text-x-black"
-                  style={{
-                    fontFamily: "'Questrial', sans-serif",
-                    fontSize: 14,
-                    lineHeight: 1,
-                  }}
-                  aria-hidden="true"
-                >
-                  ·
                 </div>
                 <div
                   style={{
