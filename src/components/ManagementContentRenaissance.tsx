@@ -399,27 +399,26 @@ export default function ManagementContentRenaissance() {
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '72px 96px 128px' }}>
 
         <header style={{ borderBottom: `1px solid ${C.line}`, paddingBottom: 56, marginBottom: 64 }}>
-          {/* ===== Phase 1.5a-1 章扉 3レイヤー構造(session77 確定・Violent Discipline 第1段階) =====
-              レイヤー1(上) : komu10 タイプロゴ(現行ブランドロゴ・小型)
-              レイヤー2(中央): THE MONEY BOOK(Big Shoulders Display Black / clamp 巨大組み)
-              レイヤー3(下) : MANAGEMENT 章名(Bricolage Grotesque Light)
-              裁定: Hedi(CEO)/ Saville(CBO)/ Paula(CDO)/ Es Devlin(CAD)/ 出口(CCV)
+          {/* ===== Phase 1.5a-1 改 章扉(session77 確定・Violent Discipline 第1段階) =====
+              アプリ名 THE MONEY BOOK はグローバルヘッダーで常時表示中。
+              章扉では「章名 MANAGEMENT」を主役に格上げ(本の章タイトル)。
+              裁定: Hedi(CEO)/ Saville(CBO)/ Paula(CDO)/ 出口(CCV)
           */}
 
-          {/* レイヤー1 — komu10 ロゴ(上部・現行タイプロゴ小型) */}
+          {/* レイヤー1 — Chapter ラベル(Bricolage 小・上部の余白印) */}
           <div style={{
-            fontFamily: F.body,
-            fontSize: T.t6,
-            fontWeight: 500,
+            fontFamily: "'Bricolage Grotesque', sans-serif",
+            fontSize: 11,
+            fontWeight: 400,
             letterSpacing: '0.32em',
-            color: C.textSub,
-            marginBottom: 28,
+            color: C.textMute,
+            marginBottom: 22,
             textTransform: 'uppercase',
           }}>
-            komu<span style={{ color: C.gold, fontWeight: 600 }}>10</span>
+            Chapter · {year}
           </div>
 
-          {/* レイヤー2 — THE MONEY BOOK(巨大主タイトル / 暴力的タイポアートの核) */}
+          {/* レイヤー2 — 章名 MANAGEMENT(巨大主タイトル / 暴力的タイポアートの核) */}
           <h1 style={{
             fontFamily: "'Big Shoulders Display', sans-serif",
             fontSize: 'clamp(72px, 12vw, 168px)',
@@ -427,35 +426,20 @@ export default function ManagementContentRenaissance() {
             color: C.text,
             letterSpacing: '-0.02em',
             lineHeight: 0.92,
-            marginBottom: 18,
-            // 暴力的タイポアートの輪郭強調(セリフ感を保持)
-            fontFeatureSettings: '"ss01"',
+            marginBottom: 24,
           }}>
-            THE MONEY BOOK
+            MANAGEMENT
           </h1>
 
-          {/* レイヤー3 — 章名(下部・Bricolage Grotesque) */}
+          {/* レイヤー3 — 詩タイトル + サブコンテキスト + ビューモード切替 */}
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'flex-end',
             gap: 32,
             flexWrap: 'wrap',
-            marginTop: 16,
           }}>
             <div style={{ flex: 1, minWidth: 320 }}>
-              <p style={{
-                fontFamily: "'Bricolage Grotesque', sans-serif",
-                fontSize: 28,
-                fontWeight: 400,
-                color: C.gold,
-                letterSpacing: '0.12em',
-                lineHeight: 1,
-                marginBottom: 18,
-                textTransform: 'uppercase',
-              }}>
-                Management · {year}
-              </p>
               <p style={{
                 fontFamily: F.jp,
                 fontSize: T.h1Jp,
@@ -614,20 +598,20 @@ function MobileView({ appeared, year, revenueTotal, expenseTotal, profitTotal, p
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '32px 24px 64px' }}>
 
         <header style={{ paddingBottom: 28, marginBottom: 36, borderBottom: `1px solid ${C.line}` }}>
-          {/* レイヤー1 — komu10 ロゴ(上部) */}
+          {/* レイヤー1 — Chapter ラベル */}
           <div style={{
-            fontFamily: F.body,
-            fontSize: T.t7,
-            fontWeight: 500,
+            fontFamily: "'Bricolage Grotesque', sans-serif",
+            fontSize: 10,
+            fontWeight: 400,
             letterSpacing: '0.32em',
-            color: C.textSub,
-            marginBottom: 14,
+            color: C.textMute,
+            marginBottom: 12,
             textTransform: 'uppercase',
           }}>
-            komu<span style={{ color: C.gold, fontWeight: 600 }}>10</span>
+            Chapter · {year}
           </div>
 
-          {/* レイヤー2 — THE MONEY BOOK(スマホ巨大組み・clamp で自動調整) */}
+          {/* レイヤー2 — 章名 MANAGEMENT(スマホ巨大組み) */}
           <h1 style={{
             fontFamily: "'Big Shoulders Display', sans-serif",
             fontSize: 'clamp(40px, 13vw, 64px)',
@@ -635,24 +619,12 @@ function MobileView({ appeared, year, revenueTotal, expenseTotal, profitTotal, p
             color: C.text,
             letterSpacing: '-0.02em',
             lineHeight: 0.92,
-            marginBottom: 14,
+            marginBottom: 16,
           }}>
-            THE MONEY BOOK
+            MANAGEMENT
           </h1>
 
-          {/* レイヤー3 — 章名 */}
-          <p style={{
-            fontFamily: "'Bricolage Grotesque', sans-serif",
-            fontSize: 14,
-            fontWeight: 400,
-            color: C.gold,
-            letterSpacing: '0.18em',
-            marginBottom: 14,
-            textTransform: 'uppercase',
-          }}>
-            Management · {year}
-          </p>
-
+          {/* レイヤー3 — 詩タイトル */}
           <h2 style={{
             fontFamily: F.jp,
             fontSize: T.t3,
