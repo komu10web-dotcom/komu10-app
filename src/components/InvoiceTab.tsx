@@ -266,7 +266,7 @@ export default function InvoiceTab({ owner, clients, initialTransactionId }: Inv
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-100">
+                  <tr className="border-b border-app-line">
                     <th className="text-left px-4 py-3 text-xs text-app-text-mute font-normal">請求書番号</th>
                     <th className="text-left px-4 py-3 text-xs text-app-text-mute font-normal">発行日</th>
                     <th className="text-left px-4 py-3 text-xs text-app-text-mute font-normal">ステータス</th>
@@ -279,7 +279,7 @@ export default function InvoiceTab({ owner, clients, initialTransactionId }: Inv
                   {filtered.map((inv) => {
                     const statusStyle = INV_STATUS_STYLES[inv.status] || INV_STATUS_STYLES.draft;
                     return (
-                      <tr key={inv.id} className="border-b border-gray-50 hover:bg-app-surface-alt/50 transition-colors">
+                      <tr key={inv.id} className="border-b border-app-line hover:bg-app-surface-alt/50 transition-colors">
                         <td className="px-4 py-3 font-['Saira_Condensed'] text-xs tabular-nums text-app-text">
                           {inv.invoice_number}
                         </td>
@@ -330,7 +330,7 @@ export default function InvoiceTab({ owner, clients, initialTransactionId }: Inv
 
           {/* フッター集計 */}
           {!loading && filtered.length > 0 && (
-            <div className="flex items-center justify-end gap-4 px-4 py-3 border-t border-gray-100 bg-app-surface-alt/50">
+            <div className="flex items-center justify-end gap-4 px-4 py-3 border-t border-app-line bg-app-surface-alt/50">
               {(['draft', 'issued', 'paid'] as const).map((s) => {
                 const sum = filtered.filter(i => i.status === s).reduce((a, i) => a + i.total, 0);
                 if (sum === 0) return null;
@@ -360,7 +360,7 @@ export default function InvoiceTab({ owner, clients, initialTransactionId }: Inv
               <p className="text-sm text-app-text mb-4">この請求書を削除しますか？</p>
               <div className="flex gap-2">
                 <button onClick={() => setDeleteTarget(null)}
-                  className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors">
+                  className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-app-surface-hover transition-colors">
                   キャンセル
                 </button>
                 <button onClick={() => handleDelete(deleteTarget)}
@@ -395,7 +395,7 @@ export default function InvoiceTab({ owner, clients, initialTransactionId }: Inv
                   <div className="flex gap-2">
                     <button onClick={() => { setSaveAsTemplateTarget(null); setTemplateName(''); }}
                       disabled={templateSaving}
-                      className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50">
+                      className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-app-surface-hover transition-colors disabled:opacity-50">
                       キャンセル
                     </button>
                     <button onClick={handleSaveAsTemplate}
@@ -967,7 +967,7 @@ function InvoiceEditor({
       <div className="bg-white rounded-2xl p-6" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
         {/* v0.8: テンプレから作成（新規時のみ・テンプレあるときのみ） */}
         {isNew && invoiceTemplates.length > 0 && (
-          <div className="mb-6 pb-4 border-b border-gray-100">
+          <div className="mb-6 pb-4 border-b border-app-line">
             <label className="block text-[10px] font-medium tracking-wider text-app-text-mute mb-1.5">テンプレから作成</label>
             <select
               value={selectedTemplateId}
@@ -1073,7 +1073,7 @@ function InvoiceEditor({
         </div>
 
         {/* v0.6.0: 請求書設定パネル（折りたたみ・デフォルト閉じ） */}
-        <div className="mb-6 border border-gray-100 rounded-xl overflow-hidden">
+        <div className="mb-6 border border-app-line rounded-xl overflow-hidden">
           <button type="button"
             onClick={() => setSettingsOpen(v => !v)}
             className="w-full flex items-center justify-between px-4 py-3 text-left bg-app-surface hover:bg-app-surface-alt transition-colors">
@@ -1230,7 +1230,7 @@ function InvoiceEditor({
         </div>
 
         {/* 合計（v0.6.0 サマリー） */}
-        <div className="border-t border-gray-100 pt-4 mb-6">
+        <div className="border-t border-app-line pt-4 mb-6">
           <div className="flex justify-end gap-8">
             <div className="text-right space-y-1">
               <div className="text-xs text-app-text-mute">小計</div>
@@ -1280,7 +1280,7 @@ function InvoiceEditor({
         </div>
         <div className="flex gap-2">
           <button onClick={onBack}
-            className="px-6 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors">
+            className="px-6 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-app-surface-hover transition-colors">
             キャンセル
           </button>
           <button onClick={handleSave} disabled={!canSave || saving}
@@ -1410,7 +1410,7 @@ function InvoicePreview({
             {exporting ? '作成中...' : '請求書作成'}
           </button>
           <button onClick={() => onEdit(invoiceId)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-white text-app-text rounded-lg text-xs border border-gray-200 hover:bg-gray-50 transition-colors">
+            className="flex items-center gap-1.5 px-4 py-2 bg-white text-app-text rounded-lg text-xs border border-app-line-medium hover:bg-app-surface transition-colors">
             <Pencil className="w-3.5 h-3.5" />編集
           </button>
         </div>
@@ -1511,7 +1511,7 @@ function InvoicePreview({
           </thead>
           <tbody>
             {items.map((item) => (
-              <tr key={item.id} className="border-b border-gray-100">
+              <tr key={item.id} className="border-b border-app-line">
                 <td className="py-2.5 text-app-text">{item.description}</td>
                 <td className="py-2.5 text-center font-['Saira_Condensed'] tabular-nums text-app-text-sub">{item.quantity}</td>
                 <td className="py-2.5 text-center text-app-text-sub">{item.unit || '式'}</td>
@@ -1554,7 +1554,7 @@ function InvoicePreview({
 
         {/* 振込先 */}
         {bankAccount && (
-          <div className="border-t border-gray-100 pt-4 mb-4">
+          <div className="border-t border-app-line pt-4 mb-4">
             <div className="text-xs text-app-text-mute mb-2">お振込先</div>
             <div className="text-sm text-app-text space-y-0.5">
               <div>{bankAccount.bank_name}{bankAccount.bank_code && !(bankAccount.bank_name || '').includes(`（${bankAccount.bank_code}）`) ? `（${bankAccount.bank_code}）` : ''}</div>
@@ -1567,14 +1567,14 @@ function InvoicePreview({
 
         {/* 支払条件 */}
         {invoice.payment_terms && (
-          <div className="border-t border-gray-100 pt-4 mb-4">
+          <div className="border-t border-app-line pt-4 mb-4">
             <div className="text-xs text-app-text-mute mb-1">お支払条件</div>
             <div className="text-sm text-app-text-sub">{invoice.payment_terms}</div>
           </div>
         )}
 
         {/* 備考（固定2行: インボイス免税注記 + 振込手数料負担 を必ず表示） */}
-        <div className="border-t border-gray-100 pt-4">
+        <div className="border-t border-app-line pt-4">
           <div className="text-xs text-app-text-mute mb-1">備考</div>
           <div className="text-sm text-app-text-sub whitespace-pre-wrap">
             {[

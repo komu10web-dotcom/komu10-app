@@ -186,7 +186,7 @@ export default function HomeContent() {
                 </div>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-gray-100">
+              <div className="mt-4 pt-3 border-t border-app-line">
                 {unconfirmedCount === 0 ? (
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-app-green" />
@@ -315,7 +315,7 @@ export default function HomeContent() {
               {recentTx.map((tx) => (
                 <div
                   key={tx.id}
-                  className="flex items-center justify-between py-2.5 border-b border-gray-50 last:border-0"
+                  className="flex items-center justify-between py-2.5 border-b border-app-line last:border-0"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <span className="font-['Saira_Condensed'] text-xs text-app-text-mute w-10 shrink-0 tabular-nums">
@@ -339,7 +339,7 @@ export default function HomeContent() {
 
           <Link
             href="/expenses"
-            className="flex items-center justify-center gap-1 mt-3 pt-3 border-t border-gray-100 text-xs text-app-text-mute hover:text-app-gold transition-colors"
+            className="flex items-center justify-center gap-1 mt-3 pt-3 border-t border-app-line text-xs text-app-text-mute hover:text-app-gold transition-colors"
           >
             経費ページで全て見る
             <ArrowRight className="w-3 h-3" />

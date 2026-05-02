@@ -1402,7 +1402,7 @@ export default function TransactionModal({
 
       <div className="relative bg-white rounded-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
         style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
-        <div className="sticky top-0 bg-white rounded-t-2xl px-5 pt-5 pb-3 border-b border-gray-100 flex items-center justify-between z-10">
+        <div className="sticky top-0 bg-white rounded-t-2xl px-5 pt-5 pb-3 border-b border-app-line flex items-center justify-between z-10">
           <h3 className="text-sm font-medium text-app-text">
             {editData ? '経費を編集' : '経費を追加'}
           </h3>
@@ -1952,7 +1952,7 @@ export default function TransactionModal({
           </div>
 
           {/* ===== ステータス・支払日 ===== */}
-          <div className="pt-3 border-t border-gray-100 space-y-3">
+          <div className="pt-3 border-t border-app-line space-y-3">
             <div className="flex gap-3">
               <div className="flex-1">
                 <label className="text-xs text-app-text-mute block mb-1">ステータス</label>
@@ -2001,7 +2001,7 @@ export default function TransactionModal({
           )}
 
           {/* ===== 事業・PJ割り当て（複数行按分） ===== */}
-          <div className="pt-3 border-t border-gray-100">
+          <div className="pt-3 border-t border-app-line">
             <div className="flex items-center justify-between mb-2">
               <label className="text-xs text-app-text-mute">
                 事業・PJ割り当て
@@ -2091,7 +2091,7 @@ export default function TransactionModal({
                   それでも登録する
                 </button>
                 <button onClick={() => { setDupWarning(null); }}
-                  className="flex-1 py-2 bg-app-surface-alt text-app-text-mute rounded-lg text-xs font-medium hover:bg-gray-200 transition-colors">
+                  className="flex-1 py-2 bg-app-surface-alt text-app-text-mute rounded-lg text-xs font-medium hover:bg-app-surface-hover transition-colors">
                   キャンセル
                 </button>
               </div>
@@ -2454,7 +2454,7 @@ export default function TransactionModal({
                     setPackageTemplateName('');
                     onClose();
                   }}
-                    className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-xl hover:bg-gray-200 transition-colors">
+                    className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-xl hover:bg-app-surface-hover transition-colors">
                     キャンセル
                   </button>
                   <button onClick={saveAsTemplate}

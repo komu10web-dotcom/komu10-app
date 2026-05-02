@@ -251,18 +251,18 @@ export default function ReceiptUploadSection({
       {items.length > 0 && (
         <div className="space-y-2">
           {items.map((item, idx) => (
-            <div key={item.clientId} className="bg-app-surface border border-gray-200 rounded-lg p-3 space-y-2">
+            <div key={item.clientId} className="bg-app-surface border border-app-line-medium rounded-lg p-3 space-y-2">
               <div className="flex items-start gap-2">
                 <div className="shrink-0">
                   {item.previewUrl ? (
-                    <img src={item.previewUrl} alt={`領収書${idx + 1}`} className="w-14 h-14 object-cover rounded border border-gray-200" />
+                    <img src={item.previewUrl} alt={`領収書${idx + 1}`} className="w-14 h-14 object-cover rounded border border-app-line-medium" />
                   ) : item.driveUrl ? (
                     <a href={item.driveUrl} target="_blank" rel="noopener noreferrer"
-                       className="w-14 h-14 rounded border border-gray-200 flex items-center justify-center bg-white hover:bg-gray-50">
+                       className="w-14 h-14 rounded border border-app-line-medium flex items-center justify-center bg-white hover:bg-app-surface">
                       <ExternalLink className="w-5 h-5 text-app-text-sub" />
                     </a>
                   ) : (
-                    <div className="w-14 h-14 rounded border border-gray-200 flex items-center justify-center bg-white">
+                    <div className="w-14 h-14 rounded border border-app-line-medium flex items-center justify-center bg-white">
                       <Check className="w-5 h-5 text-app-green" />
                     </div>
                   )}
@@ -285,7 +285,7 @@ export default function ReceiptUploadSection({
                       value={item.label}
                       onChange={(e) => handleLabelChange(item.clientId, e.target.value)}
                       placeholder="例: トモ分（任意）"
-                      className="flex-1 text-[11px] px-2 py-1 border border-gray-200 rounded bg-white focus:outline-none focus:border-app-gold"
+                      className="flex-1 text-[11px] px-2 py-1 border border-app-line-medium rounded bg-white focus:outline-none focus:border-app-gold"
                     />
                   </div>
 
@@ -305,7 +305,7 @@ export default function ReceiptUploadSection({
       )}
 
       {processingFile && (
-        <div className="bg-app-surface border border-gray-200 rounded-lg p-3 flex items-center justify-center gap-2">
+        <div className="bg-app-surface border border-app-line-medium rounded-lg p-3 flex items-center justify-center gap-2">
           <Loader2 className="w-4 h-4 animate-spin text-app-gold" />
           <span className="text-[11px] text-app-text-sub">AI読み取り中: {processingFile}</span>
         </div>
@@ -319,7 +319,7 @@ export default function ReceiptUploadSection({
 
       {items.length < MAX_RECEIPTS && !processingFile && (
         <button type="button" onClick={() => fileInputRef.current?.click()}
-                className="w-full bg-app-surface border border-dashed border-gray-300 rounded-lg p-3 flex items-center justify-center gap-1.5 hover:border-app-gold hover:bg-state-warn-bg transition-colors">
+                className="w-full bg-app-surface border border-dashed border-app-line-strong rounded-lg p-3 flex items-center justify-center gap-1.5 hover:border-app-gold hover:bg-state-warn-bg transition-colors">
           {items.length === 0 ? (
             <>
               <Camera className="w-4 h-4 text-app-text-mute" />
@@ -338,7 +338,7 @@ export default function ReceiptUploadSection({
              onChange={handleFileChange} className="hidden" />
 
       {items.length >= 2 && hasAnyAiAmount && (
-        <div className="bg-white border border-gray-200 rounded-lg p-3 space-y-1.5">
+        <div className="bg-white border border-app-line-medium rounded-lg p-3 space-y-1.5">
           <div className="flex justify-between text-[11px]">
             <span className="text-app-text-sub">領収書合計（AI抽出）</span>
             <span className="font-medium text-app-text-strong">¥{receiptSum.toLocaleString()}</span>
@@ -347,7 +347,7 @@ export default function ReceiptUploadSection({
             <span className="text-app-text-sub">経費金額</span>
             <span className="font-medium text-app-text-strong">¥{formContext.totalAmount.toLocaleString()}</span>
           </div>
-          <div className="flex justify-between text-[11px] pt-1.5 border-t border-gray-100">
+          <div className="flex justify-between text-[11px] pt-1.5 border-t border-app-line">
             <span className="text-app-text-sub">差分</span>
             <span className={`font-medium ${inRange ? 'text-app-green' : 'text-app-gold'}`}>
               {inRange ? '🟢' : '🟡'} ¥{diffAbs.toLocaleString()}{inRange ? '（許容範囲内）' : '（要確認）'}
@@ -363,7 +363,7 @@ export default function ReceiptUploadSection({
       )}
 
       {items.length > 0 && (
-        <div className="border border-gray-200 rounded-lg overflow-hidden">
+        <div className="border border-app-line-medium rounded-lg overflow-hidden">
           <button type="button" onClick={() => setShowFilenamePreview((v) => !v)}
                   className="w-full px-3 py-2 flex items-center justify-between bg-app-surface hover:bg-app-surface-alt text-[10px] text-app-text-sub transition-colors">
             <span>ファイル名プレビュー</span>
@@ -374,7 +374,7 @@ export default function ReceiptUploadSection({
               {filenamePreviews.map((name, idx) => (
                 <div key={idx} className="text-[10px] text-app-text-sub font-mono break-all">{idx + 1}. {name}</div>
               ))}
-              <div className="text-[9px] text-app-text-mute pt-1 border-t border-gray-100 mt-2">
+              <div className="text-[9px] text-app-text-mute pt-1 border-t border-app-line mt-2">
                 ※ 登録ボタン押下時にこの名前でGoogle Driveに保存されます
               </div>
             </div>

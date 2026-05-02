@@ -2548,7 +2548,7 @@ export default function SettingsContent() {
               <div className="flex gap-2">
                 <button
                   onClick={() => setFiscalConfirmOpen(false)}
-                  className="flex-1 py-2 rounded-lg text-xs text-app-text-mute bg-app-surface-alt hover:bg-gray-200 transition-colors"
+                  className="flex-1 py-2 rounded-lg text-xs text-app-text-mute bg-app-surface-alt hover:bg-app-surface-hover transition-colors"
                 >
                   キャンセル
                 </button>
@@ -2925,7 +2925,7 @@ export default function SettingsContent() {
             </div>
 
             {/* カスタムカラー */}
-            <div className="pt-3 border-t border-gray-100">
+            <div className="pt-3 border-t border-app-line">
               <p className="text-[10px] text-app-text-mute mb-2">カスタムカラー</p>
               <div className="flex items-center gap-3">
                 <input
@@ -4909,7 +4909,7 @@ export default function SettingsContent() {
             <p className="text-sm text-app-text mb-4">この口座を削除しますか？</p>
             <div className="flex gap-2">
               <button onClick={() => setBankDeleteTarget(null)}
-                className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors">
+                className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-app-surface-hover transition-colors">
                 キャンセル
               </button>
               <button onClick={() => deleteBank(bankDeleteTarget)}
@@ -4938,7 +4938,7 @@ export default function SettingsContent() {
             <p className="text-sm text-app-text mb-4">この備品を台帳から削除しますか？</p>
             <div className="flex gap-2">
               <button onClick={() => setEqDeleteTarget(null)}
-                className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors">
+                className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-app-surface-hover transition-colors">
                 キャンセル
               </button>
               <button onClick={() => deleteEquipmentItem(eqDeleteTarget)}
@@ -4970,7 +4970,7 @@ export default function SettingsContent() {
             <p className="text-sm text-app-text mb-4">このテンプレートを削除しますか？</p>
             <div className="flex gap-2">
               <button onClick={() => setTemplateDeleteTarget(null)}
-                className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors">
+                className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-app-surface-hover transition-colors">
                 キャンセル
               </button>
               <button onClick={() => deleteTemplate(templateDeleteTarget)}
@@ -5010,7 +5010,7 @@ export default function SettingsContent() {
             <p className="text-sm text-app-text mb-4">このルートテンプレートを削除しますか？</p>
             <div className="flex gap-2">
               <button onClick={() => setRouteDeleteTarget(null)}
-                className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors">
+                className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-app-surface-hover transition-colors">
                 キャンセル
               </button>
               <button onClick={() => deleteRouteTemplate(routeDeleteTarget)}
@@ -5041,7 +5041,7 @@ export default function SettingsContent() {
             <p className="text-sm text-app-text mb-4">この請求書テンプレを削除しますか？</p>
             <div className="flex gap-2">
               <button onClick={() => setInvTplDeleteTarget(null)}
-                className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors">
+                className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-app-surface-hover transition-colors">
                 キャンセル
               </button>
               <button onClick={() => deleteInvoiceTemplate(invTplDeleteTarget)}
@@ -5070,7 +5070,7 @@ export default function SettingsContent() {
             <p className="text-sm text-app-text mb-4">この取引先を削除しますか？</p>
             <div className="flex gap-2">
               <button onClick={() => setClientDeleteTarget(null)}
-                className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors">
+                className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-app-surface-hover transition-colors">
                 キャンセル
               </button>
               <button onClick={() => deleteClient(clientDeleteTarget)}
@@ -5100,7 +5100,7 @@ export default function SettingsContent() {
             <p className="text-sm text-app-text mb-4">この固定契約を削除しますか？<br /><span className="text-[11px] text-app-text-mute">紐づく見込み売上も削除されます</span></p>
             <div className="flex gap-2">
               <button onClick={() => setRecurringDeleteTarget(null)}
-                className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors">
+                className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-app-surface-hover transition-colors">
                 キャンセル
               </button>
               <button onClick={() => deleteRecurring(recurringDeleteTarget)}
@@ -5129,7 +5129,7 @@ export default function SettingsContent() {
             <p className="text-sm text-app-text mb-4">このプロジェクトを削除しますか？</p>
             <div className="flex gap-2">
               <button onClick={() => setProjectDeleteTarget(null)}
-                className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors">
+                className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-app-surface-hover transition-colors">
                 キャンセル
               </button>
               <button onClick={() => deleteProject(projectDeleteTarget)}
@@ -5380,7 +5380,7 @@ function BankModal({
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
       <div className="relative bg-white rounded-2xl w-full max-w-md mx-4 max-h-[85vh] overflow-y-auto"
         style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-app-line">
           <h2 className="text-sm font-medium text-app-text">
             {bank ? '口座を編集' : '口座を追加'}
           </h2>
@@ -5473,9 +5473,9 @@ function BankModal({
           </div>
         </div>
 
-        <div className="px-5 py-4 border-t border-gray-100 flex gap-2">
+        <div className="px-5 py-4 border-t border-app-line flex gap-2">
           <button onClick={onClose}
-            className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors">
+            className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-app-surface-hover transition-colors">
             キャンセル
           </button>
           <button onClick={handleSave} disabled={!canSave || saving}
@@ -5565,7 +5565,7 @@ function ClientModal({
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
       <div className="relative bg-white rounded-2xl w-full max-w-md mx-4 max-h-[85vh] overflow-y-auto"
         style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-app-line">
           <h2 className="text-sm font-medium text-app-text">
             {client ? `取引先を編集（${client.client_number}）` : '取引先を追加'}
           </h2>
@@ -5652,7 +5652,7 @@ function ClientModal({
           </div>
 
           {/* v0.6.0 請求書設定 */}
-          <div className="border-t border-gray-100 pt-4 space-y-3">
+          <div className="border-t border-app-line pt-4 space-y-3">
             <div className="text-xs font-medium text-app-text">請求書設定</div>
 
             {/* 支払サイト種別（自動期限算出用） */}
@@ -5760,9 +5760,9 @@ function ClientModal({
           )}
         </div>
 
-        <div className="px-5 py-4 border-t border-gray-100 flex gap-2">
+        <div className="px-5 py-4 border-t border-app-line flex gap-2">
           <button onClick={onClose}
-            className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors">
+            className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-app-surface-hover transition-colors">
             キャンセル
           </button>
           <button onClick={handleSave} disabled={!canSave || saving}
@@ -5850,7 +5850,7 @@ function RecurringModal({
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
       <div className="relative bg-white rounded-2xl w-full max-w-md mx-4 max-h-[85vh] overflow-y-auto"
         style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-app-line">
           <h2 className="text-sm font-medium text-app-text">
             {recurring ? '固定契約を編集' : '固定契約を追加'}
           </h2>
@@ -5981,9 +5981,9 @@ function RecurringModal({
           </div>
         </div>
 
-        <div className="px-5 py-4 border-t border-gray-100 flex gap-2">
+        <div className="px-5 py-4 border-t border-app-line flex gap-2">
           <button onClick={onClose}
-            className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors">
+            className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-app-surface-hover transition-colors">
             キャンセル
           </button>
           <button onClick={handleSave} disabled={!canSave || saving}
@@ -6031,7 +6031,7 @@ function ProjectModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
       <div className="relative bg-white rounded-2xl w-full max-w-md mx-4 overflow-hidden" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
-        <div className="px-5 py-4 border-b border-gray-100">
+        <div className="px-5 py-4 border-b border-app-line">
           <h2 className="text-sm font-medium text-app-text">
             {project ? 'プロジェクト編集' : 'プロジェクト追加'}
           </h2>
@@ -6108,9 +6108,9 @@ function ProjectModal({
           </div>
         </div>
 
-        <div className="px-5 py-4 border-t border-gray-100 flex gap-2">
+        <div className="px-5 py-4 border-t border-app-line flex gap-2">
           <button onClick={onClose}
-            className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors">
+            className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-app-surface-hover transition-colors">
             キャンセル
           </button>
           <button onClick={handleSave} disabled={!form.name.trim() || saving}
@@ -6207,7 +6207,7 @@ function EquipmentEditModal({
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
       <div className="relative bg-white rounded-2xl w-full max-w-md mx-4 max-h-[85vh] overflow-y-auto"
         style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-app-line">
           <h2 className="text-sm font-medium text-app-text">備品を編集</h2>
           <button onClick={onClose} className="p-1 hover:bg-black/5 rounded-md transition-colors">
             <X className="w-4 h-4 text-app-text-mute" />
@@ -6314,9 +6314,9 @@ function EquipmentEditModal({
           </div>
         </div>
 
-        <div className="px-5 py-4 border-t border-gray-100 flex gap-2">
+        <div className="px-5 py-4 border-t border-app-line flex gap-2">
           <button onClick={onClose}
-            className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors">
+            className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-app-surface-hover transition-colors">
             キャンセル
           </button>
           <button onClick={handleSave} disabled={saving}
@@ -6567,7 +6567,7 @@ function TemplateModal({
                       placeholder="%" min={0} max={100}
                       className="w-16 px-2 py-2 text-xs text-right tabular-nums bg-white border border-app-line-medium rounded-lg focus:outline-none focus:border-app-text" />
                     <span className="text-[10px] text-app-text-mute">%</span>
-                    <button onClick={() => removeAllocRow(idx)} className="p-1 rounded hover:bg-gray-200">
+                    <button onClick={() => removeAllocRow(idx)} className="p-1 rounded hover:bg-app-surface-hover">
                       <X className="w-3.5 h-3.5 text-app-red" />
                     </button>
                   </div>
@@ -6595,7 +6595,7 @@ function TemplateModal({
 
         <div className="flex gap-2 mt-4">
           <button onClick={onClose}
-            className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-xl hover:bg-gray-200 transition-colors">
+            className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-xl hover:bg-app-surface-hover transition-colors">
             キャンセル
           </button>
           <button
@@ -6739,7 +6739,7 @@ function RouteTemplateModal({
 
         <div className="flex gap-2 mt-4">
           <button onClick={onClose}
-            className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-xl hover:bg-gray-200 transition-colors">
+            className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-xl hover:bg-app-surface-hover transition-colors">
             キャンセル
           </button>
           <button
@@ -6935,7 +6935,7 @@ function PackageTemplateModal({
         <div className="flex gap-2 mt-4">
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-xl hover:bg-gray-200 transition-colors"
+            className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-xl hover:bg-app-surface-hover transition-colors"
           >
             キャンセル
           </button>

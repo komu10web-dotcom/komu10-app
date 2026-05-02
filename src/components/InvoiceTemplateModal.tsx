@@ -109,7 +109,7 @@ export default function InvoiceTemplateModal({
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
         {/* ヘッダー */}
-        <div className="sticky top-0 bg-white border-b border-gray-100 px-5 py-4 flex items-center justify-between z-10">
+        <div className="sticky top-0 bg-white border-b border-app-line px-5 py-4 flex items-center justify-between z-10">
           <p className="text-sm font-medium text-app-text">
             {template ? '請求書テンプレを編集' : '請求書テンプレを追加'}
           </p>
@@ -327,11 +327,11 @@ export default function InvoiceTemplateModal({
         </div>
 
         {/* フッター */}
-        <div className="sticky bottom-0 bg-white border-t border-gray-100 px-5 py-3 flex gap-2">
+        <div className="sticky bottom-0 bg-white border-t border-app-line px-5 py-3 flex gap-2">
           <button
             onClick={onClose}
             disabled={saving}
-            className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+            className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-app-surface-hover transition-colors disabled:opacity-50"
           >
             キャンセル
           </button>

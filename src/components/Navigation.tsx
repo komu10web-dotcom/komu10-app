@@ -24,7 +24,7 @@ export default function Navigation() {
   };
 
   return (
-    <nav className="border-t border-gray-100">
+    <nav className="border-t border-app-line">
       <div className="px-6 flex gap-6">
         {navItems.map((item) => {
           const isActive = pathname === item.href || 
@@ -38,7 +38,7 @@ export default function Navigation() {
                 relative py-3 font-['Shippori_Mincho'] text-[13px] transition-colors
                 ${isActive 
                   ? 'text-x-black' 
-                  : 'text-gray-400 hover:text-gray-600'
+                  : 'text-app-text-mute hover:text-app-text-sub'
                 }
               `}
             >

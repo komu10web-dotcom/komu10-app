@@ -211,7 +211,7 @@ export default function SimulationContent() {
                   </div>
 
                   {/* カード詳細 */}
-                  <div className="px-5 pb-5 pt-2 border-t border-gray-50">
+                  <div className="px-5 pb-5 pt-2 border-t border-app-line">
                     <div className="flex items-center gap-3 flex-wrap">
                       {/* 金額タイプ */}
                       <div className="flex items-center gap-0.5 bg-app-surface-alt rounded-lg p-0.5">

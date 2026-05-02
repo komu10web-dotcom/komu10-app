@@ -245,7 +245,7 @@ export default function ConsultationModal({
         style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}
       >
         {/* ヘッダー */}
-        <div className="sticky top-0 bg-white border-b border-gray-100 px-5 py-4 flex items-center justify-between z-10 sm:rounded-t-2xl">
+        <div className="sticky top-0 bg-white border-b border-app-line px-5 py-4 flex items-center justify-between z-10 sm:rounded-t-2xl">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-app-text" />
             <p className="text-sm font-medium text-app-text">AIに相談</p>
@@ -256,7 +256,7 @@ export default function ConsultationModal({
         </div>
 
         {/* 文脈サマリー */}
-        <div className="px-5 py-3 bg-app-surface border-b border-gray-100 text-[11px] text-app-text-sub">
+        <div className="px-5 py-3 bg-app-surface border-b border-app-line text-[11px] text-app-text-sub">
           <span className="font-medium text-app-text">
             {context.date || '日付未'} / ¥{(context.amount || 0).toLocaleString()} / {context.store || '支払先未'}
           </span>
@@ -265,7 +265,7 @@ export default function ConsultationModal({
 
         {/* 過去の類似取引（折りたたみ） */}
         {similarStore.length > 0 && (
-          <div className="border-b border-gray-100">
+          <div className="border-b border-app-line">
             <button
               onClick={() => setSimilarOpen(!similarOpen)}
               className="w-full px-5 py-2.5 flex items-center justify-between text-[11px] text-app-text-sub hover:bg-black/5"
@@ -280,7 +280,7 @@ export default function ConsultationModal({
                     key={s.id}
                     onClick={() => handleApplySimilar(s)}
                     disabled={applying}
-                    className="w-full text-left p-2 rounded-lg bg-white border border-gray-200 hover:border-app-text transition-colors disabled:opacity-50"
+                    className="w-full text-left p-2 rounded-lg bg-white border border-app-line-medium hover:border-app-text transition-colors disabled:opacity-50"
                   >
                     <div className="flex justify-between items-center text-[11px]">
                       <div>
@@ -311,7 +311,7 @@ export default function ConsultationModal({
                 className={`max-w-[85%] px-3 py-2 rounded-2xl text-[12px] leading-relaxed whitespace-pre-wrap ${
                   m.role === 'user'
                     ? 'bg-app-button text-white rounded-br-sm'
-                    : 'bg-white text-app-text border border-gray-200 rounded-bl-sm'
+                    : 'bg-white text-app-text border border-app-line-medium rounded-bl-sm'
                 }`}
               >
                 {m.content}
@@ -320,7 +320,7 @@ export default function ConsultationModal({
           ))}
           {loading && (
             <div className="flex justify-start">
-              <div className="px-3 py-2 rounded-2xl bg-white border border-gray-200 text-app-text-mute text-[12px]">
+              <div className="px-3 py-2 rounded-2xl bg-white border border-app-line-medium text-app-text-mute text-[12px]">
                 <span className="inline-flex gap-1">
                   <span className="w-1.5 h-1.5 bg-app-text-mute rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                   <span className="w-1.5 h-1.5 bg-app-text-mute rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -356,7 +356,7 @@ export default function ConsultationModal({
         )}
 
         {/* 入力欄 */}
-        <div className="border-t border-gray-100 p-3 bg-white sm:rounded-b-2xl">
+        <div className="border-t border-app-line p-3 bg-white sm:rounded-b-2xl">
           <div className="flex items-end gap-2">
             <textarea
               value={input}
@@ -365,7 +365,7 @@ export default function ConsultationModal({
               placeholder="質問を入力..."
               rows={1}
               disabled={loading}
-              className="flex-1 px-3 py-2 text-[12px] border border-gray-200 rounded-lg focus:outline-none focus:border-app-text resize-none disabled:bg-gray-50"
+              className="flex-1 px-3 py-2 text-[12px] border border-app-line-medium rounded-lg focus:outline-none focus:border-app-text resize-none disabled:bg-app-surface"
               style={{ minHeight: '36px', maxHeight: '100px' }}
             />
             <button

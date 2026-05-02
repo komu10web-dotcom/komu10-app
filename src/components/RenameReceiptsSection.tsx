@@ -209,7 +209,7 @@ export default function RenameReceiptsSection() {
             <div className="flex gap-2">
               <button
                 onClick={reset}
-                className="px-4 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors"
+                className="px-4 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-app-surface-hover transition-colors"
               >
                 キャンセル
               </button>
@@ -293,7 +293,7 @@ export default function RenameReceiptsSection() {
 
             <button
               onClick={reset}
-              className="px-4 py-2 text-xs text-app-text-strong bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors"
+              className="px-4 py-2 text-xs text-app-text-strong bg-app-surface-alt rounded-lg hover:bg-app-surface-hover transition-colors"
             >
               閉じる
             </button>

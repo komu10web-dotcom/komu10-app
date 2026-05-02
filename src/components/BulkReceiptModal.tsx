@@ -350,7 +350,7 @@ export default function BulkReceiptModal({
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40">
       <div className="bg-white w-full sm:max-w-3xl sm:rounded-2xl rounded-t-2xl max-h-[90vh] flex flex-col overflow-hidden">
         {/* ── ヘッダー ── */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-app-line shrink-0">
           <div>
             <h2 className="text-base font-medium text-app-text">領収書をまとめて取り込み</h2>
             <p className="text-[11px] text-app-text-mute mt-0.5">複数の領収書をAIで一気に読み取り・登録します</p>
@@ -358,7 +358,7 @@ export default function BulkReceiptModal({
           <button
             onClick={handleClose}
             disabled={bulkSaving}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-30"
+            className="p-2 hover:bg-app-surface-alt rounded-lg transition-colors disabled:opacity-30"
           >
             <X className="w-4 h-4 text-app-text-sub" />
           </button>
@@ -373,7 +373,7 @@ export default function BulkReceiptModal({
               onDragLeave={() => setIsDragging(false)}
               onDrop={handleDrop}
               className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors ${
-                isDragging ? 'border-app-gold bg-state-gold-soft' : 'border-gray-200 bg-app-surface'
+                isDragging ? 'border-app-gold bg-state-gold-soft' : 'border-app-line-medium bg-app-surface'
               }`}
             >
               <Upload className="w-6 h-6 mx-auto mb-2 text-app-text-mute" />
@@ -467,7 +467,7 @@ export default function BulkReceiptModal({
                             type="date"
                             value={row.date}
                             onChange={(e) => updateRow(row.clientId, { date: e.target.value })}
-                            className="w-full text-xs px-2 py-1.5 border border-gray-200 rounded bg-white"
+                            className="w-full text-xs px-2 py-1.5 border border-app-line-medium rounded bg-white"
                           />
                         </div>
                         <div>
@@ -476,7 +476,7 @@ export default function BulkReceiptModal({
                             type="number"
                             value={row.amount || ''}
                             onChange={(e) => updateRow(row.clientId, { amount: parseInt(e.target.value) || 0 })}
-                            className="w-full text-xs px-2 py-1.5 border border-gray-200 rounded bg-white tabular-nums"
+                            className="w-full text-xs px-2 py-1.5 border border-app-line-medium rounded bg-white tabular-nums"
                             placeholder="0"
                           />
                         </div>
@@ -488,7 +488,7 @@ export default function BulkReceiptModal({
                           type="text"
                           value={row.store}
                           onChange={(e) => updateRow(row.clientId, { store: e.target.value })}
-                          className="w-full text-xs px-2 py-1.5 border border-gray-200 rounded bg-white"
+                          className="w-full text-xs px-2 py-1.5 border border-app-line-medium rounded bg-white"
                           placeholder="店名・会社名"
                         />
                       </div>
@@ -499,7 +499,7 @@ export default function BulkReceiptModal({
                           <select
                             value={row.kamoku}
                             onChange={(e) => updateRow(row.clientId, { kamoku: e.target.value })}
-                            className="w-full text-xs px-2 py-1.5 border border-gray-200 rounded bg-white"
+                            className="w-full text-xs px-2 py-1.5 border border-app-line-medium rounded bg-white"
                           >
                             {expenseKamokus.map(([key, def]) => (
                               <option key={key} value={key}>{(def as any).name}</option>
@@ -511,7 +511,7 @@ export default function BulkReceiptModal({
                           <select
                             value={row.owner}
                             onChange={(e) => updateRow(row.clientId, { owner: e.target.value })}
-                            className="w-full text-xs px-2 py-1.5 border border-gray-200 rounded bg-white"
+                            className="w-full text-xs px-2 py-1.5 border border-app-line-medium rounded bg-white"
                           >
                             <option value="tomo">tomo</option>
                             <option value="toshiki">toshiki</option>
@@ -525,7 +525,7 @@ export default function BulkReceiptModal({
                           <select
                             value={row.division}
                             onChange={(e) => updateRow(row.clientId, { division: e.target.value })}
-                            className="w-full text-xs px-2 py-1.5 border border-gray-200 rounded bg-white"
+                            className="w-full text-xs px-2 py-1.5 border border-app-line-medium rounded bg-white"
                           >
                             {Object.entries(DIVISIONS).map(([key, def]) => (
                               <option key={key} value={key}>{def.name}</option>
@@ -539,7 +539,7 @@ export default function BulkReceiptModal({
                           <select
                             value={row.projectId}
                             onChange={(e) => updateRow(row.clientId, { projectId: e.target.value })}
-                            className="w-full text-xs px-2 py-1.5 border border-gray-200 rounded bg-white"
+                            className="w-full text-xs px-2 py-1.5 border border-app-line-medium rounded bg-white"
                           >
                             <option value="">—</option>
                             {KAMOKU_INPUT_GUIDE[row.kamoku]?.requireProject && (
@@ -559,7 +559,7 @@ export default function BulkReceiptModal({
                             type="text"
                             value={row.description}
                             onChange={(e) => updateRow(row.clientId, { description: e.target.value })}
-                            className="w-full text-xs px-2 py-1.5 border border-gray-200 rounded bg-white"
+                            className="w-full text-xs px-2 py-1.5 border border-app-line-medium rounded bg-white"
                             placeholder={KAMOKU_INPUT_GUIDE[row.kamoku]?.example || ''}
                           />
                         </div>
@@ -573,7 +573,7 @@ export default function BulkReceiptModal({
         </div>
 
         {/* ── フッター ── */}
-        <div className="px-5 py-3 border-t border-gray-100 shrink-0 bg-white">
+        <div className="px-5 py-3 border-t border-app-line shrink-0 bg-white">
           {rows.length > 0 && (
             <div className="flex items-center justify-between mb-2 text-[11px] text-app-text-sub">
               <div className="flex items-center gap-3">
@@ -588,7 +588,7 @@ export default function BulkReceiptModal({
             <button
               onClick={handleClose}
               disabled={bulkSaving}
-              className="flex-1 py-2.5 text-xs text-app-text-sub bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-30"
+              className="flex-1 py-2.5 text-xs text-app-text-sub bg-app-surface-alt rounded-lg hover:bg-app-surface-hover transition-colors disabled:opacity-30"
             >
               {allDone ? '閉じる' : 'キャンセル'}
             </button>

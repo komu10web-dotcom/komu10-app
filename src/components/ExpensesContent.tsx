@@ -241,12 +241,12 @@ export default function ExpensesContent() {
             </button>
             <button
               onClick={() => setBulkModalOpen(true)}
-              className="flex items-center gap-1.5 px-4 py-2 bg-white text-app-text rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors border border-gray-200"
+              className="flex items-center gap-1.5 px-4 py-2 bg-white text-app-text rounded-lg text-xs font-medium hover:bg-app-surface transition-colors border border-app-line-medium"
             >
               <Layers className="w-3.5 h-3.5" />
               まとめて
             </button>
-            <label className="flex items-center gap-1.5 px-4 py-2 bg-white text-app-text rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors cursor-pointer border border-gray-200">
+            <label className="flex items-center gap-1.5 px-4 py-2 bg-white text-app-text rounded-lg text-xs font-medium hover:bg-app-surface transition-colors cursor-pointer border border-app-line-medium">
               <Upload className="w-3.5 h-3.5" />
               {importing ? 'インポート中...' : 'CSV'}
               <input
@@ -272,7 +272,7 @@ export default function ExpensesContent() {
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               placeholder="検索..."
-              className="pl-8 pr-3 py-2 bg-white rounded-lg text-xs border border-gray-200 outline-none focus:ring-2 focus:ring-app-gold/50 w-40"
+              className="pl-8 pr-3 py-2 bg-white rounded-lg text-xs border border-app-line-medium outline-none focus:ring-2 focus:ring-app-gold/50 w-40"
             />
           </div>
           {/* v0.9.0: 未紐付けフィルタートグル（取材費・制作費で案件タグ未紐付け） */}
@@ -282,7 +282,7 @@ export default function ExpensesContent() {
               className={`px-3 py-2 rounded-lg text-xs border transition-colors ${
                 showOnlyUntagged
                   ? 'bg-app-red/10 border-app-red/30 text-app-red'
-                  : 'bg-white border-gray-200 text-app-text-sub hover:border-app-red/30'
+                  : 'bg-white border-app-line-medium text-app-text-sub hover:border-app-red/30'
               }`}
             >
               未紐付け {untaggedIds.size}件
@@ -307,7 +307,7 @@ export default function ExpensesContent() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-100">
+                  <tr className="border-b border-app-line">
                     <th className="text-left px-4 py-3 text-xs text-app-text-mute font-normal">日付</th>
                     <th className="text-left px-4 py-3 text-xs text-app-text-mute font-normal">ステータス</th>
                     <th className="text-left px-4 py-3 text-xs text-app-text-mute font-normal">支払先</th>
@@ -323,7 +323,7 @@ export default function ExpensesContent() {
                     const statusStyle = STATUS_STYLES[effStatus] || STATUS_STYLES.settled;
                     const statusLabel = TRANSACTION_STATUS[effStatus as keyof typeof TRANSACTION_STATUS] || TRANSACTION_STATUS.settled;
                     return (
-                      <tr key={tx.id} className="border-b border-gray-50 hover:bg-app-surface-alt/50 transition-colors">
+                      <tr key={tx.id} className="border-b border-app-line hover:bg-app-surface-alt/50 transition-colors">
                         <td className="px-4 py-3 font-['Saira_Condensed'] text-xs text-app-text-mute tabular-nums">
                           {formatDate(tx.date)}
                         </td>
@@ -396,7 +396,7 @@ export default function ExpensesContent() {
 
           {/* ── フッター集計 ── */}
           {!loading && filtered.length > 0 && (
-            <div className="flex items-center justify-end px-4 py-3 border-t border-gray-100 bg-app-surface-alt/50">
+            <div className="flex items-center justify-end px-4 py-3 border-t border-app-line bg-app-surface-alt/50">
               <div className="text-xs">
                 <span className="text-app-text-mute">合計: </span>
                 <span className="font-['Saira_Condensed'] text-app-text tabular-nums">{formatAmount(expenseSum)}</span>
@@ -470,7 +470,7 @@ export default function ExpensesContent() {
             <div className="flex gap-2">
               <button
                 onClick={() => setDeleteTarget(null)}
-                className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors"
+                className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-app-surface-hover transition-colors"
               >
                 キャンセル
               </button>

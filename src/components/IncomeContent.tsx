@@ -315,7 +315,7 @@ export default function IncomeContent() {
             <Plus className="w-3.5 h-3.5" />
             売上入力
           </button>
-          <label className="flex items-center gap-1.5 px-4 py-2 bg-white text-app-text rounded-lg text-xs font-medium hover:bg-gray-50 transition-colors cursor-pointer border border-gray-200">
+          <label className="flex items-center gap-1.5 px-4 py-2 bg-white text-app-text rounded-lg text-xs font-medium hover:bg-app-surface transition-colors cursor-pointer border border-app-line-medium">
             <Upload className="w-3.5 h-3.5" />
             {importing ? 'インポート中...' : 'CSV'}
             <input
@@ -336,7 +336,7 @@ export default function IncomeContent() {
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               placeholder="検索..."
-              className="pl-8 pr-3 py-2 bg-white rounded-lg text-xs border border-gray-200 outline-none focus:ring-2 focus:ring-app-gold/50 w-40"
+              className="pl-8 pr-3 py-2 bg-white rounded-lg text-xs border border-app-line-medium outline-none focus:ring-2 focus:ring-app-gold/50 w-40"
             />
           </div>
           <span className="text-xs text-app-text-mute">
@@ -358,7 +358,7 @@ export default function IncomeContent() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-100">
+                  <tr className="border-b border-app-line">
                     <th className="text-left px-4 py-3 text-xs text-app-text-mute font-normal">日付</th>
                     <th className="text-left px-4 py-3 text-xs text-app-text-mute font-normal">ステータス</th>
                     <th className="text-left px-4 py-3 text-xs text-app-text-mute font-normal">取引先</th>
@@ -379,7 +379,7 @@ export default function IncomeContent() {
                     const effStatus = getEffectiveStatus(tx.status);
                     const statusStyle = STATUS_STYLES[effStatus] || STATUS_STYLES.settled;
                     return (
-                      <tr key={tx.id} className="border-b border-gray-50 hover:bg-app-surface-alt/50 transition-colors">
+                      <tr key={tx.id} className="border-b border-app-line hover:bg-app-surface-alt/50 transition-colors">
                         <td className="px-4 py-3 font-['Saira_Condensed'] text-xs text-app-text-mute tabular-nums">
                           {formatDate(tx.date)}
                         </td>
@@ -445,7 +445,7 @@ export default function IncomeContent() {
             const settledSum = filtered.filter(t => getEffectiveStatus(t.status) === 'settled').reduce((s, t) => s + t.amount, 0);
             const otherSum = revenueSum - forecastSum - settledSum;
             return (
-              <div className="flex items-center justify-end gap-4 px-4 py-3 border-t border-gray-100 bg-app-surface-alt/50">
+              <div className="flex items-center justify-end gap-4 px-4 py-3 border-t border-app-line bg-app-surface-alt/50">
                 {forecastSum > 0 && (
                   <div className="text-xs">
                     <span className="text-app-text-mute">見込み: </span>
@@ -498,7 +498,7 @@ export default function IncomeContent() {
             <div className="flex gap-2">
               <button
                 onClick={() => setDeleteTarget(null)}
-                className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors"
+                className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-app-surface-hover transition-colors"
               >
                 キャンセル
               </button>
@@ -847,7 +847,7 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
         style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}
       >
         {/* ヘッダー */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-app-line">
           <h2 className="text-sm font-medium text-app-text">
             {editData ? '売上を編集' : '売上を入力'}
           </h2>
@@ -1150,10 +1150,10 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
         </div>
 
         {/* フッター */}
-        <div className="px-5 py-4 border-t border-gray-100 flex gap-2">
+        <div className="px-5 py-4 border-t border-app-line flex gap-2">
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-gray-200 transition-colors"
+            className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-app-surface-hover transition-colors"
           >
             キャンセル
           </button>

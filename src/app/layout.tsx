@@ -19,7 +19,7 @@ export default function RootLayout({
       <body>
         <div className="min-h-screen flex flex-col">
           {/* ヘッダー（sticky） */}
-          <header className="sticky top-0 z-50 bg-white border-b border-gray-200">
+          <header className="sticky top-0 z-50 bg-white border-b border-app-line-medium">
             {/* 上段: THE MONEY BOOK タイプロゴ + フィルター
                 session77 確定: アプリ正式名は THE MONEY BOOK
                   - 左: komu10(運営者表記・小)+ THE MONEY BOOK(アプリ本名・主役)
