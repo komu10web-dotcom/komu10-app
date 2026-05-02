@@ -1,4 +1,13 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Questrial&family=Saira+Condensed:wght@400;500;600&family=Shippori+Mincho:wght@400;500&family=Noto+Sans+JP:wght@400;500;600&display=swap');
+/* komu10 ブランド基本書体(session77 確定/v1.5 改訂対象)
+ * - Big Shoulders Display Black 900: コンテンツ名タイプロゴ・章扉・KPI巨大数字(60-500px)
+ * - Bricolage Grotesque 200..800: サブヘッディング・章番号・データラベル(14-60px)
+ * - Saira Condensed: 数値ラベル・凡例(8-16px)
+ * - Inter: 英文本文・UI(14-18px)
+ * - Shippori Mincho: 日本語見出し(16-52px)
+ * - Questrial: komu10 ロゴ
+ * - Noto Sans JP: 日本語UI
+ */
+@import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@900&family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Inter:wght@300;400;500;600&family=Questrial&family=Saira+Condensed:wght@400;500;600&family=Shippori+Mincho:wght@400;500&family=Noto+Sans+JP:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;

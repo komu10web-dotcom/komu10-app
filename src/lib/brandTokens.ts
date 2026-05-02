@@ -107,16 +107,19 @@ export const SEMANTIC = {
 } as const;
 
 // ============================================================
-// タイポグラフィ(規定書 §4 X 命名・ブランド6書体)
+// タイポグラフィ(規定書 §4 X 命名・基本書体)
+// session77 改訂:Big Shoulders Display Black + Bricolage Grotesque を追加
 // ============================================================
 export const FONTS = {
-  logo:    "'Questrial', sans-serif",         // X ロゴ
-  mincho:  "'Shippori Mincho', serif",         // X 明朝
-  num:     "'Saira Condensed', sans-serif",    // X 数字
-  ui:      "'Inter', sans-serif",              // X UI
-  uiJp:    "'Noto Sans JP', sans-serif",       // X UI 和
+  logo:    "'Questrial', sans-serif",                   // X ロゴ
+  mincho:  "'Shippori Mincho', serif",                   // X 明朝(和文見出し)
+  num:     "'Saira Condensed', sans-serif",              // X 数字(凡例・極小)
+  ui:      "'Inter', sans-serif",                        // X UI(英文本文)
+  uiJp:    "'Noto Sans JP', sans-serif",                 // X UI 和
+  // session77 追加(コンテンツ名 THE MONEY BOOK / 章扉 / KPI 巨大数字)
+  display: "'Big Shoulders Display', sans-serif",        // X Display(60-500px・Black 900)
+  brico:   "'Bricolage Grotesque', sans-serif",          // X Brico(14-60px・Variable 200..800)
   // Cormorant Garamond は失敗事例#1 で全廃済(session52-53 / Paula Scher 整合性違反)
-  // 規定書 v1.4-rev6 の正規書体は上記5系統のみ。bi: の復活禁止。
 } as const;
 
 // ============================================================

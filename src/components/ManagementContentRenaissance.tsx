@@ -401,8 +401,17 @@ export default function ManagementContentRenaissance() {
         <header style={{ borderBottom: `1px solid ${C.line}`, paddingBottom: 56, marginBottom: 96 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 32, flexWrap: 'wrap' }}>
             <div style={{ flex: 1, minWidth: 320 }}>
-              <p style={{ fontFamily: F.num, fontSize: T.t6, letterSpacing: '0.35em', color: C.gold, marginBottom: 22, fontWeight: 500 }}>
-                VOLUME 04 · MANAGEMENT
+              {/* THE MONEY BOOK タイプロゴ(session77 確定・Big Shoulders Display Black) */}
+              <p style={{
+                fontFamily: "'Big Shoulders Display', sans-serif",
+                fontSize: 22,
+                fontWeight: 900,
+                color: C.gold,
+                letterSpacing: '0.04em',
+                marginBottom: 22,
+                lineHeight: 1,
+              }}>
+                THE MONEY BOOK
               </p>
               <h1 style={{
                 fontFamily: F.jp,
@@ -527,8 +536,14 @@ export default function ManagementContentRenaissance() {
             </span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, textAlign: 'right' }}>
-            <span style={{ fontFamily: F.num, letterSpacing: '0.25em' }}>
-              VOLUME 04 · MANAGEMENT · {year}
+            <span style={{
+              fontFamily: "'Big Shoulders Display', sans-serif",
+              fontWeight: 900,
+              fontSize: 16,
+              letterSpacing: '0.04em',
+              color: C.gold,
+            }}>
+              THE MONEY BOOK
             </span>
             <span style={{ fontFamily: F.num, fontSize: T.t7, letterSpacing: '0.2em', color: C.textFade, textTransform: 'uppercase' }}>
               Last updated · {lastUpdated}
@@ -572,8 +587,17 @@ function MobileView({ appeared, year, revenueTotal, expenseTotal, profitTotal, p
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '32px 24px 64px' }}>
 
         <header style={{ paddingBottom: 24, marginBottom: 36, borderBottom: `1px solid ${C.line}` }}>
-          <p style={{ fontFamily: F.num, fontSize: T.t6, letterSpacing: '0.3em', color: C.gold, marginBottom: 14, fontWeight: 500 }}>
-            VOLUME 04 · MANAGEMENT
+          {/* THE MONEY BOOK タイプロゴ(スマホ版) */}
+          <p style={{
+            fontFamily: "'Big Shoulders Display', sans-serif",
+            fontSize: 18,
+            fontWeight: 900,
+            color: C.gold,
+            letterSpacing: '0.04em',
+            marginBottom: 14,
+            lineHeight: 1,
+          }}>
+            THE MONEY BOOK
           </p>
           <h1 style={{
             fontFamily: F.jp,
@@ -735,8 +759,14 @@ function MobileView({ appeared, year, revenueTotal, expenseTotal, profitTotal, p
           <span style={{ fontFamily: F.num, fontWeight: 500, fontSize: T.t6 }}>
             komu<span style={{ color: C.gold }}>10</span>
           </span>
-          <span style={{ fontFamily: F.num, letterSpacing: '0.25em' }}>
-            VOLUME 04 · {year}
+          <span style={{
+            fontFamily: "'Big Shoulders Display', sans-serif",
+            fontSize: 13,
+            fontWeight: 900,
+            letterSpacing: '0.04em',
+            color: C.gold,
+          }}>
+            THE MONEY BOOK
           </span>
         </footer>
       </div>
