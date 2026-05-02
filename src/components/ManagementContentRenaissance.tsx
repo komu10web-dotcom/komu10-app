@@ -398,32 +398,75 @@ export default function ManagementContentRenaissance() {
     }}>
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '72px 96px 128px' }}>
 
-        <header style={{ borderBottom: `1px solid ${C.line}`, paddingBottom: 56, marginBottom: 96 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 32, flexWrap: 'wrap' }}>
+        <header style={{ borderBottom: `1px solid ${C.line}`, paddingBottom: 56, marginBottom: 64 }}>
+          {/* ===== Phase 1.5a-1 章扉 3レイヤー構造(session77 確定・Violent Discipline 第1段階) =====
+              レイヤー1(上) : komu10 タイプロゴ(現行ブランドロゴ・小型)
+              レイヤー2(中央): THE MONEY BOOK(Big Shoulders Display Black / clamp 巨大組み)
+              レイヤー3(下) : MANAGEMENT 章名(Bricolage Grotesque Light)
+              裁定: Hedi(CEO)/ Saville(CBO)/ Paula(CDO)/ Es Devlin(CAD)/ 出口(CCV)
+          */}
+
+          {/* レイヤー1 — komu10 ロゴ(上部・現行タイプロゴ小型) */}
+          <div style={{
+            fontFamily: F.body,
+            fontSize: T.t6,
+            fontWeight: 500,
+            letterSpacing: '0.32em',
+            color: C.textSub,
+            marginBottom: 28,
+            textTransform: 'uppercase',
+          }}>
+            komu<span style={{ color: C.gold, fontWeight: 600 }}>10</span>
+          </div>
+
+          {/* レイヤー2 — THE MONEY BOOK(巨大主タイトル / 暴力的タイポアートの核) */}
+          <h1 style={{
+            fontFamily: "'Big Shoulders Display', sans-serif",
+            fontSize: 'clamp(72px, 12vw, 168px)',
+            fontWeight: 900,
+            color: C.text,
+            letterSpacing: '-0.02em',
+            lineHeight: 0.92,
+            marginBottom: 18,
+            // 暴力的タイポアートの輪郭強調(セリフ感を保持)
+            fontFeatureSettings: '"ss01"',
+          }}>
+            THE MONEY BOOK
+          </h1>
+
+          {/* レイヤー3 — 章名(下部・Bricolage Grotesque) */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-end',
+            gap: 32,
+            flexWrap: 'wrap',
+            marginTop: 16,
+          }}>
             <div style={{ flex: 1, minWidth: 320 }}>
-              {/* THE MONEY BOOK タイプロゴ(session77 確定・Big Shoulders Display Black) */}
               <p style={{
-                fontFamily: "'Big Shoulders Display', sans-serif",
-                fontSize: 22,
-                fontWeight: 900,
+                fontFamily: "'Bricolage Grotesque', sans-serif",
+                fontSize: 28,
+                fontWeight: 400,
                 color: C.gold,
-                letterSpacing: '0.04em',
-                marginBottom: 22,
+                letterSpacing: '0.12em',
                 lineHeight: 1,
+                marginBottom: 18,
+                textTransform: 'uppercase',
               }}>
-                THE MONEY BOOK
+                Management · {year}
               </p>
-              <h1 style={{
+              <p style={{
                 fontFamily: F.jp,
                 fontSize: T.h1Jp,
                 fontWeight: 400,
                 color: C.text,
-                lineHeight: 1.35,
+                lineHeight: 1.3,
                 letterSpacing: '0.04em',
-                marginBottom: 14,
+                marginBottom: 12,
               }}>
                 {poeticTitle}
-              </h1>
+              </p>
               <p style={{
                 fontFamily: F.jp,
                 fontSize: T.t4,
@@ -431,12 +474,8 @@ export default function ManagementContentRenaissance() {
                 color: C.textSub,
                 letterSpacing: '0.06em',
                 lineHeight: 1.5,
-                marginBottom: 16,
               }}>
                 — {subContext}
-              </p>
-              <p style={{ fontSize: T.t6, color: C.textMute, letterSpacing: '0.2em', fontWeight: 300 }}>
-                {sectionLabel} · {year}
               </p>
             </div>
 
@@ -466,22 +505,10 @@ export default function ManagementContentRenaissance() {
           </div>
         </header>
 
-        {/* session77 Phase 1 C1: X ライン1箇所先行導入(章扉装飾)
-            規定書 v1.1 §2.2 Type II 非対称テーパー Forward / §3 stroke 1.0pt 中央階段(実描画 2.5px)
-            §4.1 暗背景 / §4.2 〜→ X Gold(進行・到達点・章扉)
-            §5 絶対禁則#1: UI 進捗バー用途ではない・章扉装飾としての使用 ◯ */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12, marginBottom: 64 }}>
-          <svg width="240" height="6" viewBox="0 0 240 6" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }} aria-hidden="true">
-            <defs>
-              <linearGradient id="x-line-forward" x1="0" y1="0" x2="240" y2="0" gradientUnits="userSpaceOnUse">
-                <stop offset="0" stopColor="#B8893A" stopOpacity="0" />
-                <stop offset="1" stopColor="#B8893A" stopOpacity="1" />
-              </linearGradient>
-            </defs>
-            {/* Type II Forward:始点 太(2.5px) → 終点 細(終端 20% = 0.5px) */}
-            <polygon points="0,1.75 240,2.75 240,3.25 0,4.25" fill="url(#x-line-forward)" />
-          </svg>
-        </div>
+        {/* Phase 1.5b: 静的 X ライン削除済(session77)
+            旧 Type II Forward 階段ポリゴンはボス判断「変・意味不明」で全廃。
+            武器化版(章扉到達時の画面横断閃光・500ms・stroke 2.6pt)は
+            次 Sub-phase で IntersectionObserver + GSAP で実装予定。 */}
 
         <ViewSwitch viewKey={`${viewMode}-${year}`}>
           {viewMode === 'pl' ? (
@@ -586,33 +613,57 @@ function MobileView({ appeared, year, revenueTotal, expenseTotal, profitTotal, p
     }}>
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '32px 24px 64px' }}>
 
-        <header style={{ paddingBottom: 24, marginBottom: 36, borderBottom: `1px solid ${C.line}` }}>
-          {/* THE MONEY BOOK タイプロゴ(スマホ版) */}
-          <p style={{
-            fontFamily: "'Big Shoulders Display', sans-serif",
-            fontSize: 18,
-            fontWeight: 900,
-            color: C.gold,
-            letterSpacing: '0.04em',
+        <header style={{ paddingBottom: 28, marginBottom: 36, borderBottom: `1px solid ${C.line}` }}>
+          {/* レイヤー1 — komu10 ロゴ(上部) */}
+          <div style={{
+            fontFamily: F.body,
+            fontSize: T.t7,
+            fontWeight: 500,
+            letterSpacing: '0.32em',
+            color: C.textSub,
             marginBottom: 14,
-            lineHeight: 1,
+            textTransform: 'uppercase',
+          }}>
+            komu<span style={{ color: C.gold, fontWeight: 600 }}>10</span>
+          </div>
+
+          {/* レイヤー2 — THE MONEY BOOK(スマホ巨大組み・clamp で自動調整) */}
+          <h1 style={{
+            fontFamily: "'Big Shoulders Display', sans-serif",
+            fontSize: 'clamp(40px, 13vw, 64px)',
+            fontWeight: 900,
+            color: C.text,
+            letterSpacing: '-0.02em',
+            lineHeight: 0.92,
+            marginBottom: 14,
           }}>
             THE MONEY BOOK
+          </h1>
+
+          {/* レイヤー3 — 章名 */}
+          <p style={{
+            fontFamily: "'Bricolage Grotesque', sans-serif",
+            fontSize: 14,
+            fontWeight: 400,
+            color: C.gold,
+            letterSpacing: '0.18em',
+            marginBottom: 14,
+            textTransform: 'uppercase',
+          }}>
+            Management · {year}
           </p>
-          <h1 style={{
+
+          <h2 style={{
             fontFamily: F.jp,
             fontSize: T.t3,
             fontWeight: 400,
             color: C.text,
             lineHeight: 1.45,
             letterSpacing: '0.03em',
-            marginBottom: 10,
+            marginBottom: 0,
           }}>
             いま、儲かっているのか。
-          </h1>
-          <p style={{ fontSize: T.t7, color: C.textMute, letterSpacing: '0.2em', fontWeight: 300 }}>
-            損益 · {year}
-          </p>
+          </h2>
         </header>
 
         <section style={{ marginBottom: 40 }}>
