@@ -32,6 +32,7 @@ import { usePeriodRange } from './HeaderControls';
 import { useViewport } from '@/lib/useViewport';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { useCountUp } from '@/lib/useCountUp';
+import { ViewSwitch } from '@/lib/ViewSwitch';
 
 import { APP_DARK, FONTS, TYPE_SCALE } from '@/lib/brandTokens';
 
@@ -92,6 +93,8 @@ export default function ManagementContentRenaissance() {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'pl' | 'cf'>('pl');
   const [appeared, setAppeared] = useState(false);
+  // session77 Phase 1 B3: Tufte 流メタ情報帯(更新日)
+  const [lastUpdated, setLastUpdated] = useState<string>('—');
 
   useEffect(() => {
     if (!loading) {
@@ -141,6 +144,10 @@ export default function ManagementContentRenaissance() {
       console.error('Fetch error:', err);
     } finally {
       setLoading(false);
+      // session77 Phase 1 B3: メタ情報帯の更新日を記録(YYYY-MM-DD HH:MM)
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, '0');
+      setLastUpdated(`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`);
     }
   }, [owner, startDate, endDate, year]);
 
@@ -236,15 +243,30 @@ export default function ManagementContentRenaissance() {
   const divisionPL = useMemo(() => {
     const divExp: Record<string, number> = {};
     const divRev: Record<string, number> = {};
+    // session77 Phase 1 B5: Small Multiples 用に月次推移を集計
+    const divMonthlyRev: Record<string, number[]> = {};
+    const divMonthlyExp: Record<string, number[]> = {};
+    const ensureMonth = (rec: Record<string, number[]>, id: string) => {
+      if (!rec[id]) rec[id] = Array(12).fill(0);
+      return rec[id];
+    };
+    const monthIdxOf = (date: string | null | undefined): number => {
+      if (!date) return -1;
+      const mm = parseInt(date.slice(5, 7), 10);
+      return isNaN(mm) ? -1 : mm - 1;
+    };
     transactions.forEach(t => {
       const allocs = allocByTx[t.id];
+      const mIdx = monthIdxOf(t.date);
       if (t.tx_type === 'revenue') {
         const div = t.division || 'general';
         divRev[div] = (divRev[div] || 0) + (t.amount || 0);
+        if (mIdx >= 0 && mIdx < 12) ensureMonth(divMonthlyRev, div)[mIdx] += (t.amount || 0);
       } else if (t.tx_type === 'expense') {
         if (allocs && allocs.length > 0) {
           allocs.forEach(a => {
             divExp[a.division_id] = (divExp[a.division_id] || 0) + (a.amount || 0);
+            if (mIdx >= 0 && mIdx < 12) ensureMonth(divMonthlyExp, a.division_id)[mIdx] += (a.amount || 0);
           });
         }
       }
@@ -252,7 +274,10 @@ export default function ManagementContentRenaissance() {
     return activeDivisions.map(([id, v]) => {
       const rev = divRev[id] || 0;
       const exp = divExp[id] || 0;
-      return { id, name: v.name, label: v.label, color: v.color, revenue: rev, expense: exp, profit: rev - exp };
+      const mRev = divMonthlyRev[id] || Array(12).fill(0);
+      const mExp = divMonthlyExp[id] || Array(12).fill(0);
+      const monthlyProfit = mRev.map((r, i) => r - mExp[i]);
+      return { id, name: v.name, label: v.label, color: v.color, revenue: rev, expense: exp, profit: rev - exp, monthlyProfit };
     });
   }, [transactions, allocByTx, activeDivisions]);
 
@@ -269,29 +294,47 @@ export default function ManagementContentRenaissance() {
   }, [transactions]);
 
   const projectPL = useMemo(() => {
-    const m: Record<string, { revenue: number; expense: number }> = {};
+    const m: Record<string, { revenue: number; expense: number; monthlyRev: number[]; monthlyExp: number[] }> = {};
+    const ensure = (id: string) => {
+      if (!m[id]) m[id] = {
+        revenue: 0, expense: 0,
+        monthlyRev: Array(12).fill(0),
+        monthlyExp: Array(12).fill(0),
+      };
+      return m[id];
+    };
     transactions.forEach(t => {
       const allocs = allocByTx[t.id];
+      // 月次 index は date の月から(0-11)
+      const monthIdx = (() => {
+        if (!t.date) return -1;
+        const mm = parseInt(t.date.slice(5, 7), 10);
+        return isNaN(mm) ? -1 : mm - 1;
+      })();
       if (t.tx_type === 'revenue' && t.project_id) {
-        if (!m[t.project_id]) m[t.project_id] = { revenue: 0, expense: 0 };
-        m[t.project_id].revenue += (t.amount || 0);
+        const rec = ensure(t.project_id);
+        rec.revenue += (t.amount || 0);
+        if (monthIdx >= 0 && monthIdx < 12) rec.monthlyRev[monthIdx] += (t.amount || 0);
       } else if (t.tx_type === 'expense' && allocs) {
         allocs.forEach(a => {
           if (a.project_id) {
-            if (!m[a.project_id]) m[a.project_id] = { revenue: 0, expense: 0 };
-            m[a.project_id].expense += (a.amount || 0);
+            const rec = ensure(a.project_id);
+            rec.expense += (a.amount || 0);
+            if (monthIdx >= 0 && monthIdx < 12) rec.monthlyExp[monthIdx] += (a.amount || 0);
           }
         });
       }
     });
     return projects
       .map(pj => {
-        const pl = m[pj.id] || { revenue: 0, expense: 0 };
+        const pl = m[pj.id] || { revenue: 0, expense: 0, monthlyRev: Array(12).fill(0), monthlyExp: Array(12).fill(0) };
         const profit = pl.revenue - pl.expense;
         const rate = pl.revenue > 0 ? (profit / pl.revenue) * 100 : 0;
+        const monthlyProfit = pl.monthlyRev.map((r, i) => r - pl.monthlyExp[i]);
         return {
           id: pj.id, name: pj.name, division: pj.division,
           revenue: pl.revenue, expense: pl.expense, profit, rate,
+          monthlyProfit,
         };
       })
       .filter(p => p.revenue > 0 || p.expense > 0)
@@ -337,9 +380,9 @@ export default function ManagementContentRenaissance() {
       opacity: appeared ? 1 : 0,
       transition: reduceMotion ? 'none' : 'opacity 280ms ease-out',
     }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '64px 48px 96px' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '72px 96px 128px' }}>
 
-        <header style={{ borderBottom: `1px solid ${C.line}`, paddingBottom: 40, marginBottom: 64 }}>
+        <header style={{ borderBottom: `1px solid ${C.line}`, paddingBottom: 56, marginBottom: 96 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 32, flexWrap: 'wrap' }}>
             <div style={{ flex: 1, minWidth: 320 }}>
               <p style={{ fontFamily: F.num, fontSize: T.t6, letterSpacing: '0.35em', color: C.gold, marginBottom: 22, fontWeight: 500 }}>
@@ -398,33 +441,35 @@ export default function ManagementContentRenaissance() {
           </div>
         </header>
 
-        {viewMode === 'pl' ? (
-          <PLView
-            year={year}
-            revenueTotal={revenueTotal}
-            expenseTotal={expenseTotal}
-            profitTotal={profitTotal}
-            profitRate={profitRate}
-            monthlyPL={monthlyPL}
-            divisionPL={divisionPL}
-            kamokuExpense={kamokuExpense}
-            projectPL={projectPL}
-          />
-        ) : (
-          <CFView
-            year={year}
-            cfTotalInflow={cfTotalInflow}
-            cfTotalOutflow={cfTotalOutflow}
-            cfNet={cfNet}
-            totalBankBalance={totalBankBalance}
-            bankAccounts={bankAccounts}
-            runwayMonths={runwayMonths}
-            runwayColor={runwayColor}
-            runwayLabel={runwayLabel}
-            avgMonthlyOutflow={avgMonthlyOutflow}
-            monthlyCF={monthlyCF}
-          />
-        )}
+        <ViewSwitch viewKey={`${viewMode}-${year}`}>
+          {viewMode === 'pl' ? (
+            <PLView
+              year={year}
+              revenueTotal={revenueTotal}
+              expenseTotal={expenseTotal}
+              profitTotal={profitTotal}
+              profitRate={profitRate}
+              monthlyPL={monthlyPL}
+              divisionPL={divisionPL}
+              kamokuExpense={kamokuExpense}
+              projectPL={projectPL}
+            />
+          ) : (
+            <CFView
+              year={year}
+              cfTotalInflow={cfTotalInflow}
+              cfTotalOutflow={cfTotalOutflow}
+              cfNet={cfNet}
+              totalBankBalance={totalBankBalance}
+              bankAccounts={bankAccounts}
+              runwayMonths={runwayMonths}
+              runwayColor={runwayColor}
+              runwayLabel={runwayLabel}
+              avgMonthlyOutflow={avgMonthlyOutflow}
+              monthlyCF={monthlyCF}
+            />
+          )}
+        </ViewSwitch>
 
         <footer style={{
           marginTop: 96,
@@ -432,17 +477,30 @@ export default function ManagementContentRenaissance() {
           borderTop: `1px solid ${C.line}`,
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center',
+          alignItems: 'flex-end',
+          flexWrap: 'wrap',
+          gap: 24,
           fontSize: T.t7,
           color: C.textMute,
           letterSpacing: '0.15em',
         }}>
-          <span style={{ fontFamily: F.num, fontWeight: 500, fontSize: T.t5 }}>
-            komu<span style={{ color: C.gold }}>10</span>
-          </span>
-          <span style={{ fontFamily: F.num, letterSpacing: '0.25em' }}>
-            VOLUME 04 · MANAGEMENT · {year}
-          </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <span style={{ fontFamily: F.num, fontWeight: 500, fontSize: T.t5, color: C.text }}>
+              komu<span style={{ color: C.gold }}>10</span>
+            </span>
+            {/* session77 Phase 1 軸3 / B3: Tufte 流メタ情報帯(出典・単位・更新日) */}
+            <span style={{ fontFamily: F.num, fontSize: T.t7, letterSpacing: '0.2em', color: C.textFade, textTransform: 'uppercase' }}>
+              Unit · JPY  /  Source · Supabase
+            </span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, textAlign: 'right' }}>
+            <span style={{ fontFamily: F.num, letterSpacing: '0.25em' }}>
+              VOLUME 04 · MANAGEMENT · {year}
+            </span>
+            <span style={{ fontFamily: F.num, fontSize: T.t7, letterSpacing: '0.2em', color: C.textFade, textTransform: 'uppercase' }}>
+              Last updated · {lastUpdated}
+            </span>
+          </div>
         </footer>
       </div>
     </div>
@@ -664,9 +722,9 @@ function PLView({ year, revenueTotal, expenseTotal, profitTotal, profitRate, mon
     expSettled: number; expForecast: number;
     profitSettled: number;
   }[];
-  divisionPL: { id: string; name: string; label: string; color: string; revenue: number; expense: number; profit: number }[];
+  divisionPL: { id: string; name: string; label: string; color: string; revenue: number; expense: number; profit: number; monthlyProfit: number[] }[];
   kamokuExpense: { kamoku: string; name: string; amount: number }[];
-  projectPL: { id: string; name: string; division: string; revenue: number; expense: number; profit: number; rate: number }[];
+  projectPL: { id: string; name: string; division: string; revenue: number; expense: number; profit: number; rate: number; monthlyProfit: number[] }[];
 }) {
   // session77 Phase 1 軸4: 主指標 4KPI のカウントアップ(280-400ms / easeOutQuart)
   // prefers-reduced-motion: reduce のとき即時表示にフォールバック
@@ -676,7 +734,7 @@ function PLView({ year, revenueTotal, expenseTotal, profitTotal, profitRate, mon
   const animRate   = useCountUp(profitRate);
   return (
     <>
-      <Section num="01" title={`${year}年の手応え`}>
+      <Section num="01" title={`${year}年の手応え`} tone="lead">
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(4, 1fr)',
@@ -759,7 +817,7 @@ function CFView({ year, cfTotalInflow, cfTotalOutflow, cfNet, totalBankBalance, 
   const animBalance  = useCountUp(totalBankBalance);
   return (
     <>
-      <Section num="01" title="このペースで、あと何ヶ月もつのか">
+      <Section num="01" title="このペースで、あと何ヶ月もつのか" tone="lead">
         <div style={{
           background: C.surface,
           border: `1px solid ${C.line}`,
@@ -871,9 +929,19 @@ function CFView({ year, cfTotalInflow, cfTotalOutflow, cfNet, totalBankBalance, 
   );
 }
 
-function Section({ num, title, children }: { num: string; title: string; children: React.ReactNode }) {
+function Section({ num, title, tone = 'normal', children }: {
+  num: string;
+  title: string;
+  tone?: 'lead' | 'normal' | 'meta';
+  children: React.ReactNode;
+}) {
+  // session77 Phase 1 軸3 / B1: セクション間余白の階層化(原研哉「間」の哲学)
+  // lead   = 主役セクション(画面冒頭の主指標 KPI 群)
+  // normal = 補助セクション(月別チャート・部門別など)
+  // meta   = 末尾のメタ・参考情報
+  const sectionMb = tone === 'lead' ? 120 : tone === 'meta' ? 64 : 80;
   return (
-    <section style={{ marginBottom: 80 }}>
+    <section style={{ marginBottom: sectionMb }}>
       <div style={{ marginBottom: 28, display: 'flex', alignItems: 'baseline', gap: 20 }}>
         <span style={{
           fontFamily: F.num,
@@ -1107,7 +1175,7 @@ function SubLegend({ variant, label }: { variant: 'solid' | 'hatched'; label: st
 
 // ========== 事業別フロー(全事業最大値で正規化・v0.22.0修正) ==========
 
-function DivisionFlow({ divisions }: { divisions: { id: string; name: string; label: string; color: string; revenue: number; expense: number; profit: number }[] }) {
+function DivisionFlow({ divisions }: { divisions: { id: string; name: string; label: string; color: string; revenue: number; expense: number; profit: number; monthlyProfit: number[] }[] }) {
   // session77 Phase 1 軸4: バー幅トランジション reduceMotion ガード
   const reduceMotion = useReducedMotion();
   const totalRev = divisions.reduce((s, d) => s + d.revenue, 0);
@@ -1184,6 +1252,32 @@ function DivisionFlow({ divisions }: { divisions: { id: string; name: string; la
           );
         })}
       </div>
+
+      {/* session77 Phase 1 B5: Small Multiples 部門別月次推移群(Tufte) */}
+      {sorted.some(d => d.monthlyProfit && d.monthlyProfit.some(v => v !== 0)) && (
+        <div style={{ marginTop: 36, paddingTop: 28, borderTop: `1px solid ${C.lineSoft}` }}>
+          <p style={{ fontSize: T.t7, letterSpacing: '0.3em', color: C.textMute, marginBottom: 18, textTransform: 'uppercase', fontWeight: 500 }}>
+            Monthly Profit Trends · 月次利益推移
+          </p>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(${Math.min(sorted.length, 5)}, 1fr)`,
+            gap: 20,
+          }}>
+            {sorted.map(d => {
+              const profitColor = d.profit >= 0 ? C.green : C.crimson;
+              return (
+                <div key={`sm-${d.id}`} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <span style={{ fontFamily: F.num, fontSize: T.t7, color: C.textSub, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+                    {d.name}
+                  </span>
+                  <SmallMultiple data={d.monthlyProfit} color={profitColor} />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1239,9 +1333,96 @@ function KamokuBars({ items, total }: { items: { kamoku: string; name: string; a
   );
 }
 
+// ========== Sparkline(Tufte Beautiful Evidence・月次推移ミニグラフ) ==========
+// session77 Phase 1 B4 / 軸5
+// 仕様:幅 100px・高さ 18px・凡例なし・最大値 = データの絶対値最大
+// 判定:Edward Tufte(必須監督)/ Maureen Stone(色覚)/ Sara Soueidan(SVG実装)
+function Sparkline({ data, color }: { data: number[]; color: string }) {
+  if (!data || data.length === 0) return null;
+  const w = 100;
+  const h = 18;
+  const max = Math.max(...data.map(Math.abs), 1);
+  // 中央線を 0 として上下に描く(利益はゼロ基準で正負を見せる)
+  const midY = h / 2;
+  const points = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * w;
+    const y = midY - (v / max) * (midY - 1);
+    return `${x.toFixed(2)},${y.toFixed(2)}`;
+  }).join(' ');
+  return (
+    <svg
+      width={w}
+      height={h}
+      viewBox={`0 0 ${w} ${h}`}
+      style={{ display: 'block' }}
+      role="img"
+      aria-label="月次利益推移"
+    >
+      {/* ゼロ基準線 */}
+      <line x1={0} y1={midY} x2={w} y2={midY} stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+      {/* 推移線 */}
+      <polyline
+        fill="none"
+        stroke={color}
+        strokeWidth="1.25"
+        strokeLinecap="butt"
+        strokeLinejoin="miter"
+        points={points}
+      />
+    </svg>
+  );
+}
+
+// ========== SmallMultiple(Tufte / 部門別月次推移・並列比較) ==========
+// session77 Phase 1 B5 / 軸5
+// 仕様:幅 100% (auto fit)・高さ 40px・ゼロ基準線・縦軸は全部門共通スケール無し(各々独立)
+// 並列で複数表示することで「形」の比較を可能にする = Small Multiples
+// 判定:Edward Tufte(必須監督)/ Ralph Kimball / Maureen Stone
+function SmallMultiple({ data, color }: { data: number[]; color: string }) {
+  if (!data || data.length === 0) return null;
+  const w = 120;
+  const h = 40;
+  const max = Math.max(...data.map(Math.abs), 1);
+  const midY = h / 2;
+  const padX = 2;
+  const innerW = w - padX * 2;
+  const points = data.map((v, i) => {
+    const x = padX + (i / (data.length - 1)) * innerW;
+    const y = midY - (v / max) * (midY - 2);
+    return `${x.toFixed(2)},${y.toFixed(2)}`;
+  });
+  // 面塗り用パス(ゼロ基準線まで閉じる)
+  const areaPath = `M ${points[0]} L ${points.slice(1).join(' L ')} L ${padX + innerW},${midY} L ${padX},${midY} Z`;
+  return (
+    <svg
+      width="100%"
+      height={h}
+      viewBox={`0 0 ${w} ${h}`}
+      preserveAspectRatio="none"
+      style={{ display: 'block' }}
+      role="img"
+      aria-label="部門別月次利益推移"
+    >
+      {/* ゼロ基準線 */}
+      <line x1={0} y1={midY} x2={w} y2={midY} stroke="rgba(255,255,255,0.10)" strokeWidth="0.5" />
+      {/* 面塗り(薄い透過) */}
+      <path d={areaPath} fill={color} opacity="0.18" />
+      {/* 推移線 */}
+      <polyline
+        fill="none"
+        stroke={color}
+        strokeWidth="1.25"
+        strokeLinecap="butt"
+        strokeLinejoin="miter"
+        points={points.join(' ')}
+      />
+    </svg>
+  );
+}
+
 // ========== PJ別利益率テーブル(PC前提・カラム幅広く・v0.22.0修正) ==========
 
-function ProjectTable({ items }: { items: { id: string; name: string; division: string; revenue: number; expense: number; profit: number; rate: number }[] }) {
+function ProjectTable({ items }: { items: { id: string; name: string; division: string; revenue: number; expense: number; profit: number; rate: number; monthlyProfit: number[] }[] }) {
   // session77 Phase 1 軸4: バー transition reduceMotion ガード
   const reduceMotion = useReducedMotion();
   if (items.length === 0) {
@@ -1253,7 +1434,8 @@ function ProjectTable({ items }: { items: { id: string; name: string; division: 
   }
 
   // PC/タブレット幅(>=768px)前提・カラム幅をゆったり
-  const cols = '40px 1.6fr 130px 130px 130px 160px';
+  // session77 Phase 1 B4: Sparkline カラム(100px)を PJ 名の右に追加
+  const cols = '40px 1.4fr 100px 130px 130px 130px 160px';
 
   return (
     <div style={{ background: C.surface, border: `1px solid ${C.line}` }}>
@@ -1271,6 +1453,7 @@ function ProjectTable({ items }: { items: { id: string; name: string; division: 
       }}>
         <span></span>
         <span>プロジェクト</span>
+        <span>推移</span>
         <span style={{ textAlign: 'right' }}>売上</span>
         <span style={{ textAlign: 'right' }}>経費</span>
         <span style={{ textAlign: 'right' }}>利益</span>
@@ -1297,6 +1480,7 @@ function ProjectTable({ items }: { items: { id: string; name: string; division: 
             <span style={{ fontFamily: F.jp, fontSize: T.t5, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {p.name}
             </span>
+            <Sparkline data={p.monthlyProfit} color={barColor} />
             <span style={{ fontFamily: F.num, fontSize: T.t5, color: C.textSub, textAlign: 'right', fontFeatureSettings: "'tnum' 1" }}>
               {yenShort(p.revenue)}
             </span>
