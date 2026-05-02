@@ -383,8 +383,13 @@ export default function TaxReturnContentRenaissance() {
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             fontSize: 9, color: C.textMute, letterSpacing: '0.15em',
           }}>
-            <span style={{ fontFamily: F.num, fontWeight: 500, fontSize: 12 }}>
-              komu<span style={{ color: C.gold }}>10</span>
+            <span style={{
+              fontFamily: "'Questrial', sans-serif",
+              fontSize: 12,
+              letterSpacing: '0.04em',
+              color: C.text,
+            }}>
+              komu10
             </span>
             <span style={{ fontFamily: F.num, letterSpacing: '0.25em' }}>
               VOLUME 05 · {year}
@@ -997,8 +1002,13 @@ export default function TaxReturnContentRenaissance() {
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           fontSize: 10, color: C.textMute, letterSpacing: '0.15em',
         }}>
-          <span style={{ fontFamily: F.num, fontWeight: 500, fontSize: 14 }}>
-            komu<span style={{ color: C.gold }}>10</span>
+          <span style={{
+            fontFamily: "'Questrial', sans-serif",
+            fontSize: 14,
+            letterSpacing: '0.04em',
+            color: C.text,
+          }}>
+            komu10
           </span>
           <span style={{ fontFamily: F.num, letterSpacing: '0.25em' }}>
             VOLUME 05 · TAX RETURN · {year} · {ownerLabel}

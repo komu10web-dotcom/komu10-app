@@ -538,8 +538,13 @@ export default function ManagementContentRenaissance() {
           letterSpacing: '0.15em',
         }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <span style={{ fontFamily: F.num, fontWeight: 500, fontSize: T.t5, color: C.text }}>
-              komu<span style={{ color: C.gold }}>10</span>
+            <span style={{
+              fontFamily: "'Questrial', sans-serif",
+              fontSize: T.t5,
+              letterSpacing: '0.04em',
+              color: C.text,
+            }}>
+              komu10
             </span>
             {/* session77 Phase 1 軸3 / B3: Tufte 流メタ情報帯(出典・単位・更新日) */}
             <span style={{ fontFamily: F.num, fontSize: T.t7, letterSpacing: '0.2em', color: C.textFade, textTransform: 'uppercase' }}>
@@ -779,8 +784,13 @@ function MobileView({ appeared, year, revenueTotal, expenseTotal, profitTotal, p
           color: C.textMute,
           letterSpacing: '0.15em',
         }}>
-          <span style={{ fontFamily: F.num, fontWeight: 500, fontSize: T.t6 }}>
-            komu<span style={{ color: C.gold }}>10</span>
+          <span style={{
+            fontFamily: "'Questrial', sans-serif",
+            fontSize: T.t6,
+            letterSpacing: '0.04em',
+            color: C.text,
+          }}>
+            komu10
           </span>
           <span style={{
             fontFamily: "'Big Shoulders Display', sans-serif",

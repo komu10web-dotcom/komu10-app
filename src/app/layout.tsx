@@ -29,10 +29,15 @@ export default function RootLayout({
               {/* 左: komu10 運営表記 + THE MONEY BOOK アプリ名 */}
               <div className="flex items-baseline gap-3">
                 <div
-                  className="text-[11px] tracking-[0.32em] text-gray-400 uppercase"
-                  style={{ fontFamily: "'Questrial', sans-serif" }}
+                  className="text-x-black"
+                  style={{
+                    fontFamily: "'Questrial', sans-serif",
+                    fontSize: 14,
+                    letterSpacing: '0.04em',
+                    lineHeight: 1,
+                  }}
                 >
-                  komu<span className="text-app-gold">10</span>
+                  komu10
                 </div>
                 <div
                   className="text-x-black"
