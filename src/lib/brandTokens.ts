@@ -38,9 +38,15 @@ export const X_BRAND = {
 // ============================================================
 // アプリ画面用 調整パレット(明色UI最適化版)
 // ブランド7色を画面表示で疲れない明度に微調整した版。ブランド本義は維持。
+// session77 改訂: themoneybook 主役色を明背景版で追加
 // ============================================================
 export const APP_LIGHT = {
+  // THE MONEY BOOK 主役色(明背景・古典帳簿のインクブルー)
+  ink:        '#14213D',  // 主役 KPI / 章名アクセント
+  inkLight:   '#2A3F6B',  // ホバー・補助
+  inkSoft:    'rgba(20, 33, 61, 0.10)',  // 帯・サーフェス
   // アクセント(ブランド色をUI画面で映える明度に調整)
+  // 注: gold は komu10 親ブランド強調に限定。THE MONEY BOOK 主役は ink を使う。
   gold:     '#D4A03A',  // X Gold をUI明度+15
   green:    '#1B4D3E',  // X Green をUI明度+調整
   red:      '#C23728',  // X Red をUI明度調整(エラー表示用)
@@ -61,6 +67,7 @@ export const APP_LIGHT = {
 
 // ============================================================
 // Renaissance 暗色基調パレット(経営ダッシュボード/確定申告 δ案)
+// session77 改訂: themoneybook 主役色を暗背景版で追加
 // ============================================================
 export const APP_DARK = {
   bg:        '#0a0a0b',   // X Black
@@ -72,7 +79,12 @@ export const APP_DARK = {
   textSub:     'rgba(255,255,255,0.55)',
   textMute:    'rgba(255,255,255,0.32)',
   textFade:    'rgba(255,255,255,0.20)',
+  // THE MONEY BOOK 主役色(暗背景用・コントラスト確保のため明度上げ版)
+  ink:         '#3D5A9C',  // ミッドナイトインクの暗背景アクセント版
+  inkSoft:     'rgba(61, 90, 156, 0.22)',
+  inkLine:     'rgba(61, 90, 156, 0.40)',
   // アクセント(暗色背景に映える明度)
+  // 注: gold は komu10 親ブランド強調に限定。THE MONEY BOOK 主役は ink を使う。
   gold:        '#D4A03A',
   goldSoft:    'rgba(212,160,58,0.18)',
   green:       '#1B4D3E',
@@ -82,14 +94,30 @@ export const APP_DARK = {
 } as const;
 
 // ============================================================
-// コンテンツ色(SCENE NOTES / THIS PLACE / DATA SCIENCE / DATA FILES)
+// コンテンツ色(THE MONEY BOOK / SCENE NOTES / THIS PLACE / DATA SCIENCE / DATA FILES)
 // ブランド規定の派生子ブランド色
+// session77 追加: themoneybook = ミッドナイトインク(古典会計帳簿色)
 // ============================================================
 export const CONTENT_COLORS = {
-  sceneNotes:  '#81D8D0',  // SCENE NOTES パステルブルー
-  thisPlace:   '#FF5F45',  // THIS PLACE サンセット
-  dataScience: '#1A5F8A',  // DATA SCIENCE ディープブルー
-  dataFiles:   '#C23728',  // DATA FILES クリムゾン
+  themoneybook: '#14213D',  // THE MONEY BOOK ミッドナイトインク(古典帳簿・万年筆ブルーブラック)
+  sceneNotes:   '#81D8D0',  // SCENE NOTES パステルブルー
+  thisPlace:    '#FF5F45',  // THIS PLACE サンセット
+  dataScience:  '#1A5F8A',  // DATA SCIENCE ディープブルー
+  dataFiles:    '#C23728',  // DATA FILES クリムゾン
+} as const;
+
+// ============================================================
+// THE MONEY BOOK 専用パレット(session77 確定)
+// 用途: アプリの主役色・KPI 強調・章名アクセント
+// X Gold(#B8893A)は komu10 親ブランド強調に限定し、
+// THE MONEY BOOK の主役は ink を使う。
+// 裁定: Hedi(CEO) / Saville(CBO) / Paula(CDO) / Maureen Stone(色彩科学)
+// ============================================================
+export const MONEYBOOK = {
+  ink:        '#14213D',  // 主役色(KPI / 章名アクセント / 主要数値)
+  inkLight:   '#2A3F6B',  // 明度上げ版(明背景での文字色強調用)
+  inkSoft:    'rgba(20, 33, 61, 0.15)',  // ホバー・サーフェス・帯
+  inkBright:  '#3D5A9C',  // 暗背景でのアクセント強調用(コントラスト確保)
 } as const;
 
 // ============================================================

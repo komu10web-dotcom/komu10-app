@@ -60,10 +60,19 @@ module.exports = {
           'gold-soft':  '#FAF6EE',
         },
         content: {
-          'scene-notes':  '#81D8D0',
-          'this-place':   '#FF5F45',
-          'data-science': '#1A5F8A',
-          'data-files':   '#C23728',
+          'themoneybook':  '#14213D',  // session77 確定: ミッドナイトインク(古典帳簿)
+          'scene-notes':   '#81D8D0',
+          'this-place':    '#FF5F45',
+          'data-science':  '#1A5F8A',
+          'data-files':    '#C23728',
+        },
+        // THE MONEY BOOK アプリ専用パレット(session77 確定)
+        // 役割分離: gold = komu10 親ブランド強調 / ink = THE MONEY BOOK 主役
+        moneybook: {
+          ink:         '#14213D',  // 主役色
+          'ink-light': '#2A3F6B',  // 補助・ホバー
+          'ink-bright':'#3D5A9C',  // 暗背景アクセント
+          'ink-soft':  'rgba(20, 33, 61, 0.10)',  // 帯・サーフェス
         },
       },
       fontFamily: {
