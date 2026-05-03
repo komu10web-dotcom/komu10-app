@@ -1161,13 +1161,33 @@ export default function TransactionModal({
         status: form.status,
         actual_payment_date: form.actual_payment_date,
       };
+      // v0.40.1: AI校閲に渡すtransportDataから「ユーザー未入力の初期値」を除外
+      // - production/torizai では purpose 入力欄が画面非表示のため、初期値「商談」を渡すとAIが誤認する
+      // - class_value の初期値「普通席」もユーザー選択ではないため除外
+      const cleanedTransport = (() => {
+        if (!usesTransportDetail(form.kamoku) || !transportData) return null;
+        const isProductionOrTorizai = form.kamoku === 'production' || form.kamoku === 'torizai';
+        return {
+          ...transportData,
+          // 制作費/取材費では purpose欄が画面に出ない → 初期値を渡さない
+          purpose: isProductionOrTorizai ? null : transportData.purpose,
+          // 後方互換のclass_value/class_reason/companion/flight_train_no は区間レベルへ移行済 → 渡さない
+          class_value: undefined,
+          class_reason: undefined,
+          companion: undefined,
+          flight_train_no: undefined,
+          route_note: undefined,
+        };
+      })();
       const res = await fetch('/api/transactions/audit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           transaction: transactionPayload,
-          transportData: usesTransportDetail(form.kamoku) ? transportData : null,
-          ocrData: null, // OCRデータは receipts テーブル側にあるため一旦割愛
+          transportData: cleanedTransport,
+          ocrData: null,
+          // v0.40.1: AIに今日の日付を伝える(過去日/未来日判定の基準)
+          today: new Date().toISOString().split('T')[0],
         }),
       });
       if (!res.ok) {
@@ -1175,12 +1195,15 @@ export default function TransactionModal({
         return { shouldProceed: true };
       }
       const result = await res.json();
-      // pass なら issues 空でもそのまま登録続行
-      if (result.verdict === 'pass' || (result.issues || []).length === 0) {
+      // v0.40.1: INFOレベルのみの指摘は無視(参考情報・登録ブロックしない)
+      const blockingIssues = (result.issues || []).filter(
+        (i: any) => i.level === 'error' || i.level === 'warning'
+      );
+      if (result.verdict === 'pass' || blockingIssues.length === 0) {
         return { shouldProceed: true };
       }
-      // warning / error がある → モーダル表示で停止
-      setAuditResult(result);
+      // warning / error がある → モーダル表示で停止(INFO除外版)
+      setAuditResult({ ...result, issues: blockingIssues });
       return { shouldProceed: false };
     } catch (e) {
       console.warn('audit failed, proceeding:', e);

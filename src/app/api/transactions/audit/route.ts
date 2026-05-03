@@ -57,40 +57,47 @@ const AUDIT_RULES = `あなたはkomu10(個人事業主・小林寿樹)の経理
 
 # 4. 誤字脱字・桁ミスチェック
 - 金額が領収書OCR値と大きく乖離(±20%以上): 警告
-- 日付が未来日: エラー
-- 日付が3ヶ月以上前: 警告(記憶違いリスク)
+- 日付が未来日: エラー ★必ず「今日」(user メッセージで提供される today 値)を基準に判定。本日より後の日付のみ未来日。
+- 日付が3ヶ月以上前: 警告(記憶違いリスク・本日基準で90日以上前)
 - 取引先名・地名の明らかな誤字: 警告
 
-# 5. 業務文脈整合
-- YouTube移動費: travel ではなく production の sub_category=prod_transport が原則
-- 取材移動費: travel ではなく torizai の sub_category=tori_transport が原則
-- ただし純粋な業務移動は travel で OK
+# 5. 業務文脈整合(★komu10運用ルール)
+- ★YouTube ロケ移動: kamoku=production + sub_category=prod_transport(移動) は **正常パターン**。指摘禁止。
+- ★取材移動費: kamoku=torizai + sub_category=tori_transport も **正常パターン**。指摘禁止。
+- ★純粋な業務移動: kamoku=travel が原則
+- description が「YouTube ロケ」「撮影」「取材」「ロケハン」等を含み、kamoku=production または torizai であれば、それは正しい運用。INFOレベルでも指摘禁止。
+
+# 6. ★絶対指摘禁止項目(過去の誤判定再発防止)
+- transportData.purpose の値そのものに対する指摘禁止(初期値の可能性が高く、ユーザーの実意を反映していない)
+- description と kamoku の組合せが上記「業務文脈整合」で正常パターンと判定されるなら指摘しない
+- 入力値に問題がない場合に「念のため確認を」のような曖昧な warning/info を出さない
 
 # 出力形式(必ずJSONのみ)
 {
   "verdict": "pass" | "warning" | "error",
   "issues": [
     {
-      "level": "error" | "warning" | "info",
+      "level": "error" | "warning",
       "field": "対象フィールド名(amount/date/kamoku/sub_category/class_reason等)",
       "message": "問題の具体的説明(50字以内)",
       "suggestion": "推奨される修正案(60字以内・任意)"
     }
   ],
-  "summary": "全体の総評を1-2文(任意)"
+  "summary": "全体の総評を1-2文(問題なしなら不要)"
 }
 
 verdict のルール:
 - error が1件でもあれば "error"(登録ブロック推奨)
 - warning のみなら "warning"(注意喚起・登録は可)
-- 問題なしなら "pass"
+- 問題なしなら "pass"・issues は []
 
-issues は最大10件まで。検出されない場合は空配列 []。
+★INFO レベルは出力禁止。確実な error/warning のみ指摘。
+issues は最大5件まで。検出されない場合は空配列 []。確信が持てない指摘は出さない。
 JSON以外の文字を絶対に出力しない。markdown フェンスも禁止。`;
 
 export async function POST(request: NextRequest) {
   try {
-    const { transaction, transportData, ocrData } = await request.json();
+    const { transaction, transportData, ocrData, today } = await request.json();
 
     if (!transaction) {
       return NextResponse.json({ error: 'transaction required' }, { status: 400 });
@@ -112,19 +119,25 @@ export async function POST(request: NextRequest) {
         actual_payment_date: transaction.actual_payment_date || null,
       },
       transport: transportData ? {
-        purpose: transportData.purpose,
+        // v0.40.1: purpose は null/undefined の時は除外(ユーザー未入力の初期値を渡さない)
+        ...(transportData.purpose ? { purpose: transportData.purpose } : {}),
         round_trip: transportData.round_trip,
         fare_input_mode: transportData.fare_input_mode,
         route_legs: transportData.route_legs?.map((l: any) => ({
           from: l.from, to: l.to, method: l.method, carrier: l.carrier,
-          amount: l.amount, class_value: l.class_value, class_reason: l.class_reason,
-          green: l.green, flight_train_no: l.flight_train_no,
-          passenger_count: l.passenger_count,
+          amount: l.amount,
+          // class_value は実値が選ばれている時のみ渡す(初期値「普通席」は渡さない)
+          ...(l.class_value && l.class_value !== '普通席' ? { class_value: l.class_value } : {}),
+          ...(l.class_reason ? { class_reason: l.class_reason } : {}),
+          green: l.green || undefined,
+          flight_train_no: l.flight_train_no || undefined,
+          passenger_count: l.passenger_count > 1 ? l.passenger_count : undefined,
         })),
-        return_legs: transportData.return_legs?.map((l: any) => ({
+        return_legs: transportData.return_legs?.length > 0 ? transportData.return_legs.map((l: any) => ({
           from: l.from, to: l.to, method: l.method, carrier: l.carrier,
-          amount: l.amount, class_value: l.class_value,
-        })),
+          amount: l.amount,
+          ...(l.class_value && l.class_value !== '普通席' ? { class_value: l.class_value } : {}),
+        })) : undefined,
         payment_method: transportData.payment_method,
       } : null,
       ocr: ocrData ? {
@@ -153,7 +166,9 @@ export async function POST(request: NextRequest) {
       messages: [
         {
           role: 'user',
-          content: `以下の取引を最終校閲してください。問題があれば issues に列挙、なければ空配列。
+          content: `本日: ${today || new Date().toISOString().split('T')[0]}
+
+以下の取引を最終校閲してください。問題があれば issues に列挙、なければ空配列(verdict="pass")。
 
 ${JSON.stringify(auditPayload, null, 2)}`,
         },
