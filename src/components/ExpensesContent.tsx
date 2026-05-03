@@ -48,6 +48,15 @@ export default function ExpensesContent() {
   // v0.10.0: AI会計相談モーダル（一覧行から呼び出し）
   const [consultTarget, setConsultTarget] = useState<Transaction | null>(null);
 
+  // v0.40.0: アップグレード追加対象(親取引)とその交通詳細
+  const [upgradeTarget, setUpgradeTarget] = useState<{
+    parentTransactionId: string;
+    parentDate: string;
+    parentStore: string | null;
+    parentOwner: string;
+    parentTransport: any;
+  } | null>(null);
+
   // プロジェクト（TransactionModalに渡す）
   const [projects, setProjects] = useState<Project[]>([]);
 
@@ -142,6 +151,26 @@ export default function ExpensesContent() {
     // v0.9.0: 未紐付けフィルター
     if (showOnlyUntagged && !untaggedIds.has(tx.id)) return false;
     return true;
+  });
+
+  // v0.40.0: 親子インデント表示用 — 子取引(parent_transaction_id 持ち)を親の下に配置
+  const childrenMap = new Map<string, Transaction[]>();
+  filtered.forEach(tx => {
+    const parentId = (tx as any).parent_transaction_id;
+    if (parentId) {
+      if (!childrenMap.has(parentId)) childrenMap.set(parentId, []);
+      childrenMap.get(parentId)!.push(tx);
+    }
+  });
+  const childIds = new Set<string>();
+  childrenMap.forEach(children => children.forEach(c => childIds.add(c.id)));
+  // 表示順: 親(または独立取引) → その子取引・独立取引はそのまま
+  const orderedRows: Array<{ tx: Transaction; isChild: boolean }> = [];
+  filtered.forEach(tx => {
+    if (childIds.has(tx.id)) return; // 子は親のループで挿入済
+    orderedRows.push({ tx, isChild: false });
+    const children = childrenMap.get(tx.id);
+    if (children) children.forEach(c => orderedRows.push({ tx: c, isChild: true }));
   });
 
   // 集計
@@ -328,14 +357,15 @@ export default function ExpensesContent() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((tx) => {
+                  {orderedRows.map(({ tx, isChild }) => {
                     const kamokuName = KAMOKU[tx.kamoku as keyof typeof KAMOKU]?.name || tx.kamoku;
                     const effStatus = tx.status || 'settled';
                     const statusStyle = STATUS_STYLES[effStatus] || STATUS_STYLES.settled;
                     const statusLabel = TRANSACTION_STATUS[effStatus as keyof typeof TRANSACTION_STATUS] || TRANSACTION_STATUS.settled;
                     return (
-                      <tr key={tx.id} className="border-b border-app-line hover:bg-app-surface-alt/50 transition-colors">
+                      <tr key={tx.id} className={`border-b border-app-line hover:bg-app-surface-alt/50 transition-colors ${isChild ? 'bg-app-gold/5' : ''}`}>
                         <td className="px-4 py-3 font-['Saira_Condensed'] text-xs text-app-text-mute tabular-nums">
+                          {isChild && <span className="text-app-gold mr-1">└</span>}
                           {formatDate(tx.date)}
                         </td>
                         <td className="px-4 py-3">
@@ -344,9 +374,9 @@ export default function ExpensesContent() {
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <div className="text-app-text">{tx.store || '—'}</div>
+                          <div className={`text-app-text ${isChild ? 'pl-3 text-sm' : ''}`}>{tx.store || '—'}</div>
                           {tx.description && (
-                            <div className="text-xs text-app-text-mute mt-0.5">{tx.description}</div>
+                            <div className={`text-xs text-app-text-mute mt-0.5 ${isChild ? 'pl-3' : ''}`}>{tx.description}</div>
                           )}
                         </td>
                         <td className="px-4 py-3 text-xs text-app-text-sub">
@@ -381,6 +411,32 @@ export default function ExpensesContent() {
                             >
                               <Sparkles className="w-3.5 h-3.5 text-app-text-mute" />
                             </button>
+                            {/* v0.40.0: travel/production/torizai 取引にアップグレード追加 */}
+                            {(tx.kamoku === 'travel' || tx.kamoku === 'production' || tx.kamoku === 'torizai') && (
+                              <button
+                                onClick={async () => {
+                                  // 親取引の transport_details を取得して継承用にセット
+                                  if (!supabase) return;
+                                  const { data: td } = await supabase
+                                    .from('transport_details')
+                                    .select('*')
+                                    .eq('transaction_id', tx.id)
+                                    .maybeSingle();
+                                  setUpgradeTarget({
+                                    parentTransactionId: tx.id,
+                                    parentDate: tx.date,
+                                    parentStore: tx.store,
+                                    parentOwner: tx.owner,
+                                    parentTransport: td || null,
+                                  });
+                                  setModalOpen(true);
+                                }}
+                                className="p-1.5 hover:bg-app-gold/10 rounded-md transition-colors"
+                                title="アップグレードを追加"
+                              >
+                                <Plus className="w-3.5 h-3.5 text-app-gold" />
+                              </button>
+                            )}
                             <button
                               onClick={() => { setEditTarget(tx); setModalOpen(true); }}
                               className="p-1.5 hover:bg-black/5 rounded-md transition-colors"
@@ -420,11 +476,12 @@ export default function ExpensesContent() {
       {/* ── 手入力/編集モーダル ── */}
       <TransactionModal
         isOpen={modalOpen}
-        onClose={() => { setModalOpen(false); setEditTarget(null); }}
+        onClose={() => { setModalOpen(false); setEditTarget(null); setUpgradeTarget(null); }}
         onSaved={fetchTransactions}
         editData={editTarget}
         defaultOwner={owner}
         projects={projects}
+        upgradeForParent={upgradeTarget}
       />
 
       {/* ── v0.19.0: 複数領収書一括取込モーダル ── */}

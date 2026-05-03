@@ -22,6 +22,19 @@ interface TransactionModalProps {
   editData?: Transaction | null;
   defaultOwner?: string;
   projects?: Project[];
+  // v0.40.0: アップグレード追加モード(親取引から from/to/便名/会社/支払方法を継承し金額のみ入力)
+  upgradeForParent?: {
+    parentTransactionId: string;
+    parentDate: string;
+    parentStore: string | null;
+    parentOwner: string;
+    parentTransport: {
+      route_legs?: any[];
+      return_legs?: any[];
+      payment_method?: string;
+      purpose?: string;
+    } | null;
+  } | null;
 }
 
 interface AllocRow {
@@ -52,6 +65,7 @@ export default function TransactionModal({
   editData,
   defaultOwner = 'tomo',
   projects = [],
+  upgradeForParent = null,
 }: TransactionModalProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -323,13 +337,18 @@ export default function TransactionModal({
       setPendingReceiptTrashIds([]);
       setPendingReceiptDeleteIds([]);
     } else {
+      // v0.40.0: アップグレード追加モード — 親取引の情報を継承して新規取引フォームをプリセット
+      const isUpgradeMode = !!upgradeForParent;
+      const upgradeParentLeg = upgradeForParent?.parentTransport?.route_legs?.[0];
       setForm({
-        date: new Date().toISOString().split('T')[0],
+        date: isUpgradeMode ? (upgradeForParent.parentDate || new Date().toISOString().split('T')[0]) : new Date().toISOString().split('T')[0],
         amount: '',
-        store: '',
-        kamoku: '',
-        owner: defaultOwner === 'all' ? 'tomo' : defaultOwner,
-        description: '',
+        store: isUpgradeMode ? (upgradeForParent.parentStore || '') : '',
+        kamoku: isUpgradeMode ? 'travel' : '',
+        owner: isUpgradeMode ? upgradeForParent.parentOwner : (defaultOwner === 'all' ? 'tomo' : defaultOwner),
+        description: isUpgradeMode && upgradeParentLeg
+          ? `${upgradeParentLeg.flight_train_no || upgradeParentLeg.carrier || ''} 当日アップグレード`.trim()
+          : '',
         status: 'settled',
         actual_payment_date: '',
         item_name: '',
@@ -340,7 +359,33 @@ export default function TransactionModal({
         eq_warranty_date: '',
         sub_category: '', // v0.15.0
       });
-      setTransportData({ ...EMPTY_TRANSPORT });
+      if (isUpgradeMode && upgradeParentLeg) {
+        // 親取引から from/to/手段/会社/便名を継承し、クラスは未設定(ボスがチップで選ぶ)
+        setTransportData({
+          ...EMPTY_TRANSPORT,
+          purpose: upgradeForParent?.parentTransport?.purpose || '商談',
+          payment_method: upgradeForParent?.parentTransport?.payment_method || 'ic',
+          route_legs: [{
+            from: upgradeParentLeg.from || '',
+            to: upgradeParentLeg.to || '',
+            method: upgradeParentLeg.method || '飛行機',
+            carrier: upgradeParentLeg.carrier || '',
+            amount: 0,
+            green: false,
+            green_amount: 0,
+            class_value: '', // ボスが選択
+            class_reason: '',
+            client_name: '',
+            flight_train_no: upgradeParentLeg.flight_train_no || '',
+            passenger_count: upgradeParentLeg.passenger_count || 1,
+            companion_memo: '',
+          }],
+          round_trip: 'one_way',
+          fare_input_mode: null,
+        });
+      } else {
+        setTransportData({ ...EMPTY_TRANSPORT });
+      }
       setEntertainmentData({ ...EMPTY_ENTERTAINMENT });
       setAllocRows([]);
       setSelectedTemplate(null);
@@ -358,7 +403,7 @@ export default function TransactionModal({
     setError(null);
     setDupWarning(null);
     setDupConfirmed(false);
-  }, [editData, isOpen, defaultOwner]);
+  }, [editData, isOpen, defaultOwner, upgradeForParent]);
 
   // v0.14.0 Phase 4: 片道ルートテンプレ + 逆順ペアを自動生成
   // 保存成功時に片道A.id を返す（パッケージ生成で使用）
@@ -1316,9 +1361,13 @@ export default function TransactionModal({
           await updateTransportDetails(editData.id, transportData);
         }
       } else {
+        // v0.40.0: アップグレード追加モード時は parent_transaction_id を付与
+        const insertPayload = upgradeForParent
+          ? { ...payload, parent_transaction_id: upgradeForParent.parentTransactionId }
+          : payload;
         const { data: inserted, error: dbErr } = await supabase
           .from('transactions')
-          .insert(payload as any)
+          .insert(insertPayload as any)
           .select('id')
           .single();
         if (dbErr) throw dbErr;
@@ -1618,7 +1667,7 @@ export default function TransactionModal({
         style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
         <div className="sticky top-0 bg-white rounded-t-2xl px-5 pt-5 pb-3 border-b border-app-line flex items-center justify-between z-10">
           <h3 className="text-sm font-medium text-app-text">
-            {editData ? '経費を編集' : '経費を追加'}
+            {editData ? '経費を編集' : upgradeForParent ? 'アップグレードを追加' : '経費を追加'}
           </h3>
           <button onClick={onClose} className="p-1 hover:bg-black/5 rounded-full">
             <X className="w-4 h-4 text-app-text-mute" />
@@ -1626,6 +1675,16 @@ export default function TransactionModal({
         </div>
 
         <div className="px-5 py-4 space-y-3">
+          {/* v0.40.0: アップグレード追加モードの案内バナー */}
+          {upgradeForParent && (
+            <div className="rounded-lg border border-app-gold/60 bg-app-gold/10 px-3 py-2.5">
+              <p className="text-[10px] font-medium tracking-wider text-app-gold">アップグレード追加モード</p>
+              <p className="text-[12px] text-app-text leading-relaxed mt-1">
+                親取引「{upgradeForParent.parentStore || '元の取引'}」に紐付けて登録します。
+                日付・区間・便名は継承済。<strong className="font-semibold">クラスと金額のみ入力</strong>してください。
+              </p>
+            </div>
+          )}
           {/* v0.11.0: 領収書アップロード（新規/編集 共通） */}
           {/* v0.15.0: 旅費交通費のみ最大10枚、その他経費は最大1枚に制限 */}
           <ReceiptUploadSection
