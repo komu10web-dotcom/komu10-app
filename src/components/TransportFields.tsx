@@ -199,6 +199,8 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
 
   // 合計金額を親に通知（往復対応）
   // v0.14.0: return_mode ベースに更新、既存データ互換のため same_route/same_amount もフォールバック
+  // v0.38.1: 飛行機/フェリー等「往復一体型」交通機関は領収書が通常往復合計のため、
+  //          auto_reverse モードでも×2しない(JAL/ANA/カーフェリー等の領収書は1枚に往復合計が記載されるため)
   const prevTotalRef = useRef<number>(0);
   useEffect(() => {
     const oneWayTotal = sumLegs(data.route_legs);
@@ -207,8 +209,11 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
       // return_mode が未設定なら same_route/same_amount から推定（既存データ互換）
       const mode = data.return_mode ?? (data.same_route ? (data.same_amount ? 'auto_reverse' : 'auto_reverse') : 'different_route');
       if (mode === 'auto_reverse') {
-        // 往路の逆順 = 同ルート・同額
-        total = oneWayTotal * 2;
+        // v0.38.1: 区間に飛行機・フェリーが含まれる場合は領収書がすでに往復合計のため×2しない
+        const hasRoundTripBundleMethod = (data.route_legs || []).some(
+          l => l.method === '飛行機' || l.method === 'フェリー'
+        );
+        total = hasRoundTripBundleMethod ? oneWayTotal : oneWayTotal * 2;
       } else {
         // different_route / manual = return_legs の合計
         const returnTotal = sumLegs(data.return_legs);
@@ -314,12 +319,18 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
   };
 
   const oneWayTotal = sumLegs(data.route_legs);
+  // v0.38.1: 飛行機・フェリーは領収書が往復一括のため、往復モードでも合計=片道合計とする
+  const hasRoundTripBundleMethod = (data.route_legs || []).some(
+    l => l.method === '飛行機' || l.method === 'フェリー'
+  );
   const returnTotal = data.round_trip === 'round_trip'
-    ? data.same_amount
-      ? oneWayTotal
-      : data.same_route
-        ? (data.return_amount || 0)
-        : sumLegs(data.return_legs)
+    ? hasRoundTripBundleMethod
+      ? 0  // v0.38.1: 飛行機・フェリーの往復は片道合計がそのまま往復合計
+      : data.same_amount
+        ? oneWayTotal
+        : data.same_route
+          ? (data.return_amount || 0)
+          : sumLegs(data.return_legs)
     : 0;
   const total = data.round_trip === 'round_trip' ? oneWayTotal + returnTotal : oneWayTotal;
 
@@ -972,6 +983,12 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
           {data.round_trip === 'round_trip' && (data.return_mode === 'different_route' || data.return_mode === 'manual' || (!data.return_mode && !data.same_amount)) && (
             <p className="text-[10px] text-app-text-mute">
               往路 ¥{oneWayTotal.toLocaleString()} + 復路 ¥{returnTotal.toLocaleString()}
+            </p>
+          )}
+          {/* v0.38.1: 飛行機・フェリー往復時の補足説明 */}
+          {data.round_trip === 'round_trip' && hasRoundTripBundleMethod && (
+            <p className="text-[10px] text-app-text-mute">
+              ※ 飛行機・フェリーは領収書が往復一括金額のため、入力金額をそのまま往復合計として扱います
             </p>
           )}
           <p className="text-base font-medium font-['Saira_Condensed'] tabular-nums text-app-text">
