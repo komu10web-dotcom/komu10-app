@@ -132,6 +132,22 @@ export default function TransactionModal({
   const [productionHint, setProductionHint] = useState(false);
   // v0.15.4: AI推定の内訳タグヒント（制作費/取材費に変更時に併せて反映する用）
   const [aiSubCategoryHint, setAiSubCategoryHint] = useState<string | null>(null);
+  // v0.40.0: アップグレード追加モード時の親取引情報
+  // v0.41.0: 親登録成功直後に「追加領収書ありますか?」ポップアップを出すための一時保存
+  const [pendingAddonPrompt, setPendingAddonPrompt] = useState<{
+    parentTxId: string;
+    parentDate: string;
+    parentStore: string | null;
+    parentOwner: string;
+    parentKamoku: string;
+    parentSubCategory: string | null;
+    parentDescription: string | null;
+    parentAllocRows: AllocRow[];
+    parentTransport: TransportData | null;
+    parentReceiptFiles: { fileName: string; driveFileId: string; driveUrl: string }[]; // 親PDFの参照
+    detectedAddons: NonNullable<ReceiptExtractedData['addon_charges']> | null; // OCRで既に検出済の場合
+  } | null>(null);
+
   // v0.39.0: AI が trip_legs を検出した際の判定旗印(モーダル内バナー表示用)
   const [aiTripLegsDetected, setAiTripLegsDetected] = useState<{
     legCount: number;
@@ -139,6 +155,9 @@ export default function TransactionModal({
     firstFlight: string | null;
     lastFlight: string | null;
   } | null>(null);
+
+  // v0.41.0: OCR で検出されたが「保留中」の追加課金リスト(親登録後にポップアップで提示)
+  const ocrAddonChargesRef = useRef<NonNullable<ReceiptExtractedData['addon_charges']> | null>(null);
 
   // テンプレート取得（モーダルopen時 — transport + general 両方）
   useEffect(() => {
@@ -1114,6 +1133,13 @@ export default function TransactionModal({
       }
     }
 
+    // v0.41.0: 追加課金(アップグレード等)を一時保管 → 親登録成功後のポップアップで使用
+    if (Array.isArray(data.addon_charges) && data.addon_charges.length > 0) {
+      ocrAddonChargesRef.current = data.addon_charges;
+    } else {
+      ocrAddonChargesRef.current = null;
+    }
+
     // v0.10.2: 接待交際費・会議費・取材費・福利厚生費の場合、人数を流し込み
     // ※ guest_name(取引先名)はレシートから読み取れないため自動入力しない（手入力必須）
     if (
@@ -1496,6 +1522,39 @@ export default function TransactionModal({
       }
 
       onSaved();
+
+      // v0.41.0: 親登録成功直後の「追加領収書はありますか?」ポップアップ判定
+      // 条件: 新規登録(編集ではない)・travel/production/torizai・アップグレードモードでない
+      const shouldPromptAddon = !editData
+        && !upgradeForParent
+        && (form.kamoku === 'travel' || form.kamoku === 'production' || form.kamoku === 'torizai')
+        && usesTransportDetail(form.kamoku)
+        && txId;
+      if (shouldPromptAddon) {
+        // 親領収書情報(子取引で同じPDFを参照するため)
+        const parentReceiptFiles = receiptItems
+          .filter(r => r.staged && r.driveFileId && r.driveUrl)
+          .map(r => ({
+            fileName: r.fileName,
+            driveFileId: r.driveFileId!,
+            driveUrl: r.driveUrl!,
+          }));
+        setPendingAddonPrompt({
+          parentTxId: txId,
+          parentDate: form.date,
+          parentStore: form.store || null,
+          parentOwner: form.owner,
+          parentKamoku: form.kamoku,
+          parentSubCategory: form.sub_category || null,
+          parentDescription: form.description || null,
+          parentAllocRows: allocRows,
+          parentTransport: { ...transportData },
+          parentReceiptFiles,
+          detectedAddons: ocrAddonChargesRef.current,
+        });
+        // ポップアップ表示中はモーダルを閉じない(ポップアップで「閉じる」を押した時点で onClose)
+        return;
+      }
 
       // v0.30.0: 経費入力中に「このルートをテンプレに保存」をONにしていた場合、
       // 別モーダルを経由せず即座に route_templates へ INSERT（逆順ペアも自動生成）。
@@ -2894,6 +2953,164 @@ export default function TransactionModal({
                 }`}
               >
                 {auditResult.verdict === 'error' ? 'それでも登録' : 'このまま登録'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* v0.41.0: 親登録成功後の「追加領収書ありますか?」ポップアップ */}
+      {pendingAddonPrompt && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[120] flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-app-surface w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl">
+            <div className="px-5 py-4 border-b border-app-line-medium bg-app-button-soft">
+              <p className="text-[10px] font-medium tracking-wider text-app-text-mute">登録完了</p>
+              <h3 className="text-base font-medium text-app-text mt-0.5">
+                {pendingAddonPrompt.detectedAddons && pendingAddonPrompt.detectedAddons.length > 0
+                  ? `領収書から追加課金が${pendingAddonPrompt.detectedAddons.length}件見つかりました`
+                  : 'この取引に関する追加領収書はありますか?'}
+              </h3>
+              <p className="text-xs text-app-text-sub mt-1.5 leading-relaxed">
+                {pendingAddonPrompt.detectedAddons && pendingAddonPrompt.detectedAddons.length > 0
+                  ? `アップグレード・座席指定料・荷物料金などをまとめて登録できます。`
+                  : 'アップグレード・座席指定・荷物料金などの追加課金がある場合は領収書を読み込んでください。'}
+              </p>
+            </div>
+
+            {/* 検出済 addon が存在する場合 — リスト表示 + 一括追加ボタン */}
+            {pendingAddonPrompt.detectedAddons && pendingAddonPrompt.detectedAddons.length > 0 && (
+              <div className="px-5 py-4 space-y-2">
+                {pendingAddonPrompt.detectedAddons.map((ac, i) => (
+                  <div key={i} className="rounded-lg border border-app-gold/40 bg-app-gold/5 px-3 py-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[12px] text-app-text leading-relaxed">
+                          {ac.charge_type === 'upgrade'
+                            ? `${ac.related_flight_no || ''} ${ac.upgrade_from_class || '普通席'}→${ac.upgrade_to_class || 'クラスJ'}`
+                            : ac.description || ac.charge_type || '追加課金'}
+                        </p>
+                        <p className="text-[10px] text-app-text-mute mt-0.5">
+                          {ac.date} {ac.related_leg_from} → {ac.related_leg_to}
+                        </p>
+                      </div>
+                      <p className="text-sm font-medium text-app-text font-['Saira_Condensed'] tabular-nums">
+                        ¥{(ac.amount || 0).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="px-5 py-4 border-t border-app-line-medium space-y-2">
+              {/* ★メインアクション: 検出済addonがあれば「全部一括登録」 */}
+              {pendingAddonPrompt.detectedAddons && pendingAddonPrompt.detectedAddons.length > 0 && (
+                <button
+                  onClick={async () => {
+                    // 各 addon を子取引として一括登録
+                    if (!supabase) return;
+                    const parent = pendingAddonPrompt;
+                    const inserts = parent.detectedAddons!.map(ac => {
+                      const description = ac.charge_type === 'upgrade'
+                        ? `${ac.related_flight_no || ''} 当日アップグレード(${ac.upgrade_from_class || '普通席'}→${ac.upgrade_to_class || 'クラスJ'})`.trim()
+                        : ac.description || `追加課金(${ac.charge_type || 'その他'})`;
+                      return {
+                        date: ac.date || parent.parentDate,
+                        amount: ac.amount || 0,
+                        store: parent.parentStore,
+                        kamoku: parent.parentKamoku,
+                        sub_category: parent.parentSubCategory,
+                        description,
+                        owner: parent.parentOwner,
+                        status: 'settled',
+                        parent_transaction_id: parent.parentTxId,
+                      };
+                    });
+                    const { data: insertedRows, error } = await supabase
+                      .from('transactions')
+                      .insert(inserts as any)
+                      .select('id');
+                    if (error) {
+                      console.error('addon insert error:', error);
+                      setError(`追加課金の登録に失敗: ${error.message}`);
+                      setPendingAddonPrompt(null);
+                      onClose();
+                      return;
+                    }
+                    // 各子取引に transport_details(クラスのみ更新したコピー)を保存
+                    if (insertedRows && parent.parentTransport) {
+                      for (let i = 0; i < insertedRows.length; i++) {
+                        const ac = parent.detectedAddons![i];
+                        const childTransport: TransportData = {
+                          ...parent.parentTransport,
+                          // 子取引はその区間1区間のみ・往復は片道扱い
+                          round_trip: 'one_way',
+                          fare_input_mode: null,
+                          return_legs: [],
+                          return_amount: 0,
+                          route_legs: [{
+                            from: ac.related_leg_from || parent.parentTransport.route_legs[0]?.from || '',
+                            to: ac.related_leg_to || parent.parentTransport.route_legs[0]?.to || '',
+                            method: parent.parentTransport.route_legs[0]?.method || '飛行機',
+                            carrier: parent.parentTransport.route_legs[0]?.carrier || '',
+                            amount: ac.amount || 0,
+                            green: false,
+                            green_amount: 0,
+                            class_value: ac.upgrade_to_class || 'クラスJ',
+                            class_reason: '',
+                            client_name: '',
+                            flight_train_no: ac.related_flight_no || '',
+                            passenger_count: 1,
+                            companion_memo: '',
+                          }],
+                        };
+                        try {
+                          await saveTransportDetails((insertedRows[i] as any).id, childTransport);
+                        } catch (e) {
+                          console.warn('child transport save failed:', e);
+                        }
+                      }
+                    }
+                    // 親PDFを子取引にも複製参照(receipts テーブルへ追記)
+                    if (insertedRows && parent.parentReceiptFiles.length > 0) {
+                      const receiptInserts: any[] = [];
+                      insertedRows.forEach((row: any) => {
+                        parent.parentReceiptFiles.forEach(f => {
+                          receiptInserts.push({
+                            transaction_id: row.id,
+                            file_name: f.fileName,
+                            drive_file_id: f.driveFileId,
+                            drive_url: f.driveUrl,
+                          });
+                        });
+                      });
+                      try {
+                        await supabase.from('receipts').insert(receiptInserts);
+                      } catch (e) {
+                        console.warn('child receipt copy failed:', e);
+                      }
+                    }
+                    onSaved();
+                    setPendingAddonPrompt(null);
+                    onClose();
+                  }}
+                  className="w-full py-2.5 text-sm text-white bg-app-button rounded-xl hover:bg-app-button-hover transition-colors"
+                >
+                  {pendingAddonPrompt.detectedAddons.length}件すべて追加登録する
+                </button>
+              )}
+
+              {/* 別の領収書を追加(将来拡張用・現状は手動で経費追加へ誘導) */}
+              <button
+                onClick={() => {
+                  setPendingAddonPrompt(null);
+                  onClose();
+                }}
+                className="w-full py-2.5 text-sm text-app-text-sub bg-app-surface-alt rounded-xl hover:text-app-text transition-colors"
+              >
+                {pendingAddonPrompt.detectedAddons && pendingAddonPrompt.detectedAddons.length > 0
+                  ? '追加しないで閉じる'
+                  : 'ありません(閉じる)'}
               </button>
             </div>
           </div>

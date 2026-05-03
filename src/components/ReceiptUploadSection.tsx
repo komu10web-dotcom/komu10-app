@@ -48,6 +48,19 @@ export interface ReceiptExtractedData {
   fare_input_mode_hint?: 'round_trip_total' | 'per_leg' | 'one_way' | null;
   total_amount_includes_all_legs?: boolean | null;
   round_trip_relationship?: 'same_carrier_round_trip' | 'same_carrier_open_jaw' | 'different_carriers' | null;
+  // v0.41.0: 追加課金(アップグレード・座席指定・荷物等)
+  addon_charges?: Array<{
+    charge_index?: number;
+    date?: string | null;
+    charge_type?: 'upgrade' | 'seat_fee' | 'baggage' | 'lounge' | 'meal' | 'wifi' | 'other' | null;
+    amount?: number;
+    upgrade_from_class?: string | null;
+    upgrade_to_class?: string | null;
+    related_leg_from?: string | null;
+    related_leg_to?: string | null;
+    related_flight_no?: string | null;
+    description?: string | null;
+  }> | null;
   guest_count?: number | string | null;
   restaurant_type?: string | null;
   model_number?: string | null;
