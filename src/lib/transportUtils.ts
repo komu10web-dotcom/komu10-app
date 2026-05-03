@@ -72,6 +72,8 @@ export async function saveTransportDetails(
       return_amount: data.return_amount || 0,
       return_mode: data.return_mode || 'auto_reverse',
       payment_method: data.payment_method || 'ic',
+      // v0.39.0: 往復料金入力方式(DBにカラムが無ければSupabaseが無視・SQLでカラム追加すれば永続化)
+      fare_input_mode: data.fare_input_mode || null,
     } as any);
 
   if (error) throw error;
@@ -121,6 +123,11 @@ export async function loadTransportDetails(
     return_amount: row.return_amount || 0,
     return_mode: row.return_mode || 'auto_reverse',
     payment_method: row.payment_method || 'ic',
+    // v0.39.0: fare_input_mode の読込・既存データは return_mode から自動推定
+    fare_input_mode: row.fare_input_mode
+      ?? (row.round_trip === 'round_trip'
+        ? (row.return_mode === 'auto_reverse' ? 'one_way_doubled' : 'per_leg')
+        : null),
     class_value: row.class || '',
     class_reason: row.class_reason || '',
     companion: row.companion || '',

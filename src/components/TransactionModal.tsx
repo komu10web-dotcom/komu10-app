@@ -118,6 +118,13 @@ export default function TransactionModal({
   const [productionHint, setProductionHint] = useState(false);
   // v0.15.4: AI推定の内訳タグヒント（制作費/取材費に変更時に併せて反映する用）
   const [aiSubCategoryHint, setAiSubCategoryHint] = useState<string | null>(null);
+  // v0.39.0: AI が trip_legs を検出した際の判定旗印(モーダル内バナー表示用)
+  const [aiTripLegsDetected, setAiTripLegsDetected] = useState<{
+    legCount: number;
+    fareMode: string | null;
+    firstFlight: string | null;
+    lastFlight: string | null;
+  } | null>(null);
 
   // テンプレート取得（モーダルopen時 — transport + general 両方）
   useEffect(() => {
@@ -192,6 +199,8 @@ export default function TransactionModal({
   }, [greenMode, selectedTemplate]);
 
   useEffect(() => {
+    // v0.39.0: モーダル開閉・編集対象切替時にAI判定旗印をクリア
+    setAiTripLegsDetected(null);
     if (editData) {
       setForm({
         date: editData.date,
@@ -927,49 +936,97 @@ export default function TransactionModal({
     }
 
     // v0.10.1: 交通費の場合、ルート・往復・支払方法を transportData に自動流し込み
-    if (inferredKamoku === 'travel') {
+    // v0.39.0: trip_legs 配列を最優先で反映(複数区間の往復領収書対応)
+    if (inferredKamoku === 'travel' || inferredKamoku === 'production' || inferredKamoku === 'torizai') {
       const validPaymentMethods = ['ic', 'cash', 'credit', 'invoice'];
       const aiPayment = data.payment_method && validPaymentMethods.includes(data.payment_method)
         ? data.payment_method
         : null;
 
+      // v0.39.0 method推定共通関数(trip_legs各区間で再利用)
+      const classHintMap: Record<string, string> = {
+        'self_seat': '自由席', 'reserved': '指定席', 'green': 'グリーン',
+        'gran_class': 'グランクラス', 'premium_seat': '個室・プレミアム',
+        'economy': '普通席', 'premium_economy': 'プレエコ',
+        'business': 'ビジネス', 'first': 'ファースト',
+        'class_j': 'クラスJ', 'ana_premium': 'プレミアム',
+      };
+      const inferMethod = (carrierStr: string, flightNoStr: string, hintMethod?: string): string => {
+        // hintMethod が AI から直接来ていれば優先
+        if (hintMethod && ['飛行機','新幹線','特急','普通電車','バス','タクシー','レンタカー','自家用車','フェリー'].includes(hintMethod)) {
+          return hintMethod;
+        }
+        const c = carrierStr.toLowerCase();
+        const f = flightNoStr;
+        if (/jal|ana|skymark|peach|jetstar|航空|airlines/i.test(c) || /^[A-Z]{2}\d/.test(f)) return '飛行機';
+        if (/新幹線|のぞみ|ひかり|こだま|やまびこ|はやぶさ|かがやき|つばさ|あさま|とき|たにがわ|さくら|つばめ|みずほ/i.test(c + f)) return '新幹線';
+        if (/特急|あずさ|かいじ|あさぎり|サンダーバード|しらさぎ|ひだ|南紀|くろしお|はるか|スペーシア|しおかぜ|南風|あしずり|うずしお|ソニック|かもめ|みどり|ゆふいんの森|ロマンスカー|laview|ライナー/i.test(c + f)) return '特急';
+        if (/jr|私鉄|電鉄|鉄道/i.test(c)) return '普通電車';
+        return '普通電車';
+      };
+
       setTransportData(prev => {
         const next = { ...prev };
-        // 出発地・到着地が両方とれている場合のみ、最初の区間を上書き
-        if (data.from_station && data.to_station) {
-          const firstLeg = prev.route_legs?.[0] || { from: '', to: '', method: '普通電車', carrier: '', amount: 0, green: false };
-          // v0.30.2: AI抽出の手がかりから手段・座席クラス・便名を推定
-          // carrier / 領収書の文言から「新幹線/特急/普通電車/飛行機」を判定
-          const carrierStr = String(data.carrier || '').toLowerCase();
-          const flightTrainNoStr = String(data.flight_train_no_hint || '');
-          let inferredMethod = firstLeg.method || '普通電車';
-          if (/jal|ana|skymark|peach|jetstar|航空|airlines/i.test(carrierStr) || /^[A-Z]{2}\d/.test(flightTrainNoStr)) {
-            inferredMethod = '飛行機';
-          } else if (/新幹線|のぞみ|ひかり|こだま|やまびこ|はやぶさ|かがやき|つばさ|あさま|とき|たにがわ|さくら|つばめ|みずほ/i.test(carrierStr + flightTrainNoStr)) {
-            inferredMethod = '新幹線';
-          } else if (/特急|あずさ|かいじ|あさぎり|サンダーバード|しらさぎ|ひだ|南紀|くろしお|はるか|サフィール踊り子|スペーシア|しおかぜ|南風|あしずり|うずしお|ソニック|かもめ|みどり|ゆふいんの森|ロマンスカー|laview|ライナー/i.test(carrierStr + flightTrainNoStr)) {
-            inferredMethod = '特急';
-          } else if (/jr|私鉄|電鉄|鉄道/i.test(carrierStr)) {
-            inferredMethod = '普通電車';
+
+        // ★ v0.39.0: trip_legs 配列が来ていれば最優先で複数区間自動展開
+        const tripLegs = Array.isArray(data.trip_legs) ? data.trip_legs : null;
+        if (tripLegs && tripLegs.length >= 1) {
+          const buildLeg = (raw: any, fallback: any = {}) => ({
+            from: String(raw?.from || fallback.from || ''),
+            to: String(raw?.to || fallback.to || ''),
+            method: inferMethod(String(raw?.carrier || data.carrier || ''), String(raw?.flight_or_train_no || ''), raw?.method),
+            carrier: String(raw?.carrier || data.carrier || fallback.carrier || ''),
+            amount: Number(raw?.amount_for_this_leg) || 0,
+            green: raw?.class_hint === 'green',
+            green_amount: 0,
+            class_value: raw?.class_hint ? (classHintMap[String(raw.class_hint)] || '') : (fallback.class_value || ''),
+            class_reason: '',
+            client_name: '',
+            flight_train_no: String(raw?.flight_or_train_no || ''),
+            passenger_count: Number(data.passenger_count) > 0 ? Number(data.passenger_count) : 1,
+            companion_memo: '',
+          });
+
+          if (tripLegs.length === 1) {
+            // 片道領収書 — 区間1のみ反映
+            next.route_legs = [buildLeg(tripLegs[0], prev.route_legs?.[0])];
+            next.round_trip = 'one_way';
+            next.fare_input_mode = null;
+          } else {
+            // 複数区間 — 1個目=往路・2個目以降=復路
+            next.round_trip = 'round_trip';
+            next.route_legs = [buildLeg(tripLegs[0], prev.route_legs?.[0])];
+            next.return_legs = tripLegs.slice(1).map((l: any, i: number) =>
+              buildLeg(l, prev.return_legs?.[i] || prev.route_legs?.[0])
+            );
+            // fare_input_mode は AI のヒントを優先
+            const fim = data.fare_input_mode_hint;
+            if (fim === 'round_trip_total' || fim === 'per_leg' || fim === 'one_way') {
+              next.fare_input_mode = fim === 'one_way' ? null : fim;
+            } else {
+              // ヒント未提供 → 全区間 amount_for_this_leg が null なら round_trip_total と推定
+              const allLegAmountsNull = tripLegs.every(l => !l?.amount_for_this_leg);
+              next.fare_input_mode = allLegAmountsNull ? 'round_trip_total' : 'per_leg';
+            }
+            // round_trip_total 時は領収書合計金額を区間1の amount に格納(画面で「往復合計欄」として表示される)
+            if (next.fare_input_mode === 'round_trip_total' && data.amount) {
+              next.route_legs[0].amount = Number(data.amount);
+              // 復路区間の金額は0(amountは画面非表示・合計には影響しない)
+              next.return_legs = next.return_legs.map(l => ({ ...l, amount: 0 }));
+            }
+            next.return_mode = next.fare_input_mode === 'round_trip_total' ? 'manual' : 'manual';
+            next.same_route = false;
+            next.same_amount = false;
           }
-          // v0.30.2: AIヒントから座席クラスをチップ値にマッピング
-          const classHintMap: Record<string, string> = {
-            'self_seat': '自由席',
-            'reserved': '指定席',
-            'green': 'グリーン',
-            'gran_class': 'グランクラス',
-            'premium_seat': '個室・プレミアム',
-            'economy': '普通席',
-            'premium_economy': 'プレエコ',
-            'business': 'ビジネス',
-            'first': 'ファースト',
-            'class_j': 'クラスJ',
-            'ana_premium': 'プレミアム',
-          };
+        } else if (data.from_station && data.to_station) {
+          // フォールバック(従来パス・trip_legs 未提供時)
+          const firstLeg = prev.route_legs?.[0] || { from: '', to: '', method: '普通電車', carrier: '', amount: 0, green: false } as any;
+          const carrierStr = String(data.carrier || '');
+          const flightTrainNoStr = String(data.flight_train_no_hint || '');
+          const inferredMethod = inferMethod(carrierStr, flightTrainNoStr);
           const inferredClassValue = data.transport_class_hint
             ? (classHintMap[String(data.transport_class_hint)] || '')
             : (firstLeg.class_value || '');
-          // v0.30.2: 利用人数(passenger_count)の流し込み
           const inferredPassengers = data.passenger_count && Number(data.passenger_count) > 0
             ? Number(data.passenger_count)
             : (firstLeg.passenger_count || 1);
@@ -987,17 +1044,29 @@ export default function TransactionModal({
             },
             ...prev.route_legs.slice(1),
           ];
+          if (data.round_trip === 'one_way' || data.round_trip === 'round_trip') {
+            next.round_trip = data.round_trip;
+          }
         }
-        // 往復区分
-        if (data.round_trip === 'one_way' || data.round_trip === 'round_trip') {
-          next.round_trip = data.round_trip;
-        }
+
         // 支払方法
         if (aiPayment) {
           next.payment_method = aiPayment;
         }
         return next;
       });
+
+      // v0.39.0: AI 判定の旗印を立てる(UI バナー表示用)
+      if (Array.isArray(data.trip_legs) && data.trip_legs.length >= 2) {
+        setAiTripLegsDetected({
+          legCount: data.trip_legs.length,
+          fareMode: data.fare_input_mode_hint || null,
+          firstFlight: data.trip_legs[0]?.flight_or_train_no || null,
+          lastFlight: data.trip_legs[data.trip_legs.length - 1]?.flight_or_train_no || null,
+        });
+      } else {
+        setAiTripLegsDetected(null);
+      }
     }
 
     // v0.10.2: 接待交際費・会議費・取材費・福利厚生費の場合、人数を流し込み
@@ -1015,6 +1084,64 @@ export default function TransactionModal({
           guest_count: prev.guest_count || guestCountStr,
         }));
       }
+    }
+  };
+
+  // v0.39.0: AI校閲結果モーダル制御
+  const [auditResult, setAuditResult] = useState<{
+    verdict: 'pass' | 'warning' | 'error';
+    issues: Array<{ level: 'error' | 'warning' | 'info'; field: string; message: string; suggestion?: string }>;
+    summary?: string;
+  } | null>(null);
+  const [auditing, setAuditing] = useState(false);
+  const auditBypassRef = useRef(false);
+
+  // AI校閲を実行(handleSave 冒頭から呼ばれる)
+  const runAudit = async (): Promise<{ shouldProceed: boolean }> => {
+    if (auditBypassRef.current) {
+      // 校閲済(バナーで「それでも登録」を押した) → そのまま進める
+      auditBypassRef.current = false;
+      return { shouldProceed: true };
+    }
+    setAuditing(true);
+    try {
+      const transactionPayload = {
+        date: form.date,
+        amount: form.amount ? Number(form.amount.replace(/,/g, '')) : 0,
+        store: form.store,
+        kamoku: form.kamoku,
+        sub_category: form.sub_category,
+        description: form.description,
+        owner: form.owner,
+        status: form.status,
+        actual_payment_date: form.actual_payment_date,
+      };
+      const res = await fetch('/api/transactions/audit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transaction: transactionPayload,
+          transportData: usesTransportDetail(form.kamoku) ? transportData : null,
+          ocrData: null, // OCRデータは receipts テーブル側にあるため一旦割愛
+        }),
+      });
+      if (!res.ok) {
+        // 校閲失敗時は通過扱い
+        return { shouldProceed: true };
+      }
+      const result = await res.json();
+      // pass なら issues 空でもそのまま登録続行
+      if (result.verdict === 'pass' || (result.issues || []).length === 0) {
+        return { shouldProceed: true };
+      }
+      // warning / error がある → モーダル表示で停止
+      setAuditResult(result);
+      return { shouldProceed: false };
+    } catch (e) {
+      console.warn('audit failed, proceeding:', e);
+      return { shouldProceed: true };
+    } finally {
+      setAuditing(false);
     }
   };
 
@@ -1113,6 +1240,10 @@ export default function TransactionModal({
         return;
       }
     }
+
+    // v0.39.0: AI第2段校閲(Opus 4.7) — error/warning があればモーダル表示で停止
+    const auditCheck = await runAudit();
+    if (!auditCheck.shouldProceed) return;
 
     setSaving(true);
     setError(null);
@@ -1879,6 +2010,25 @@ export default function TransactionModal({
             }
             return false;
           })() && (
+            <>
+            {/* v0.39.0: AI が複数区間(往復/オープンジョー等)を検出した時の判定旗印バナー */}
+            {aiTripLegsDetected && (
+              <div className="rounded-lg border border-app-gold/60 bg-app-gold/10 px-3 py-2.5 mb-2">
+                <div className="flex items-start gap-2">
+                  <span className="text-[10px] font-medium text-app-gold tracking-wider">AI 判定</span>
+                </div>
+                <p className="text-[12px] text-app-text leading-relaxed mt-1">
+                  領収書から{aiTripLegsDetected.legCount}区間
+                  {aiTripLegsDetected.fareMode === 'round_trip_total' ? '・往復一括金額' :
+                   aiTripLegsDetected.fareMode === 'per_leg' ? '・区間別金額' : ''}
+                  を読み取りました
+                  {aiTripLegsDetected.firstFlight && aiTripLegsDetected.lastFlight && (
+                    <span className="text-app-text-mute"> ({aiTripLegsDetected.firstFlight} / {aiTripLegsDetected.lastFlight})</span>
+                  )}
+                  。自動入力した内容をご確認ください。
+                </p>
+              </div>
+            )}
             <TransportFields
               data={transportData}
               onChange={setTransportData}
@@ -1926,6 +2076,7 @@ export default function TransactionModal({
                 );
               })()}
             />
+            </>
           )}
 
           {/* v0.30.0: 交通費入力中に「このルートをテンプレに保存」インラインUI
@@ -2590,13 +2741,82 @@ export default function TransactionModal({
               </div>
             );
           })() : (
-            <button onClick={handleSave} disabled={saving || !form.amount || !form.date}
+            <button onClick={handleSave} disabled={saving || auditing || !form.amount || !form.date}
               className="w-full py-3 bg-app-button text-white rounded-xl text-sm font-medium hover:bg-app-button-hover disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2">
-              {saving ? (<><Loader2 className="w-4 h-4 animate-spin" />保存中...</>) : editData ? '更新する' : '登録する'}
+              {auditing ? (<><Loader2 className="w-4 h-4 animate-spin" />AIが校閲中...</>) :
+               saving ? (<><Loader2 className="w-4 h-4 animate-spin" />保存中...</>) :
+               editData ? '更新する' : '登録する'}
             </button>
           )}
         </div>
       </div>
+
+      {/* v0.39.0: AI校閲結果モーダル */}
+      {auditResult && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[110] flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <div className="bg-app-surface w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl max-h-[85vh] overflow-y-auto">
+            <div className={`px-5 py-4 border-b border-app-line-medium ${
+              auditResult.verdict === 'error' ? 'bg-app-error/10' :
+              auditResult.verdict === 'warning' ? 'bg-app-warn/10' : 'bg-app-button-soft'
+            }`}>
+              <p className="text-[10px] font-medium tracking-wider text-app-text-mute">AI 最終校閲</p>
+              <h3 className="text-base font-medium text-app-text mt-0.5">
+                {auditResult.verdict === 'error' ? '登録前に確認が必要です' :
+                 auditResult.verdict === 'warning' ? '注意点があります' : 'チェック完了'}
+              </h3>
+              {auditResult.summary && (
+                <p className="text-xs text-app-text-sub mt-1.5 leading-relaxed">{auditResult.summary}</p>
+              )}
+            </div>
+            <div className="px-5 py-4 space-y-2.5">
+              {auditResult.issues.map((issue, i) => (
+                <div key={i} className={`rounded-lg px-3 py-2.5 border ${
+                  issue.level === 'error' ? 'border-app-error/40 bg-app-error/5' :
+                  issue.level === 'warning' ? 'border-app-warn/40 bg-app-warn/5' :
+                  'border-app-line-medium bg-app-surface-alt'
+                }`}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className={`text-[10px] font-medium tracking-wider ${
+                      issue.level === 'error' ? 'text-app-error' :
+                      issue.level === 'warning' ? 'text-app-warn' : 'text-app-text-mute'
+                    }`}>
+                      {issue.level === 'error' ? 'ERROR' : issue.level === 'warning' ? 'WARN' : 'INFO'}
+                    </span>
+                    <span className="text-[10px] text-app-text-mute font-mono">{issue.field}</span>
+                  </div>
+                  <p className="text-[12px] text-app-text leading-relaxed">{issue.message}</p>
+                  {issue.suggestion && (
+                    <p className="text-[11px] text-app-text-sub mt-1 leading-relaxed">→ {issue.suggestion}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="px-5 py-4 border-t border-app-line-medium flex gap-2">
+              <button
+                onClick={() => setAuditResult(null)}
+                className="flex-1 py-2.5 text-sm text-app-text-sub bg-app-surface-alt rounded-xl hover:text-app-text transition-colors"
+              >
+                修正する
+              </button>
+              <button
+                onClick={() => {
+                  // バイパスフラグを立てて再度handleSaveを呼ぶ
+                  auditBypassRef.current = true;
+                  setAuditResult(null);
+                  handleSave();
+                }}
+                className={`flex-1 py-2.5 text-sm rounded-xl transition-colors ${
+                  auditResult.verdict === 'error'
+                    ? 'text-white bg-app-error hover:opacity-90'
+                    : 'text-white bg-app-button hover:bg-app-button-hover'
+                }`}
+              >
+                {auditResult.verdict === 'error' ? 'それでも登録' : 'このまま登録'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* v0.10.0: AI会計相談モーダル */}
       {showConsultation && (

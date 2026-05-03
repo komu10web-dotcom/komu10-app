@@ -52,6 +52,12 @@ export interface TransportData {
   // v0.14.0: 復路モード3択（auto_reverse=往路の逆順 / different_route=別ルート / manual=手入力）
   // 既存 same_route / same_amount は互換用に残すが、return_mode から派生する
   return_mode?: 'auto_reverse' | 'different_route' | 'manual';
+  // v0.39.0: 往復料金の入力方式（3モード対等）
+  // - per_leg: 区間ごとに金額入力（行帰違う社・別領収書・電車Suica片道2回タッチ）
+  // - round_trip_total: 往復一括金額を1つだけ入力（JAL/ANA/新幹線/船の1領収書に往復合計記載）
+  // - one_way_doubled: 片道金額を入力→自動で2倍（片道金額しか手元にない場合）
+  // 未設定のとき one_way なら null・round_trip ならフォールバック判定
+  fare_input_mode?: 'per_leg' | 'round_trip_total' | 'one_way_doubled' | null;
   same_route: boolean;
   same_amount: boolean;
   return_legs: RouteLeg[];
@@ -86,6 +92,7 @@ export const EMPTY_TRANSPORT: TransportData = {
   route_legs: [{ ...EMPTY_LEG }],
   round_trip: 'one_way',
   return_mode: 'auto_reverse',
+  fare_input_mode: null,
   same_route: true,
   same_amount: true,
   return_legs: [],
@@ -199,23 +206,23 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
 
   // 合計金額を親に通知（往復対応）
   // v0.14.0: return_mode ベースに更新、既存データ互換のため same_route/same_amount もフォールバック
-  // v0.38.1: 飛行機/フェリー等「往復一体型」交通機関は領収書が通常往復合計のため、
-  //          auto_reverse モードでも×2しない(JAL/ANA/カーフェリー等の領収書は1枚に往復合計が記載されるため)
+  // v0.39.0: fare_input_mode 導入。既存データは return_mode から自動推定。
   const prevTotalRef = useRef<number>(0);
   useEffect(() => {
     const oneWayTotal = sumLegs(data.route_legs);
     let total = oneWayTotal;
     if (data.round_trip === 'round_trip') {
-      // return_mode が未設定なら same_route/same_amount から推定（既存データ互換）
-      const mode = data.return_mode ?? (data.same_route ? (data.same_amount ? 'auto_reverse' : 'auto_reverse') : 'different_route');
-      if (mode === 'auto_reverse') {
-        // v0.38.1: 区間に飛行機・フェリーが含まれる場合は領収書がすでに往復合計のため×2しない
-        const hasRoundTripBundleMethod = (data.route_legs || []).some(
-          l => l.method === '飛行機' || l.method === 'フェリー'
-        );
-        total = hasRoundTripBundleMethod ? oneWayTotal : oneWayTotal * 2;
+      // v0.39.0: fare_input_mode 優先・未設定なら return_mode から推定（既存データ互換）
+      const fim = data.fare_input_mode
+        ?? (data.return_mode === 'auto_reverse' ? 'one_way_doubled' : 'per_leg');
+      if (fim === 'round_trip_total') {
+        // 入力金額がそのまま往復合計
+        total = oneWayTotal;
+      } else if (fim === 'one_way_doubled') {
+        // 片道金額を入力 → 自動で2倍
+        total = oneWayTotal * 2;
       } else {
-        // different_route / manual = return_legs の合計
+        // per_leg = 区間ごとに金額・往路+復路の合計
         const returnTotal = sumLegs(data.return_legs);
         total = oneWayTotal + returnTotal;
       }
@@ -224,7 +231,7 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
       prevTotalRef.current = total;
       onAmountChange?.(total);
     }
-  }, [data.route_legs, data.round_trip, data.return_mode, data.same_amount, data.same_route, data.return_amount, data.return_legs, onAmountChange]);
+  }, [data.route_legs, data.round_trip, data.return_mode, data.same_amount, data.same_route, data.return_amount, data.return_legs, data.fare_input_mode, onAmountChange]);
 
   const setField = <K extends keyof TransportData>(key: K, value: TransportData[K]) => {
     onChange({ ...data, [key]: value });
@@ -319,18 +326,17 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
   };
 
   const oneWayTotal = sumLegs(data.route_legs);
-  // v0.38.1: 飛行機・フェリーは領収書が往復一括のため、往復モードでも合計=片道合計とする
-  const hasRoundTripBundleMethod = (data.route_legs || []).some(
-    l => l.method === '飛行機' || l.method === 'フェリー'
-  );
+  // v0.39.0: fare_input_mode 優先・未設定なら return_mode から推定（既存データ互換）
+  const fareInputMode = data.fare_input_mode
+    ?? (data.round_trip === 'round_trip'
+      ? (data.return_mode === 'auto_reverse' ? 'one_way_doubled' : 'per_leg')
+      : null);
   const returnTotal = data.round_trip === 'round_trip'
-    ? hasRoundTripBundleMethod
-      ? 0  // v0.38.1: 飛行機・フェリーの往復は片道合計がそのまま往復合計
-      : data.same_amount
-        ? oneWayTotal
-        : data.same_route
-          ? (data.return_amount || 0)
-          : sumLegs(data.return_legs)
+    ? fareInputMode === 'round_trip_total'
+      ? 0  // 入力金額がそのまま往復合計
+      : fareInputMode === 'one_way_doubled'
+        ? oneWayTotal  // 片道×2
+        : sumLegs(data.return_legs)  // per_leg
     : 0;
   const total = data.round_trip === 'round_trip' ? oneWayTotal + returnTotal : oneWayTotal;
 
@@ -470,8 +476,19 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
             </div>
           </div>
 
-          {/* 金額 */}
+          {/* 金額 — v0.39.0: round_trip_total モード時は区間1のみ「往復合計」として表示・区間2以降は非表示 */}
+          {(() => {
+            const fim = data.fare_input_mode
+              ?? (data.round_trip === 'round_trip' && data.return_mode === 'auto_reverse' ? 'one_way_doubled' : 'per_leg');
+            const isRoundTripTotal = data.round_trip === 'round_trip' && fim === 'round_trip_total';
+            // round_trip_total モードでは区間1のみ金額表示・以降は非表示
+            if (isRoundTripTotal && idx > 0) return null;
+            const isRoundTripTotalFirstLeg = isRoundTripTotal && idx === 0;
+            return (
           <div>
+            {isRoundTripTotalFirstLeg && (
+              <label className="text-[10px] text-app-text-mute block mb-1">往復合計金額(1領収書に記載の往復合計を入力)</label>
+            )}
             <input
               type="text"
               inputMode="numeric"
@@ -481,10 +498,14 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
                 if (/^\d*$/.test(v)) updateLeg(idx, 'amount', parseInt(v) || 0);
               }}
               className={`${inputClass} font-['Saira_Condensed'] tabular-nums`}
-              placeholder={leg.method === '普通電車' ? '¥ 乗車料金' : '¥ 金額（特急・座席込み）'}
+              placeholder={
+                isRoundTripTotalFirstLeg
+                  ? '¥ 往復合計金額'
+                  : leg.method === '普通電車' ? '¥ 乗車料金' : '¥ 金額(特急・座席込み)'
+              }
             />
-            {/* v0.30.1: 料金を調べる(普通電車・バス・新幹線・特急のみ) */}
-            {!isTemplate && FARE_LOOKUP_METHODS.has(leg.method) && (() => {
+            {/* v0.30.1: 料金を調べる(普通電車・バス・新幹線・特急のみ・round_trip_total時は非表示) */}
+            {!isTemplate && !isRoundTripTotal && FARE_LOOKUP_METHODS.has(leg.method) && (() => {
               const key = `out-${idx}`;
               const canLookup = !!leg.from?.trim() && !!leg.to?.trim() && !fareLoading[key];
               return (
@@ -511,6 +532,8 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
               );
             })()}
           </div>
+            );
+          })()}
 
           {/* v0.30.0: 普通電車のグリーン車トグル + ON時にグリーン料金別欄
               v0.30.3: 過去合意「class_reasonはグリーン以上で必須」の復元 — 普通電車のグリーンON時にも業務理由欄を表示 */}
@@ -743,6 +766,11 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
                   updated.same_amount = true;
                   updated.return_legs = [];
                   updated.return_amount = 0;
+                  updated.fare_input_mode = null; // v0.39.0: 片道に戻したらリセット
+                } else {
+                  // v0.39.0: 往復に切替時、デフォルトで fare_input_mode 未設定
+                  // → ユーザーが下の3択から選ぶ
+                  updated.fare_input_mode = updated.fare_input_mode ?? null;
                 }
                 onChange({ ...data, ...updated });
               }}
@@ -759,8 +787,87 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
       </div>
       )}
 
-      {/* ⑧ 往復の場合の分岐 — v0.14.0: 3択ラジオ化 */}
+      {/* v0.39.0: 往復モード時の「料金入力方式」3択 — 全モード対等 */}
       {!isTemplate && data.round_trip === 'round_trip' && (() => {
+        const fim = data.fare_input_mode
+          ?? (data.return_mode === 'auto_reverse' ? 'one_way_doubled' : 'per_leg');
+        const setFareMode = (next: 'per_leg' | 'round_trip_total' | 'one_way_doubled') => {
+          const updated: Partial<TransportData> = { fare_input_mode: next };
+          // モードに応じて return_mode も整合させる
+          if (next === 'one_way_doubled') {
+            updated.return_mode = 'auto_reverse';
+            updated.same_route = true;
+            updated.same_amount = true;
+            updated.return_legs = [];
+          } else if (next === 'round_trip_total') {
+            // 往復一括金額モード — 復路区間も入力可だがamountは0扱い
+            // 既存の return_legs があれば残す(行帰違う空港・違う便名のケースに対応)
+            updated.return_mode = data.return_mode === 'auto_reverse' ? 'manual' : data.return_mode;
+            if (!data.return_legs || data.return_legs.length === 0) {
+              updated.return_legs = [{
+                ...EMPTY_LEG,
+                from: data.route_legs[data.route_legs.length - 1]?.to || '',
+                to: data.route_legs[0]?.from || '',
+              }];
+              updated.return_mode = 'manual';
+            }
+            updated.same_route = false;
+            updated.same_amount = false;
+          } else {
+            // per_leg
+            updated.return_mode = data.return_mode === 'auto_reverse' ? 'manual' : (data.return_mode || 'manual');
+            updated.same_route = false;
+            updated.same_amount = false;
+            if (!data.return_legs || data.return_legs.length === 0) {
+              updated.return_legs = [{
+                ...EMPTY_LEG,
+                from: data.route_legs[data.route_legs.length - 1]?.to || '',
+                to: data.route_legs[0]?.from || '',
+              }];
+            }
+          }
+          onChange({ ...data, ...updated });
+        };
+        const options: { key: 'per_leg' | 'round_trip_total' | 'one_way_doubled'; label: string; hint: string }[] = [
+          { key: 'round_trip_total', label: '往復一括金額', hint: '1領収書に往復合計が記載(JAL/ANA/新幹線往復券)' },
+          { key: 'per_leg', label: '区間ごとに金額', hint: '行帰違う社・違う便・別領収書(電車Suica片道2回も)' },
+          { key: 'one_way_doubled', label: '片道金額×2', hint: '片道金額しか手元にない・自動で2倍計算' },
+        ];
+        return (
+          <div className="space-y-2">
+            <label className="text-xs text-app-text-mute block">料金の入力方式</label>
+            <div className="space-y-1.5">
+              {options.map(opt => (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => setFareMode(opt.key)}
+                  className={`w-full text-left px-3 py-2 rounded-lg border transition-all ${
+                    fim === opt.key
+                      ? 'border-app-text bg-app-button-soft'
+                      : 'border-app-line-medium bg-app-surface-alt hover:border-app-text-mute'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className={`w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${
+                      fim === opt.key ? 'border-app-text' : 'border-app-text-mute'
+                    }`}>
+                      {fim === opt.key && <div className="w-1.5 h-1.5 rounded-full bg-app-text" />}
+                    </div>
+                    <span className="text-sm text-app-text font-medium">{opt.label}</span>
+                  </div>
+                  <p className="text-[10px] text-app-text-mute mt-0.5 ml-5">{opt.hint}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ⑧ 往復の場合の分岐 — v0.14.0: 3択ラジオ化
+          v0.39.0: round_trip_total モード時は非表示(復路区間入力欄が直接出るため冗長) */}
+      {!isTemplate && data.round_trip === 'round_trip' &&
+        (data.fare_input_mode ?? 'per_leg') !== 'round_trip_total' && (() => {
         // return_mode が未設定の既存データは same_route/same_amount から推定
         const mode: 'auto_reverse' | 'different_route' | 'manual' =
           data.return_mode ?? (data.same_route ? 'auto_reverse' : 'different_route');
@@ -893,6 +1000,8 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
                           className={inputClass} placeholder="利用会社" />
                       </div>
                     </div>
+                    {/* v0.39.0: round_trip_total モード時は復路区間のamount欄非表示 */}
+                    {(data.fare_input_mode ?? 'per_leg') !== 'round_trip_total' && (
                     <input type="text" inputMode="numeric"
                       value={leg.amount ? `¥${leg.amount.toLocaleString()}` : ''}
                       onChange={(e) => {
@@ -900,6 +1009,7 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
                         if (/^\d*$/.test(v)) updateReturnLeg(idx, 'amount', parseInt(v) || 0);
                       }}
                       className={`${inputClass} font-['Saira_Condensed'] tabular-nums`} placeholder="¥ 金額" />
+                    )}
 
                     {/* グリーン車トグル(往路と同等) — v0.30.0: 普通電車のみ */}
                     {leg.method === '普通電車' && (
@@ -980,15 +1090,22 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
             {routePreview}
             {data.round_trip === 'round_trip' && ' (往復)'}
           </p>
-          {data.round_trip === 'round_trip' && (data.return_mode === 'different_route' || data.return_mode === 'manual' || (!data.return_mode && !data.same_amount)) && (
+          {/* v0.39.0: per_leg モードのみ往路+復路の内訳を表示 */}
+          {data.round_trip === 'round_trip' && fareInputMode === 'per_leg' && (
             <p className="text-[10px] text-app-text-mute">
               往路 ¥{oneWayTotal.toLocaleString()} + 復路 ¥{returnTotal.toLocaleString()}
             </p>
           )}
-          {/* v0.38.1: 飛行機・フェリー往復時の補足説明 */}
-          {data.round_trip === 'round_trip' && hasRoundTripBundleMethod && (
+          {/* v0.39.0: 往復一括モード時の補足 */}
+          {data.round_trip === 'round_trip' && fareInputMode === 'round_trip_total' && (
             <p className="text-[10px] text-app-text-mute">
-              ※ 飛行機・フェリーは領収書が往復一括金額のため、入力金額をそのまま往復合計として扱います
+              ※ 入力金額がそのまま往復合計として扱われます(1領収書に往復合計記載のケース)
+            </p>
+          )}
+          {/* v0.39.0: 片道×2モード時の補足 */}
+          {data.round_trip === 'round_trip' && fareInputMode === 'one_way_doubled' && (
+            <p className="text-[10px] text-app-text-mute">
+              ※ 片道金額を入力 → 自動で2倍して往復合計を計算します
             </p>
           )}
           <p className="text-base font-medium font-['Saira_Condensed'] tabular-nums text-app-text">

@@ -33,6 +33,21 @@ export interface ReceiptExtractedData {
   passenger_count?: number | string | null;
   transport_class_hint?: string | null;
   flight_train_no_hint?: string | null;
+  // v0.39.0: 複数区間の構造化抽出
+  trip_legs?: Array<{
+    leg_index?: number;
+    date?: string | null;
+    from?: string | null;
+    to?: string | null;
+    method?: string | null;
+    carrier?: string | null;
+    flight_or_train_no?: string | null;
+    class_hint?: string | null;
+    amount_for_this_leg?: number | null;
+  }> | null;
+  fare_input_mode_hint?: 'round_trip_total' | 'per_leg' | 'one_way' | null;
+  total_amount_includes_all_legs?: boolean | null;
+  round_trip_relationship?: 'same_carrier_round_trip' | 'same_carrier_open_jaw' | 'different_carriers' | null;
   guest_count?: number | string | null;
   restaurant_type?: string | null;
   model_number?: string | null;
