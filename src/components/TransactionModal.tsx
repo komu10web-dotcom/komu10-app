@@ -630,18 +630,9 @@ export default function TransactionModal({
             }
           }
         } else {
-          // 片道 or 往復auto_reverse モード → 片道テンプレ1個 + 逆順ペアを自動生成
-          // routeOnlyMode (経費テンプレ適用中で新規ルート手入力) ではチェックボックスなしでも
-          // ルート名が入力されていれば保存する仕様
-          const routeOnlyMode = isTransport && !!selectedTemplate && selectedTemplate.template_type === 'transport';
-          const shouldSaveRoute = (alsoSaveRoute || routeOnlyMode) && routeTemplateName.trim();
-          if (shouldSaveRoute && outboundLegs.length > 0 && outboundLegs.some((l: any) => l.from || l.to)) {
-            await saveOnewayWithPair({
-              owner: snap.owner,
-              name: routeTemplateName.trim(),
-              legs: outboundLegs,
-            });
-          }
+          // v0.38.0: 片道モード/routeOnlyMode のモーダル経由ルート保存は撤廃。
+          // ルート保存はインラインUI（このルートをテンプレに保存する）で完結する。
+          // multiMode（往復 different_route/manual / auto_reverse）のみモーダル経由を維持。
         }
       }
     } catch (err) {
@@ -1306,9 +1297,11 @@ export default function TransactionModal({
       // v0.30.0: 経費入力中に「このルートをテンプレに保存」をONにしていた場合、
       // 別モーダルを経由せず即座に route_templates へ INSERT（逆順ペアも自動生成）。
       // インライン保存できたら、後続のテンプレ提案モーダルでのルート保存提案は重複なので抑止する。
+      // v0.30.4: 更新時(editData あり)もインライン保存を有効化。
+      // チェックボックスONはユーザーの明確な意図 → 新規/更新を問わず保存する。
+      // 同一 owner + 同一 name のルートテンプレが既存なら重複保存を skip（無言で）。
       let inlineRouteSaved = false;
       if (
-        !editData &&
         usesTransportDetail(form.kamoku) &&
         !selectedOutboundRoute &&
         alsoSaveRoute &&
@@ -1325,16 +1318,49 @@ export default function TransactionModal({
             green: !!l.green,
           }));
         if (legs.length > 0) {
-          const aId = await saveOnewayWithPair({
-            owner: form.owner,
-            name: routeTemplateName.trim(),
-            legs,
-          });
-          if (aId) {
+          // v0.30.4: 同名重複チェック（無言skip・ユーザーには既に保存済みとして扱わせる）
+          const trimmedName = routeTemplateName.trim();
+          let duplicateExists = false;
+          try {
+            const { data: existingRoute } = await supabase
+              .from('route_templates')
+              .select('id')
+              .eq('owner', form.owner)
+              .eq('name', trimmedName)
+              .limit(1)
+              .maybeSingle();
+            if (existingRoute) {
+              duplicateExists = true;
+            }
+          } catch (dupErr) {
+            console.warn('ルートテンプレ重複チェック失敗（保存は続行）:', dupErr);
+          }
+
+          if (duplicateExists) {
+            // 既存と同名 → 保存skip。状態リセットして提案モーダルも抑止
             inlineRouteSaved = true;
-            // 状態リセット（後続モーダルでの再提案を抑止）
             setAlsoSaveRoute(false);
             setRouteTemplateName('');
+          } else {
+            const aId = await saveOnewayWithPair({
+              owner: form.owner,
+              name: trimmedName,
+              legs,
+            });
+            if (aId) {
+              inlineRouteSaved = true;
+              // 状態リセット（後続モーダルでの再提案を抑止）
+              setAlsoSaveRoute(false);
+              setRouteTemplateName('');
+            } else {
+              // saveOnewayWithPair が null を返した = 保存失敗
+              // ユーザーに気づかせるため warn を出す（v0.30.4 強化）
+              console.warn('ルートテンプレ・インライン保存に失敗しました。saveOnewayWithPair が null を返しました。', {
+                owner: form.owner,
+                name: trimmedName,
+                legCount: legs.length,
+              });
+            }
           }
         }
       }
@@ -1357,7 +1383,9 @@ export default function TransactionModal({
       // - 交通費かつ新規区間（往路ルートテンプレ未選択）かつ区間が入力済みのときON推奨
       // v0.14.0 Phase 4: multiMode（往復 + different_route/manual + 復路手入力）も発火対象
       // v0.30.0: インラインで既にルート保存済みの場合は提案不要（重複抑止）
+      // v0.38.0: 更新時(editData あり)はモーダル全廃。ルート保存はインラインUIで完結。
       const shouldSuggestRouteSave = (() => {
+        if (editData) return false; // v0.38.0: 更新時はインラインUIのみ
         if (inlineRouteSaved) return false;
         if (!usesTransportDetail(form.kamoku)) return false;
         if (selectedOutboundRoute) return false; // 既存ルート選択済みなら不要
@@ -1373,7 +1401,9 @@ export default function TransactionModal({
       //   ボス指摘: パッケージ適用後に『この往復セットをパッケージ保存しますか？』と
       //   聞くのは不必要。既存の参照を使っただけで、DB に新規保存する必要はない。
       // v0.14.7: auto_reverse も対象に追加（2段構え: 逆順片道保存 + パッケージ保存）
+      // v0.38.0: 更新時(editData あり)はモーダル全廃。
       const shouldSuggestMultiMode = (() => {
+        if (editData) return false; // v0.38.0: 更新時はインラインUIのみ
         if (!usesTransportDetail(form.kamoku)) return false;
         if (transportData.round_trip !== 'round_trip') return false;
         // 既存ルートで往路・復路両方埋まっていて、かつ既にパッケージ化済なら提案不要
@@ -1411,16 +1441,9 @@ export default function TransactionModal({
           payment_method: usesTransportDetail(form.kamoku) ? transportData.payment_method : 'personal',
           transportData: usesTransportDetail(form.kamoku) ? { ...transportData } : null,
         });
-        setAlsoSaveRoute(shouldSuggestRouteSave);
-        // ルート名のデフォルト候補（起点→終点）
-        if (shouldSuggestRouteSave) {
-          const legs = transportData.route_legs || [];
-          const firstFrom = (legs[0]?.from || '').trim();
-          const lastTo = (legs[legs.length - 1]?.to || '').trim();
-          if (firstFrom && lastTo) {
-            setRouteTemplateName(`${firstFrom}→${lastTo}`);
-          }
-        }
+        // v0.38.0: ルート保存はインラインUIで完結。モーダル内でのルート連動は撤廃。
+        setAlsoSaveRoute(false);
+        setRouteTemplateName('');
         setShowTemplateSave(true);
       } else if (shouldSuggestMultiMode) {
         // v0.14.0 Phase 4: 往復 + different_route/manual → 3チェックボックスモーダル
@@ -1436,28 +1459,10 @@ export default function TransactionModal({
         setTemplateName('');
         setAlsoSaveRoute(false);
         setShowTemplateSave(true);
-      } else if (shouldSuggestRouteSave) {
-        // v0.13.1: 経費テンプレ既選択だが、新規ルートを手入力した場合はルートのみ保存提案
-        setSavedFormSnapshot({
-          kamoku: form.kamoku,
-          store: form.store,
-          amount: txAmount,
-          description: finalDescription,
-          owner: form.owner,
-          payment_method: usesTransportDetail(form.kamoku) ? transportData.payment_method : 'personal',
-          transportData: usesTransportDetail(form.kamoku) ? { ...transportData } : null,
-        });
-        setAlsoSaveRoute(true);
-        // ルート名のみ入力してもらうモード（経費テンプレ名は空のまま → UIで分岐）
-        setTemplateName('');
-        const legs = transportData.route_legs || [];
-        const firstFrom = (legs[0]?.from || '').trim();
-        const lastTo = (legs[legs.length - 1]?.to || '').trim();
-        if (firstFrom && lastTo) {
-          setRouteTemplateName(`${firstFrom}→${lastTo}`);
-        }
-        setShowTemplateSave(true);
       } else {
+        // v0.38.0: shouldSuggestRouteSave 単独でのモーダル発火は撤廃。
+        // ルート保存はインラインUIで完結（このルートをテンプレに保存する）。
+        // 経費テンプレ提案 or multiMode 提案のいずれにも該当しない場合は単純にクローズ。
         onClose();
       }
     } catch (err) {
@@ -1959,7 +1964,7 @@ export default function TransactionModal({
                     }}
                     className="w-4 h-4 accent-app-gold"
                   />
-                  <span className="text-xs font-medium text-app-text">このルートをテンプレに保存する</span>
+                  <span className="text-xs font-medium text-app-text">ルートとして登録する</span>
                 </label>
                 {alsoSaveRoute && (
                   <div className="space-y-1.5 pl-6">
@@ -1971,7 +1976,7 @@ export default function TransactionModal({
                       className="w-full px-3 py-2 bg-white rounded-lg text-sm border border-app-gold/30 outline-none focus:ring-2 focus:ring-app-gold/50"
                     />
                     <p className="text-[10px] text-app-text-mute">
-                      ※ 次回からこのルートを呼び出して即入力できます。逆順ペアも自動作成されます。
+                      ※ 次回からこのルートを呼び出して即入力できます。逆順ルートも自動で登録されます。
                     </p>
                   </div>
                 )}
@@ -2260,8 +2265,7 @@ export default function TransactionModal({
               (returnMode === 'auto_reverse')
             );
             const isAutoReverse = isTransport && isRoundTrip && returnMode === 'auto_reverse';
-            // routeOnlyMode: 経費テンプレ適用中で新規ルートを手入力した場合
-            const routeOnlyMode = isTransport && !!selectedTemplate && selectedTemplate.template_type === 'transport';
+            // v0.38.0: routeOnlyMode 変数は撤廃（インラインUIで完結のためモーダルでは使わない）
             // 既存片道テンプレを往路/復路に適用中かどうか（二重保存防止）
             const outboundAlreadyLinked = !!selectedOutboundRoute;
             const returnAlreadyLinked = !!selectedReturnRoute;
@@ -2322,30 +2326,27 @@ export default function TransactionModal({
 
             return (
               <div className="space-y-3">
-                {routeOnlyMode && !multiMode ? (
+                {/* v0.38.0: routeOnlyMode はモーダル発火しない（インラインUIで完結）。
+                    モーダル見出しは multiMode と通常の経費テンプレ提案の2分岐のみ。 */}
+                {multiMode ? (
                   <>
-                    <p className="text-xs text-app-text font-medium">この区間をルートとして保存しますか？</p>
-                    <p className="text-[10px] text-app-text-mute">逆順ペアも自動で保存されます</p>
-                  </>
-                ) : multiMode ? (
-                  <>
-                    <p className="text-xs text-app-text font-medium">保存提案</p>
-                    <p className="text-[10px] text-app-text-mute">各項目で保存するか選んでください</p>
+                    <p className="text-xs text-app-text font-medium">登録提案</p>
+                    <p className="text-[10px] text-app-text-mute">各項目で登録するか選んでください</p>
                   </>
                 ) : (
                   <>
-                    <p className="text-xs text-app-text font-medium">テンプレートとして保存しますか？</p>
-                    <p className="text-[10px] text-app-text-mute">次回から同じ内容をワンタップで入力できます</p>
+                    <p className="text-xs text-app-text font-medium">経費テンプレとして登録しますか？</p>
+                    <p className="text-[10px] text-app-text-mute">支払先・配賦・支払方法をワンタップで呼び出せます</p>
                   </>
                 )}
 
-                {/* 経費テンプレ名入力（ルートのみモード以外） */}
-                {!routeOnlyMode && !isAutoReverse && (
+                {/* 経費テンプレ名入力（multiMode + isAutoReverse 以外） */}
+                {!isAutoReverse && !multiMode && (
                   <input
                     value={templateName}
                     onChange={e => setTemplateName(e.target.value)}
                     placeholder={isTransport
-                      ? '経費テンプレ名（例: 出張用メタ）'
+                      ? '経費テンプレ名（例: 出張用・支払先＋配賦の塊）'
                       : 'テンプレ名（例: Adobe CC）'}
                     className="w-full px-3 py-2.5 text-sm border border-app-line-medium rounded-xl focus:outline-none focus:border-app-text transition-colors"
                     autoFocus
@@ -2548,42 +2549,9 @@ export default function TransactionModal({
                   </div>
                 )}
 
-                {/* 片道 モード — 従来UI（片道1個 + 自動逆順） */}
-                {isTransport && !multiMode && !routeOnlyMode && (
-                  <div className="pt-2 border-t border-app-line">
-                    <label className="flex items-start gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={alsoSaveRoute}
-                        onChange={e => setAlsoSaveRoute(e.target.checked)}
-                        className="mt-0.5 w-4 h-4 accent-app-text"
-                      />
-                      <div className="flex-1">
-                        <p className="text-xs text-app-text font-medium">片道テンプレとして保存</p>
-                        <p className="text-[10px] text-app-text-mute mt-0.5">逆順ペアも自動で保存されます</p>
-                      </div>
-                    </label>
-                    {alsoSaveRoute && (
-                      <input
-                        value={routeTemplateName}
-                        onChange={e => setRouteTemplateName(e.target.value)}
-                        placeholder="ルート名（例: 自宅→四ツ谷）"
-                        className="w-full mt-2 px-3 py-2.5 text-sm border border-app-line-medium rounded-xl focus:outline-none focus:border-app-text transition-colors"
-                      />
-                    )}
-                  </div>
-                )}
-
-                {/* ルートのみモード — ルート名のみ表示 */}
-                {routeOnlyMode && !multiMode && (
-                  <input
-                    value={routeTemplateName}
-                    onChange={e => setRouteTemplateName(e.target.value)}
-                    placeholder="ルート名（例: 自宅→四ツ谷）"
-                    className="w-full px-3 py-2.5 text-sm border border-app-line-medium rounded-xl focus:outline-none focus:border-app-text transition-colors"
-                    autoFocus
-                  />
-                )}
+                {/* v0.38.0: 片道モード/ルートのみモードのモーダル内UIは撤廃。
+                    ルート保存はインラインUI（このルートをテンプレに保存する）で完結。
+                    モーダル経由でルート名入力を求めることはなくなった。 */}
 
                 <div className="flex gap-2">
                   <button onClick={() => {
@@ -2611,10 +2579,9 @@ export default function TransactionModal({
                         const packageValid = !savePackageEnabled || packageTemplateName.trim().length > 0;
                         return !outboundValid || !returnValid || !packageValid;
                       }
-                      if (routeOnlyMode) {
-                        return !routeTemplateName.trim();
-                      }
-                      return !templateName.trim() || (alsoSaveRoute && !routeTemplateName.trim());
+                      // v0.38.0: routeOnlyMode + alsoSaveRoute 連動のモーダルロジックは撤廃。
+                      // ルート保存はインラインUIで完結するため、本モーダルは経費テンプレ専用。
+                      return !templateName.trim();
                     })()}
                     className="flex-1 py-2.5 text-xs text-white bg-app-button rounded-xl hover:bg-app-button-hover disabled:opacity-40 transition-colors">
                     登録する
