@@ -29,6 +29,10 @@ export interface ReceiptExtractedData {
   to_station?: string | null;
   round_trip?: 'one_way' | 'round_trip' | null;
   carrier?: string | null;
+  // v0.30.2: 交通費の追加フィールド(passenger_count・座席クラス・便名)
+  passenger_count?: number | string | null;
+  transport_class_hint?: string | null;
+  flight_train_no_hint?: string | null;
   guest_count?: number | string | null;
   restaurant_type?: string | null;
   model_number?: string | null;

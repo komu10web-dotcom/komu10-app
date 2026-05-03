@@ -946,14 +946,53 @@ export default function TransactionModal({
         const next = { ...prev };
         // 出発地・到着地が両方とれている場合のみ、最初の区間を上書き
         if (data.from_station && data.to_station) {
-          const firstLeg = prev.route_legs?.[0] || { from: '', to: '', method: '電車', carrier: '', amount: 0, green: false };
+          const firstLeg = prev.route_legs?.[0] || { from: '', to: '', method: '普通電車', carrier: '', amount: 0, green: false };
+          // v0.30.2: AI抽出の手がかりから手段・座席クラス・便名を推定
+          // carrier / 領収書の文言から「新幹線/特急/普通電車/飛行機」を判定
+          const carrierStr = String(data.carrier || '').toLowerCase();
+          const flightTrainNoStr = String(data.flight_train_no_hint || '');
+          let inferredMethod = firstLeg.method || '普通電車';
+          if (/jal|ana|skymark|peach|jetstar|航空|airlines/i.test(carrierStr) || /^[A-Z]{2}\d/.test(flightTrainNoStr)) {
+            inferredMethod = '飛行機';
+          } else if (/新幹線|のぞみ|ひかり|こだま|やまびこ|はやぶさ|かがやき|つばさ|あさま|とき|たにがわ|さくら|つばめ|みずほ/i.test(carrierStr + flightTrainNoStr)) {
+            inferredMethod = '新幹線';
+          } else if (/特急|あずさ|かいじ|あさぎり|サンダーバード|しらさぎ|ひだ|南紀|くろしお|はるか|サフィール踊り子|スペーシア|しおかぜ|南風|あしずり|うずしお|ソニック|かもめ|みどり|ゆふいんの森|ロマンスカー|laview|ライナー/i.test(carrierStr + flightTrainNoStr)) {
+            inferredMethod = '特急';
+          } else if (/jr|私鉄|電鉄|鉄道/i.test(carrierStr)) {
+            inferredMethod = '普通電車';
+          }
+          // v0.30.2: AIヒントから座席クラスをチップ値にマッピング
+          const classHintMap: Record<string, string> = {
+            'self_seat': '自由席',
+            'reserved': '指定席',
+            'green': 'グリーン',
+            'gran_class': 'グランクラス',
+            'premium_seat': '個室・プレミアム',
+            'economy': '普通席',
+            'premium_economy': 'プレエコ',
+            'business': 'ビジネス',
+            'first': 'ファースト',
+            'class_j': 'クラスJ',
+            'ana_premium': 'プレミアム',
+          };
+          const inferredClassValue = data.transport_class_hint
+            ? (classHintMap[String(data.transport_class_hint)] || '')
+            : (firstLeg.class_value || '');
+          // v0.30.2: 利用人数(passenger_count)の流し込み
+          const inferredPassengers = data.passenger_count && Number(data.passenger_count) > 0
+            ? Number(data.passenger_count)
+            : (firstLeg.passenger_count || 1);
           next.route_legs = [
             {
               ...firstLeg,
               from: data.from_station,
               to: data.to_station,
+              method: inferredMethod,
               carrier: data.carrier || firstLeg.carrier || '',
               amount: data.amount || firstLeg.amount || 0,
+              class_value: inferredClassValue,
+              flight_train_no: data.flight_train_no_hint || firstLeg.flight_train_no || '',
+              passenger_count: inferredPassengers,
             },
             ...prev.route_legs.slice(1),
           ];
@@ -1692,10 +1731,20 @@ export default function TransactionModal({
           )}
 
           {/* v0.7: 交通費テンプレ（業務メタ） + ルートテンプレ（物理経路）の独立選択 */}
-          {form.kamoku === 'travel' && (
+          {/* v0.30.2: travel に加えて、制作費・取材費の交通費 sub_category でも表示 */}
+          {(() => {
+            if (form.kamoku === 'travel') return true;
+            if (form.kamoku === 'production' || form.kamoku === 'torizai') {
+              if (!form.sub_category) return false;
+              const selectedLabel = subCategories.find(s => s.key === form.sub_category)?.label ?? null;
+              return isTransportSubCategory(form.sub_category, selectedLabel);
+            }
+            return false;
+          })() && (
             <div className="space-y-3">
               {/* 経費テンプレ選択（業務メタ） */}
-              {templates.filter(t => t.template_type === 'transport').length > 0 && (
+              {/* travel のときだけ経費テンプレを出す(制作費・取材費は科目自体が業務メタを持つ) */}
+              {form.kamoku === 'travel' && templates.filter(t => t.template_type === 'transport').length > 0 && (
                 <div>
                   <label className="text-xs text-app-text-mute block mb-1">経費テンプレ（業務メタ）</label>
                   <select
@@ -1724,6 +1773,7 @@ export default function TransactionModal({
               )}
 
               {/* ルート選択（v0.14.0: 仕様D — パッケージと片道を統合表示） */}
+              {/* v0.30.2: 制作費・取材費の交通費でも同じUIで表示 */}
               {routeTemplates.length > 0 && (() => {
                 // アーカイブ除外 + 種別で分類
                 const active = routeTemplates.filter((t) => !t.archived_at);
