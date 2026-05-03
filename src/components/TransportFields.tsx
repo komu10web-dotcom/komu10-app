@@ -151,6 +151,9 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkPassengers, setBulkPassengers] = useState<number>(1);
   const [bulkCompanion, setBulkCompanion] = useState<string>('');
+  // v0.30.1: 料金検索の状態(区間キーごと)
+  const [fareLoading, setFareLoading] = useState<Record<string, boolean>>({});
+  const [fareMessage, setFareMessage] = useState<Record<string, string>>({});
   const [purposes, setPurposes] = useState<{ id: string; name: string }[]>(DEFAULT_PURPOSES);
   const isTemplate = mode === 'template';
 
@@ -220,6 +223,40 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
 
   const setField = <K extends keyof TransportData>(key: K, value: TransportData[K]) => {
     onChange({ ...data, [key]: value });
+  };
+
+  // v0.30.1: 料金を調べる(普通電車・バス・新幹線・特急)
+  // 区間キー(例: "out-0", "ret-1")で状態管理し、対象区間の amount を AI 概算で更新する
+  const FARE_LOOKUP_METHODS = new Set(['普通電車', 'バス', '新幹線', '特急']);
+  const lookupFare = async (key: string, leg: RouteLeg, applyAmount: (n: number) => void) => {
+    if (!FARE_LOOKUP_METHODS.has(leg.method)) return;
+    if (!leg.from?.trim() || !leg.to?.trim()) return;
+    setFareLoading(prev => ({ ...prev, [key]: true }));
+    setFareMessage(prev => ({ ...prev, [key]: '' }));
+    try {
+      const res = await fetch('/api/transport/estimate-fare', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: leg.from,
+          to: leg.to,
+          method: leg.method,
+          carrier: leg.carrier || '',
+        }),
+      });
+      const json = await res.json();
+      if (json.amount && typeof json.amount === 'number' && json.amount > 0) {
+        applyAmount(json.amount);
+        setFareMessage(prev => ({ ...prev, [key]: `概算 ¥${json.amount.toLocaleString()} を入力しました。実額と異なる場合は修正してください。` }));
+      } else {
+        setFareMessage(prev => ({ ...prev, [key]: json.error || '料金を取得できませんでした。実額を入力してください。' }));
+      }
+    } catch (err) {
+      console.error('lookupFare error:', err);
+      setFareMessage(prev => ({ ...prev, [key]: '料金検索に失敗しました。時間をおいて再度お試しください。' }));
+    } finally {
+      setFareLoading(prev => ({ ...prev, [key]: false }));
+    }
   };
 
   const updateLeg = (idx: number, field: keyof RouteLeg, value: string | number | boolean) => {
@@ -435,6 +472,33 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
               className={`${inputClass} font-['Saira_Condensed'] tabular-nums`}
               placeholder={leg.method === '普通電車' ? '¥ 乗車料金' : '¥ 金額（特急・座席込み）'}
             />
+            {/* v0.30.1: 料金を調べる(普通電車・バス・新幹線・特急のみ) */}
+            {!isTemplate && FARE_LOOKUP_METHODS.has(leg.method) && (() => {
+              const key = `out-${idx}`;
+              const canLookup = !!leg.from?.trim() && !!leg.to?.trim() && !fareLoading[key];
+              return (
+                <div className="mt-2 space-y-1">
+                  <button
+                    type="button"
+                    disabled={!canLookup}
+                    onClick={() => lookupFare(key, leg, (n) => updateLeg(idx, 'amount', n))}
+                    className="text-xs text-app-gold hover:text-app-gold-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors py-0.5"
+                  >
+                    {fareLoading[key] ? '料金を調べています...' : '料金を調べる'}
+                  </button>
+                  {!fareMessage[key] && (
+                    <p className="text-[10px] text-app-text-mute leading-relaxed">
+                      普通電車・バス・新幹線・特急の通常料金を調べます。<br />
+                      座席指定や繁忙期の追加料金は含まれません。飛行機・タクシーは対象外です。<br />
+                      実際に支払った金額と異なる場合は修正してください。
+                    </p>
+                  )}
+                  {fareMessage[key] && (
+                    <p className="text-[10px] text-app-text-sub">{fareMessage[key]}</p>
+                  )}
+                </div>
+              );
+            })()}
           </div>
 
           {/* v0.30.0: 普通電車のグリーン車トグル + ON時にグリーン料金別欄 */}
