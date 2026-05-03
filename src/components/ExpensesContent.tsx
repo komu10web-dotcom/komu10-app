@@ -134,7 +134,9 @@ export default function ExpensesContent() {
   const filtered = transactions.filter((tx) => {
     if (searchText) {
       const q = searchText.toLowerCase();
-      const haystack = `${tx.store || ''} ${tx.description || ''}`.toLowerCase();
+      // v0.30.3: 検索対象を拡張(支払先・説明文に加えて科目ラベルも)
+      const kamokuLabel = (tx.kamoku && KAMOKU[tx.kamoku as keyof typeof KAMOKU]?.name) || '';
+      const haystack = `${tx.store || ''} ${tx.description || ''} ${kamokuLabel}`.toLowerCase();
       if (!haystack.includes(q)) return false;
     }
     // v0.9.0: 未紐付けフィルター
@@ -271,8 +273,8 @@ export default function ExpensesContent() {
               type="text"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
-              placeholder="検索..."
-              className="pl-8 pr-3 py-2 bg-white rounded-lg text-xs border border-app-line-medium outline-none focus:ring-2 focus:ring-app-gold/50 w-40"
+              placeholder="支払先・科目で検索"
+              className="pl-8 pr-3 py-2 bg-white rounded-lg text-xs border border-app-line-medium outline-none focus:ring-2 focus:ring-app-gold/50 w-56"
             />
           </div>
           {/* v0.9.0: 未紐付けフィルタートグル（取材費・制作費で案件タグ未紐付け） */}
@@ -301,7 +303,16 @@ export default function ExpensesContent() {
             </div>
           ) : filtered.length === 0 ? (
             <div className="py-20 text-center text-sm text-app-text-fade">
-              取引がありません
+              {searchText || showOnlyUntagged ? (
+                <>
+                  条件に一致する取引がありません
+                  {searchText && (
+                    <div className="mt-2 text-xs text-app-text-mute">「{searchText}」</div>
+                  )}
+                </>
+              ) : (
+                '取引がありません'
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">

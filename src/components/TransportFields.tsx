@@ -501,7 +501,8 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
             })()}
           </div>
 
-          {/* v0.30.0: 普通電車のグリーン車トグル + ON時にグリーン料金別欄 */}
+          {/* v0.30.0: 普通電車のグリーン車トグル + ON時にグリーン料金別欄
+              v0.30.3: 過去合意「class_reasonはグリーン以上で必須」の復元 — 普通電車のグリーンON時にも業務理由欄を表示 */}
           {leg.method === '普通電車' && (
             <>
               <label className="flex items-center gap-2.5 cursor-pointer py-1">
@@ -514,20 +515,48 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
                 <span className="text-sm text-app-text-sub">グリーン車</span>
               </label>
               {leg.green && (
-                <div>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={leg.green_amount ? `¥${(leg.green_amount).toLocaleString()}` : ''}
-                    onChange={(e) => {
-                      const v = e.target.value.replace(/[¥,]/g, '');
-                      if (/^\d*$/.test(v)) updateLeg(idx, 'green_amount', parseInt(v) || 0);
-                    }}
-                    className={`${inputClass} font-['Saira_Condensed'] tabular-nums`}
-                    placeholder="¥ グリーン料金"
-                  />
-                  <p className="text-[10px] text-app-text-mute mt-1">乗車料金とは別にグリーン券の料金を入力してください。</p>
-                </div>
+                <>
+                  <div>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={leg.green_amount ? `¥${(leg.green_amount).toLocaleString()}` : ''}
+                      onChange={(e) => {
+                        const v = e.target.value.replace(/[¥,]/g, '');
+                        if (/^\d*$/.test(v)) updateLeg(idx, 'green_amount', parseInt(v) || 0);
+                      }}
+                      className={`${inputClass} font-['Saira_Condensed'] tabular-nums`}
+                      placeholder="¥ グリーン料金"
+                    />
+                    <p className="text-[10px] text-app-text-mute mt-1">乗車料金とは別にグリーン券の料金を入力してください。</p>
+                  </div>
+                  {/* v0.30.3: 業務上の利用理由(過去session合意の復元) */}
+                  <div className="space-y-2 pt-1">
+                    <div>
+                      <label className="text-[10px] text-app-text-mute block mb-1">業務上の利用理由</label>
+                      <select
+                        value={leg.class_reason || ''}
+                        onChange={(e) => updateLeg(idx, 'class_reason', e.target.value)}
+                        className={inputClass}
+                      >
+                        <option value="">選択してください</option>
+                        {CLASS_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                    </div>
+                    {leg.class_reason === 'クライアント同行' && (
+                      <div>
+                        <label className="text-[10px] text-app-text-mute block mb-1">同行したクライアント</label>
+                        <input
+                          type="text"
+                          value={leg.client_name || ''}
+                          onChange={(e) => updateLeg(idx, 'client_name', e.target.value)}
+                          className={inputClass}
+                          placeholder="例:◯◯商事 田中様"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </>
               )}
             </>
           )}

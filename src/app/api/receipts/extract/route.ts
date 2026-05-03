@@ -101,19 +101,34 @@ export async function POST(request: NextRequest) {
   misc（不明）
 
 【交通費の場合のみ追加で抽出】
-kamoku_hint が "travel" かつ鉄道・バス・タクシー・飛行機の場合:
+kamoku_hint が "travel" かつ鉄道・バス・タクシー・飛行機の場合、以下を抽出:
+
 - from_station: 出発地・出発駅（例: "横浜市内", "東京", "新宿"）。読み取れなければnull。
 - to_station: 到着地・到着駅（例: "出雲市", "新大阪", "京都"）。読み取れなければnull。
 - round_trip: "round_trip"（往復券・復路券・「ゆき・かえり」両方記載）か "one_way"（片道券・単一区間）か。判断不能ならnull。
 - carrier: 鉄道会社・航空会社名（例: "JR西日本", "ANA", "東京メトロ"）。読み取れなければnull。
-- passenger_count: 利用人数（数値のみ）。「おとな2名」「大人2名」「2名様」「2人」等から抽出。1名・記載なし・判別不能はnull。**この値があれば、登録時に金額を1人あたりではなく合計金額として扱うため正確に読み取ること**。
-- transport_class_hint: 座席クラスの手がかり。以下のいずれかを返す:
-  ※ "self_seat"（自由席）, "reserved"（指定席）, "green"（グリーン車）, "gran_class"（グランクラス）,
-  ※ "premium_seat"（個室・プレミアム・スーパーシート等）,
-  ※ "economy"（飛行機エコノミー）, "premium_economy"（プレエコ）, "business"（ビジネスクラス）, "first"（ファーストクラス）,
-  ※ "class_j"（JALクラスJ）, "ana_premium"（ANAプレミアムクラス）,
-  ※ 不明・記載なしはnull。
-- flight_train_no_hint: 便名・列車名（例: "JAL301", "のぞみ15号", "やまびこ53号"）。読み取れなければnull。
+- passenger_count: **利用人数**（数値のみ）。「おとな2名」「大人2名」「ご利用人数 2名」「2名様」「2人」「大人 2」等の表記から**必ず数値で抽出**。1名・記載なし・判別不能はnull。
+- transport_class_hint: 座席クラスの手がかり。以下のキーから1つ選択:
+  - "self_seat"（自由席）
+  - "reserved"（指定席・「指定」「指定席」記載あり）
+  - "green"（グリーン車・「グリーン」記載あり）
+  - "gran_class"（グランクラス）
+  - "premium_seat"（個室・プレミアム・スーパーシート等）
+  - "economy"（飛行機エコノミー・普通席）
+  - "premium_economy"（プレエコ・プレミアムエコノミー）
+  - "business"（ビジネスクラス）
+  - "first"（ファーストクラス）
+  - "class_j"（JALクラスJ）
+  - "ana_premium"（ANAプレミアムクラス）
+  - 不明・記載なしはnull。
+- flight_train_no_hint: 便名・列車名（例: "JL301", "JAL301", "のぞみ15号", "やまびこ53号", "ひかり507号"）。読み取れなければnull。
+
+【重要】鉄道領収書(えきねっと・モバイルSuica等)の典型例:
+- 「列車名・区間」欄に「やまびこ53号指定席」と書いてあれば → flight_train_no_hint="やまびこ53号", transport_class_hint="reserved"
+- 「ご利用人数 おとな2名」と書いてあれば → passenger_count=2(必ず2を返す。null禁止)
+- 「東京 → 宇都宮」と書いてあれば → from_station="東京", to_station="宇都宮"
+- 「東日本旅客鉄道株式会社」 → carrier="JR東日本"
+
 宿泊（ホテル領収書）の場合は from_station / to_station / round_trip / passenger_count / transport_class_hint / flight_train_no_hint は全てnullで構わない。
 
 【接待交際費・会議費・取材費の場合のみ追加で抽出】
