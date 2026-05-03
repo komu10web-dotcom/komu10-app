@@ -1263,6 +1263,43 @@ export default function TransactionModal({
       }
 
       onSaved();
+
+      // v0.30.0: 経費入力中に「このルートをテンプレに保存」をONにしていた場合、
+      // 別モーダルを経由せず即座に route_templates へ INSERT（逆順ペアも自動生成）。
+      // インライン保存できたら、後続のテンプレ提案モーダルでのルート保存提案は重複なので抑止する。
+      let inlineRouteSaved = false;
+      if (
+        !editData &&
+        usesTransportDetail(form.kamoku) &&
+        !selectedOutboundRoute &&
+        alsoSaveRoute &&
+        routeTemplateName.trim()
+      ) {
+        const legs = (transportData.route_legs || [])
+          .filter(l => (l.from || '').trim() && (l.to || '').trim() && (l.amount || 0) > 0)
+          .map(l => ({
+            from: (l.from || '').trim(),
+            to: (l.to || '').trim(),
+            method: l.method || '電車',
+            carrier: (l.carrier || '').trim(),
+            amount: Number(l.amount) || 0,
+            green: !!l.green,
+          }));
+        if (legs.length > 0) {
+          const aId = await saveOnewayWithPair({
+            owner: form.owner,
+            name: routeTemplateName.trim(),
+            legs,
+          });
+          if (aId) {
+            inlineRouteSaved = true;
+            // 状態リセット（後続モーダルでの再提案を抑止）
+            setAlsoSaveRoute(false);
+            setRouteTemplateName('');
+          }
+        }
+      }
+
       // v0.13.1: テンプレ保存提案の発火条件を拡張
       // - 新規登録は常に対象
       // - テンプレ選択済みでも、支払先 or 科目が変わっていれば別物とみなし提案
@@ -1280,7 +1317,9 @@ export default function TransactionModal({
       // v0.13.1: 「ルートとしても保存」の初期値判定
       // - 交通費かつ新規区間（往路ルートテンプレ未選択）かつ区間が入力済みのときON推奨
       // v0.14.0 Phase 4: multiMode（往復 + different_route/manual + 復路手入力）も発火対象
+      // v0.30.0: インラインで既にルート保存済みの場合は提案不要（重複抑止）
       const shouldSuggestRouteSave = (() => {
+        if (inlineRouteSaved) return false;
         if (!usesTransportDetail(form.kamoku)) return false;
         if (selectedOutboundRoute) return false; // 既存ルート選択済みなら不要
         const legs = transportData.route_legs || [];
@@ -1833,6 +1872,63 @@ export default function TransactionModal({
               })()}
             />
           )}
+
+          {/* v0.30.0: 交通費入力中に「このルートをテンプレに保存」インラインUI
+              既存ルートテンプレ未選択 + 区間が入力済み + travel/制作費/取材費の交通費 のときだけ表示 */}
+          {(() => {
+            const isTransportLike = (() => {
+              if (form.kamoku === 'travel') return true;
+              if (form.kamoku === 'production' || form.kamoku === 'torizai') {
+                if (!form.sub_category) return false;
+                const selectedLabel = subCategories.find(s => s.key === form.sub_category)?.label ?? null;
+                return isTransportSubCategory(form.sub_category, selectedLabel);
+              }
+              return false;
+            })();
+            if (!isTransportLike) return null;
+            // 既存ルートテンプレを選択済み（適用済み）の場合は表示しない
+            if (selectedOutboundRoute) return null;
+            // 区間に出発地・到着地・金額のいずれかが入力されているときだけ表示
+            const legs = transportData.route_legs || [];
+            const hasContent = legs.some(l => (l.from || '').trim() || (l.to || '').trim() || (l.amount || 0) > 0);
+            if (!hasContent) return null;
+            const firstFrom = (legs[0]?.from || '').trim();
+            const lastTo = (legs[legs.length - 1]?.to || '').trim();
+            const placeholder = (firstFrom && lastTo) ? `${firstFrom}→${lastTo}` : 'ルート名';
+            return (
+              <div className="border border-app-gold/30 rounded-xl p-4 space-y-2 bg-app-gold/5">
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={alsoSaveRoute}
+                    onChange={(e) => {
+                      setAlsoSaveRoute(e.target.checked);
+                      if (e.target.checked && !routeTemplateName.trim() && firstFrom && lastTo) {
+                        setRouteTemplateName(`${firstFrom}→${lastTo}`);
+                      }
+                    }}
+                    className="w-4 h-4 accent-app-gold"
+                  />
+                  <span className="text-xs font-medium text-app-text">このルートをテンプレに保存する</span>
+                </label>
+                {alsoSaveRoute && (
+                  <div className="space-y-1.5 pl-6">
+                    <input
+                      type="text"
+                      value={routeTemplateName}
+                      onChange={(e) => setRouteTemplateName(e.target.value)}
+                      placeholder={placeholder}
+                      className="w-full px-3 py-2 bg-white rounded-lg text-sm border border-app-gold/30 outline-none focus:ring-2 focus:ring-app-gold/50"
+                    />
+                    <p className="text-[10px] text-app-text-mute">
+                      ※ 次回からこのルートを呼び出して即入力できます。逆順ペアも自動作成されます。
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           {form.kamoku === 'entertainment' && <EntertainmentFields data={entertainmentData} onChange={setEntertainmentData} />}
 
           {form.kamoku === 'equipment' && (
@@ -2455,12 +2551,11 @@ export default function TransactionModal({
                     onClose();
                   }}
                     className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-xl hover:bg-app-surface-hover transition-colors">
-                    キャンセル
+                    登録しない
                   </button>
                   <button onClick={saveAsTemplate}
                     disabled={(() => {
                       if (multiMode) {
-                        // Yes側なら名前必須、各段独立評価
                         const outboundValid = !saveOutboundEnabled || outboundTemplateName.trim().length > 0;
                         const returnValid = !saveReturnEnabled || returnTemplateName.trim().length > 0;
                         const packageValid = !savePackageEnabled || packageTemplateName.trim().length > 0;
@@ -2469,11 +2564,10 @@ export default function TransactionModal({
                       if (routeOnlyMode) {
                         return !routeTemplateName.trim();
                       }
-                      // 通常モード: 経費テンプレ名必須、alsoSaveRoute時はルート名も必須
                       return !templateName.trim() || (alsoSaveRoute && !routeTemplateName.trim());
                     })()}
                     className="flex-1 py-2.5 text-xs text-white bg-app-button rounded-xl hover:bg-app-button-hover disabled:opacity-40 transition-colors">
-                    登録を確定
+                    登録する
                   </button>
                 </div>
               </div>

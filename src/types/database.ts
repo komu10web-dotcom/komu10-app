@@ -649,6 +649,14 @@ export type RouteLeg = {
   carrier: string;
   amount: number;
   green: boolean;
+  // v0.30.0: 区間レベルの詳細フィールド(全てoptional・既存データは後方互換)
+  green_amount?: number;        // 普通電車のグリーン料金別入力
+  class_value?: string;         // 座席クラス
+  class_reason?: string;        // 上位クラス選択時の業務理由
+  client_name?: string;         // 「クライアント同行」選択時の相手先(税務証跡)
+  flight_train_no?: string;     // 便名・列車名
+  passenger_count?: number;     // 人数(自分含む)・デフォルト1
+  companion_memo?: string;      // 同行者メモ(任意)
 };
  
 export type TemplateAllocation = {
