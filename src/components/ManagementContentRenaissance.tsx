@@ -892,9 +892,23 @@ function PLView({ year, revenueTotal, expenseTotal, profitTotal, profitRate, mon
       </Section>
 
       <Section num="03" title="事業ごとに、利益はどこで立ったか">
-        {/* s88 追加: X 呼吸チャート(s87 ボス確定仕様) */}
+        {/* s88 v0.43.0: XBreathChart v1.0 プレゼン版準拠 */}
         <div style={{ marginBottom: 28 }}>
-          <XBreathChart divisions={divisionPL} />
+          <XBreathChart
+            departments={{
+              YT:   { revenue: divisionPL.find(d => d.id === 'youtube')?.revenue    ?? 0,
+                       profit:  divisionPL.find(d => d.id === 'youtube')?.profit     ?? 0 },
+              EDIT: { revenue: divisionPL.find(d => d.id === 'editorial')?.revenue  ?? 0,
+                       profit:  divisionPL.find(d => d.id === 'editorial')?.profit   ?? 0 },
+              TP:   { revenue: divisionPL.find(d => d.id === 'thisplace')?.revenue  ?? 0,
+                       profit:  divisionPL.find(d => d.id === 'thisplace')?.profit   ?? 0 },
+              SUP:  { revenue: divisionPL.find(d => d.id === 'support')?.revenue    ?? 0,
+                       profit:  divisionPL.find(d => d.id === 'support')?.profit     ?? 0 },
+            }}
+            totalRevenue={revenueTotal}
+            totalProfit={profitTotal}
+            initialMode="revenue"
+          />
         </div>
         <DivisionFlow divisions={divisionPL} />
       </Section>

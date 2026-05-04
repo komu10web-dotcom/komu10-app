@@ -1,314 +1,313 @@
 'use client';
 
 /**
- * XBreathChart — komu10 X 呼吸チャート(s87 ボス確定仕様・v0.42.1 完全再実装)
+ * XBreathChart — komu10 X 呼吸チャート v0.43.0
  *
- * 失敗事例 #58 是正(s88 認定):
- *   v0.42.0 の独断構造変更を破棄し、v1.0 デザイン HTML(File ID 1geEZy0izYmB49aN8I9iSWTr12hi1HAAO)の
- *   SVG コードを1対1で React 移植。座標・stroke 値・viewBox・終端金額ラベル位置すべて元 v1.0 そのまま。
+ * 指示書: komu10-app-XBreathChart-jisshi-shijisho-v1_0-s88-20260504.md
+ * v1.0 プレゼン版 HTML §FRAME 02 を1対1で React 化。
+ * デザイン判断・センス判断は一切行っていない。SVG コードの完全移植のみ。
  *
- * 元 SVG の設計(変更不可・触るな資産):
+ * 触らない資産(変更禁止):
  *   viewBox: 0 0 400 420
- *   YT   上左 (100, 80)  → (184, 164)  stroke 14
- *   EDIT 上右 (300, 80)  → (216, 164)  stroke  6
- *   TP   下左 (100, 320) → (184, 236)  stroke  9
- *   SUP  下右 (300, 320) → (216, 236)  stroke 11
+ *   YT   上左 (100, 80)  → (184, 164)  リアルデータ動的計算(MAX=14)
+ *   EDIT 上右 (300, 80)  → (216, 164)  リアルデータ動的計算(MIN=4)
+ *   TP   下左 (100, 320) → (184, 236)  リアルデータ動的計算
+ *   SUP  下右 (300, 320) → (216, 236)  リアルデータ動的計算
  *   center: cx=200 cy=200 r=3 fill=#b8893a
+ *   呼吸: 2.4秒 ±15%
  *
- * 起案: イナモトレイ(CBPO) / 演出: Es Devlin(CAD) / 色彩: Maureen Stone
- * 統治: Hedi(CEO) / Saville(CBO) / Paula Scher(CDO) / Jony Ive(CXO)
- * 実装: Patrick Collison(s88 v0.42.1 / 2026-05-04)
+ * 実装: Patrick Collison(s88 v0.43.0 / 2026-05-04)
  */
 
-import { useState, useEffect, useMemo } from 'react';
-import { APP_DARK, FONTS, X_BRAND } from '@/lib/brandTokens';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 
-const C = APP_DARK;
-const F = FONTS;
+type Department = 'YT' | 'EDIT' | 'TP' | 'SUP';
 
-type Division = {
-  id: string;
-  name: string;
-  label: string;
+type DepartmentData = {
   revenue: number;
-  expense: number;
   profit: number;
 };
 
-type Mode = 'revenue' | 'profit';
+type XBreathChartProps = {
+  departments: Record<Department, DepartmentData>;
+  initialMode?: 'revenue' | 'profit';
+  totalRevenue: number;
+  totalProfit: number;
+};
 
-// 元 v1.0 デザインの座標(変更禁止・viewBox 400x420)
-const LINE_COORDS = {
-  upLeft:  { x1: 100, y1: 80,  x2: 184, y2: 164 },
-  upRight: { x1: 300, y1: 80,  x2: 216, y2: 164 },
-  downLeft:  { x1: 100, y1: 320, x2: 184, y2: 236 },
-  downRight: { x1: 300, y1: 320, x2: 216, y2: 236 },
-} as const;
+// v1.0 SVG 座標(変更禁止)
+const DEPT_CONFIG: Record<Department, {
+  x1: number; y1: number; x2: number; y2: number;
+  labelX: number; labelY: number;
+  moneyY: number;
+  anchor: 'start' | 'end';
+}> = {
+  YT:   { x1: 100, y1: 80,  x2: 184, y2: 164, labelX: 20,  labelY: 34,  moneyY: 60,  anchor: 'start' },
+  EDIT: { x1: 300, y1: 80,  x2: 216, y2: 164, labelX: 380, labelY: 34,  moneyY: 60,  anchor: 'end'   },
+  TP:   { x1: 100, y1: 320, x2: 184, y2: 236, labelX: 20,  labelY: 370, moneyY: 392, anchor: 'start' },
+  SUP:  { x1: 300, y1: 320, x2: 216, y2: 236, labelX: 380, labelY: 370, moneyY: 392, anchor: 'end'   },
+};
 
-const LABEL_POS = {
-  upLeft:  { x: 20,  y: 34, yMoney: 60, anchor: 'start' as const },
-  upRight: { x: 380, y: 34, yMoney: 60, anchor: 'end'   as const },
-  downLeft:  { x: 20,  y: 370, yMoney: 392, anchor: 'start' as const },
-  downRight: { x: 380, y: 370, yMoney: 392, anchor: 'end'   as const },
-} as const;
+const DEPT_ORDER: Department[] = ['YT', 'EDIT', 'TP', 'SUP'];
+const MAX_WIDTH = 14;
+const MIN_WIDTH = 4;
+const ZERO_WIDTH = 4;
 
-const QUADRANT_BY_INDEX: Array<keyof typeof LINE_COORDS> = ['upLeft', 'upRight', 'downLeft', 'downRight'];
+function calcWidth(value: number, allValues: number[]): number {
+  const maxAbs = Math.max(...allValues.map(Math.abs));
+  if (maxAbs === 0) return ZERO_WIDTH;
+  if (value === 0) return ZERO_WIDTH;
+  const ratio = Math.abs(value) / maxAbs;
+  return MIN_WIDTH + ratio * (MAX_WIDTH - MIN_WIDTH);
+}
 
-export default function XBreathChart({ divisions }: { divisions: Division[] }) {
+function formatM(amount: number): string {
+  const sign = amount < 0 ? '-' : '';
+  const abs = Math.abs(amount);
+  if (abs >= 1_000_000) return `${sign}¥${(abs / 1_000_000).toFixed(1)}M`;
+  return `${sign}¥${(abs / 1_000).toFixed(0)}K`;
+}
+
+function getTopDept(departments: Record<Department, DepartmentData>, mode: 'revenue' | 'profit'): Department {
+  return DEPT_ORDER.reduce((top, dept) => {
+    const topVal = mode === 'revenue' ? departments[top].revenue : departments[top].profit;
+    const deptVal = mode === 'revenue' ? departments[dept].revenue : departments[dept].profit;
+    return deptVal > topVal ? dept : top;
+  });
+}
+
+export default function XBreathChart({
+  departments,
+  initialMode = 'revenue',
+  totalRevenue,
+  totalProfit,
+}: XBreathChartProps) {
   const reduceMotion = useReducedMotion();
-  const [mode, setMode] = useState<Mode>('revenue');
-  const [isVisible, setIsVisible] = useState(true);
+  const [mode, setMode] = useState<'revenue' | 'profit'>(initialMode);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [breathingActive, setBreathingActive] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    try {
-      const saved = window.localStorage.getItem('komu10-xchart-mode');
-      if (saved === 'revenue' || saved === 'profit') setMode(saved);
-    } catch { /* ignore */ }
-  }, []);
-
+  // Page Visibility API
   useEffect(() => {
     if (typeof document === 'undefined') return;
-    const update = () => setIsVisible(!document.hidden);
-    update();
-    document.addEventListener('visibilitychange', update);
-    return () => document.removeEventListener('visibilitychange', update);
+    const handler = () => {
+      if (document.hidden) setBreathingActive(false);
+    };
+    document.addEventListener('visibilitychange', handler);
+    return () => document.removeEventListener('visibilitychange', handler);
   }, []);
 
-  const sorted = useMemo(() => {
-    return [...divisions].sort((a, b) => b.revenue - a.revenue).slice(0, 4);
-  }, [divisions]);
+  // IntersectionObserver
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting && !document.hidden) setBreathingActive(true);
+      });
+    }, { threshold: 0.3 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
-  const valueOf = (d: Division) => mode === 'revenue' ? d.revenue : d.profit;
-
-  const maxRevenue = Math.max(...sorted.map(d => d.revenue), 1);
-  const strokeOf = (d: Division) => 6 + (d.revenue / maxRevenue) * 8; // 6〜14px(元v1.0準拠)
-
-  const colorOf = (d: Division, idx: number): string => {
-    if (mode === 'revenue') {
-      return idx === 0 ? X_BRAND.gold : X_BRAND.white;
-    } else {
-      if (d.profit < 0) return X_BRAND.red;
-      const profitTopIdx = sorted
-        .map((sd, i) => ({ profit: sd.profit, i }))
-        .filter(x => x.profit >= 0)
-        .sort((a, b) => b.profit - a.profit)[0]?.i;
-      return idx === profitTopIdx ? X_BRAND.gold : X_BRAND.white;
-    }
-  };
-
-  const handleModeSwitch = (next: Mode) => {
-    if (next === mode || isTransitioning) return;
+  // モード切替(800ms)
+  const handleToggle = useCallback((newMode: 'revenue' | 'profit') => {
+    if (newMode === mode || isTransitioning) return;
     setIsTransitioning(true);
-    try { window.localStorage.setItem('komu10-xchart-mode', next); } catch { /* ignore */ }
-    setTimeout(() => setMode(next), 300);
-    setTimeout(() => setIsTransitioning(false), 800);
-  };
+    setBreathingActive(false);
+    setTimeout(() => setMode(newMode), 350);
+    setTimeout(() => {
+      setIsTransitioning(false);
+      if (!document.hidden) setBreathingActive(true);
+    }, 800);
+  }, [mode, isTransitioning]);
 
-  const breathing = !reduceMotion && isVisible && !isTransitioning;
-
-  const totalValue = sorted.reduce((s, d) => s + valueOf(d), 0);
-  const yenShortM = (n: number): string => {
-    const sign = n < 0 ? '-' : '';
-    const abs = Math.abs(n);
-    if (abs >= 1000000) return `${sign}¥${(abs / 1000000).toFixed(1)}M`;
-    if (abs >= 1000) return `${sign}¥${(abs / 1000).toFixed(0)}K`;
-    return `${sign}¥${abs}`;
-  };
-  const yenShort = (n: number): string => {
-    const sign = n < 0 ? '-' : '';
-    const abs = Math.abs(n);
-    if (abs >= 100000000) return `${sign}¥${(abs / 100000000).toFixed(1)}億`;
-    if (abs >= 10000) return `${sign}¥${(abs / 10000).toFixed(0)}万`;
-    return `${sign}¥${abs.toLocaleString()}`;
-  };
+  const breathing = !reduceMotion && breathingActive && !isTransitioning;
+  const allValues = DEPT_ORDER.map(dept => mode === 'revenue' ? departments[dept].revenue : departments[dept].profit);
+  const topDept = getTopDept(departments, mode);
+  const totalValue = mode === 'revenue' ? totalRevenue : totalProfit;
 
   return (
-    <div style={{ background: C.surface, border: `1px solid ${C.line}`, padding: '36px 32px' }}>
-      {/* ヘッダー */}
-      <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end',
-        gap: 24, marginBottom: 28, paddingBottom: 20,
-        borderBottom: `1px solid ${C.lineSoft}`, flexWrap: 'wrap',
-      }}>
-        <div role="tablist" aria-label="表示モード切替" style={{ display: 'flex', gap: 0, position: 'relative' }}>
-          {(['revenue', 'profit'] as Mode[]).map((m) => {
-            const active = mode === m;
-            const label = m === 'revenue' ? 'REVENUE' : 'PROFIT';
-            const labelJp = m === 'revenue' ? '売上' : '利益';
-            return (
-              <button
-                key={m} role="tab" aria-selected={active}
-                onClick={() => handleModeSwitch(m)} disabled={isTransitioning}
-                style={{
-                  background: 'transparent', border: 'none',
-                  padding: '12px 20px', minHeight: 44,
-                  cursor: isTransitioning ? 'wait' : 'pointer',
-                  position: 'relative',
-                  fontFamily: F.display, fontWeight: 900, fontSize: 22,
-                  letterSpacing: '0.08em',
-                  color: active ? C.text : C.textMute,
-                  transition: reduceMotion ? 'none' : 'color 280ms ease-out',
-                }}
-              >
-                <span style={{ display: 'block', lineHeight: 1 }}>{label}</span>
-                <span style={{
-                  display: 'block', fontFamily: F.uiJp,
-                  fontSize: 10, fontWeight: 400, letterSpacing: '0.2em',
-                  color: active ? C.textSub : C.textMute, marginTop: 4,
-                }}>{labelJp}</span>
-                {active && (
-                  <span aria-hidden style={{
-                    position: 'absolute', left: 12, right: 12, bottom: -1,
-                    height: 1, background: X_BRAND.gold,
-                    transition: reduceMotion ? 'none' : 'all 280ms ease-out',
-                  }} />
-                )}
-              </button>
-            );
-          })}
-        </div>
+    <div ref={wrapRef}>
+      <style>{`
+        @keyframes x-breathe-yt   { 0%,100%{stroke-width:11.90} 50%{stroke-width:16.10} }
+        @keyframes x-breathe-edit { 0%,100%{stroke-width:5.10}  50%{stroke-width:6.90}  }
+        @keyframes x-breathe-tp   { 0%,100%{stroke-width:7.65}  50%{stroke-width:10.35} }
+        @keyframes x-breathe-sup  { 0%,100%{stroke-width:9.35}  50%{stroke-width:12.65} }
+        @keyframes x-breathe-center { 0%,100%{opacity:1;r:3} 50%{opacity:0.35;r:2} }
+        @keyframes x-collapse { from{stroke-dashoffset:0} to{stroke-dashoffset:100} }
+        @keyframes x-redraw   { from{stroke-dashoffset:100} to{stroke-dashoffset:0}   }
+        .xb-yt   {animation:x-breathe-yt   2.4s ease-in-out infinite}
+        .xb-edit {animation:x-breathe-edit 2.4s ease-in-out infinite}
+        .xb-tp   {animation:x-breathe-tp   2.4s ease-in-out infinite}
+        .xb-sup  {animation:x-breathe-sup  2.4s ease-in-out infinite}
+        .xb-center   {animation:x-breathe-center 2.4s ease-in-out infinite}
+        .xb-collapse {stroke-dasharray:100;animation:x-collapse 300ms cubic-bezier(0.4,0,1,1) forwards}
+        .xb-redraw   {stroke-dasharray:100;animation:x-redraw   500ms cubic-bezier(0.16,1,0.3,1) forwards}
+        @media(prefers-reduced-motion:reduce){
+          .xb-yt,.xb-edit,.xb-tp,.xb-sup,.xb-center,.xb-collapse,.xb-redraw{animation:none!important}
+        }
+        .xb-toggle-row{display:flex;gap:0;margin-bottom:20px}
+        .xb-btn{
+          background:transparent;border:none;padding:0 16px;
+          min-height:44px;min-width:44px;cursor:pointer;
+          font-family:'Saira Condensed',sans-serif;font-size:15px;
+          letter-spacing:0.15em;color:rgba(255,255,255,0.38);
+          position:relative;transition:color 280ms ease-out;text-transform:uppercase;
+        }
+        .xb-btn.active{color:rgba(255,255,255,0.92)}
+        .xb-btn.active::after{
+          content:'';position:absolute;bottom:0;left:12px;right:12px;
+          height:1px;background:#b8893a;
+        }
+        .xb-btn:disabled{cursor:wait}
+        .xb-total{margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid rgba(255,255,255,0.06)}
+        .xb-total-label{
+          display:block;font-family:'Saira Condensed',sans-serif;
+          font-size:11px;letter-spacing:0.2em;color:rgba(255,255,255,0.32);
+          text-transform:uppercase;margin-bottom:6px;
+        }
+        .xb-total-value{
+          display:block;font-family:'Big Shoulders Display',sans-serif;
+          font-weight:900;font-size:32px;color:rgba(255,255,255,0.92);
+          line-height:1;letter-spacing:-0.01em;
+        }
+        .xb-total-value.neg{color:#aa2a2a}
+        .xb-grid{
+          display:grid;grid-template-columns:1fr 1fr;
+          gap:48px;align-items:center;
+        }
+        .xb-svg-wrap{
+          background:rgba(255,255,255,0.02);
+          padding:32px;border:1px solid rgba(255,255,255,0.06);
+        }
+        .xb-explainer h4{
+          font-family:'Saira Condensed',sans-serif;font-size:15px;
+          letter-spacing:0.08em;color:rgba(255,255,255,0.92);
+          font-weight:400;margin:0 0 16px;line-height:1.5;
+        }
+        .xb-explainer p{
+          font-family:'Noto Sans JP',sans-serif;font-size:12px;
+          color:rgba(255,255,255,0.38);line-height:1.8;
+          margin:0 0 12px;letter-spacing:0.04em;
+        }
+        @media(max-width:768px){.xb-grid{grid-template-columns:1fr}}
+      `}</style>
 
-        <div style={{ textAlign: 'right' }}>
-          <p style={{
-            fontSize: 10, letterSpacing: '0.3em', color: C.textMute,
-            marginBottom: 6, textTransform: 'uppercase', fontWeight: 500,
-          }}>{mode === 'revenue' ? 'TOTAL REVENUE' : 'TOTAL PROFIT'}</p>
-          <p style={{
-            fontFamily: F.display, fontWeight: 900, fontSize: 44,
-            color: mode === 'profit' && totalValue < 0 ? X_BRAND.red : C.text,
-            lineHeight: 1, fontFeatureSettings: "'tnum' 1, 'lnum' 1",
-            letterSpacing: '-0.01em',
-          }}>{yenShort(totalValue)}</p>
-        </div>
+      {/* トグル */}
+      <div className="xb-toggle-row">
+        {(['revenue','profit'] as const).map(m => (
+          <button
+            key={m}
+            className={`xb-btn${mode===m?' active':''}`}
+            onClick={() => handleToggle(m)}
+            disabled={isTransitioning}
+            aria-pressed={mode===m}
+          >
+            {m==='revenue'?'売上':'利益'}
+          </button>
+        ))}
       </div>
 
-      {/* X 呼吸チャート本体(SVG は元 v1.0 を完全コピー) */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'minmax(320px, 480px) 1fr',
-        gap: 40, alignItems: 'center',
-      }}>
-        <div style={{ width: '100%', maxWidth: 480, margin: '0 auto' }}>
+      {/* TOTAL 合計 */}
+      <div className="xb-total">
+        <span className="xb-total-label">
+          {mode==='revenue'?'TOTAL REVENUE':'TOTAL PROFIT'}
+        </span>
+        <span className={`xb-total-value${mode==='profit'&&totalValue<0?' neg':''}`}>
+          {formatM(totalValue)}
+        </span>
+      </div>
+
+      {/* グリッド: SVG 左 | 説明 右 */}
+      <div className="xb-grid">
+        <div className="xb-svg-wrap">
           <svg
             viewBox="0 0 400 420"
             xmlns="http://www.w3.org/2000/svg"
-            style={{
-              width: '100%', height: 'auto', display: 'block',
-              opacity: isTransitioning ? 0 : 1,
-              transition: reduceMotion ? 'none' : `opacity 300ms ease-${isTransitioning ? 'in' : 'out'}`,
-            }}
+            style={{width:'100%',height:'auto',display:'block'}}
             role="img"
-            aria-label={`事業部別${mode === 'revenue' ? '売上' : '利益'}チャート(X 呼吸)`}
+            aria-label={`事業部別${mode==='revenue'?'売上':'利益'} X 呼吸チャート`}
           >
-            {sorted.map((d, idx) => {
-              const quadrantKey = QUADRANT_BY_INDEX[idx];
-              const coords = LINE_COORDS[quadrantKey];
-              const labelPos = LABEL_POS[quadrantKey];
-              const stroke = strokeOf(d);
-              const color = colorOf(d, idx);
-              const value = valueOf(d);
+            {DEPT_ORDER.map((dept) => {
+              const cfg = DEPT_CONFIG[dept];
+              const value = mode==='revenue' ? departments[dept].revenue : departments[dept].profit;
+              const w = calcWidth(value, allValues);
+
+              let strokeColor: string;
+              if (mode==='profit' && value<0) {
+                strokeColor = '#aa2a2a';
+              } else if (dept===topDept) {
+                strokeColor = '#b8893a';
+              } else {
+                strokeColor = '#fafaf6';
+              }
+
+              const breathClass = breathing ? `xb-${dept.toLowerCase()}` : '';
+              const transClass  = isTransitioning ? 'xb-redraw' : '';
 
               return (
-                <g key={d.id} className="x-line-group">
-                  <text
-                    x={labelPos.x} y={labelPos.y}
-                    textAnchor={labelPos.anchor}
-                    fontFamily="'Saira Condensed', sans-serif"
-                    fontSize={13} fill={C.textMute}
-                    letterSpacing="0.2em"
-                  >{d.name}</text>
-                  <text
-                    x={labelPos.x} y={labelPos.yMoney}
-                    textAnchor={labelPos.anchor}
-                    fontFamily="'Big Shoulders Display', sans-serif"
-                    fontWeight={900} fontSize={26} fill={color}
-                    style={{ transition: reduceMotion ? 'none' : 'fill 320ms ease-out' }}
-                  >{yenShortM(value)}</text>
+                <g key={dept} data-dept={dept}>
                   <line
-                    x1={coords.x1} y1={coords.y1}
-                    x2={coords.x2} y2={coords.y2}
-                    stroke={color} strokeWidth={stroke}
-                    strokeLinecap="butt" pathLength={100}
-                    className={breathing ? 'x-breath-line' : ''}
+                    x1={cfg.x1} y1={cfg.y1}
+                    x2={cfg.x2} y2={cfg.y2}
+                    stroke={strokeColor}
+                    strokeWidth={w}
+                    strokeLinecap="butt"
+                    pathLength={100}
+                    className={[breathClass, transClass].filter(Boolean).join(' ')}
                     style={{
-                      transition: reduceMotion ? 'none' : 'stroke-width 320ms ease-out, stroke 320ms ease-out',
+                      transition: reduceMotion
+                        ? 'none'
+                        : 'stroke 600ms ease-in-out, stroke-width 800ms cubic-bezier(0.16,1,0.3,1)',
                     }}
                   />
+                  <text
+                    x={cfg.labelX} y={cfg.labelY}
+                    textAnchor={cfg.anchor}
+                    fontFamily="'Saira Condensed', sans-serif"
+                    fontSize={13} fill="rgba(255,255,255,0.32)"
+                    letterSpacing="0.2em"
+                  >{dept}</text>
+                  <text
+                    x={cfg.labelX} y={cfg.moneyY}
+                    textAnchor={cfg.anchor}
+                    fontFamily="'Big Shoulders Display', sans-serif"
+                    fontWeight={900} fontSize={26}
+                    fill={mode==='profit'&&value<0 ? '#aa2a2a' : '#fafaf6'}
+                    style={{transition: reduceMotion?'none':'fill 600ms ease-in-out'}}
+                  >{formatM(value)}</text>
                 </g>
               );
             })}
+
+            {/* 中心点 = 間 */}
             <circle
               cx={200} cy={200} r={3}
-              fill={X_BRAND.gold}
-              className={breathing ? 'x-breath-center' : ''}
+              fill="#b8893a"
+              className={breathing ? 'xb-center' : ''}
             />
           </svg>
-
-          <style jsx>{`
-            @keyframes xBreathLine {
-              0%, 100% { stroke-width: var(--base-stroke, 10); }
-              50% { stroke-width: calc(var(--base-stroke, 10) * 1.06); }
-            }
-            @keyframes xBreathCenter {
-              0%, 100% { opacity: 1.0; }
-              50% { opacity: 0.4; }
-            }
-            .x-breath-line { animation: xBreathLine 3s ease-in-out infinite; }
-            .x-breath-center { animation: xBreathCenter 3s ease-in-out infinite; }
-            @media (prefers-reduced-motion: reduce) {
-              .x-breath-line, .x-breath-center { animation: none !important; }
-            }
-          `}</style>
         </div>
 
-        {/* 凡例 */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {sorted.map((d, idx) => {
-            const color = colorOf(d, idx);
-            const value = valueOf(d);
-            const stroke = strokeOf(d);
-            const isHighlight = color === X_BRAND.gold || color === X_BRAND.red;
-            return (
-              <div key={d.id} style={{
-                display: 'flex', alignItems: 'center', gap: 14,
-                paddingBottom: 12, borderBottom: `1px solid ${C.lineSoft}`,
-              }}>
-                <span style={{
-                  display: 'inline-block', width: 28,
-                  height: Math.max(2, stroke / 3),
-                  background: color, flexShrink: 0,
-                }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{
-                    fontFamily: F.brico, fontSize: 12,
-                    letterSpacing: '0.18em',
-                    color: isHighlight ? color : C.text,
-                    textTransform: 'uppercase', fontWeight: 600,
-                    marginBottom: 2,
-                  }}>{d.name}</p>
-                  <p style={{
-                    fontFamily: F.uiJp, fontSize: 11,
-                    color: C.textMute, letterSpacing: '0.04em',
-                  }}>{d.label}</p>
-                </div>
-                <p style={{
-                  fontFamily: F.display, fontWeight: 900, fontSize: 22,
-                  color: isHighlight ? color : C.text,
-                  fontFeatureSettings: "'tnum' 1, 'lnum' 1",
-                  letterSpacing: '-0.01em',
-                }}>{yenShort(value)}</p>
-              </div>
-            );
-          })}
-
-          <p style={{
-            fontFamily: F.uiJp, fontSize: 11, color: C.textMute,
-            letterSpacing: '0.06em', lineHeight: 1.6, marginTop: 8,
-          }}>
-            線の太さは売上の大きさ。色は{mode === 'revenue' ? '売上トップ部門' : '利益トップ部門と赤字部門'}を示す。
+        {/* 説明エリア(金額一覧表示禁止・テキストのみ) */}
+        <div className="xb-explainer">
+          <h4>4本の線が<br />事業4部門の温度を語る</h4>
+          <p>
+            線の太さ = 各事業部門の今月収益。トップ部門のみ Xゴールド・他は白。
+            中心の点 = 間(ま) = クライアントごとに毎回オリジナルが立ち上がる場所。
+            これは X 原理(s86 確定)の直接実装。
+          </p>
+          <p>
+            ↻ 呼吸演出(2.4秒周期):4本の線が同位相で呼吸(±15%・線太さが緩やかに伸縮)。
+            中心点は逆位相(線が膨らむ瞬間に中心が縮む)。
+            停止後の経営の温度を心臓のように示す。
+          </p>
+          <p>
+            「売上 / 利益」トグルで切替時、800ms かけて X が再描画される。
+            最終的な経営判断は利益額モードで下す。
           </p>
         </div>
       </div>
