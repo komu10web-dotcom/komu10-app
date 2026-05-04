@@ -30,6 +30,7 @@ import type { Transaction, Project, TransactionAllocation, BankAccount } from '@
 import { Loader2 } from 'lucide-react';
 import AnimatedChapterTitle from './AnimatedChapterTitle';
 import XLineFlash from './XLineFlash';
+import XBreathChart from './XBreathChart';
 import { usePeriodRange } from './HeaderControls';
 import { useViewport } from '@/lib/useViewport';
 import { useReducedMotion } from '@/lib/useReducedMotion';
@@ -891,6 +892,10 @@ function PLView({ year, revenueTotal, expenseTotal, profitTotal, profitRate, mon
       </Section>
 
       <Section num="03" title="事業ごとに、利益はどこで立ったか">
+        {/* s88 追加: X 呼吸チャート(s87 ボス確定仕様) */}
+        <div style={{ marginBottom: 28 }}>
+          <XBreathChart divisions={divisionPL} />
+        </div>
         <DivisionFlow divisions={divisionPL} />
       </Section>
 
