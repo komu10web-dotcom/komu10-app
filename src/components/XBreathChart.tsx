@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * XBreathChart — komu10 X 呼吸チャート v0.43.0
+ * XBreathChart — komu10 X 呼吸チャート v0.44.0
  *
  * 指示書: komu10-app-XBreathChart-jisshi-shijisho-v1_0-s88-20260504.md
  * v1.0 プレゼン版 HTML §FRAME 02 を1対1で React 化。
@@ -9,14 +9,19 @@
  *
  * 触らない資産(変更禁止):
  *   viewBox: 0 0 400 420
- *   YT   上左 (100, 80)  → (184, 164)  リアルデータ動的計算(MAX=14)
- *   EDIT 上右 (300, 80)  → (216, 164)  リアルデータ動的計算(MIN=4)
- *   TP   下左 (100, 320) → (184, 236)  リアルデータ動的計算
- *   SUP  下右 (300, 320) → (216, 236)  リアルデータ動的計算
+ *   YT   上左 (100, 80)  → (184, 164)
+ *   EDIT 上右 (300, 80)  → (216, 164)
+ *   TP   下左 (100, 320) → (184, 236)
+ *   SUP  下右 (300, 320) → (216, 236)
  *   center: cx=200 cy=200 r=3 fill=#b8893a
- *   呼吸: 2.4秒 ±15%
+ *   呼吸: 2.4秒 ±15%  CSS変数(--breathe-min/max)で動的
+ *   dept label fill: #9B9B9B
  *
- * 実装: Patrick Collison(s88 v0.43.0 / 2026-05-04)
+ * 実装: Patrick Collison(s88 v0.44.0 / 2026-05-04)
+ * 変更点(v0.43.0→v0.44.0):
+ *   - 呼吸 keyframes を固定値から CSS変数(--breathe-min/max)に変更
+ *   - dept label fill を rgba(255,255,255,0.32) → #9B9B9B に修正(v1.0準拠)
+ *   - 単一 x-breathe-line keyframe で全部門を統一処理
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -94,10 +99,11 @@ export default function XBreathChart({
     if (typeof document === 'undefined') return;
     const handler = () => {
       if (document.hidden) setBreathingActive(false);
+      else if (!isTransitioning) setBreathingActive(true);
     };
     document.addEventListener('visibilitychange', handler);
     return () => document.removeEventListener('visibilitychange', handler);
-  }, []);
+  }, [isTransitioning]);
 
   // IntersectionObserver
   useEffect(() => {
@@ -125,88 +131,151 @@ export default function XBreathChart({
   }, [mode, isTransitioning]);
 
   const breathing = !reduceMotion && breathingActive && !isTransitioning;
-  const allValues = DEPT_ORDER.map(dept => mode === 'revenue' ? departments[dept].revenue : departments[dept].profit);
+  const allValues = DEPT_ORDER.map(dept =>
+    mode === 'revenue' ? departments[dept].revenue : departments[dept].profit
+  );
   const topDept = getTopDept(departments, mode);
   const totalValue = mode === 'revenue' ? totalRevenue : totalProfit;
 
   return (
     <div ref={wrapRef}>
       <style>{`
-        @keyframes x-breathe-yt   { 0%,100%{stroke-width:11.90} 50%{stroke-width:16.10} }
-        @keyframes x-breathe-edit { 0%,100%{stroke-width:5.10}  50%{stroke-width:6.90}  }
-        @keyframes x-breathe-tp   { 0%,100%{stroke-width:7.65}  50%{stroke-width:10.35} }
-        @keyframes x-breathe-sup  { 0%,100%{stroke-width:9.35}  50%{stroke-width:12.65} }
-        @keyframes x-breathe-center { 0%,100%{opacity:1;r:3} 50%{opacity:0.35;r:2} }
-        @keyframes x-collapse { from{stroke-dashoffset:0} to{stroke-dashoffset:100} }
-        @keyframes x-redraw   { from{stroke-dashoffset:100} to{stroke-dashoffset:0}   }
-        .xb-yt   {animation:x-breathe-yt   2.4s ease-in-out infinite}
-        .xb-edit {animation:x-breathe-edit 2.4s ease-in-out infinite}
-        .xb-tp   {animation:x-breathe-tp   2.4s ease-in-out infinite}
-        .xb-sup  {animation:x-breathe-sup  2.4s ease-in-out infinite}
-        .xb-center   {animation:x-breathe-center 2.4s ease-in-out infinite}
-        .xb-collapse {stroke-dasharray:100;animation:x-collapse 300ms cubic-bezier(0.4,0,1,1) forwards}
-        .xb-redraw   {stroke-dasharray:100;animation:x-redraw   500ms cubic-bezier(0.16,1,0.3,1) forwards}
-        @media(prefers-reduced-motion:reduce){
-          .xb-yt,.xb-edit,.xb-tp,.xb-sup,.xb-center,.xb-collapse,.xb-redraw{animation:none!important}
+        /* 呼吸: CSS変数(--breathe-min / --breathe-max)で各線のリアル幅を参照 */
+        @keyframes x-breathe-line {
+          0%, 100% { stroke-width: var(--breathe-min); }
+          50%       { stroke-width: var(--breathe-max); }
         }
-        .xb-toggle-row{display:flex;gap:0;margin-bottom:20px}
-        .xb-btn{
-          background:transparent;border:none;padding:0 16px;
-          min-height:44px;min-width:44px;cursor:pointer;
-          font-family:'Saira Condensed',sans-serif;font-size:15px;
-          letter-spacing:0.15em;color:rgba(255,255,255,0.38);
-          position:relative;transition:color 280ms ease-out;text-transform:uppercase;
+        @keyframes x-breathe-center {
+          0%, 100% { opacity: 1;    }
+          50%       { opacity: 0.35; }
         }
-        .xb-btn.active{color:rgba(255,255,255,0.92)}
-        .xb-btn.active::after{
-          content:'';position:absolute;bottom:0;left:12px;right:12px;
-          height:1px;background:#b8893a;
+        @keyframes x-collapse {
+          from { stroke-dashoffset: 0;   }
+          to   { stroke-dashoffset: 100; }
         }
-        .xb-btn:disabled{cursor:wait}
-        .xb-total{margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid rgba(255,255,255,0.06)}
-        .xb-total-label{
-          display:block;font-family:'Saira Condensed',sans-serif;
-          font-size:11px;letter-spacing:0.2em;color:rgba(255,255,255,0.32);
-          text-transform:uppercase;margin-bottom:6px;
+        @keyframes x-redraw {
+          from { stroke-dashoffset: 100; }
+          to   { stroke-dashoffset: 0;   }
         }
-        .xb-total-value{
-          display:block;font-family:'Big Shoulders Display',sans-serif;
-          font-weight:900;font-size:32px;color:rgba(255,255,255,0.92);
-          line-height:1;letter-spacing:-0.01em;
+        .xb-line-breathing {
+          animation: x-breathe-line 2.4s ease-in-out infinite;
         }
-        .xb-total-value.neg{color:#aa2a2a}
-        .xb-grid{
-          display:grid;grid-template-columns:1fr 1fr;
-          gap:48px;align-items:center;
+        .xb-center-breathing {
+          animation: x-breathe-center 2.4s ease-in-out infinite;
         }
-        .xb-svg-wrap{
-          background:rgba(255,255,255,0.02);
-          padding:32px;border:1px solid rgba(255,255,255,0.06);
+        .xb-collapse {
+          stroke-dasharray: 100;
+          animation: x-collapse 300ms cubic-bezier(0.4, 0, 1, 1) forwards;
         }
-        .xb-explainer h4{
-          font-family:'Saira Condensed',sans-serif;font-size:15px;
-          letter-spacing:0.08em;color:rgba(255,255,255,0.92);
-          font-weight:400;margin:0 0 16px;line-height:1.5;
+        .xb-redraw {
+          stroke-dasharray: 100;
+          animation: x-redraw 500ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
-        .xb-explainer p{
-          font-family:'Noto Sans JP',sans-serif;font-size:12px;
-          color:rgba(255,255,255,0.38);line-height:1.8;
-          margin:0 0 12px;letter-spacing:0.04em;
+        @media (prefers-reduced-motion: reduce) {
+          .xb-line-breathing,
+          .xb-center-breathing,
+          .xb-collapse,
+          .xb-redraw { animation: none !important; }
         }
-        @media(max-width:768px){.xb-grid{grid-template-columns:1fr}}
+        .xb-toggle-row {
+          display: flex;
+          gap: 0;
+          margin-bottom: 20px;
+        }
+        .xb-btn {
+          background: transparent;
+          border: none;
+          padding: 0 16px;
+          min-height: 44px;
+          min-width: 44px;
+          cursor: pointer;
+          font-family: 'Saira Condensed', sans-serif;
+          font-size: 15px;
+          letter-spacing: 0.15em;
+          color: rgba(255, 255, 255, 0.38);
+          position: relative;
+          transition: color 280ms ease-out;
+          text-transform: uppercase;
+        }
+        .xb-btn.active { color: rgba(255, 255, 255, 0.92); }
+        .xb-btn.active::after {
+          content: '';
+          position: absolute;
+          bottom: 0;
+          left: 12px;
+          right: 12px;
+          height: 1px;
+          background: #b8893a;
+        }
+        .xb-btn:disabled { cursor: wait; }
+        .xb-total {
+          margin-bottom: 24px;
+          padding-bottom: 20px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .xb-total-label {
+          display: block;
+          font-family: 'Saira Condensed', sans-serif;
+          font-size: 11px;
+          letter-spacing: 0.2em;
+          color: rgba(255, 255, 255, 0.32);
+          text-transform: uppercase;
+          margin-bottom: 6px;
+        }
+        .xb-total-value {
+          display: block;
+          font-family: 'Big Shoulders Display', sans-serif;
+          font-weight: 900;
+          font-size: 32px;
+          color: rgba(255, 255, 255, 0.92);
+          line-height: 1;
+          letter-spacing: -0.01em;
+        }
+        .xb-total-value.neg { color: #aa2a2a; }
+        .xb-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 48px;
+          align-items: center;
+        }
+        .xb-svg-wrap {
+          background: rgba(255, 255, 255, 0.02);
+          padding: 32px;
+          border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .xb-explainer h4 {
+          font-family: 'Saira Condensed', sans-serif;
+          font-size: 15px;
+          letter-spacing: 0.08em;
+          color: rgba(255, 255, 255, 0.92);
+          font-weight: 400;
+          margin: 0 0 16px;
+          line-height: 1.5;
+        }
+        .xb-explainer p {
+          font-family: 'Noto Sans JP', sans-serif;
+          font-size: 12px;
+          color: rgba(255, 255, 255, 0.38);
+          line-height: 1.8;
+          margin: 0 0 12px;
+          letter-spacing: 0.04em;
+        }
+        @media (max-width: 768px) {
+          .xb-grid { grid-template-columns: 1fr; }
+        }
       `}</style>
 
       {/* トグル */}
       <div className="xb-toggle-row">
-        {(['revenue','profit'] as const).map(m => (
+        {(['revenue', 'profit'] as const).map(m => (
           <button
             key={m}
-            className={`xb-btn${mode===m?' active':''}`}
+            className={`xb-btn${mode === m ? ' active' : ''}`}
             onClick={() => handleToggle(m)}
             disabled={isTransitioning}
-            aria-pressed={mode===m}
+            aria-pressed={mode === m}
           >
-            {m==='revenue'?'売上':'利益'}
+            {m === 'revenue' ? '売上' : '利益'}
           </button>
         ))}
       </div>
@@ -214,9 +283,9 @@ export default function XBreathChart({
       {/* TOTAL 合計 */}
       <div className="xb-total">
         <span className="xb-total-label">
-          {mode==='revenue'?'TOTAL REVENUE':'TOTAL PROFIT'}
+          {mode === 'revenue' ? 'TOTAL REVENUE' : 'TOTAL PROFIT'}
         </span>
-        <span className={`xb-total-value${mode==='profit'&&totalValue<0?' neg':''}`}>
+        <span className={`xb-total-value${mode === 'profit' && totalValue < 0 ? ' neg' : ''}`}>
           {formatM(totalValue)}
         </span>
       </div>
@@ -227,26 +296,30 @@ export default function XBreathChart({
           <svg
             viewBox="0 0 400 420"
             xmlns="http://www.w3.org/2000/svg"
-            style={{width:'100%',height:'auto',display:'block'}}
+            style={{ width: '100%', height: 'auto', display: 'block' }}
             role="img"
-            aria-label={`事業部別${mode==='revenue'?'売上':'利益'} X 呼吸チャート`}
+            aria-label={`事業部別${mode === 'revenue' ? '売上' : '利益'} X 呼吸チャート`}
           >
             {DEPT_ORDER.map((dept) => {
               const cfg = DEPT_CONFIG[dept];
-              const value = mode==='revenue' ? departments[dept].revenue : departments[dept].profit;
+              const value = mode === 'revenue' ? departments[dept].revenue : departments[dept].profit;
               const w = calcWidth(value, allValues);
+              const breatheMin = (w * 0.85).toFixed(2);
+              const breatheMax = (w * 1.15).toFixed(2);
 
               let strokeColor: string;
-              if (mode==='profit' && value<0) {
+              if (mode === 'profit' && value < 0) {
                 strokeColor = '#aa2a2a';
-              } else if (dept===topDept) {
+              } else if (dept === topDept) {
                 strokeColor = '#b8893a';
               } else {
                 strokeColor = '#fafaf6';
               }
 
-              const breathClass = breathing ? `xb-${dept.toLowerCase()}` : '';
-              const transClass  = isTransitioning ? 'xb-redraw' : '';
+              // クラス: 呼吸 or トランジション
+              let lineClass = '';
+              if (isTransitioning) lineClass = 'xb-redraw';
+              else if (breathing) lineClass = 'xb-line-breathing';
 
               return (
                 <g key={dept} data-dept={dept}>
@@ -257,42 +330,49 @@ export default function XBreathChart({
                     strokeWidth={w}
                     strokeLinecap="butt"
                     pathLength={100}
-                    className={[breathClass, transClass].filter(Boolean).join(' ')}
+                    className={lineClass}
                     style={{
+                      // CSS変数で呼吸幅をリアルデータ基準に設定
+                      ['--breathe-min' as string]: breatheMin,
+                      ['--breathe-max' as string]: breatheMax,
                       transition: reduceMotion
                         ? 'none'
-                        : 'stroke 600ms ease-in-out, stroke-width 800ms cubic-bezier(0.16,1,0.3,1)',
+                        : 'stroke 600ms ease-in-out, stroke-width 800ms cubic-bezier(0.16, 1, 0.3, 1)',
                     }}
                   />
+                  {/* dept label: v1.0準拠 fill=#9B9B9B */}
                   <text
                     x={cfg.labelX} y={cfg.labelY}
                     textAnchor={cfg.anchor}
                     fontFamily="'Saira Condensed', sans-serif"
-                    fontSize={13} fill="rgba(255,255,255,0.32)"
+                    fontSize={13}
+                    fill="#9B9B9B"
                     letterSpacing="0.2em"
                   >{dept}</text>
+                  {/* money: v1.0準拠 Big Shoulders 26px */}
                   <text
                     x={cfg.labelX} y={cfg.moneyY}
                     textAnchor={cfg.anchor}
                     fontFamily="'Big Shoulders Display', sans-serif"
-                    fontWeight={900} fontSize={26}
-                    fill={mode==='profit'&&value<0 ? '#aa2a2a' : '#fafaf6'}
-                    style={{transition: reduceMotion?'none':'fill 600ms ease-in-out'}}
+                    fontWeight={900}
+                    fontSize={26}
+                    fill={mode === 'profit' && value < 0 ? '#aa2a2a' : '#fafaf6'}
+                    style={{ transition: reduceMotion ? 'none' : 'fill 600ms ease-in-out' }}
                   >{formatM(value)}</text>
                 </g>
               );
             })}
 
-            {/* 中心点 = 間 */}
+            {/* 中心点 = 間(ま): cx=200 cy=200 r=3 fill=#b8893a */}
             <circle
               cx={200} cy={200} r={3}
               fill="#b8893a"
-              className={breathing ? 'xb-center' : ''}
+              className={breathing ? 'xb-center-breathing' : ''}
             />
           </svg>
         </div>
 
-        {/* 説明エリア(金額一覧表示禁止・テキストのみ) */}
+        {/* 説明エリア(指示書§3.3準拠・金額一覧表示禁止・テキストのみ) */}
         <div className="xb-explainer">
           <h4>4本の線が<br />事業4部門の温度を語る</h4>
           <p>
