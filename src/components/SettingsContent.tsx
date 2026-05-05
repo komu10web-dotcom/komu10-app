@@ -11,7 +11,6 @@ import TransportFields, { EMPTY_TRANSPORT } from '@/components/TransportFields';
 import type { TransportData } from '@/components/TransportFields';
 import InvoiceTemplateModal from '@/components/InvoiceTemplateModal';
 import RenameReceiptsSection from '@/components/RenameReceiptsSection';
-import XLineTaper from '@/components/XLineTaper';
 
 // ============================================================
 // 定数
@@ -1995,11 +1994,6 @@ export default function SettingsContent() {
       <div className="max-w-3xl mx-auto px-6 py-8">
         {/* ── ヘッダー(VOLUME 06 SETTINGS + X ライン Type I-3 対称) ── */}
         <div className="mb-8 pb-5">
-          {/* canon-x-line-applications §3.4 配置#4 (設定ページセクション境界)
-              Type I-3 対称 / stroke 1.0pt / テーパー率 20% / X Black 単色(明背景) */}
-          <div style={{ marginBottom: 28 }}>
-            <XLineTaper type="I-3" color="black-solid" />
-          </div>
           <p className="font-['Saira_Condensed'] text-[11px] tracking-[0.3em] text-app-gold mb-3 font-medium">
             VOLUME 06 · SETTINGS · {ownerLabel}
           </p>

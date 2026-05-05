@@ -8,7 +8,7 @@ const navItems = [
   { href: '/expenses', label: '経費' },
   { href: '/income', label: '売上' },
   { href: '/tax-return', label: '確定申告' },
-  { href: '/management', label: '経営' },
+  // { href: '/management', label: '経営' }, // s93: 経営画面非表示(ボス指示・v0.50.0)
   { href: '/simulation', label: '案件検討' },
   { href: '/settings', label: '設定' },
 ];

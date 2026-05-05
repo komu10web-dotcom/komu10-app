@@ -30,10 +30,8 @@ import { DIVISIONS, KAMOKU } from '@/types/database';
 import type { Transaction, Project, TransactionAllocation, BankAccount } from '@/types/database';
 import { Loader2 } from 'lucide-react';
 import AnimatedChapterTitle from './AnimatedChapterTitle';
-import XLineFlash from './XLineFlash';
 import XStepIndicator, { rateToState } from './XStepIndicator';
 import XBreathChart from './XBreathChart';
-import XLineTaper from './XLineTaper';
 import { usePeriodRange } from './HeaderControls';
 import { useViewport } from '@/lib/useViewport';
 import { useReducedMotion } from '@/lib/useReducedMotion';
@@ -516,7 +514,6 @@ export default function ManagementContentRenaissance() {
           </div>
 
           {/* Phase 1.5b X ライン武器化(session78 確定) — header 下端で画面横一閃 */}
-          <XLineFlash storageKey="management-desktop" />
         </header>
 
         {/* Phase 1.5b: 静的 X ライン削除済(session77)
@@ -674,7 +671,6 @@ function MobileView({ appeared, year, revenueTotal, expenseTotal, profitTotal, p
           </h2>
 
           {/* Phase 1.5b X ライン武器化(session78 確定) — header 下端 */}
-          <XLineFlash storageKey="management-mobile" />
         </header>
 
         <section style={{ marginBottom: 40 }}>
@@ -1112,7 +1108,6 @@ function Section({ num, title, tone = 'normal', children }: {
             stroke 0.6pt / テーパー率 32% / 暗背景 X Milk ⇄ X Gold グラデ
             (節レベルの細線・章扉の Type II-5 より小さい階層) */}
         <div style={{ maxWidth: 320 }}>
-          <XLineTaper type="II-2" direction="forward" color="gold-on-dark" />
         </div>
       </div>
       {children}

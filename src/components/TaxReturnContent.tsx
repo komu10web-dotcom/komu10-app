@@ -6,7 +6,6 @@ import { KAMOKU } from '@/types/database';
 import type { Transaction, Asset, AnbunSetting, FundTransfer, BankAccount } from '@/types/database';
 import { Copy, Check, Download, Loader2, AlertTriangle } from 'lucide-react';
 import { usePeriodRange } from './HeaderControls';
-import XLineTaper from '@/components/XLineTaper';
 
 // ============================================================
 // 型定義
@@ -569,11 +568,6 @@ export default function TaxReturnContent() {
       <div className="max-w-3xl mx-auto px-6 py-8">
         {/* ── ヘッダー(CHAPTER · TAX RETURN + X ライン Type II-5 Forward 章扉・暗背景) ── */}
         <div className="mb-10">
-          {/* canon-x-line-applications §3.1 配置#1 (章扉・暗背景)
-              Type II-5 / stroke 2.6pt / テーパー率 8% / X Milk ⇄ X Gold グラデ */}
-          <div style={{ marginBottom: 28 }}>
-            <XLineTaper type="II-5" direction="forward" color="gold-on-dark" animate />
-          </div>
           <p className="font-['Saira_Condensed'] text-[11px] tracking-[0.3em] mb-3 font-medium" style={{ color: '#B8893A' }}>
             CHAPTER · {year}
           </p>

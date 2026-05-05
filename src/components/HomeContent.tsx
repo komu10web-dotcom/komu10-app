@@ -9,7 +9,6 @@ import Link from 'next/link';
 import { usePeriodRange } from './HeaderControls';
 import TransactionModal from '@/components/TransactionModal';
 import BulkReceiptModal from '@/components/BulkReceiptModal';
-import XLineTaper from '@/components/XLineTaper';
 
 interface TransactionRow {
   id: string;
@@ -147,11 +146,6 @@ export default function HomeContent() {
 
         {/* ── ヘッダー(VOLUME 01 + day by day + X ライン Type II-3 Forward) ── */}
         <header className="pb-6">
-          {/* canon-x-line-applications §3.3 配置#3 (HOME 大型見出し下)
-              Type II-3 / stroke 1.0pt / テーパー率 8%(s89 課題§6.1 適合化済)/ X Black ⇄ X Gold グラデ */}
-          <div style={{ marginBottom: 24 }}>
-            <XLineTaper type="II-3" direction="forward" color="gold-on-light" animate />
-          </div>
           <p className="font-['Saira_Condensed'] text-[11px] tracking-[0.3em] text-app-gold mb-5 font-medium uppercase">
             VOLUME 01 · HOME
           </p>

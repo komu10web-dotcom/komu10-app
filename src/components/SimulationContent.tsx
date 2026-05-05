@@ -6,7 +6,6 @@ import { DIVISIONS } from '@/types/database';
 import type { Transaction } from '@/types/database';
 import { Plus, Trash2 } from 'lucide-react';
 import { usePeriodRange } from './HeaderControls';
-import XLineTaper from '@/components/XLineTaper';
 
 // ========== ヘルパー ==========
 
@@ -117,11 +116,6 @@ export default function SimulationContent() {
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* ── ヘッダー(VOLUME 04 SIMULATION + X ライン Type II-5 Forward 章扉) ── */}
         <div className="mb-8 pb-5">
-          {/* canon-x-line-applications §3.1 配置#1 (章扉)
-              Type II-5 / stroke 2.6pt / テーパー率 8% / X Black ⇄ X Gold グラデ */}
-          <div style={{ marginBottom: 28 }}>
-            <XLineTaper type="II-5" direction="forward" color="gold-on-light" animate />
-          </div>
           <p className="font-['Saira_Condensed'] text-[11px] tracking-[0.3em] text-app-gold mb-3 font-medium">
             VOLUME 04 · SIMULATION
           </p>
