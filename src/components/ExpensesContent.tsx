@@ -249,16 +249,27 @@ export default function ExpensesContent() {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen" style={{ background: '#FAFAF6' }}>
       <div className="max-w-5xl mx-auto px-6 py-8">
 
-        {/* ── ヘッダー(δ案語彙・明色基調・縦積み構造) ── */}
-        <div className="mb-8 pb-5 border-b border-app-line-medium">
+        {/* ── ヘッダー(VOLUME 02 + X ライン Type II + 牛乳色) ── */}
+        <div className="mb-8 pb-5">
+          {/* X ライン Type II 非対称テーパー */}
+          <svg width="100%" height="3" viewBox="0 0 200 3" preserveAspectRatio="none" style={{ marginBottom: 24, display: 'block' }}>
+            <defs>
+              <linearGradient id="x-line-expenses" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%"   stopColor="#B8893A" stopOpacity="0" />
+                <stop offset="20%"  stopColor="#B8893A" stopOpacity="1" />
+                <stop offset="100%" stopColor="#0A0A0B" stopOpacity="1" />
+              </linearGradient>
+            </defs>
+            <line x1="0" y1="1.5" x2="200" y2="1.5" stroke="url(#x-line-expenses)" strokeWidth="1.6" strokeLinecap="butt" />
+          </svg>
           <div>
             <p className="font-['Saira_Condensed'] text-[11px] tracking-[0.3em] text-app-gold mb-3 font-medium">
               VOLUME 02 · EXPENSES
             </p>
-            <h1 className="font-['Shippori_Mincho'] text-[26px] font-normal text-app-text leading-[1.4] tracking-[0.03em]">
+            <h1 className="font-['Shippori_Mincho'] font-normal text-app-text" style={{ fontSize: 40, fontWeight: 400, letterSpacing: '0.01em', lineHeight: 1.15 }}>
               いくら、投じているか。
             </h1>
           </div>

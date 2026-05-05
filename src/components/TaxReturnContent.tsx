@@ -557,24 +557,41 @@ export default function TaxReturnContent() {
   // ============================================================
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#0a1424' }}>
         <Loader2 className="w-5 h-5 text-app-gold animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen" style={{ background: '#0a1424' /* ink-deep */ }}>
       <div className="max-w-3xl mx-auto px-6 py-8">
-        {/* ヘッダー */}
-        <div className="mb-8">
-          <h1 className="font-['Shippori_Mincho'] text-xl text-app-text">
-            {year}年 確定申告サマリー
-          </h1>
-          <p className="text-[10px] font-light tracking-wider text-app-text-mute mt-1 mb-4">
-            TAX RETURN — {ownerLabel}
+        {/* ── ヘッダー(CHAPTER · TAX RETURN + X ライン Type II + 暗色) ── */}
+        <div className="mb-10">
+          {/* X ライン Type II */}
+          <svg width="100%" height="3" viewBox="0 0 200 3" preserveAspectRatio="none" style={{ marginBottom: 28, display: 'block' }}>
+            <defs>
+              <linearGradient id="x-line-tax" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%"   stopColor="#B8893A" stopOpacity="0" />
+                <stop offset="20%"  stopColor="#B8893A" stopOpacity="1" />
+                <stop offset="100%" stopColor="#FAFAF6" stopOpacity="0.6" />
+              </linearGradient>
+            </defs>
+            <line x1="0" y1="1.5" x2="200" y2="1.5" stroke="url(#x-line-tax)" strokeWidth="1.6" strokeLinecap="butt" />
+          </svg>
+          <p className="font-['Saira_Condensed'] text-[11px] tracking-[0.3em] mb-3 font-medium" style={{ color: '#B8893A' }}>
+            CHAPTER · {year}
           </p>
-          <p className="text-xs text-app-text-sub leading-relaxed">
+          <h1 className="font-['Saira_Condensed'] text-white" style={{ fontSize: 56, fontWeight: 400, letterSpacing: '-0.02em', lineHeight: 1, marginBottom: 16, textTransform: 'uppercase' }}>
+            TAX RETURN
+          </h1>
+          <p className="font-['Shippori_Mincho']" style={{ fontSize: 22, color: 'rgba(255,255,255,0.85)', letterSpacing: '0.04em', lineHeight: 1.5, marginBottom: 8 }}>
+            {year}年、いくら納めるのか。
+          </p>
+          <p className="font-['Shippori_Mincho']" style={{ fontSize: 14, color: 'rgba(255,255,255,0.55)', letterSpacing: '0.04em', lineHeight: 1.6 }}>
+            — {ownerLabel} ・ E-TAX 転記用
+          </p>
+          <p className="text-xs leading-relaxed mt-5" style={{ color: 'rgba(255,255,255,0.65)' }}>
             この画面の数字をE-TAXに転記してください。
             <br />
             科目別の金額は📋ボタンでコピーできます。

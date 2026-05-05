@@ -112,12 +112,28 @@ export default function SimulationContent() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      {/* ヘッダー */}
-      <div className="mb-8">
-        <h1 className="font-['Shippori_Mincho'] text-xl text-app-text">案件検討</h1>
-        <p className="text-[10px] font-light tracking-wider text-app-text-mute mt-1">SIMULATION</p>
-      </div>
+    <div className="min-h-screen" style={{ background: '#FAFAF6' }}>
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        {/* ── ヘッダー(VOLUME 04 + X ライン Type II + 牛乳色) ── */}
+        <div className="mb-8 pb-5">
+          {/* X ライン Type II */}
+          <svg width="100%" height="3" viewBox="0 0 200 3" preserveAspectRatio="none" style={{ marginBottom: 24, display: 'block' }}>
+            <defs>
+              <linearGradient id="x-line-sim" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%"   stopColor="#B8893A" stopOpacity="0" />
+                <stop offset="20%"  stopColor="#B8893A" stopOpacity="1" />
+                <stop offset="100%" stopColor="#0A0A0B" stopOpacity="1" />
+              </linearGradient>
+            </defs>
+            <line x1="0" y1="1.5" x2="200" y2="1.5" stroke="url(#x-line-sim)" strokeWidth="1.6" strokeLinecap="butt" />
+          </svg>
+          <p className="font-['Saira_Condensed'] text-[11px] tracking-[0.3em] text-app-gold mb-3 font-medium">
+            VOLUME 04 · SIMULATION
+          </p>
+          <h1 className="font-['Shippori_Mincho'] font-normal text-app-text" style={{ fontSize: 40, fontWeight: 400, letterSpacing: '0.01em', lineHeight: 1.15 }}>
+            これから、何が立ち上がるか。
+          </h1>
+        </div>
 
       {/* ── 着地予測KPI ── */}
       <div className="grid grid-cols-3 gap-4 mb-6">
@@ -306,6 +322,7 @@ export default function SimulationContent() {
           </div>
         )}
       </div>
+    </div>
     </div>
   );
 }

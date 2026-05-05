@@ -1972,7 +1972,7 @@ export default function SettingsContent() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen" style={{ background: '#FAFAF6' }}>
       {/* v0.14.1: フラッシュメッセージ（保存成功/失敗/重複の即時フィードバック） */}
       {flash && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] pointer-events-none">
@@ -1992,12 +1992,23 @@ export default function SettingsContent() {
         </div>
       )}
       <div className="max-w-3xl mx-auto px-6 py-8">
-        {/* ヘッダー + タブ(δ案語彙・明色基調) */}
-        <div className="mb-8 pb-5 border-b border-app-line-medium">
+        {/* ── ヘッダー(VOLUME 06 + X ライン Type II) ── */}
+        <div className="mb-8 pb-5">
+          {/* X ライン Type II */}
+          <svg width="100%" height="3" viewBox="0 0 200 3" preserveAspectRatio="none" style={{ marginBottom: 24, display: 'block' }}>
+            <defs>
+              <linearGradient id="x-line-settings" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%"   stopColor="#B8893A" stopOpacity="0" />
+                <stop offset="20%"  stopColor="#B8893A" stopOpacity="1" />
+                <stop offset="100%" stopColor="#0A0A0B" stopOpacity="1" />
+              </linearGradient>
+            </defs>
+            <line x1="0" y1="1.5" x2="200" y2="1.5" stroke="url(#x-line-settings)" strokeWidth="1.6" strokeLinecap="butt" />
+          </svg>
           <p className="font-['Saira_Condensed'] text-[11px] tracking-[0.3em] text-app-gold mb-3 font-medium">
             VOLUME 06 · SETTINGS · {ownerLabel}
           </p>
-          <h1 className="font-['Shippori_Mincho'] text-[26px] font-normal text-app-text leading-[1.4] tracking-[0.03em]">
+          <h1 className="font-['Shippori_Mincho'] font-normal text-app-text" style={{ fontSize: 40, fontWeight: 400, letterSpacing: '0.01em', lineHeight: 1.15 }}>
             ここで、ルールを決める。
           </h1>
           <div className="flex gap-6 mt-6 border-b border-app-line-medium -mb-5">
