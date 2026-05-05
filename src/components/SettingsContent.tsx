@@ -11,6 +11,7 @@ import TransportFields, { EMPTY_TRANSPORT } from '@/components/TransportFields';
 import type { TransportData } from '@/components/TransportFields';
 import InvoiceTemplateModal from '@/components/InvoiceTemplateModal';
 import RenameReceiptsSection from '@/components/RenameReceiptsSection';
+import XLineTaper from '@/components/XLineTaper';
 
 // ============================================================
 // 定数
@@ -1992,19 +1993,13 @@ export default function SettingsContent() {
         </div>
       )}
       <div className="max-w-3xl mx-auto px-6 py-8">
-        {/* ── ヘッダー(VOLUME 06 + X ライン Type II) ── */}
+        {/* ── ヘッダー(VOLUME 06 SETTINGS + X ライン Type I-3 対称) ── */}
         <div className="mb-8 pb-5">
-          {/* X ライン Type II */}
-          <svg width="100%" height="3" viewBox="0 0 200 3" preserveAspectRatio="none" style={{ marginBottom: 24, display: 'block' }}>
-            <defs>
-              <linearGradient id="x-line-settings" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%"   stopColor="#B8893A" stopOpacity="0" />
-                <stop offset="20%"  stopColor="#B8893A" stopOpacity="1" />
-                <stop offset="100%" stopColor="#0A0A0B" stopOpacity="1" />
-              </linearGradient>
-            </defs>
-            <line x1="0" y1="1.5" x2="200" y2="1.5" stroke="url(#x-line-settings)" strokeWidth="1.6" strokeLinecap="butt" />
-          </svg>
+          {/* canon-x-line-applications §3.4 配置#4 (設定ページセクション境界)
+              Type I-3 対称 / stroke 1.0pt / テーパー率 20% / X Black 単色(明背景) */}
+          <div style={{ marginBottom: 28 }}>
+            <XLineTaper type="I-3" color="black-solid" />
+          </div>
           <p className="font-['Saira_Condensed'] text-[11px] tracking-[0.3em] text-app-gold mb-3 font-medium">
             VOLUME 06 · SETTINGS · {ownerLabel}
           </p>

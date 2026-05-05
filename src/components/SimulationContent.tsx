@@ -6,6 +6,7 @@ import { DIVISIONS } from '@/types/database';
 import type { Transaction } from '@/types/database';
 import { Plus, Trash2 } from 'lucide-react';
 import { usePeriodRange } from './HeaderControls';
+import XLineTaper from '@/components/XLineTaper';
 
 // ========== ヘルパー ==========
 
@@ -114,19 +115,13 @@ export default function SimulationContent() {
   return (
     <div className="min-h-screen" style={{ background: '#FAFAF6' }}>
       <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* ── ヘッダー(VOLUME 04 + X ライン Type II + 牛乳色) ── */}
+        {/* ── ヘッダー(VOLUME 04 SIMULATION + X ライン Type II-5 Forward 章扉) ── */}
         <div className="mb-8 pb-5">
-          {/* X ライン Type II */}
-          <svg width="100%" height="3" viewBox="0 0 200 3" preserveAspectRatio="none" style={{ marginBottom: 24, display: 'block' }}>
-            <defs>
-              <linearGradient id="x-line-sim" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%"   stopColor="#B8893A" stopOpacity="0" />
-                <stop offset="20%"  stopColor="#B8893A" stopOpacity="1" />
-                <stop offset="100%" stopColor="#0A0A0B" stopOpacity="1" />
-              </linearGradient>
-            </defs>
-            <line x1="0" y1="1.5" x2="200" y2="1.5" stroke="url(#x-line-sim)" strokeWidth="1.6" strokeLinecap="butt" />
-          </svg>
+          {/* canon-x-line-applications §3.1 配置#1 (章扉)
+              Type II-5 / stroke 2.6pt / テーパー率 8% / X Black ⇄ X Gold グラデ */}
+          <div style={{ marginBottom: 28 }}>
+            <XLineTaper type="II-5" direction="forward" color="gold-on-light" animate />
+          </div>
           <p className="font-['Saira_Condensed'] text-[11px] tracking-[0.3em] text-app-gold mb-3 font-medium">
             VOLUME 04 · SIMULATION
           </p>

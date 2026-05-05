@@ -6,6 +6,7 @@ import { KAMOKU } from '@/types/database';
 import type { Transaction, Asset, AnbunSetting, FundTransfer, BankAccount } from '@/types/database';
 import { Copy, Check, Download, Loader2, AlertTriangle } from 'lucide-react';
 import { usePeriodRange } from './HeaderControls';
+import XLineTaper from '@/components/XLineTaper';
 
 // ============================================================
 // 型定義
@@ -566,19 +567,13 @@ export default function TaxReturnContent() {
   return (
     <div className="min-h-screen" style={{ background: '#0a1424' /* ink-deep */ }}>
       <div className="max-w-3xl mx-auto px-6 py-8">
-        {/* ── ヘッダー(CHAPTER · TAX RETURN + X ライン Type II + 暗色) ── */}
+        {/* ── ヘッダー(CHAPTER · TAX RETURN + X ライン Type II-5 Forward 章扉・暗背景) ── */}
         <div className="mb-10">
-          {/* X ライン Type II */}
-          <svg width="100%" height="3" viewBox="0 0 200 3" preserveAspectRatio="none" style={{ marginBottom: 28, display: 'block' }}>
-            <defs>
-              <linearGradient id="x-line-tax" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%"   stopColor="#B8893A" stopOpacity="0" />
-                <stop offset="20%"  stopColor="#B8893A" stopOpacity="1" />
-                <stop offset="100%" stopColor="#FAFAF6" stopOpacity="0.6" />
-              </linearGradient>
-            </defs>
-            <line x1="0" y1="1.5" x2="200" y2="1.5" stroke="url(#x-line-tax)" strokeWidth="1.6" strokeLinecap="butt" />
-          </svg>
+          {/* canon-x-line-applications §3.1 配置#1 (章扉・暗背景)
+              Type II-5 / stroke 2.6pt / テーパー率 8% / X Milk ⇄ X Gold グラデ */}
+          <div style={{ marginBottom: 28 }}>
+            <XLineTaper type="II-5" direction="forward" color="gold-on-dark" animate />
+          </div>
           <p className="font-['Saira_Condensed'] text-[11px] tracking-[0.3em] mb-3 font-medium" style={{ color: '#B8893A' }}>
             CHAPTER · {year}
           </p>

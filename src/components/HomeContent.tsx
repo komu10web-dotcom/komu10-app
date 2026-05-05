@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { usePeriodRange } from './HeaderControls';
 import TransactionModal from '@/components/TransactionModal';
 import BulkReceiptModal from '@/components/BulkReceiptModal';
+import XLineTaper from '@/components/XLineTaper';
 
 interface TransactionRow {
   id: string;
@@ -144,19 +145,13 @@ export default function HomeContent() {
     <div className="min-h-screen" style={{ background: '#FAFAF6' /* X Milk = 牛乳色 */ }}>
       <div className="max-w-lg mx-auto px-4 py-8 space-y-6">
 
-        {/* ── ヘッダー(VOLUME 01 + day by day + X ライン Type II) ── */}
+        {/* ── ヘッダー(VOLUME 01 + day by day + X ライン Type II-3 Forward) ── */}
         <header className="pb-6">
-          {/* X ライン Type II 非対称テーパー(canon-brand 第4部・stroke 1.6pt) */}
-          <svg width="100%" height="3" viewBox="0 0 200 3" preserveAspectRatio="none" style={{ marginBottom: 24, display: 'block' }}>
-            <defs>
-              <linearGradient id="x-line-home" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%"   stopColor="#B8893A" stopOpacity="0" />
-                <stop offset="20%"  stopColor="#B8893A" stopOpacity="1" />
-                <stop offset="100%" stopColor="#0A0A0B" stopOpacity="1" />
-              </linearGradient>
-            </defs>
-            <line x1="0" y1="1.5" x2="200" y2="1.5" stroke="url(#x-line-home)" strokeWidth="1.6" strokeLinecap="butt" />
-          </svg>
+          {/* canon-x-line-applications §3.3 配置#3 (HOME 大型見出し下)
+              Type II-3 / stroke 1.0pt / テーパー率 8%(s89 課題§6.1 適合化済)/ X Black ⇄ X Gold グラデ */}
+          <div style={{ marginBottom: 24 }}>
+            <XLineTaper type="II-3" direction="forward" color="gold-on-light" animate />
+          </div>
           <p className="font-['Saira_Condensed'] text-[11px] tracking-[0.3em] text-app-gold mb-5 font-medium uppercase">
             VOLUME 01 · HOME
           </p>

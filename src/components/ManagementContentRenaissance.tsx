@@ -33,6 +33,7 @@ import AnimatedChapterTitle from './AnimatedChapterTitle';
 import XLineFlash from './XLineFlash';
 import XStepIndicator, { rateToState } from './XStepIndicator';
 import XBreathChart from './XBreathChart';
+import XLineTaper from './XLineTaper';
 import { usePeriodRange } from './HeaderControls';
 import { useViewport } from '@/lib/useViewport';
 import { useReducedMotion } from '@/lib/useReducedMotion';
@@ -1087,8 +1088,6 @@ function Section({ num, title, tone = 'normal', children }: {
   // normal = 補助セクション(月別チャート・部門別など)
   // meta   = 末尾のメタ・参考情報
   const sectionMb = tone === 'lead' ? 120 : tone === 'meta' ? 64 : 80;
-  // v0.46.0: 章番号にユニーク id を付与(SVG gradient用)
-  const lineId = `x-line-section-${num.replace(/[^a-zA-Z0-9]/g, '')}`;
   return (
     <section style={{ marginBottom: sectionMb }}>
       <div style={{ marginBottom: 28 }}>
@@ -1109,17 +1108,12 @@ function Section({ num, title, tone = 'normal', children }: {
             {title}
           </span>
         </div>
-        {/* X ライン Type II 非対称テーパー(canon-brand 第4部・stroke 0.6pt・Forward 方向) */}
-        <svg width="100%" height="2" viewBox="0 0 1000 2" preserveAspectRatio="none" style={{ display: 'block', maxWidth: 280 }}>
-          <defs>
-            <linearGradient id={lineId} x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%"   stopColor="#B8893A" stopOpacity="0.0" />
-              <stop offset="15%"  stopColor="#B8893A" stopOpacity="0.7" />
-              <stop offset="100%" stopColor="#B8893A" stopOpacity="0.15" />
-            </linearGradient>
-          </defs>
-          <line x1="0" y1="1" x2="1000" y2="1" stroke={`url(#${lineId})`} strokeWidth="0.6" strokeLinecap="butt" />
-        </svg>
+        {/* canon-x-line v1.1 §3 Type II-2 非対称テーパー
+            stroke 0.6pt / テーパー率 32% / 暗背景 X Milk ⇄ X Gold グラデ
+            (節レベルの細線・章扉の Type II-5 より小さい階層) */}
+        <div style={{ maxWidth: 320 }}>
+          <XLineTaper type="II-2" direction="forward" color="gold-on-dark" />
+        </div>
       </div>
       {children}
     </section>
@@ -1233,21 +1227,27 @@ function PLChart({ data }: { data: { month: number; rev: number; exp: number; pr
                 );
               })}
             </div>
-            {/* 利益折れ線(主役・X Gold・stroke 太め) */}
+            {/* 利益折れ線(主役・X Gold・stroke 太め・描画アニメ) */}
             <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }} preserveAspectRatio="none" viewBox="0 0 100 100">
-              {/* 着地見込み利益(全status・点線・薄め) */}
+              {/* 着地見込み利益(全status・点線・薄め・遅延描画) */}
               <polyline
                 fill="none"
                 stroke="#B8893A"
                 strokeWidth="0.6"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                strokeDasharray="2 1.5"
-                strokeOpacity="0.55"
+                strokeDasharray={reduceMotion ? "2 1.5" : undefined}
+                strokeOpacity={reduceMotion ? 0.55 : undefined}
                 vectorEffect="non-scaling-stroke"
                 points={forecastLine}
+                style={reduceMotion ? undefined : {
+                  strokeDasharray: '300',
+                  strokeDashoffset: '300',
+                  strokeOpacity: 0.55,
+                  animation: 'xline-draw-dashed 1400ms 800ms ease-out forwards, xline-fade-in 600ms 800ms ease-out forwards',
+                }}
               />
-              {/* 確定利益(settled のみ・実線・太め=主役) */}
+              {/* 確定利益(settled のみ・実線・太め=主役・先行描画) */}
               {lastSettledIdx >= 0 && (
                 <polyline
                   fill="none"
@@ -1257,9 +1257,30 @@ function PLChart({ data }: { data: { month: number; rev: number; exp: number; pr
                   strokeLinejoin="round"
                   vectorEffect="non-scaling-stroke"
                   points={settledLine}
+                  style={reduceMotion ? undefined : {
+                    strokeDasharray: '300',
+                    strokeDashoffset: '300',
+                    animation: 'xline-draw 900ms 200ms ease-out forwards',
+                  }}
                 />
               )}
             </svg>
+            <style jsx>{`
+              @keyframes xline-draw {
+                to { stroke-dashoffset: 0; }
+              }
+              @keyframes xline-draw-dashed {
+                0% { stroke-dashoffset: 300; }
+                100% {
+                  stroke-dashoffset: 0;
+                  stroke-dasharray: 2 1.5;
+                }
+              }
+              @keyframes xline-fade-in {
+                from { opacity: 0; }
+                to { opacity: 1; }
+              }
+            `}</style>
           </div>
           <XAxis />
         </div>
