@@ -6,7 +6,7 @@
 // 1領収書 = 1取引を堅持。Y案(v0.11.0)と棲み分け。
 // ═══════════════════════════════════════════════════════════════
 
-import { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { Upload, X, Loader2, Check, AlertCircle, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { KAMOKU, DIVISIONS, KAMOKU_INPUT_GUIDE, UNASSIGNED_PROJECT_VALUE, UNASSIGNED_PROJECT_LABEL } from '@/types/database';
@@ -364,6 +364,16 @@ export default function BulkReceiptModal({
           </button>
         </div>
 
+        {/* ── 4ステップフロー(現在地呼吸・s90 ハンドオフ・v0.45.0 復元) ── */}
+        <BulkStepFlow
+          rowsCount={rows.length}
+          analyzingCount={analyzingCount}
+          readyCount={readyCount}
+          savingCount={rows.filter(r => r.status === 'saving').length}
+          savedCount={savedCount}
+          allDone={allDone}
+        />
+
         {/* ── コンテンツ ── */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           {/* アップロードエリア */}
@@ -609,6 +619,114 @@ export default function BulkReceiptModal({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ============================================================
+// BulkStepFlow — 4ステップフロー(現在地呼吸・Step Glyph 4.2 作例3 系譜)
+// canon-brand 第2部 Step Glyph 別冊 §3.4(進行状態は明度・透明度で示す)
+// 現在地のみ stroke 14・他は stroke 6 (作例3 規定)
+// ============================================================
+
+interface BulkStepFlowProps {
+  rowsCount: number;
+  analyzingCount: number;
+  readyCount: number;
+  savingCount: number;
+  savedCount: number;
+  allDone: boolean;
+}
+
+type FlowStep = 'upload' | 'analyze' | 'review' | 'done';
+
+function BulkStepFlow({
+  rowsCount,
+  analyzingCount,
+  readyCount,
+  savingCount,
+  savedCount,
+  allDone,
+}: BulkStepFlowProps) {
+  // 現在地判定
+  let currentStep: FlowStep = 'upload';
+  if (allDone) currentStep = 'done';
+  else if (savingCount > 0 || (readyCount > 0 && savedCount > 0)) currentStep = 'review';
+  else if (rowsCount > 0 && analyzingCount > 0) currentStep = 'analyze';
+  else if (rowsCount > 0 && readyCount > 0) currentStep = 'review';
+  else if (rowsCount > 0) currentStep = 'analyze';
+
+  const steps: { key: FlowStep; label: string }[] = [
+    { key: 'upload',  label: 'アップロード' },
+    { key: 'analyze', label: 'AI 解析' },
+    { key: 'review',  label: '確認' },
+    { key: 'done',    label: '登録完了' },
+  ];
+
+  const stepOrder: Record<FlowStep, number> = { upload: 0, analyze: 1, review: 2, done: 3 };
+  const currentIdx = stepOrder[currentStep];
+
+  return (
+    <div className="px-5 py-3 border-b border-app-line bg-app-surface-alt/40 shrink-0">
+      <div className="flex items-center justify-between gap-2">
+        {steps.map((step, idx) => {
+          const isComplete = idx < currentIdx;
+          const isCurrent  = idx === currentIdx;
+          const stroke     = isCurrent ? 14 : 6;
+          // 色: 完了=Black 100%・現在=Gold・未来=Black 25%
+          const color =
+            isCurrent  ? '#B8893A' :
+            isComplete ? '#0A0A0B' :
+                         'rgba(10,10,11,0.25)';
+          const labelColor =
+            isCurrent  ? 'text-app-gold font-medium' :
+            isComplete ? 'text-app-text' :
+                         'text-app-text-mute';
+          return (
+            <React.Fragment key={step.key}>
+              <div className="flex items-center gap-2 min-w-0">
+                <span
+                  className={isCurrent ? 'animate-bulk-step-pulse' : ''}
+                  style={{ display: 'inline-flex', flexShrink: 0 }}
+                  aria-hidden="true"
+                >
+                  <svg width={20} height={20} viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                    <g stroke={color} strokeWidth={stroke} strokeLinecap="butt" fill="none">
+                      <line x1="50" y1="50" x2="92" y2="92" />
+                      <line x1="150" y1="50" x2="108" y2="92" />
+                      <line x1="50" y1="150" x2="92" y2="108" />
+                      <line x1="150" y1="150" x2="108" y2="108" />
+                    </g>
+                  </svg>
+                </span>
+                <span className={`text-[11px] tracking-wide truncate ${labelColor}`}>
+                  {step.label}
+                </span>
+              </div>
+              {idx < steps.length - 1 && (
+                <span
+                  className="flex-1 h-px"
+                  style={{ background: idx < currentIdx ? '#0A0A0B' : 'rgba(10,10,11,0.15)' }}
+                />
+              )}
+            </React.Fragment>
+          );
+        })}
+      </div>
+      <style jsx>{`
+        @keyframes bulk-step-pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50%      { opacity: 0.55; transform: scale(0.92); }
+        }
+        .animate-bulk-step-pulse {
+          animation: bulk-step-pulse 2s ease-in-out infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .animate-bulk-step-pulse {
+            animation: none;
+          }
+        }
+      `}</style>
     </div>
   );
 }

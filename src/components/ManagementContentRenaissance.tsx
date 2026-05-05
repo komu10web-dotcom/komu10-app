@@ -30,6 +30,7 @@ import type { Transaction, Project, TransactionAllocation, BankAccount } from '@
 import { Loader2 } from 'lucide-react';
 import AnimatedChapterTitle from './AnimatedChapterTitle';
 import XLineFlash from './XLineFlash';
+import XStepIndicator, { rateToState } from './XStepIndicator';
 import XBreathChart from './XBreathChart';
 import { usePeriodRange } from './HeaderControls';
 import { useViewport } from '@/lib/useViewport';
@@ -1697,7 +1698,7 @@ function ProjectTable({ items }: { items: { id: string; name: string; division: 
       </div>
 
       {items.map(p => {
-        const dotColor = p.rate >= 50 ? C.gold : p.rate >= 20 ? C.green : p.profit < 0 ? C.crimson : C.textMute;
+        const stepState = rateToState(p.rate, p.profit);
         const barColor = p.profit >= 0 ? C.green : C.crimson;
         const barWidth = Math.min(Math.abs(p.rate), 100);
         return (
@@ -1712,7 +1713,7 @@ function ProjectTable({ items }: { items: { id: string; name: string; division: 
               alignItems: 'center',
             }}
           >
-            <span style={{ width: 10, height: 10, background: dotColor, display: 'inline-block', alignSelf: 'center' }} />
+            <XStepIndicator state={stepState} size={16} stroke={3} />
             <span style={{ fontFamily: F.jp, fontSize: T.t5, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {p.name}
             </span>

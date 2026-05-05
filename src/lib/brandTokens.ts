@@ -70,9 +70,10 @@ export const APP_LIGHT = {
 // session77 改訂: themoneybook 主役色を暗背景版で追加
 // ============================================================
 export const APP_DARK = {
-  bg:        '#0a0a0b',   // X Black
-  surface:   '#131316',
-  surfaceHi: '#1a1a1f',
+  bg:        '#0a1424',   // ink-deep / ミッドナイトインク深部(s86-s87 ボス確定・経営/観賞モード背景)
+  bgPureBlack: '#0a0a0b', // X Black(必要時に参照可・原則使わない)
+  surface:   '#131525',   // bg より一段明るい・サーフェス
+  surfaceHi: '#1a1d2f',   // 強調サーフェス
   line:        'rgba(255,255,255,0.08)',
   lineSoft:    'rgba(255,255,255,0.04)',
   text:        'rgba(255,255,255,0.92)',
