@@ -24,6 +24,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { DIVISIONS, KAMOKU } from '@/types/database';
 import type { Transaction, Project, TransactionAllocation, BankAccount } from '@/types/database';
@@ -88,6 +89,19 @@ export default function ManagementContentRenaissance() {
   const { isWide, mounted } = useViewport();
   // session77 Phase 1 軸4: prefers-reduced-motion 対応(WCAG / Léonie Watson 必須)
   const reduceMotion = useReducedMotion();
+
+  // v0.46.0: 経営ページのデフォルト期間モード = 決算期(fiscal)
+  // s90 ボス確定: 経営判断は決算期単位が基本・「年間」は補助
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  useEffect(() => {
+    if (!searchParams.get('mode')) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('mode', 'fiscal');
+      router.replace(`${pathname}?${params.toString()}`);
+    }
+  }, [searchParams, router, pathname]);
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -1073,24 +1087,39 @@ function Section({ num, title, tone = 'normal', children }: {
   // normal = 補助セクション(月別チャート・部門別など)
   // meta   = 末尾のメタ・参考情報
   const sectionMb = tone === 'lead' ? 120 : tone === 'meta' ? 64 : 80;
+  // v0.46.0: 章番号にユニーク id を付与(SVG gradient用)
+  const lineId = `x-line-section-${num.replace(/[^a-zA-Z0-9]/g, '')}`;
   return (
     <section style={{ marginBottom: sectionMb }}>
-      <div style={{ marginBottom: 28, display: 'flex', alignItems: 'baseline', gap: 20 }}>
-        <span style={{
-          fontFamily: F.num,
-          fontSize: T.t5,
-          color: C.ink,
-          letterSpacing: '0.25em',
-          fontWeight: 500,
-        }}>— {num}</span>
-        <span style={{
-          fontFamily: F.jp,
-          fontSize: T.t4,
-          color: C.textSub,
-          letterSpacing: '0.06em',
-        }}>
-          {title}
-        </span>
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 20, marginBottom: 14 }}>
+          <span style={{
+            fontFamily: F.num,
+            fontSize: T.t5,
+            color: C.ink,
+            letterSpacing: '0.25em',
+            fontWeight: 500,
+          }}>— {num}</span>
+          <span style={{
+            fontFamily: F.jp,
+            fontSize: T.t4,
+            color: C.textSub,
+            letterSpacing: '0.06em',
+          }}>
+            {title}
+          </span>
+        </div>
+        {/* X ライン Type II 非対称テーパー(canon-brand 第4部・stroke 0.6pt・Forward 方向) */}
+        <svg width="100%" height="2" viewBox="0 0 1000 2" preserveAspectRatio="none" style={{ display: 'block', maxWidth: 280 }}>
+          <defs>
+            <linearGradient id={lineId} x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%"   stopColor="#B8893A" stopOpacity="0.0" />
+              <stop offset="15%"  stopColor="#B8893A" stopOpacity="0.7" />
+              <stop offset="100%" stopColor="#B8893A" stopOpacity="0.15" />
+            </linearGradient>
+          </defs>
+          <line x1="0" y1="1" x2="1000" y2="1" stroke={`url(#${lineId})`} strokeWidth="0.6" strokeLinecap="butt" />
+        </svg>
       </div>
       {children}
     </section>
@@ -1102,89 +1131,128 @@ function PLChart({ data }: { data: { month: number; rev: number; exp: number; pr
   expSettled: number; expForecast: number;
   profitSettled: number;
 }[] }) {
-  const maxVal = Math.max(...data.flatMap(d => [d.rev, d.exp]), 1);
-  const ticks = calcAxisTicks(maxVal);
-  const chartMax = ticks[ticks.length - 1] || 1;
+  // v0.46.0 Tufte 流刷新:
+  //   - 凡例を最小化(4種→3種・実績/見込みは細棒の透明度で表現)
+  //   - 斜線パターン廃止(Chartjunk)
+  //   - 利益折れ線を主役化(stroke 太く・X Gold)
+  //   - X 軸 12ヶ月のラベルは月数のみ・3で字間広く
+  //   - Y 軸 3 ticks に削減(0/中/最大)
+  //   - reduceMotion 対応
 
-  // v0.31.0: 実績/予測分離。境界月=settled が profit に存在する最後の月
-  // 境界月までは実線、境界月の次月以降は点線で利益折れ線を描く
+  const reduceMotion = useReducedMotion();
+  const maxVal = Math.max(...data.flatMap(d => [d.rev, d.exp]), 1);
+  const chartMax = niceCeil(maxVal);
+  const ticks3 = [0, chartMax / 2, chartMax];
+
+  // 利益の最大絶対値で別軸スケール
+  const profitMax = Math.max(...data.map(d => Math.abs(d.profit)), 1);
+  const profitNice = niceCeil(profitMax);
+
   const lastSettledIdx = (() => {
     for (let i = data.length - 1; i >= 0; i--) {
       if (data[i].revSettled > 0 || data[i].expSettled > 0) return i;
     }
     return -1;
   })();
+
+  const profitToY = (p: number) => 50 - (p / profitNice) * 45; // 0=center 50・±45
   const settledLine = data
     .filter((_, i) => i <= lastSettledIdx)
-    .map((d, i) => `${((i + 0.5) / 12) * 100},${100 - Math.max(0, (d.profitSettled / chartMax) * 100)}`)
+    .map((d, i) => `${((i + 0.5) / 12) * 100},${profitToY(d.profitSettled)}`)
     .join(' ');
-  const forecastLine = data.map((d, i) => `${((i + 0.5) / 12) * 100},${100 - Math.max(0, (d.profit / chartMax) * 100)}`).join(' ');
+  const forecastLine = data.map((d, i) => `${((i + 0.5) / 12) * 100},${profitToY(d.profit)}`).join(' ');
 
   return (
     <div style={{ background: C.surface, border: `1px solid ${C.line}`, padding: '40px 36px' }}>
-      <div style={{ marginBottom: 28, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
-        <div>
-          <div style={{ display: 'flex', gap: 28, fontSize: T.t6, letterSpacing: '0.18em', color: C.textSub }}>
-            <Legend color={C.ink} label="売上" />
-            <Legend color={C.crimson} label="経費" />
-            <Legend color={C.green} label="利益" line />
-          </div>
-          <div style={{ display: 'flex', gap: 18, marginTop: 10, fontSize: T.t7, letterSpacing: '0.2em', color: C.textMute, textTransform: 'uppercase' }}>
-            <SubLegend variant="solid" label="実績" />
-            <SubLegend variant="hatched" label="見込み" />
-          </div>
+      {/* 凡例: 最小化(売上=ink細棒・経費=crimson細棒・利益=gold折れ線) */}
+      <div style={{ marginBottom: 32, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+        <div style={{ display: 'flex', gap: 32, fontSize: T.t7, letterSpacing: '0.22em', color: C.textSub, textTransform: 'uppercase', fontWeight: 500 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 3, height: 14, background: C.ink, display: 'inline-block' }} />売上
+          </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 3, height: 14, background: C.crimson, display: 'inline-block' }} />経費
+          </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ width: 18, height: 2, background: '#B8893A', display: 'inline-block' }} />利益
+          </span>
         </div>
-        {/* session77 Phase 1 C3: 全 chart に単位・基準明記(Tufte 流) */}
-        <span style={{ fontFamily: F.num, fontSize: T.t7, letterSpacing: '0.22em', color: C.textFade, textTransform: 'uppercase' }}>
-          Unit · JPY
+        <span style={{ fontFamily: F.num, fontSize: T.t7, letterSpacing: '0.28em', color: C.textFade, textTransform: 'uppercase' }}>
+          ¥ · UNIT
         </span>
       </div>
 
-      <div style={{ display: 'flex', height: 280 }}>
-        <YAxis ticks={ticks} />
+      <div style={{ display: 'flex', height: 320 }}>
+        <YAxis ticks={ticks3} />
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
           <div style={{ flex: 1, position: 'relative' }}>
-            {ticks.map((t, i) => (
+            {/* グリッドライン:3本のみ */}
+            {ticks3.map((t, i) => (
               <div key={i} style={{
                 position: 'absolute', left: 0, right: 0,
                 bottom: `${(t / chartMax) * 100}%`,
                 borderTop: `1px solid ${C.lineSoft}`,
               }} />
             ))}
+            {/* 0 中心ライン(利益折れ線の基準) */}
+            <div style={{
+              position: 'absolute', left: 0, right: 0,
+              bottom: '50%',
+              borderTop: `1px dashed ${C.lineSoft}`,
+              opacity: 0.5,
+            }} />
             <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'flex-end' }}>
-              {data.map(d => (
-                <div key={d.month} style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap: 3, height: '100%' }}>
-                  {/* 売上棒: 下=settled / 上=forecast 斜線 */}
-                  <div style={{ width: 10, height: `${(d.rev / chartMax) * 100}%`, display: 'flex', flexDirection: 'column-reverse', opacity: d.rev > 0 ? 1 : 0 }} title={`${d.month}月 売上 ${yen(d.rev)}\n  実績 ${yen(d.revSettled)}\n  見込み ${yen(d.revForecast)}`}>
-                    <div style={{ width: '100%', height: `${d.rev > 0 ? (d.revSettled / d.rev) * 100 : 0}%`, background: C.ink }} />
-                    <div style={{ width: '100%', height: `${d.rev > 0 ? (d.revForecast / d.rev) * 100 : 0}%`, background: `repeating-linear-gradient(135deg, ${C.ink} 0 2px, transparent 2px 5px)`, border: `1px solid ${C.ink}`, boxSizing: 'border-box' }} />
+              {data.map(d => {
+                const revOpacity = d.revSettled > 0 ? 1 : 0.45;  // 見込みのみ=低不透明度
+                const expOpacity = d.expSettled > 0 ? 1 : 0.45;
+                return (
+                  <div key={d.month} style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap: 4, height: '100%' }}>
+                    {/* 売上 細棒 */}
+                    <div
+                      style={{
+                        width: 4,
+                        height: `${(d.rev / chartMax) * 100}%`,
+                        background: C.ink,
+                        opacity: revOpacity,
+                        transition: reduceMotion ? 'none' : 'height 600ms ease',
+                      }}
+                      title={`${d.month}月 売上 ${yen(d.rev)}\n  実績 ${yen(d.revSettled)}${d.revForecast > 0 ? `\n  見込み ${yen(d.revForecast)}` : ''}`}
+                    />
+                    {/* 経費 細棒 */}
+                    <div
+                      style={{
+                        width: 4,
+                        height: `${(d.exp / chartMax) * 100}%`,
+                        background: C.crimson,
+                        opacity: expOpacity,
+                        transition: reduceMotion ? 'none' : 'height 600ms ease',
+                      }}
+                      title={`${d.month}月 経費 ${yen(d.exp)}\n  実績 ${yen(d.expSettled)}${d.expForecast > 0 ? `\n  見込み ${yen(d.expForecast)}` : ''}`}
+                    />
                   </div>
-                  {/* 経費棒: 下=settled / 上=forecast 斜線 */}
-                  <div style={{ width: 10, height: `${(d.exp / chartMax) * 100}%`, display: 'flex', flexDirection: 'column-reverse', opacity: d.exp > 0 ? 1 : 0 }} title={`${d.month}月 経費 ${yen(d.exp)}\n  実績 ${yen(d.expSettled)}\n  見込み ${yen(d.expForecast)}`}>
-                    <div style={{ width: '100%', height: `${d.exp > 0 ? (d.expSettled / d.exp) * 100 : 0}%`, background: C.crimson }} />
-                    <div style={{ width: '100%', height: `${d.exp > 0 ? (d.expForecast / d.exp) * 100 : 0}%`, background: `repeating-linear-gradient(135deg, ${C.crimson} 0 2px, transparent 2px 5px)`, border: `1px solid ${C.crimson}`, boxSizing: 'border-box' }} />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
+            {/* 利益折れ線(主役・X Gold・stroke 太め) */}
             <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }} preserveAspectRatio="none" viewBox="0 0 100 100">
-              {/* 着地見込み利益(全status・点線) */}
+              {/* 着地見込み利益(全status・点線・薄め) */}
               <polyline
                 fill="none"
-                stroke={C.green}
-                strokeWidth="0.4"
+                stroke="#B8893A"
+                strokeWidth="0.6"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                strokeDasharray="1.5 1.2"
+                strokeDasharray="2 1.5"
+                strokeOpacity="0.55"
                 vectorEffect="non-scaling-stroke"
                 points={forecastLine}
               />
-              {/* 確定利益(settled のみ・実線) */}
+              {/* 確定利益(settled のみ・実線・太め=主役) */}
               {lastSettledIdx >= 0 && (
                 <polyline
                   fill="none"
-                  stroke={C.green}
-                  strokeWidth="0.55"
+                  stroke="#B8893A"
+                  strokeWidth="0.9"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   vectorEffect="non-scaling-stroke"
@@ -1198,6 +1266,15 @@ function PLChart({ data }: { data: { month: number; rev: number; exp: number; pr
       </div>
     </div>
   );
+}
+
+// niceCeil: 最大値を切りの良い数に丸める(Tufte 流軸ラベル)
+function niceCeil(v: number): number {
+  if (v <= 0) return 1;
+  const exp = Math.floor(Math.log10(v));
+  const f = v / Math.pow(10, exp);
+  const nice = f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10;
+  return nice * Math.pow(10, exp);
 }
 
 function CFChart({ data }: { data: { month: number; inflow: number; outflow: number; net: number;

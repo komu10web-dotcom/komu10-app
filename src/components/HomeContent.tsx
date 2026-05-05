@@ -141,17 +141,28 @@ export default function HomeContent() {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen" style={{ background: '#FAFAF6' /* X Milk = 牛乳色 */ }}>
       <div className="max-w-lg mx-auto px-4 py-8 space-y-6">
 
-        {/* ── ヘッダー(δ案語彙・明色基調・3層タイポ) ── */}
-        <header className="pb-5 border-b border-app-line-medium">
-          <p className="font-['Saira_Condensed'] text-[11px] tracking-[0.3em] text-app-gold mb-6 font-medium uppercase">
+        {/* ── ヘッダー(VOLUME 01 + day by day + X ライン Type II) ── */}
+        <header className="pb-6">
+          {/* X ライン Type II 非対称テーパー(canon-brand 第4部・stroke 1.6pt) */}
+          <svg width="100%" height="3" viewBox="0 0 200 3" preserveAspectRatio="none" style={{ marginBottom: 24, display: 'block' }}>
+            <defs>
+              <linearGradient id="x-line-home" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%"   stopColor="#B8893A" stopOpacity="0" />
+                <stop offset="20%"  stopColor="#B8893A" stopOpacity="1" />
+                <stop offset="100%" stopColor="#0A0A0B" stopOpacity="1" />
+              </linearGradient>
+            </defs>
+            <line x1="0" y1="1.5" x2="200" y2="1.5" stroke="url(#x-line-home)" strokeWidth="1.6" strokeLinecap="butt" />
+          </svg>
+          <p className="font-['Saira_Condensed'] text-[11px] tracking-[0.3em] text-app-gold mb-5 font-medium uppercase">
             VOLUME 01 · HOME
           </p>
           <h1
             className="font-['Shippori_Mincho'] italic text-app-text mb-3.5"
-            style={{ fontSize: 36, fontWeight: 400, letterSpacing: '0.01em', lineHeight: 1.2 }}
+            style={{ fontSize: 40, fontWeight: 400, letterSpacing: '0.01em', lineHeight: 1.15 }}
           >
             day by day
           </h1>
@@ -163,30 +174,36 @@ export default function HomeContent() {
           </p>
         </header>
 
-        {/* ── サマリー ── */}
-        <div className="bg-white rounded-2xl p-5" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
+        {/* ── サマリー(Saira 主役・大型化) ── */}
+        <div className="bg-white rounded-2xl p-6" style={{ boxShadow: '0 2px 20px rgba(0,0,0,0.04)' }}>
           {loading ? (
-            <div className="h-20 flex items-center justify-center">
+            <div className="h-32 flex items-center justify-center">
               <div className="w-5 h-5 border-2 border-app-gold border-t-transparent rounded-full animate-spin" />
             </div>
           ) : (
             <>
-              <div className="space-y-3">
-                <div className="flex items-baseline justify-between">
-                  <span className="text-xs text-app-text-mute">経費</span>
-                  <span className="font-['Saira_Condensed'] text-2xl text-app-text tabular-nums">
-                    {formatAmount(expenseTotal)}
-                  </span>
+              {/* 経費(主役の数字) */}
+              <div className="mb-5">
+                <div className="text-[10px] tracking-[0.25em] text-app-text-mute uppercase mb-2">
+                  経費
                 </div>
-                <div className="flex items-baseline justify-between">
-                  <span className="text-xs text-app-text-mute">売上</span>
-                  <span className="font-['Saira_Condensed'] text-2xl text-app-green tabular-nums">
-                    {formatAmount(revenueTotal)}
-                  </span>
+                <div className="font-['Saira_Condensed'] text-app-text tabular-nums" style={{ fontSize: 44, fontWeight: 400, letterSpacing: '-0.02em', lineHeight: 1 }}>
+                  {formatAmount(expenseTotal)}
                 </div>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-app-line">
+              {/* 売上(緑・サブ位置) */}
+              <div className="pb-4 border-b border-app-line">
+                <div className="text-[10px] tracking-[0.25em] text-app-text-mute uppercase mb-2">
+                  売上
+                </div>
+                <div className="font-['Saira_Condensed'] text-app-green tabular-nums" style={{ fontSize: 32, fontWeight: 400, letterSpacing: '-0.02em', lineHeight: 1 }}>
+                  {formatAmount(revenueTotal)}
+                </div>
+              </div>
+
+              {/* ステータス */}
+              <div className="pt-4">
                 {unconfirmedCount === 0 ? (
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-app-green" />
