@@ -1,0 +1,2055 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<title>THE MONEY BOOK — Vol. 05 / 2026</title>
+
+<!-- ============================================================
+     FONTS — komu10 全書体 + THE MONEY BOOK 主役書体
+     主役: Big Shoulders Display 900 / Bricolage Grotesque 200..800
+     脇役: Inter / Saira Condensed / Shippori Mincho / Questrial / Noto Sans JP / JetBrains Mono
+     ============================================================ -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@900&family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Inter:wght@300;400;500;600;700&family=Questrial&family=Saira+Condensed:wght@400;500;600;700;900&family=Shippori+Mincho:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@200;300;400&display=swap" rel="stylesheet">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+
+:root{
+  /* === komu10 ブランド7色(canon-brand §7・脇役) === */
+  --x-black:#0a0a0b;
+  --x-snow:#ffffff;
+  --x-milk:#fafaf6;
+  --x-gold:#b8893a;
+  --x-green:#2a4a3a;
+  --x-burgundy:#5a1f24;
+  --x-red:#aa2a2a;
+
+  /* === THE MONEY BOOK 主役色(canon-brand §7.5・絶対条件) === */
+  --ink:#14213D;
+  --ink-deep:#0a1424;
+  --ink-light:#3D5A9C;
+  --ink-mid:#2A3F6B;
+  --ink-soft:rgba(20,33,61,0.15);
+}
+
+html,body{
+  font-family:'Inter','Noto Sans JP',sans-serif;
+  background:var(--ink-deep);
+  color:var(--x-snow);
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+  scroll-behavior:smooth;
+}
+
+/* === 主役書体クラス === */
+.tmb-display{font-family:'Big Shoulders Display',sans-serif;font-weight:900;letter-spacing:-.045em;line-height:.78}
+.tmb-grotesque{font-family:'Bricolage Grotesque',sans-serif;font-feature-settings:"ss01"}
+
+/* === 脇役書体クラス === */
+.mincho{font-family:'Shippori Mincho',serif;font-weight:400}
+.mincho-b{font-family:'Shippori Mincho',serif;font-weight:700}
+.saira{font-family:'Saira Condensed',sans-serif;font-weight:700;letter-spacing:-.02em}
+.inter{font-family:'Inter',sans-serif}
+.mono{font-family:'JetBrains Mono',monospace}
+.questrial{font-family:'Questrial',sans-serif;letter-spacing:-.005em}
+
+/* === グローバル背景キャンバス(粒子の海・常時) === */
+#particleCanvas{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.35}
+
+/* === スクロールプログレス === */
+.scroll-progress{position:fixed;top:0;left:0;height:2px;background:var(--x-gold);z-index:300;width:0;transition:width .1s linear;box-shadow:0 0 12px var(--x-gold)}
+
+/* === ロックヘッダ === */
+.rock-header{position:fixed;top:0;left:0;right:0;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;z-index:200;mix-blend-mode:difference;color:var(--x-snow)}
+.rock-header .logo{font-family:'Questrial',sans-serif;font-size:18px;letter-spacing:-.005em}
+.rock-header .meta{font-family:'Bricolage Grotesque',sans-serif;font-weight:600;font-size:10px;letter-spacing:.25em;opacity:.85}
+.rock-header .live-dot{display:inline-block;width:6px;height:6px;background:var(--x-red);border-radius:50%;margin-right:6px;vertical-align:middle;animation:liveBlink 1.4s ease-in-out infinite}
+@keyframes liveBlink{
+  0%,100%{opacity:1;box-shadow:0 0 8px var(--x-red)}
+  50%{opacity:.3;box-shadow:0 0 16px var(--x-red)}
+}
+
+/* === SECTION 共通 === */
+section{position:relative;padding:0 20px;z-index:10}
+
+/* ============================================================
+   00: COVER — Hedi Grand Palais + Raf Sterling Ruby + Daft Punk Pyramid
+   背景:Xブラック → ミッドナイトインクへグラデ変換
+   主役:Big Shoulders Display 900 巨大数字 + ミッドナイトインク
+   ============================================================ */
+.s-cover{
+  min-height:100vh;
+  background:linear-gradient(180deg,var(--x-black) 0%,var(--ink-deep) 60%,var(--ink) 100%);
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  padding-top:60px;
+  padding-bottom:32px;
+  position:relative;
+  overflow:hidden;
+}
+/* X 形の細い線が天井から落ちて X 主シンボルを組み上げる(Raf Sterling Ruby 赤糸) */
+.cover-x-frame{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index:3;
+  overflow:hidden;
+}
+.cover-x-line{
+  position:absolute;
+  background:linear-gradient(180deg,transparent 0%,var(--x-gold) 50%,transparent 100%);
+  width:1px;
+  height:140vh;
+  transform-origin:center top;
+  opacity:0;
+}
+.cover-x-line.l1{left:35%;top:-20vh;transform:rotate(15deg)}
+.cover-x-line.l2{left:65%;top:-20vh;transform:rotate(-15deg)}
+.cover-x-line.l3{left:25%;top:-20vh;transform:rotate(-25deg)}
+.cover-x-line.l4{left:75%;top:-20vh;transform:rotate(25deg)}
+
+/* 背景の発光グラデ(Daft Punk LED ピラミッド光源感) */
+.s-cover::after{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(circle at 30% 25%,rgba(184,137,58,.22),transparent 55%),
+    radial-gradient(circle at 70% 80%,rgba(20,33,61,.7),transparent 55%);
+  pointer-events:none;
+  animation:bgPulse 8s ease-in-out infinite;
+  z-index:1;
+}
+@keyframes bgPulse{
+  0%,100%{opacity:.7}
+  50%{opacity:1}
+}
+
+.cover-top{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  font-family:'Bricolage Grotesque',sans-serif;
+  font-weight:600;
+  font-size:11px;
+  letter-spacing:.3em;
+  color:rgba(255,255,255,.65);
+  position:relative;
+  z-index:5;
+  text-transform:uppercase;
+}
+.cover-top .vol-num{color:var(--x-gold);font-weight:800}
+
+.cover-mid{
+  flex:1;
+  display:flex;
+  align-items:center;
+  position:relative;
+  z-index:5;
+}
+.cover-num-wrap{
+  width:100%;
+  position:relative;
+}
+/* 主役巨大数字(Big Shoulders Display 900・48vw) */
+.cover-num{
+  font-family:'Big Shoulders Display',sans-serif;
+  font-weight:900;
+  font-size:50vw;
+  line-height:.78;
+  letter-spacing:-.06em;
+  color:var(--x-snow);
+  text-align:left;
+  position:relative;
+  z-index:2;
+}
+.cover-num .unit{
+  font-family:'Big Shoulders Display',sans-serif;
+  font-weight:900;
+  font-size:.18em;
+  vertical-align:top;
+  margin-left:-.05em;
+  color:var(--x-gold);
+  letter-spacing:.02em;
+}
+/* 影:ink-light で重ね影(Hedi 二重シャドウ) */
+.cover-num-shadow{
+  position:absolute;
+  top:.04em;
+  left:.025em;
+  font-family:'Big Shoulders Display',sans-serif;
+  font-weight:900;
+  font-size:50vw;
+  line-height:.78;
+  letter-spacing:-.06em;
+  color:transparent;
+  z-index:1;
+  -webkit-text-stroke:1px var(--ink-light);
+  opacity:.5;
+}
+
+.cover-bottom{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  border-top:1px solid var(--x-gold);
+  padding-top:18px;
+  position:relative;
+  z-index:5;
+}
+.cover-label{
+  font-family:'Shippori Mincho',serif;
+  font-weight:400;
+  font-size:14px;
+  color:rgba(255,255,255,.78);
+  line-height:1.6;
+  letter-spacing:.02em;
+}
+.cover-label .en{
+  color:var(--x-gold);
+  font-family:'Bricolage Grotesque',sans-serif;
+  font-weight:700;
+  font-size:11px;
+  letter-spacing:.25em;
+  display:block;
+  margin-top:6px;
+  text-transform:uppercase;
+}
+.cover-page{
+  font-family:'Bricolage Grotesque',sans-serif;
+  font-weight:600;
+  font-size:11px;
+  letter-spacing:.3em;
+  color:rgba(255,255,255,.5);
+}
+
+/* スクロールヒント */
+.scroll-hint{
+  position:absolute;
+  bottom:60px;
+  left:50%;
+  transform:translateX(-50%);
+  font-family:'Bricolage Grotesque',sans-serif;
+  font-weight:600;
+  font-size:10px;
+  letter-spacing:.4em;
+  color:rgba(255,255,255,.5);
+  z-index:5;
+  animation:scrollDown 2s ease-in-out infinite;
+}
+@keyframes scrollDown{
+  0%,100%{transform:translateX(-50%) translateY(0);opacity:.4}
+  50%{transform:translateX(-50%) translateY(8px);opacity:.85}
+}
+
+/* ============================================================
+   01: PULSAR — Saville Joy Division CP1919 + Mr.Children HANABI 球体光跡(方法論抽出)
+   背景:ミッドナイトインク主役
+   ============================================================ */
+.s-pulsar{
+  min-height:100vh;
+  background:var(--ink);
+  padding-top:80px;
+  padding-bottom:80px;
+  position:relative;
+  overflow:hidden;
+}
+.s-pulsar::before{
+  content:'';
+  position:absolute;
+  top:0;
+  left:0;
+  right:0;
+  height:1px;
+  background:linear-gradient(90deg,transparent,var(--x-gold),transparent);
+}
+.pulsar-eyebrow{
+  font-family:'Bricolage Grotesque',sans-serif;
+  font-weight:700;
+  font-size:11px;
+  letter-spacing:.45em;
+  color:var(--x-gold);
+  text-transform:uppercase;
+}
+.pulsar-eyebrow::before{
+  content:'';
+  display:inline-block;
+  width:24px;
+  height:1px;
+  background:var(--x-gold);
+  vertical-align:middle;
+  margin-right:12px;
+}
+
+/* 章番号(Big Shoulders Black 900・outline) */
+.pulsar-chapter-no{
+  font-family:'Big Shoulders Display',sans-serif;
+  font-weight:900;
+  font-size:36vw;
+  line-height:.78;
+  letter-spacing:-.06em;
+  color:transparent;
+  -webkit-text-stroke:2px var(--x-gold);
+  position:absolute;
+  top:30%;
+  left:-2vw;
+  pointer-events:none;
+  opacity:.18;
+  z-index:1;
+}
+
+.pulsar-title{
+  font-family:'Big Shoulders Display',sans-serif;
+  font-weight:900;
+  font-size:18vw;
+  line-height:.85;
+  letter-spacing:-.05em;
+  color:var(--x-snow);
+  margin-top:16px;
+  margin-bottom:32px;
+  position:relative;
+  z-index:5;
+}
+.pulsar-title em{
+  color:var(--x-gold);
+  font-style:normal;
+}
+
+.pulsar-canvas-wrap{
+  position:relative;
+  height:55vh;
+  background:transparent;
+  margin:0 -20px;
+  z-index:5;
+}
+#pulsarCanvas{
+  width:100%;
+  height:100%;
+  display:block;
+}
+.pulsar-meta{
+  display:flex;
+  justify-content:space-between;
+  font-family:'Bricolage Grotesque',sans-serif;
+  font-weight:600;
+  font-size:10px;
+  letter-spacing:.3em;
+  color:rgba(255,255,255,.55);
+  margin-top:24px;
+  padding:0 4px;
+  text-transform:uppercase;
+  position:relative;
+  z-index:5;
+}
+.pulsar-stats{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:1px;
+  background:rgba(184,137,58,.25);
+  margin-top:32px;
+  position:relative;
+  z-index:5;
+}
+.pulsar-stat-cell{
+  background:var(--ink);
+  padding:18px 14px;
+  text-align:left;
+}
+.pulsar-stat-label{
+  font-family:'Bricolage Grotesque',sans-serif;
+  font-weight:700;
+  font-size:9px;
+  letter-spacing:.3em;
+  color:rgba(255,255,255,.55);
+  margin-bottom:6px;
+  text-transform:uppercase;
+}
+.pulsar-stat-num{
+  font-family:'Big Shoulders Display',sans-serif;
+  font-weight:900;
+  font-size:32px;
+  letter-spacing:-.02em;
+  color:var(--x-snow);
+  line-height:1;
+}
+.pulsar-stat-num.gold{color:var(--x-gold)}
+
+/* ============================================================
+   02: VIOLENT TYPO — CELINE 暗闇ランウェイ + McQueen ペンキ介入(方法論抽出)
+   背景:Xブラック(主役色から脇役色へ転換・ランウェイ性)
+   ============================================================ */
+.s-violent-typo{
+  min-height:100vh;
+  background:var(--x-black);
+  padding-top:80px;
+  padding-bottom:80px;
+  position:relative;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+.violent-eyebrow{
+  font-family:'Bricolage Grotesque',sans-serif;
+  font-weight:700;
+  font-size:11px;
+  letter-spacing:.45em;
+  color:var(--x-gold);
+  padding:0 20px;
+  margin-bottom:48px;
+  text-transform:uppercase;
+}
+.violent-eyebrow::before{
+  content:'';
+  display:inline-block;
+  width:24px;
+  height:1px;
+  background:var(--x-gold);
+  vertical-align:middle;
+  margin-right:12px;
+}
+.violent-line{
+  font-family:'Big Shoulders Display',sans-serif;
+  font-weight:900;
+  font-size:32vw;
+  line-height:.85;
+  letter-spacing:-.05em;
+  white-space:nowrap;
+  color:var(--x-snow);
+  will-change:transform;
+}
+.violent-line.gold{color:var(--x-gold)}
+.violent-line.outline{
+  -webkit-text-stroke:2px var(--x-snow);
+  -webkit-text-fill-color:transparent;
+}
+.violent-line.burgundy{color:var(--x-burgundy)}
+.violent-line.mincho-style{
+  font-family:'Shippori Mincho',serif;
+  font-weight:700;
+  font-style:italic;
+  letter-spacing:-.02em;
+}
+.violent-stack{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  margin:0 -40px;
+}
+/* McQueen ペンキ介入レイヤー(赤字発生時のみ可視化) */
+.violent-paint{
+  position:absolute;
+  inset:0;
+  background:var(--x-red);
+  mix-blend-mode:multiply;
+  opacity:0;
+  pointer-events:none;
+  z-index:50;
+}
+
+/* ============================================================
+   03: COUNTER — Daft Punk Pyramid + Tron グリッド + U2 Sphere(方法論抽出)
+   背景:ミッドナイトインク主役復帰
+   ============================================================ */
+.s-counter{
+  min-height:100vh;
+  background:var(--ink);
+  padding-top:80px;
+  padding-bottom:80px;
+  position:relative;
+  overflow:hidden;
+}
+.counter-eyebrow{
+  font-family:'Bricolage Grotesque',sans-serif;
+  font-weight:700;
+  font-size:11px;
+  letter-spacing:.45em;
+  color:var(--x-gold);
+  text-transform:uppercase;
+}
+.counter-eyebrow::before{
+  content:'';
+  display:inline-block;
+  width:24px;
+  height:1px;
+  background:var(--x-gold);
+  vertical-align:middle;
+  margin-right:12px;
+}
+.counter-title{
+  font-family:'Bricolage Grotesque',sans-serif;
+  font-weight:300;
+  font-size:32px;
+  letter-spacing:-.01em;
+  color:var(--x-snow);
+  margin-top:8px;
+  margin-bottom:48px;
+}
+.counter-3d-wrap{
+  position:relative;
+  height:62vh;
+  margin:0 -20px;
+}
+#counterCanvas{
+  width:100%;
+  height:100%;
+  display:block;
+}
+.counter-overlay-num{
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  font-family:'Big Shoulders Display',sans-serif;
+  font-weight:900;
+  font-size:22vw;
+  letter-spacing:-.05em;
+  color:var(--x-snow);
+  pointer-events:none;
+  text-shadow:0 0 60px rgba(184,137,58,.5);
+  z-index:5;
+  line-height:.85;
+  text-align:center;
+}
+.counter-overlay-num .unit{
+  color:var(--x-gold);
+  font-size:.4em;
+  vertical-align:top;
+  margin-left:-.08em;
+  letter-spacing:.02em;
+}
+.counter-overlay-num .label{
+  display:block;
+  font-family:'Bricolage Grotesque',sans-serif;
+  font-weight:700;
+  font-size:11px;
+  letter-spacing:.4em;
+  color:rgba(255,255,255,.7);
+  margin-top:18px;
+  font-weight:600;
+  text-transform:uppercase;
+}
+.counter-row{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:1px;
+  background:rgba(184,137,58,.3);
+  margin-top:32px;
+}
+.counter-cell{
+  background:var(--ink);
+  padding:24px 16px;
+  text-align:left;
+}
+.counter-cell-label{
+  font-family:'Bricolage Grotesque',sans-serif;
+  font-weight:700;
+  font-size:10px;
+  letter-spacing:.35em;
+  color:rgba(255,255,255,.6);
+  margin-bottom:8px;
+  text-transform:uppercase;
+}
+.counter-cell-num{
+  font-family:'Big Shoulders Display',sans-serif;
+  font-weight:900;
+  font-size:46px;
+  letter-spacing:-.02em;
+  color:var(--x-snow);
+  line-height:1;
+}
+.counter-cell-num.gold{color:var(--x-gold)}
+
+/* ============================================================
+   04: EXPENSE FIELD — Refik Anadol + チームラボ + Random Rain Room(方法論抽出)
+   背景:Xブラック(深い暗闇)
+   粒子色:Xゴールド + ミッドナイトインク・ライト + Xバーガンディ 3色混合
+   ============================================================ */
+.s-field{
+  min-height:100vh;
+  background:var(--x-black);
+  padding-top:80px;
+  padding-bottom:80px;
+  position:relative;
+  overflow:hidden;
+}
+.field-eyebrow{
+  font-family:'Bricolage Grotesque',sans-serif;
+  font-weight:700;
+  font-size:11px;
+  letter-spacing:.45em;
+  color:var(--x-gold);
+  text-transform:uppercase;
+}
+.field-eyebrow::before{
+  content:'';
+  display:inline-block;
+  width:24px;
+  height:1px;
+  background:var(--x-gold);
+  vertical-align:middle;
+  margin-right:12px;
+}
+.field-title{
+  font-family:'Big Shoulders Display',sans-serif;
+  font-weight:900;
+  font-size:18vw;
+  line-height:.85;
+  letter-spacing:-.05em;
+  color:var(--x-snow);
+  margin-top:16px;
+  margin-bottom:32px;
+}
+.field-title em{
+  color:var(--x-gold);
+  font-style:normal;
+}
+.field-canvas-wrap{
+  position:relative;
+  height:65vh;
+  margin:0 -20px;
+}
+#fieldCanvas{
+  width:100%;
+  height:100%;
+  display:block;
+}
+.field-meta{
+  display:flex;
+  justify-content:space-between;
+  font-family:'Bricolage Grotesque',sans-serif;
+  font-weight:600;
+  font-size:10px;
+  letter-spacing:.3em;
+  color:rgba(255,255,255,.55);
+  margin-top:32px;
+  padding:0 4px;
+  text-transform:uppercase;
+}
+.field-meta .num{
+  font-family:'Big Shoulders Display',sans-serif;
+  font-weight:900;
+  font-size:24px;
+  color:var(--x-snow);
+  letter-spacing:-.02em;
+  line-height:1;
+  display:block;
+  margin-top:4px;
+}
+.field-meta .num.gold{color:var(--x-gold)}
+
+/* ============================================================
+   05: PROJECTS — Hedi Diary 写真集 × Margiela Numbering + 暗→明反転
+   背景:牛乳色(Hedi シーズン切替の劇的瞬間・主役 → 脇役色へ場面転換)
+   ============================================================ */
+.s-projects{
+  min-height:100vh;
+  background:var(--x-milk);
+  color:var(--x-black);
+  padding-top:80px;
+  padding-bottom:80px;
+  position:relative;
+}
+.projects-eyebrow{
+  font-family:'Bricolage Grotesque',sans-serif;
+  font-weight:700;
+  font-size:11px;
+  letter-spacing:.45em;
+  color:var(--x-burgundy);
+  text-transform:uppercase;
+}
+.projects-eyebrow::before{
+  content:'';
+  display:inline-block;
+  width:24px;
+  height:1px;
+  background:var(--x-burgundy);
+  vertical-align:middle;
+  margin-right:12px;
+}
+.projects-title{
+  font-family:'Big Shoulders Display',sans-serif;
+  font-weight:900;
+  font-size:24vw;
+  line-height:.82;
+  letter-spacing:-.05em;
+  color:var(--ink);
+  margin-top:16px;
+  margin-bottom:48px;
+}
+.projects-title em{
+  color:var(--x-burgundy);
+  font-style:normal;
+}
+.pj-card{
+  border-top:1px solid var(--x-black);
+  padding:24px 0;
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  gap:16px;
+  align-items:baseline;
+  cursor:pointer;
+  transition:padding-left .4s ease,background .4s ease;
+  position:relative;
+  overflow:hidden;
+}
+.pj-card::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:linear-gradient(90deg,rgba(42,74,58,.08),transparent);
+  opacity:0;
+  transition:opacity .4s ease;
+}
+.pj-card:hover{padding-left:8px}
+.pj-card:hover::before{opacity:1}
+.pj-card:last-child{border-bottom:1px solid var(--x-black)}
+.pj-no{
+  font-family:'Bricolage Grotesque',sans-serif;
+  font-weight:700;
+  font-size:11px;
+  letter-spacing:.3em;
+  color:rgba(0,0,0,.5);
+  width:32px;
+  position:relative;
+  z-index:2;
+}
+.pj-info{position:relative;z-index:2}
+.pj-name{
+  font-family:'Shippori Mincho',serif;
+  font-weight:700;
+  font-size:18px;
+  color:var(--x-black);
+  margin-bottom:6px;
+}
+.pj-meta{
+  font-family:'Bricolage Grotesque',sans-serif;
+  font-weight:600;
+  font-size:9px;
+  letter-spacing:.3em;
+  color:rgba(0,0,0,.45);
+  text-transform:uppercase;
+}
+.pj-amt{
+  font-family:'Big Shoulders Display',sans-serif;
+  font-weight:900;
+  font-size:30px;
+  color:var(--ink);
+  letter-spacing:-.02em;
+  position:relative;
+  z-index:2;
+}
+.pj-amt.gold{color:var(--x-gold)}
+
+/* ============================================================
+   06: GRADE D — Daft Punk Alive 2007 爆発 + McQueen Plato's Atlantis 終末感
+   背景:Xブラック → Xスノーフラッシュ → ミッドナイトインク
+   ============================================================ */
+.s-grade-d{
+  min-height:100vh;
+  background:var(--x-black);
+  padding-top:80px;
+  padding-bottom:80px;
+  position:relative;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+}
+.grade-d-canvas-wrap{
+  position:absolute;
+  inset:0;
+  z-index:1;
+}
+#gradeDCanvas{
+  width:100%;
+  height:100%;
+  display:block;
+}
+.grade-d-flash{
+  position:absolute;
+  inset:0;
+  background:var(--x-snow);
+  opacity:0;
+  pointer-events:none;
+  z-index:2;
+}
+.grade-d-content{
+  position:relative;
+  z-index:5;
+  text-align:center;
+  padding:0 20px;
+}
+.grade-d-eyebrow{
+  font-family:'Bricolage Grotesque',sans-serif;
+  font-weight:700;
+  font-size:11px;
+  letter-spacing:.45em;
+  color:var(--x-gold);
+  margin-bottom:24px;
+  text-transform:uppercase;
+}
+.grade-d-label{
+  font-family:'Big Shoulders Display',sans-serif;
+  font-weight:900;
+  font-size:62px;
+  color:var(--x-burgundy);
+  letter-spacing:-.03em;
+  line-height:1;
+  margin-bottom:32px;
+}
+.grade-d-title{
+  font-family:'Shippori Mincho',serif;
+  font-weight:700;
+  font-size:18vw;
+  line-height:.85;
+  letter-spacing:-.02em;
+  color:var(--x-snow);
+}
+.grade-d-title em{
+  color:var(--x-gold);
+  font-style:normal;
+}
+.grade-d-sub{
+  font-family:'Bricolage Grotesque',sans-serif;
+  font-weight:700;
+  font-size:14px;
+  letter-spacing:.3em;
+  color:rgba(184,137,58,.85);
+  margin-top:32px;
+  text-transform:uppercase;
+}
+
+/* ============================================================
+   07: TOC — Margiela Numbering × Saint Laurent 招待状(装飾ゼロ)
+   背景:ミッドナイトインク主役復帰(締め)
+   ============================================================ */
+.s-toc{
+  min-height:100vh;
+  background:var(--ink);
+  padding-top:80px;
+  padding-bottom:120px;
+  position:relative;
+}
+.toc-eyebrow{
+  font-family:'Bricolage Grotesque',sans-serif;
+  font-weight:700;
+  font-size:11px;
+  letter-spacing:.45em;
+  color:var(--x-gold);
+  text-transform:uppercase;
+}
+.toc-title{
+  font-family:'Shippori Mincho',serif;
+  font-weight:700;
+  font-size:22vw;
+  line-height:.82;
+  letter-spacing:-.02em;
+  color:var(--x-snow);
+  margin-top:16px;
+  margin-bottom:48px;
+}
+.toc-title em{
+  color:var(--x-gold);
+  font-style:normal;
+}
+.toc-row{
+  display:grid;
+  grid-template-columns:auto 1fr auto auto;
+  gap:16px;
+  padding:24px 0;
+  border-bottom:1px solid rgba(255,255,255,.12);
+  align-items:baseline;
+  cursor:pointer;
+  transition:padding-left .4s ease;
+}
+.toc-row:hover{padding-left:12px}
+.toc-row:hover .toc-arrow{color:var(--x-gold);transform:translateX(8px)}
+.toc-no{
+  font-family:'Bricolage Grotesque',sans-serif;
+  font-weight:700;
+  font-size:11px;
+  letter-spacing:.3em;
+  color:rgba(255,255,255,.45);
+  width:32px;
+}
+.toc-name{
+  font-family:'Shippori Mincho',serif;
+  font-weight:400;
+  font-size:18px;
+  color:var(--x-snow);
+}
+.toc-en{
+  font-family:'Bricolage Grotesque',sans-serif;
+  font-weight:700;
+  font-size:9px;
+  letter-spacing:.3em;
+  color:rgba(255,255,255,.45);
+  text-transform:uppercase;
+}
+.toc-arrow{
+  font-family:'Big Shoulders Display',sans-serif;
+  font-weight:900;
+  font-size:18px;
+  color:rgba(255,255,255,.65);
+  transition:color .3s ease,transform .3s ease;
+}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+footer{
+  padding:120px 24px 80px;
+  background:var(--ink-deep);
+  color:rgba(255,255,255,.35);
+  text-align:center;
+  font-family:'Bricolage Grotesque',sans-serif;
+  font-weight:600;
+  font-size:10px;
+  letter-spacing:.4em;
+  border-top:1px solid rgba(184,137,58,.3);
+  text-transform:uppercase;
+}
+footer .end-line{
+  width:48px;
+  height:1px;
+  background:var(--x-gold);
+  margin:0 auto 24px;
+}
+
+/* === reduced motion === */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+
+<canvas id="particleCanvas"></canvas>
+<div class="scroll-progress" id="scrollProgress"></div>
+
+<header class="rock-header">
+  <span class="logo">komu10</span>
+  <span class="meta"><span class="live-dot"></span>LIVE / 2026.05.07</span>
+</header>
+
+<!-- ============================================================
+     00: COVER
+     ============================================================ -->
+<section class="s-cover">
+  <div class="cover-x-frame">
+    <span class="cover-x-line l1"></span>
+    <span class="cover-x-line l2"></span>
+    <span class="cover-x-line l3"></span>
+    <span class="cover-x-line l4"></span>
+  </div>
+  <div class="cover-top">
+    <span><span class="vol-num">VOL. 05</span> / 2026</span>
+    <span>THE MONEY BOOK</span>
+  </div>
+  <div class="cover-mid">
+    <div class="cover-num-wrap">
+      <div class="cover-num-shadow">2.0</div>
+      <div class="cover-num"><span id="coverNum">0.0</span><span class="unit">M</span></div>
+    </div>
+  </div>
+  <div class="cover-bottom">
+    <div class="cover-label">
+      Profit, in millions yen.
+      <span class="en">MAY / TWO THOUSAND TWENTY-SIX</span>
+    </div>
+    <div class="cover-page">P. 01</div>
+  </div>
+  <div class="scroll-hint">↓ SCROLL</div>
+</section>
+
+<!-- ============================================================
+     01: PULSAR
+     ============================================================ -->
+<section class="s-pulsar">
+  <div class="pulsar-chapter-no">01</div>
+  <div class="pulsar-eyebrow">CHAPTER 01 / 12 MONTHS</div>
+  <div class="pulsar-title">REVENUE<br><em>PULSAR</em></div>
+  <div class="pulsar-canvas-wrap">
+    <canvas id="pulsarCanvas"></canvas>
+  </div>
+  <div class="pulsar-meta">
+    <span>JUN.25</span>
+    <span>SEP</span>
+    <span>DEC</span>
+    <span>MAR.26</span>
+    <span>MAY</span>
+  </div>
+  <div class="pulsar-stats">
+    <div class="pulsar-stat-cell">
+      <div class="pulsar-stat-label">PEAK</div>
+      <div class="pulsar-stat-num gold">3.2M</div>
+    </div>
+    <div class="pulsar-stat-cell">
+      <div class="pulsar-stat-label">YOY</div>
+      <div class="pulsar-stat-num">+34%</div>
+    </div>
+    <div class="pulsar-stat-cell">
+      <div class="pulsar-stat-label">TTM</div>
+      <div class="pulsar-stat-num">25.1M</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     02: VIOLENT TYPO
+     ============================================================ -->
+<section class="s-violent-typo">
+  <div class="violent-paint" id="violentPaint"></div>
+  <div class="violent-eyebrow">CHAPTER 02 / TODAY</div>
+  <div class="violent-stack">
+    <div class="violent-line" data-vt="1">+¥52K</div>
+    <div class="violent-line outline" data-vt="2">TODAY</div>
+    <div class="violent-line gold" data-vt="3">2026 / 05 / 07</div>
+    <div class="violent-line burgundy" data-vt="4">3 EVENTS</div>
+  </div>
+</section>
+
+<!-- ============================================================
+     03: COUNTER
+     ============================================================ -->
+<section class="s-counter">
+  <div class="counter-eyebrow">CHAPTER 03 / THIS MONTH</div>
+  <div class="counter-title">五月、いまの状況</div>
+  <div class="counter-3d-wrap">
+    <canvas id="counterCanvas"></canvas>
+    <div class="counter-overlay-num">
+      <span id="bigNum">0.0</span><span class="unit">M</span>
+      <span class="label">REVENUE / CUMULATIVE</span>
+    </div>
+  </div>
+  <div class="counter-row">
+    <div class="counter-cell">
+      <div class="counter-cell-label">EXPENSE</div>
+      <div class="counter-cell-num"><span id="expNum">0.0</span>M</div>
+    </div>
+    <div class="counter-cell">
+      <div class="counter-cell-label">PROFIT</div>
+      <div class="counter-cell-num gold"><span id="profitNum">0.0</span>M</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     04: EXPENSE FIELD
+     ============================================================ -->
+<section class="s-field">
+  <div class="field-eyebrow">CHAPTER 04 / 31 DAYS</div>
+  <div class="field-title">EXPENSE<br><em>FIELD</em></div>
+  <div class="field-canvas-wrap">
+    <canvas id="fieldCanvas"></canvas>
+  </div>
+  <div class="field-meta">
+    <div>
+      <span>TOTAL EXPENSE</span>
+      <span class="num">1.2M</span>
+    </div>
+    <div style="text-align:right">
+      <span>87 RECEIPTS</span>
+      <span class="num gold">87</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+     05: PROJECTS
+     ============================================================ -->
+<section class="s-projects">
+  <div class="projects-eyebrow">CHAPTER 05 / ACTIVE</div>
+  <div class="projects-title">3<br><em>PROJECTS</em></div>
+
+  <div class="pj-card">
+    <div class="pj-no">01</div>
+    <div class="pj-info">
+      <div class="pj-name">長崎DMOデータ分析</div>
+      <div class="pj-meta">DATA SCIENCE / IN PROGRESS</div>
+    </div>
+    <div class="pj-amt">¥400K</div>
+  </div>
+  <div class="pj-card">
+    <div class="pj-no">02</div>
+    <div class="pj-info">
+      <div class="pj-name">湘南カフェ vlog タイアップ</div>
+      <div class="pj-meta">YOUTUBE / IN PROGRESS</div>
+    </div>
+    <div class="pj-amt">¥180K</div>
+  </div>
+  <div class="pj-card">
+    <div class="pj-no">03</div>
+    <div class="pj-info">
+      <div class="pj-name">エディトリアル誌寄稿</div>
+      <div class="pj-meta">EDIT / IN PROGRESS</div>
+    </div>
+    <div class="pj-amt gold">¥85K</div>
+  </div>
+</section>
+
+<!-- ============================================================
+     06: GRADE D
+     ============================================================ -->
+<section class="s-grade-d">
+  <div class="grade-d-canvas-wrap">
+    <canvas id="gradeDCanvas"></canvas>
+  </div>
+  <div class="grade-d-flash" id="gradeDFlash"></div>
+  <div class="grade-d-content">
+    <div class="grade-d-eyebrow">CHAPTER 06 / GRADE D</div>
+    <div class="grade-d-label">GRADE D</div>
+    <div class="grade-d-title">過去最高<br><em>更新</em></div>
+    <div class="grade-d-sub">— X APPEARED FOR 0.3s —</div>
+  </div>
+</section>
+
+<!-- ============================================================
+     07: TOC
+     ============================================================ -->
+<section class="s-toc">
+  <div class="toc-eyebrow">— CONTENTS —</div>
+  <div class="toc-title">作業に<br><em>入る</em></div>
+
+  <div class="toc-row">
+    <div class="toc-no">01</div>
+    <div class="toc-name">経費</div>
+    <div class="toc-en">EXPENSE</div>
+    <div class="toc-arrow">→</div>
+  </div>
+  <div class="toc-row">
+    <div class="toc-no">02</div>
+    <div class="toc-name">売上</div>
+    <div class="toc-en">INCOME</div>
+    <div class="toc-arrow">→</div>
+  </div>
+  <div class="toc-row">
+    <div class="toc-no">03</div>
+    <div class="toc-name">確定申告</div>
+    <div class="toc-en">TAX RETURN</div>
+    <div class="toc-arrow">→</div>
+  </div>
+  <div class="toc-row">
+    <div class="toc-no">04</div>
+    <div class="toc-name">案件</div>
+    <div class="toc-en">PROJECT</div>
+    <div class="toc-arrow">→</div>
+  </div>
+  <div class="toc-row">
+    <div class="toc-no">05</div>
+    <div class="toc-name">経営</div>
+    <div class="toc-en">MANAGEMENT</div>
+    <div class="toc-arrow">→</div>
+  </div>
+  <div class="toc-row">
+    <div class="toc-no">06</div>
+    <div class="toc-name">設定</div>
+    <div class="toc-en">SETTING</div>
+    <div class="toc-arrow">→</div>
+  </div>
+</section>
+
+<footer>
+  <div class="end-line"></div>
+  THE MONEY BOOK / S94 V6 / NOT FOR PRODUCTION
+</footer>
+
+<script>
+'use strict';
+gsap.registerPlugin(ScrollTrigger);
+
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ============================================================
+   GLOBAL: 粒子の海(常時) — Hedi Diary 手触り
+   スマホ用シンプル版(PCでは下のCURSOR ENGINE側で干渉版が起動・本ループは停止)
+   ============================================================ */
+const _isTouchForSimpleParticles = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+(function(){
+  if(!_isTouchForSimpleParticles) return; // PC は新ループに任せる
+  const canvas = document.getElementById('particleCanvas');
+  const ctx = canvas.getContext('2d');
+  let w, h, particles = [];
+  function resize(){
+    w = canvas.width = window.innerWidth * window.devicePixelRatio;
+    h = canvas.height = window.innerHeight * window.devicePixelRatio;
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+  }
+  resize();
+  window.addEventListener('resize', resize);
+  for(let i = 0; i < 100; i++){
+    particles.push({
+      x: Math.random() * w,
+      y: Math.random() * h,
+      r: Math.random() * 1.4 + 0.3,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      o: Math.random() * 0.5 + 0.15
+    });
+  }
+  function loop(){
+    if(reducedMotion){return}
+    ctx.clearRect(0, 0, w, h);
+    particles.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      if(p.x < 0 || p.x > w) p.vx *= -1;
+      if(p.y < 0 || p.y > h) p.vy *= -1;
+      ctx.fillStyle = `rgba(184,137,58,${p.o})`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r * window.devicePixelRatio, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+
+/* ============================================================
+   SCROLL PROGRESS
+   ============================================================ */
+(function(){
+  const bar = document.getElementById('scrollProgress');
+  window.addEventListener('scroll', () => {
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    const p = (window.scrollY / max) * 100;
+    bar.style.width = p + '%';
+  }, {passive: true});
+})();
+
+/* ============================================================
+   00: COVER — オープニング X 線落下 + 数字カウントアップ
+   ============================================================ */
+gsap.fromTo('.cover-x-line.l1',{opacity:0,scaleY:0},{opacity:.7,scaleY:1,duration:1.2,delay:.2,ease:'power3.out'});
+gsap.fromTo('.cover-x-line.l2',{opacity:0,scaleY:0},{opacity:.7,scaleY:1,duration:1.2,delay:.35,ease:'power3.out'});
+gsap.fromTo('.cover-x-line.l3',{opacity:0,scaleY:0},{opacity:.5,scaleY:1,duration:1.2,delay:.5,ease:'power3.out'});
+gsap.fromTo('.cover-x-line.l4',{opacity:0,scaleY:0},{opacity:.5,scaleY:1,duration:1.2,delay:.65,ease:'power3.out'});
+
+gsap.fromTo('#coverNum',
+  {textContent:'0.0'},
+  {
+    textContent:'2.0',
+    duration:2.4,
+    delay:.8,
+    ease:'power3.out',
+    snap:{textContent:0.1}
+  }
+);
+
+/* ============================================================
+   01: PULSAR — Joy Division CP1919 × HANABI 球体光跡(方法論抽出)
+   80本の月次データを電波として描画
+   ============================================================ */
+(function(){
+  const canvas = document.getElementById('pulsarCanvas');
+  const ctx = canvas.getContext('2d');
+  let w, h;
+  function resize(){
+    const rect = canvas.getBoundingClientRect();
+    w = canvas.width = rect.width * window.devicePixelRatio;
+    h = canvas.height = rect.height * window.devicePixelRatio;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const monthly = [1.2, 1.5, 1.0, 1.8, 2.2, 1.6, 2.5, 2.0, 2.8, 2.3, 3.0, 3.2];
+  const max = Math.max(...monthly);
+  const lineCount = 80;
+
+  let phase = 0;
+  function draw(){
+    if(reducedMotion){drawStatic();return}
+    phase += 0.012;
+    ctx.clearRect(0, 0, w, h);
+
+    for(let line = 0; line < lineCount; line++){
+      const monthIdx = Math.floor((line / lineCount) * 12);
+      const value = monthly[monthIdx] / max;
+      const yBase = h * 0.12 + (line / (lineCount - 1)) * h * 0.76;
+
+      const isMonthBoundary = (line % Math.floor(lineCount / 12) === 0);
+      const isPeak = (monthIdx === 11);
+
+      let color;
+      if(isPeak && isMonthBoundary){
+        color = 'rgba(184,137,58,0.95)';
+      } else if(isMonthBoundary){
+        color = `rgba(255,255,255,${0.35 + value * 0.25})`;
+      } else {
+        color = `rgba(255,255,255,${0.10 + value * 0.18})`;
+      }
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = (isPeak && isMonthBoundary ? 2 : isMonthBoundary ? 1.2 : 0.6) * window.devicePixelRatio;
+      ctx.beginPath();
+      const segments = 240;
+      for(let i = 0; i <= segments; i++){
+        const x = (i / segments) * w;
+        const center = Math.abs(i - segments / 2) / (segments / 2);
+        const amp = (1 - center * center * 0.85) * value * h * 0.07;
+        const noise = Math.sin((i / segments) * Math.PI * 8 + phase + line * 0.18) * amp +
+                      Math.sin((i / segments) * Math.PI * 16 + phase * 1.7 + line * 0.3) * amp * 0.5 +
+                      Math.sin((i / segments) * Math.PI * 32 + phase * 2.3 + line * 0.5) * amp * 0.25;
+        const y = yBase - Math.abs(noise);
+        if(i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    requestAnimationFrame(draw);
+  }
+  function drawStatic(){
+    ctx.clearRect(0, 0, w, h);
+    for(let line = 0; line < lineCount; line++){
+      const monthIdx = Math.floor((line / lineCount) * 12);
+      const value = monthly[monthIdx] / max;
+      const yBase = h * 0.12 + (line / (lineCount - 1)) * h * 0.76;
+      const isMonthBoundary = (line % Math.floor(lineCount / 12) === 0);
+      const isPeak = (monthIdx === 11);
+      ctx.strokeStyle = (isPeak && isMonthBoundary) ? 'rgba(184,137,58,0.95)' :
+                        isMonthBoundary ? `rgba(255,255,255,${0.35 + value * 0.25})` :
+                        `rgba(255,255,255,${0.10 + value * 0.18})`;
+      ctx.lineWidth = (isPeak && isMonthBoundary ? 2 : isMonthBoundary ? 1.2 : 0.6) * window.devicePixelRatio;
+      ctx.beginPath();
+      const segments = 240;
+      for(let i = 0; i <= segments; i++){
+        const x = (i / segments) * w;
+        const center = Math.abs(i - segments / 2) / (segments / 2);
+        const amp = (1 - center * center * 0.85) * value * h * 0.07;
+        const noise = Math.sin((i / segments) * Math.PI * 8 + line * 0.18) * amp;
+        const y = yBase - Math.abs(noise);
+        if(i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+  }
+  draw();
+})();
+
+/* ============================================================
+   02: VIOLENT TYPO — CELINE 暗闇ランウェイ + McQueen ペンキ介入
+   スクロール駆動横断 + 多層パララックス
+   ============================================================ */
+gsap.utils.toArray('.violent-line').forEach((el, i) => {
+  const direction = i % 2 === 0 ? -1 : 1;
+  const speed = 1 + i * 0.15;
+  gsap.fromTo(el,
+    {x: 250 * direction * speed, opacity: 0},
+    {
+      x: 0,
+      opacity: 1,
+      ease: 'power3.out',
+      scrollTrigger: {
+        trigger: el,
+        start: 'top 90%',
+        end: 'top 25%',
+        scrub: 1
+      }
+    }
+  );
+});
+
+/* McQueen ペンキ介入 — Section 02 通過時に Xレッドが一瞬汚す */
+ScrollTrigger.create({
+  trigger: '.s-violent-typo',
+  start: 'top 30%',
+  onEnter: () => {
+    if(reducedMotion) return;
+    gsap.to('#violentPaint', {opacity: 0.18, duration: 0.08, ease: 'power4.out'});
+    gsap.to('#violentPaint', {opacity: 0, duration: 0.4, delay: 0.08, ease: 'power2.out'});
+  }
+});
+
+/* ============================================================
+   03: COUNTER — Daft Punk Pyramid + Tron グリッド + U2 Sphere
+   ============================================================ */
+(function(){
+  const canvas = document.getElementById('counterCanvas');
+  if(!canvas || typeof THREE === 'undefined') return;
+
+  const renderer = new THREE.WebGLRenderer({canvas, alpha: true, antialias: true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+  camera.position.set(0, 0, 8);
+
+  function resize(){
+    const rect = canvas.parentElement.getBoundingClientRect();
+    renderer.setSize(rect.width, rect.height, false);
+    camera.aspect = rect.width / rect.height;
+    camera.updateProjectionMatrix();
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // Tron グリッド床
+  const gridGeo = new THREE.BufferGeometry();
+  const gridPositions = [];
+  const gridSize = 24;
+  const gridStep = 0.5;
+  for(let x = -gridSize/2; x <= gridSize/2; x += gridStep){
+    for(let z = -gridSize/2; z <= gridSize/2; z += gridStep){
+      gridPositions.push(x, 0, z);
+    }
+  }
+  gridGeo.setAttribute('position', new THREE.Float32BufferAttribute(gridPositions, 3));
+  const gridMat = new THREE.PointsMaterial({color: 0xb8893a, size: 0.04, transparent: true, opacity: 0.5});
+  const gridPoints = new THREE.Points(gridGeo, gridMat);
+  gridPoints.rotation.x = Math.PI / 2.5;
+  gridPoints.position.y = -2;
+  scene.add(gridPoints);
+
+  // 中心の光柱(Daft Punk Pyramid)
+  const beamGeo = new THREE.CylinderGeometry(0.05, 0.05, 8, 16);
+  const beamMat = new THREE.MeshBasicMaterial({color: 0xb8893a, transparent: true, opacity: 0.3});
+  const beam = new THREE.Mesh(beamGeo, beamMat);
+  scene.add(beam);
+
+  // 周回リング 5本(U2 Sphere 球体感)
+  const rings = [];
+  for(let i = 0; i < 5; i++){
+    const ringGeo = new THREE.TorusGeometry(1.4 + i * 0.42, 0.012, 8, 80);
+    const ringMat = new THREE.MeshBasicMaterial({color: 0xb8893a, transparent: true, opacity: 0.6 - i * 0.08});
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.rotation.x = Math.PI / 2 + (i - 2) * 0.15;
+    ring.rotation.z = i * 0.3;
+    rings.push(ring);
+    scene.add(ring);
+  }
+
+  // 周回粒子(Rhizomatiks 群知能)
+  const orbitN = 120;
+  const orbitGeo = new THREE.BufferGeometry();
+  const orbitPos = new Float32Array(orbitN * 3);
+  const orbitData = [];
+  for(let i = 0; i < orbitN; i++){
+    const r = 1.5 + Math.random() * 1.5;
+    const theta = Math.random() * Math.PI * 2;
+    const phi = (Math.random() - 0.5) * 0.5;
+    orbitPos[i*3] = r * Math.cos(theta) * Math.cos(phi);
+    orbitPos[i*3+1] = r * Math.sin(phi);
+    orbitPos[i*3+2] = r * Math.sin(theta) * Math.cos(phi);
+    orbitData.push({r, theta, phi, speed: 0.005 + Math.random() * 0.015});
+  }
+  orbitGeo.setAttribute('position', new THREE.BufferAttribute(orbitPos, 3));
+  const orbitMat = new THREE.PointsMaterial({color: 0xffffff, size: 0.03, transparent: true, opacity: 0.85});
+  const orbitParticles = new THREE.Points(orbitGeo, orbitMat);
+  scene.add(orbitParticles);
+
+  let t = 0;
+  function loop(){
+    if(reducedMotion){renderer.render(scene, camera);return}
+    t += 0.005;
+    gridPoints.rotation.z = t * 0.2;
+    rings.forEach((r, i) => {
+      r.rotation.z = t * (i + 1) * 0.5;
+      r.material.opacity = 0.4 + Math.sin(t * 2 + i) * 0.2;
+    });
+    beam.scale.y = 1 + Math.sin(t * 3) * 0.1;
+    beam.material.opacity = 0.2 + Math.sin(t * 2.5) * 0.15;
+
+    // 周回粒子の更新
+    const pos = orbitParticles.geometry.attributes.position;
+    for(let i = 0; i < orbitN; i++){
+      orbitData[i].theta += orbitData[i].speed;
+      const r = orbitData[i].r;
+      pos.array[i*3] = r * Math.cos(orbitData[i].theta) * Math.cos(orbitData[i].phi);
+      pos.array[i*3+1] = r * Math.sin(orbitData[i].phi);
+      pos.array[i*3+2] = r * Math.sin(orbitData[i].theta) * Math.cos(orbitData[i].phi);
+    }
+    pos.needsUpdate = true;
+
+    // カメラ旋回 + PC マウス追従パララックス(Hedi レンズワーク)
+    const isTouchCounter = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    let mouseInfluenceX = 0, mouseInfluenceY = 0;
+    if(!isTouchCounter && typeof mouseGlobal !== 'undefined'){
+      // マウス位置を -1 〜 +1 に正規化
+      mouseInfluenceX = (mouseGlobal.x / window.innerWidth - 0.5) * 2;
+      mouseInfluenceY = (mouseGlobal.y / window.innerHeight - 0.5) * 2;
+    }
+    camera.position.x = Math.sin(t * 0.2) * 2 + mouseInfluenceX * 1.2;
+    camera.position.y = mouseInfluenceY * 0.8;
+    camera.position.z = 8 + Math.cos(t * 0.2) * 1;
+    camera.lookAt(0, 0, 0);
+
+    renderer.render(scene, camera);
+    requestAnimationFrame(loop);
+  }
+  loop();
+
+  // カウントアップ
+  gsap.fromTo('#bigNum',{textContent:'0.0'},{textContent:'3.2',duration:2,ease:'power2.out',snap:{textContent:0.1},scrollTrigger:{trigger:'.s-counter',start:'top 60%',toggleActions:'play none none none'}});
+  gsap.fromTo('#expNum',{textContent:'0.0'},{textContent:'1.2',duration:1.6,ease:'power2.out',snap:{textContent:0.1},scrollTrigger:{trigger:'.s-counter',start:'top 50%',toggleActions:'play none none none'}});
+  gsap.fromTo('#profitNum',{textContent:'0.0'},{textContent:'2.0',duration:2.2,ease:'power2.out',snap:{textContent:0.1},scrollTrigger:{trigger:'.s-counter',start:'top 50%',toggleActions:'play none none none'}});
+})();
+
+/* ============================================================
+   04: EXPENSE FIELD — Refik Anadol + チームラボ + Random Rain Room
+   5000粒子・3色混合・マウス重力源
+   ============================================================ */
+(function(){
+  const canvas = document.getElementById('fieldCanvas');
+  if(!canvas || typeof THREE === 'undefined') return;
+
+  const renderer = new THREE.WebGLRenderer({canvas, alpha: true, antialias: true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 100);
+  camera.position.set(0, 0, 10);
+
+  function resize(){
+    const rect = canvas.parentElement.getBoundingClientRect();
+    renderer.setSize(rect.width, rect.height, false);
+    camera.aspect = rect.width / rect.height;
+    camera.updateProjectionMatrix();
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // 31日 × 多数粒子 = 5000+(Refik Anadol レベル)
+  const dailyData = [12, 18, 8, 22, 16, 30, 28, 42, 38, 55, 48, 72, 68, 90, 85, 110, 98, 128, 120, 145, 138, 168, 158, 195, 180, 220, 205, 248, 232, 270, 255];
+  const max = Math.max(...dailyData);
+
+  const positions = [];
+  const colors = [];
+  const baseY = [];
+  const baseX = [];
+  const baseZ = [];
+  const phases = [];
+
+  // 3色混合: Xゴールド + ミッドナイトインク・ライト + Xバーガンディ
+  const colorPalette = [
+    [0xb8/255, 0x89/255, 0x3a/255], // Xゴールド
+    [0x3D/255, 0x5A/255, 0x9C/255], // ink-light
+    [0x5a/255, 0x1f/255, 0x24/255]  // Xバーガンディ
+  ];
+
+  dailyData.forEach((v, day) => {
+    const count = Math.ceil(v * 1.6);
+    for(let i = 0; i < count; i++){
+      const x = (day / 30) * 14 - 7 + (Math.random() - 0.5) * 0.4;
+      const y = (i / count) * (v / max) * 5 - 2.5 + (Math.random() - 0.5) * 0.3;
+      const z = (Math.random() - 0.5) * 4;
+      positions.push(x, y, z);
+      baseX.push(x);
+      baseY.push(y);
+      baseZ.push(z);
+      phases.push(Math.random() * Math.PI * 2);
+
+      // 3色を分布: 中央60%ゴールド・両端ink-light・赤字日バーガンディ
+      const colorIdx = v > 200 ? 2 : (v > 100 ? 0 : 1);
+      const c = colorPalette[colorIdx];
+      colors.push(c[0], c[1], c[2]);
+    }
+  });
+
+  const fieldGeo = new THREE.BufferGeometry();
+  fieldGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  fieldGeo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  const fieldMat = new THREE.PointsMaterial({size: 0.05, transparent: true, opacity: 0.85, vertexColors: true});
+  const field = new THREE.Points(fieldGeo, fieldMat);
+  scene.add(field);
+
+  // マウス位置(Rain Room 重力源)
+  let mouseX = 0, mouseY = 0;
+  canvas.addEventListener('mousemove', e => {
+    const rect = canvas.getBoundingClientRect();
+    mouseX = ((e.clientX - rect.left) / rect.width) * 14 - 7;
+    mouseY = -((e.clientY - rect.top) / rect.height) * 6 + 3;
+  });
+  canvas.addEventListener('touchmove', e => {
+    if(e.touches.length === 0) return;
+    const rect = canvas.getBoundingClientRect();
+    mouseX = ((e.touches[0].clientX - rect.left) / rect.width) * 14 - 7;
+    mouseY = -((e.touches[0].clientY - rect.top) / rect.height) * 6 + 3;
+  });
+
+  let t = 0;
+  function loop(){
+    if(reducedMotion){renderer.render(scene, camera);return}
+    t += 0.008;
+    const pos = field.geometry.attributes.position;
+    const N = pos.count;
+    for(let i = 0; i < N; i++){
+      const idx = i * 3;
+      // 流体運動(チームラボ Universe of Water Particles)
+      const flowY = baseY[i] + Math.sin(t + phases[i]) * 0.25;
+      const flowX = baseX[i] + Math.cos(t * 0.7 + phases[i]) * 0.15;
+
+      // Rain Room: マウスから逃げる
+      const dx = pos.array[idx] - mouseX;
+      const dy = pos.array[idx+1] - mouseY;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      const force = Math.max(0, 1.5 - dist) * 0.4;
+      const fx = (dx / (dist + 0.01)) * force;
+      const fy = (dy / (dist + 0.01)) * force;
+
+      pos.array[idx] = flowX + fx;
+      pos.array[idx+1] = flowY + fy;
+      pos.array[idx+2] = baseZ[i] + Math.sin(t * 1.3 + phases[i]) * 0.2;
+    }
+    pos.needsUpdate = true;
+    field.rotation.y = Math.sin(t * 0.2) * 0.12;
+    renderer.render(scene, camera);
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+
+/* ============================================================
+   05: PROJECTS — フェードイン
+   ============================================================ */
+gsap.utils.toArray('.pj-card').forEach((card, i) => {
+  gsap.fromTo(card,
+    {x: -40, opacity: 0},
+    {
+      x: 0,
+      opacity: 1,
+      duration: 0.9,
+      delay: i * 0.12,
+      ease: 'power3.out',
+      scrollTrigger: {trigger: card, start: 'top 88%', toggleActions: 'play none none none'}
+    }
+  );
+});
+
+/* ============================================================
+   06: GRADE D — Daft Punk Alive 2007 爆発 + McQueen Plato's Atlantis 終末感
+   3000粒子爆発・X 顕現フラッシュ・色変化
+   ============================================================ */
+(function(){
+  const canvas = document.getElementById('gradeDCanvas');
+  if(!canvas || typeof THREE === 'undefined') return;
+
+  const renderer = new THREE.WebGLRenderer({canvas, alpha: true, antialias: true});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 100);
+  camera.position.set(0, 0, 10);
+
+  function resize(){
+    const rect = canvas.parentElement.getBoundingClientRect();
+    renderer.setSize(rect.width, rect.height, false);
+    camera.aspect = rect.width / rect.height;
+    camera.updateProjectionMatrix();
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const N = 3000;
+  const positions = new Float32Array(N * 3);
+  const colors = new Float32Array(N * 3);
+  const velocities = [];
+
+  function reset(){
+    for(let i = 0; i < N; i++){
+      const phi = Math.random() * Math.PI * 2;
+      const theta = Math.acos((Math.random() * 2) - 1);
+      const r = 0.1;
+      positions[i * 3] = Math.sin(theta) * Math.cos(phi) * r;
+      positions[i * 3 + 1] = Math.sin(theta) * Math.sin(phi) * r;
+      positions[i * 3 + 2] = Math.cos(theta) * r;
+      const speed = 0.025 + Math.random() * 0.04;
+      velocities[i] = {
+        vx: Math.sin(theta) * Math.cos(phi) * speed,
+        vy: Math.sin(theta) * Math.sin(phi) * speed,
+        vz: Math.cos(theta) * speed
+      };
+      // 初期色:Xスノー → ゴールド → バーガンディの時間変化(後でループ内で変える)
+      colors[i*3] = 1.0;
+      colors[i*3+1] = 1.0;
+      colors[i*3+2] = 1.0;
+    }
+  }
+  reset();
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  const mat = new THREE.PointsMaterial({size: 0.05, transparent: true, opacity: 1, vertexColors: true});
+  const pts = new THREE.Points(geo, mat);
+  scene.add(pts);
+
+  let t = 0;
+  let cycle = 0;
+  function loop(){
+    if(reducedMotion){renderer.render(scene, camera);return}
+    t += 1;
+    cycle = t % 280;
+    const pos = pts.geometry.attributes.position;
+    const col = pts.geometry.attributes.color;
+
+    if(cycle < 1){
+      reset();
+      pos.needsUpdate = true;
+      col.needsUpdate = true;
+      // X 顕現フラッシュ(白0.08秒)
+      gsap.to('#gradeDFlash', {opacity: 0.85, duration: 0.08, ease: 'power4.out'});
+      gsap.to('#gradeDFlash', {opacity: 0, duration: 0.5, delay: 0.08, ease: 'power2.out'});
+    } else {
+      for(let i = 0; i < N; i++){
+        pos.array[i * 3] += velocities[i].vx;
+        pos.array[i * 3 + 1] += velocities[i].vy;
+        pos.array[i * 3 + 2] += velocities[i].vz;
+      }
+      pos.needsUpdate = true;
+
+      // 色の時間変化:Xスノー(0-30) → Xゴールド(30-150) → Xバーガンディ(150-280)
+      const phase = cycle / 280;
+      let r, g, b;
+      if(phase < 0.1){
+        r = 1.0; g = 1.0; b = 1.0;
+      } else if(phase < 0.55){
+        const p = (phase - 0.1) / 0.45;
+        r = 1.0 - p * (1.0 - 0xb8/255);
+        g = 1.0 - p * (1.0 - 0x89/255);
+        b = 1.0 - p * (1.0 - 0x3a/255);
+      } else {
+        const p = (phase - 0.55) / 0.45;
+        r = 0xb8/255 - p * (0xb8/255 - 0x5a/255);
+        g = 0x89/255 - p * (0x89/255 - 0x1f/255);
+        b = 0x3a/255 - p * (0x3a/255 - 0x24/255);
+      }
+      for(let i = 0; i < N; i++){
+        col.array[i*3] = r;
+        col.array[i*3+1] = g;
+        col.array[i*3+2] = b;
+      }
+      col.needsUpdate = true;
+    }
+    mat.opacity = Math.max(0, 1 - cycle / 230);
+    pts.rotation.y = t * 0.002;
+    renderer.render(scene, camera);
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+
+/* ============================================================
+   07: TOC — フェードイン
+   ============================================================ */
+gsap.utils.toArray('.toc-row').forEach((row, i) => {
+  gsap.fromTo(row,
+    {y: 30, opacity: 0},
+    {
+      y: 0,
+      opacity: 1,
+      duration: 0.7,
+      delay: i * 0.08,
+      ease: 'power3.out',
+      scrollTrigger: {trigger: row, start: 'top 90%', toggleActions: 'play none none none'}
+    }
+  );
+});
+
+/* ============================================================
+   CURSOR ENGINE — PC マウス反応・カスタムカーソル(Hedi Diary 手触り × Refik Anadol 干渉)
+   PC のみ作動。タッチデバイスでは無効
+   ============================================================ */
+const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+let mouseGlobal = {x: window.innerWidth/2, y: window.innerHeight/2, vx: 0, vy: 0, lastX: 0, lastY: 0};
+
+(function(){
+  if(isTouchDevice || reducedMotion) return;
+
+  // カスタムカーソル DOM 注入(Xゴールド円 + 中心点)
+  const cursor = document.createElement('div');
+  cursor.id = 'tmbCursor';
+  cursor.innerHTML = '<div class="tmb-cursor-ring"></div><div class="tmb-cursor-dot"></div>';
+  cursor.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;pointer-events:none;z-index:9999;mix-blend-mode:difference';
+  document.body.appendChild(cursor);
+
+  const styleEl = document.createElement('style');
+  styleEl.textContent = `
+    body{cursor:none}
+    a,button,.toc-row,.pj-card{cursor:none}
+    .tmb-cursor-ring{
+      position:absolute;
+      top:-18px;left:-18px;
+      width:36px;height:36px;
+      border:1px solid #b8893a;
+      border-radius:50%;
+      transition:transform .25s cubic-bezier(.2,.6,.2,1),border-color .2s;
+    }
+    .tmb-cursor-dot{
+      position:absolute;
+      top:-2px;left:-2px;
+      width:4px;height:4px;
+      background:#ffffff;
+      border-radius:50%;
+    }
+    .tmb-cursor-active .tmb-cursor-ring{
+      transform:scale(1.6);
+      border-color:#ffffff;
+    }
+  `;
+  document.head.appendChild(styleEl);
+
+  let cx = window.innerWidth/2, cy = window.innerHeight/2;
+  let tx = cx, ty = cy;
+
+  document.addEventListener('mousemove', e => {
+    tx = e.clientX;
+    ty = e.clientY;
+    mouseGlobal.lastX = mouseGlobal.x;
+    mouseGlobal.lastY = mouseGlobal.y;
+    mouseGlobal.x = e.clientX;
+    mouseGlobal.y = e.clientY;
+    mouseGlobal.vx = mouseGlobal.x - mouseGlobal.lastX;
+    mouseGlobal.vy = mouseGlobal.y - mouseGlobal.lastY;
+  });
+
+  // hover対象要素にactiveクラス追加(リンク・カード・TOC行)
+  document.querySelectorAll('a,button,.toc-row,.pj-card').forEach(el => {
+    el.addEventListener('mouseenter', () => cursor.classList.add('tmb-cursor-active'));
+    el.addEventListener('mouseleave', () => cursor.classList.remove('tmb-cursor-active'));
+  });
+
+  function loop(){
+    cx += (tx - cx) * 0.18;
+    cy += (ty - cy) * 0.18;
+    cursor.style.transform = `translate(${cx}px,${cy}px)`;
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+
+/* ============================================================
+   PARALLAX ENGINE — 全章にスクロール × マウス連動パララックス
+   各層が異なる速度で動く(McQueen No.13 の物理介入感 × Refik Anadol 流体)
+   ============================================================ */
+(function(){
+  if(reducedMotion) return;
+
+  // === Section 00 COVER パララックス ===
+  // 巨大数字「2.0M」がスクロールでゆっくり下方移動・拡大
+  gsap.to('.cover-num',{
+    yPercent:25,
+    scale:1.08,
+    ease:'none',
+    scrollTrigger:{trigger:'.s-cover',start:'top top',end:'bottom top',scrub:1.2}
+  });
+  // 影層は逆速度(視差)
+  gsap.to('.cover-num-shadow',{
+    yPercent:18,
+    xPercent:-3,
+    ease:'none',
+    scrollTrigger:{trigger:'.s-cover',start:'top top',end:'bottom top',scrub:1.5}
+  });
+  // X線4本もスクロールで微回転
+  gsap.to('.cover-x-line.l1',{rotation:18,ease:'none',scrollTrigger:{trigger:'.s-cover',start:'top top',end:'bottom top',scrub:2}});
+  gsap.to('.cover-x-line.l2',{rotation:-18,ease:'none',scrollTrigger:{trigger:'.s-cover',start:'top top',end:'bottom top',scrub:2}});
+
+  // PC マウス反応:Cover の巨大数字がマウス追従で微妙にtilt + X線4本も連動
+  if(!isTouchDevice){
+    const coverNum = document.querySelector('.cover-num');
+    const coverShadow = document.querySelector('.cover-num-shadow');
+    const coverSection = document.querySelector('.s-cover');
+    const xLines = document.querySelectorAll('.cover-x-line');
+    coverSection.addEventListener('mousemove', e => {
+      const rect = coverSection.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width - 0.5;
+      const y = (e.clientY - rect.top) / rect.height - 0.5;
+      gsap.to(coverNum,{x:x*-15,y:y*-8,duration:1,ease:'power2.out'});
+      gsap.to(coverShadow,{x:x*-25,y:y*-15,duration:1.4,ease:'power2.out'});
+      // X線4本もマウスで角度変化(物理的に揺れる)
+      xLines.forEach((line,i) => {
+        const baseRotation = [15,-15,-25,25][i];
+        gsap.to(line,{
+          rotation: baseRotation + x*8 + (i%2===0?y*4:-y*4),
+          duration: 1.5,
+          ease:'power2.out'
+        });
+      });
+    });
+    coverSection.addEventListener('mouseleave', () => {
+      gsap.to([coverNum,coverShadow],{x:0,y:0,duration:1.5,ease:'power2.out'});
+      xLines.forEach((line,i) => {
+        const baseRotation = [15,-15,-25,25][i];
+        gsap.to(line,{rotation:baseRotation,duration:2,ease:'power2.out'});
+      });
+    });
+  }
+
+  // === Section 01 PULSAR パララックス ===
+  // 章番号 outline がスクロールで横移動
+  gsap.to('.pulsar-chapter-no',{
+    xPercent:-15,
+    yPercent:8,
+    ease:'none',
+    scrollTrigger:{trigger:'.s-pulsar',start:'top bottom',end:'bottom top',scrub:1.5}
+  });
+  // タイトルがゆっくり上昇
+  gsap.from('.pulsar-title',{
+    yPercent:30,
+    opacity:0.4,
+    ease:'none',
+    scrollTrigger:{trigger:'.s-pulsar',start:'top bottom',end:'top center',scrub:1}
+  });
+  // 統計セルが時差でフェード
+  gsap.utils.toArray('.pulsar-stat-cell').forEach((cell,i) => {
+    gsap.from(cell,{
+      yPercent:50,
+      opacity:0,
+      ease:'power2.out',
+      scrollTrigger:{trigger:cell,start:'top 90%',end:'top 60%',scrub:1.2 + i*0.2}
+    });
+  });
+
+  // === Section 02 VIOLENT TYPO 多層パララックス強化 ===
+  // 既に各行にscrubあるが、さらに行ごとに異なる加速度を加算
+  gsap.utils.toArray('.violent-line').forEach((el,i) => {
+    gsap.to(el,{
+      yPercent:(i%2===0?-15:-25)-i*5,
+      ease:'none',
+      scrollTrigger:{trigger:'.s-violent-typo',start:'top center',end:'bottom top',scrub:1+i*0.3}
+    });
+  });
+
+  // === Section 03 COUNTER パララックス ===
+  // 巨大数字オーバーレイがスクロールで微浮遊
+  gsap.to('.counter-overlay-num',{
+    yPercent:-20,
+    ease:'none',
+    scrollTrigger:{trigger:'.s-counter',start:'top center',end:'bottom top',scrub:1.5}
+  });
+
+  // === Section 04 EXPENSE FIELD パララックス ===
+  gsap.from('.field-title',{
+    xPercent:-30,
+    opacity:0.3,
+    ease:'none',
+    scrollTrigger:{trigger:'.s-field',start:'top bottom',end:'top center',scrub:1}
+  });
+
+  // === Section 05 PROJECTS パララックス ===
+  gsap.from('.projects-title',{
+    xPercent:25,
+    ease:'none',
+    scrollTrigger:{trigger:'.s-projects',start:'top bottom',end:'top center',scrub:1}
+  });
+
+  // === Section 06 GRADE D パララックス ===
+  gsap.to('.grade-d-title',{
+    scale:1.15,
+    ease:'none',
+    scrollTrigger:{trigger:'.s-grade-d',start:'top bottom',end:'bottom top',scrub:1.2}
+  });
+
+  // === Section 07 TOC パララックス ===
+  gsap.from('.toc-title',{
+    xPercent:-20,
+    opacity:0.4,
+    ease:'none',
+    scrollTrigger:{trigger:'.s-toc',start:'top bottom',end:'top center',scrub:1}
+  });
+})();
+
+/* ============================================================
+   PARTICLE INTERACTION — 粒子の海(常時)が PC マウスに干渉
+   既存の particleCanvas をマウス位置で吸引/反発させる(Random Rain Room 系)
+   ============================================================ */
+(function(){
+  if(isTouchDevice || reducedMotion) return;
+
+  const canvas = document.getElementById('particleCanvas');
+  if(!canvas) return;
+
+  // 既存ループに干渉力を追加するため、particleCanvas をオーバーライド
+  const ctx = canvas.getContext('2d');
+  let w, h;
+  function resize(){
+    w = canvas.width = window.innerWidth * window.devicePixelRatio;
+    h = canvas.height = window.innerHeight * window.devicePixelRatio;
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const particles = [];
+  for(let i = 0; i < 140; i++){
+    particles.push({
+      x: Math.random() * w,
+      y: Math.random() * h,
+      r: Math.random() * 1.4 + 0.3,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      o: Math.random() * 0.5 + 0.15,
+      gold: Math.random() > 0.3 // 7割ゴールド・3割スノー
+    });
+  }
+
+  function loop(){
+    ctx.clearRect(0, 0, w, h);
+
+    const mx = mouseGlobal.x * window.devicePixelRatio;
+    const my = mouseGlobal.y * window.devicePixelRatio;
+    const repelRadius = 120 * window.devicePixelRatio;
+
+    particles.forEach(p => {
+      // マウス干渉:近距離で反発(Rain Room)
+      const dx = p.x - mx;
+      const dy = p.y - my;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if(dist < repelRadius && dist > 0){
+        const force = (1 - dist / repelRadius) * 0.8;
+        p.vx += (dx / dist) * force;
+        p.vy += (dy / dist) * force;
+      }
+
+      // 通常移動 + 摩擦
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vx *= 0.96;
+      p.vy *= 0.96;
+
+      // 平常時の漂い力
+      p.vx += (Math.random() - 0.5) * 0.04;
+      p.vy += (Math.random() - 0.5) * 0.04;
+
+      // 境界
+      if(p.x < 0){p.x = 0;p.vx *= -0.5}
+      if(p.x > w){p.x = w;p.vx *= -0.5}
+      if(p.y < 0){p.y = 0;p.vy *= -0.5}
+      if(p.y > h){p.y = h;p.vy *= -0.5}
+
+      // 描画(ゴールド or スノー)
+      const baseColor = p.gold ? '184,137,58' : '255,255,255';
+      ctx.fillStyle = `rgba(${baseColor},${p.o})`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r * window.devicePixelRatio, 0, Math.PI * 2);
+      ctx.fill();
+
+      // マウス近接時に光跡を描く(Rhizomatiks discrete figures)
+      if(dist < repelRadius){
+        const lineOpacity = (1 - dist / repelRadius) * 0.5;
+        ctx.strokeStyle = `rgba(184,137,58,${lineOpacity * p.o})`;
+        ctx.lineWidth = 0.5 * window.devicePixelRatio;
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(mx, my);
+        ctx.stroke();
+      }
+    });
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+</script>
+</body>
+</html>
