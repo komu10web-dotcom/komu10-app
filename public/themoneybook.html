@@ -2226,9 +2226,11 @@ body.spine-open .spine-overlay{
   pointer-events:auto;
 }
 
-/* スマホ:タップ専用(hover 不発火) */
+/* スマホ:タップ専用(hover 不発火・章番号は open 時のみ表示) */
 @media (hover:none){
-  .spine-menu.hover{}
+  .spine-menu.hover .spine-num{opacity:0!important;transform:translateX(20px)!important;pointer-events:none!important}
+  .spine-menu.hover .spine-axis{transform:translate(0,-50%) scaleY(0)!important}
+  .spine-menu.hover .spine-label{color:#ffffff!important;letter-spacing:.4em!important;mix-blend-mode:difference!important}
 }
 
 @media (prefers-reduced-motion:reduce){
