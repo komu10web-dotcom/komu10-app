@@ -2170,9 +2170,11 @@ let mouseGlobal = {x: window.innerWidth/2, y: window.innerHeight/2, vx: 0, vy: 0
   transition:color .4s,letter-spacing .4s;
   white-space:nowrap;
   mix-blend-mode:difference;
+  animation:spineMenuBreath 3s ease-in-out infinite;
 }
-.spine-menu.hover .spine-label-vert{color:#b8893a;letter-spacing:.6em;mix-blend-mode:normal}
-.spine-menu.open .spine-label-vert{color:#b8893a;letter-spacing:.8em;mix-blend-mode:normal}
+@keyframes spineMenuBreath{0%,100%{opacity:1}50%{opacity:.5}}
+.spine-menu.hover .spine-label-vert{color:#b8893a;letter-spacing:.6em;mix-blend-mode:normal;animation:none;opacity:1}
+.spine-menu.open .spine-label-vert{color:#b8893a;letter-spacing:.8em;mix-blend-mode:normal;animation:none;opacity:1}
 
 /* オーバーレイ:open時の暗幕 */
 .spine-overlay{
@@ -2203,7 +2205,6 @@ body.spine-open .spine-overlay{
     animation:none!important;
   }
 }
-
 html{scroll-behavior:smooth}
 section[id^="ch"]{scroll-margin-top:0}
 </style>
