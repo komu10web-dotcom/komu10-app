@@ -2125,7 +2125,7 @@ let mouseGlobal = {x: window.innerWidth/2, y: window.innerHeight/2, vx: 0, vy: 0
   transform:translate(0,-50%) scaleY(1);
 }
 .spine-menu.hover .spine-axis svg polygon{
-  fill:url(#spineGrad);
+  fill:#b8893a;
   opacity:1;
   animation:spineBreath 3s ease-in-out infinite;
 }
@@ -2137,7 +2137,7 @@ let mouseGlobal = {x: window.innerWidth/2, y: window.innerHeight/2, vx: 0, vy: 0
   transform:translate(0,-50%) scaleY(1)!important;
 }
 .spine-menu.open .spine-axis svg polygon{
-  fill:url(#spineGrad)!important;
+  fill:#b8893a!important;
   opacity:1!important;
   animation:none!important;
 }
@@ -2242,17 +2242,6 @@ html{scroll-behavior:smooth}
 section[id^="ch"]{scroll-margin-top:0}
 </style>
 
-<svg style="position:absolute;width:0;height:0" aria-hidden="true">
-  <defs>
-    <linearGradient id="spineGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#fafaf6" stop-opacity="0"></stop>
-      <stop offset="20%" stop-color="#fafaf6" stop-opacity=".7"></stop>
-      <stop offset="50%" stop-color="#b8893a" stop-opacity="1"></stop>
-      <stop offset="80%" stop-color="#fafaf6" stop-opacity=".7"></stop>
-      <stop offset="100%" stop-color="#fafaf6" stop-opacity="0"></stop>
-    </linearGradient>
-  </defs>
-</svg>
 
 <nav class="spine-menu" id="spineMenu" aria-label="目次メニュー">
   <button class="spine-hot" id="spineHot" aria-label="メニューを開く" aria-expanded="false"></button>
