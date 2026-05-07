@@ -2099,9 +2099,10 @@ let mouseGlobal = {x: window.innerWidth/2, y: window.innerHeight/2, vx: 0, vy: 0
 .spine-menu.hover .spine-label{color:#b8893a;letter-spacing:.55em;mix-blend-mode:normal}
 .spine-menu.open .spine-label{color:#b8893a;letter-spacing:.7em;mix-blend-mode:normal}
 
-/* テーパー線 - MENU 文字の下に縦に配置(重ならない位置)
-   通常時:非表示
-   ホバー時:出現 + 章番号と同領域に伸びる */
+/* テーパー線 - 章番号の縦領域と一致(8章分の高さ)
+   通常時:完全非表示(scaleY 0)
+   ホバー時:章番号と同じ縦範囲に伸びる
+   MENU 文字(right:18px) とは横方向で別配置(right:54px) */
 .spine-axis{
   position:absolute;
   top:50%;
@@ -2109,7 +2110,7 @@ let mouseGlobal = {x: window.innerWidth/2, y: window.innerHeight/2, vx: 0, vy: 0
   transform:translate(0,-50%) scaleY(0);
   transform-origin:center;
   width:2px;
-  height:62%;
+  height:380px;
   pointer-events:none;
   transition:transform .8s cubic-bezier(.2,.6,.2,1);
   z-index:3;
@@ -2147,7 +2148,7 @@ let mouseGlobal = {x: window.innerWidth/2, y: window.innerHeight/2, vx: 0, vy: 0
   top:50%;
   right:80px;
   transform:translateY(-50%);
-  height:62%;
+  height:380px;
   width:auto;
   pointer-events:none;
   z-index:4;
