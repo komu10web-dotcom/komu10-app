@@ -2051,140 +2051,86 @@ let mouseGlobal = {x: window.innerWidth/2, y: window.innerHeight/2, vx: 0, vy: 0
   loop();
 })();
 </script>
-<!-- ===== SPINE MENU s94 ===== -->
+<!-- ===== SPINE MENU s94 / canon-準拠版 ===== -->
 <style>
 .spine-menu{
   position:fixed;
   top:0;
   right:0;
-  width:auto;
+  width:80px;
   height:100vh;
   z-index:9000;
   pointer-events:none;
   font-family:'Bricolage Grotesque','Noto Sans JP',sans-serif;
 }
-.spine-hot{
+.spine-trigger{
   position:absolute;
   top:0;
   right:0;
   width:80px;
   height:100%;
-  pointer-events:auto;
   cursor:pointer;
+  z-index:50;
   background:transparent;
   border:none;
   padding:0;
-  z-index:1;
+  pointer-events:auto;
 }
-.spine-hot:focus{outline:none}
+.spine-trigger:focus{outline:none}
 
-/* MENU 文字 - 通常時はこれだけ表示・線とは重ねない */
-.spine-label{
-  position:absolute;
-  top:50%;
-  right:18px;
-  transform:translateY(-50%) rotate(-90deg);
-  transform-origin:center;
-  font-weight:700;
-  font-size:11px;
-  letter-spacing:.4em;
-  color:#ffffff;
-  text-transform:uppercase;
-  white-space:nowrap;
-  transition:color .4s,letter-spacing .4s;
-  pointer-events:none;
-  mix-blend-mode:difference;
-  z-index:5;
-}
-.spine-menu.hover .spine-label{color:#b8893a;letter-spacing:.55em;mix-blend-mode:normal}
-.spine-menu.open .spine-label{color:#b8893a;letter-spacing:.7em;mix-blend-mode:normal}
-
-/* テーパー線 - 章番号の縦領域と一致(8章分の高さ)
-   通常時:完全非表示(scaleY 0)
-   ホバー時:章番号と同じ縦範囲に伸びる
-   MENU 文字(right:18px) とは横方向で別配置(right:54px) */
+/* 線:右30pxに垂直配置・1px・Xゴールド単色
+   通常時:height:0(完全非表示)
+   ホバー時:60%
+   open時:100% */
 .spine-axis{
   position:absolute;
   top:50%;
-  right:54px;
-  transform:translate(0,-50%) scaleY(0);
-  transform-origin:center;
-  width:2px;
-  height:380px;
+  right:30px;
+  transform:translateY(-50%);
+  width:1px;
+  height:0;
+  background:#b8893a;
+  z-index:51;
   pointer-events:none;
-  transition:transform .8s cubic-bezier(.2,.6,.2,1);
-  z-index:3;
+  transition:height .8s cubic-bezier(.2,.6,.2,1),width .4s;
 }
-.spine-axis svg{width:100%;height:100%;display:block;overflow:visible}
-.spine-axis svg polygon{
-  fill:#fafaf6;
-  opacity:.55;
-  transition:fill .5s;
-}
-.spine-menu.hover .spine-axis{
-  transform:translate(0,-50%) scaleY(1);
-}
-.spine-menu.hover .spine-axis svg polygon{
-  fill:#b8893a;
-  opacity:1;
-  animation:spineBreath 3s ease-in-out infinite;
-}
-@keyframes spineBreath{
-  0%,100%{opacity:1}
-  50%{opacity:.7}
-}
-.spine-menu.open .spine-axis{
-  transform:translate(0,-50%) scaleY(1)!important;
-}
-.spine-menu.open .spine-axis svg polygon{
-  fill:#b8893a!important;
-  opacity:1!important;
-  animation:none!important;
-}
+.spine-menu.hover .spine-axis{height:60%}
+.spine-menu.open .spine-axis{height:100%!important;width:1px}
 
-/* 章番号 - 通常時は非表示・ホバーで薄く出現 */
+/* 章番号:right:50px・通常時非表示・ホバーで薄く・open時 translateX(-160px)で左へ滑り出し */
 .spine-numbers{
   position:absolute;
-  top:50%;
-  right:80px;
-  transform:translateY(-50%);
-  height:380px;
-  width:auto;
+  inset:0;
   pointer-events:none;
-  z-index:4;
-  display:flex;
-  flex-direction:column;
-  justify-content:space-between;
-  align-items:flex-end;
+  z-index:52;
 }
 .spine-num{
+  position:absolute;
+  right:50px;
   font-family:'Big Shoulders Display',sans-serif;
   font-weight:900;
-  font-size:13px;
+  font-size:48px;
   line-height:1;
-  color:#ffffff;
-  letter-spacing:.05em;
+  color:#fafaf6;
+  letter-spacing:-.03em;
   opacity:0;
   transform:translateX(20px);
+  transition:opacity .6s,transform .6s,color .4s,font-size .8s;
   pointer-events:none;
   white-space:nowrap;
-  transition:opacity .6s,transform .6s,font-size .8s;
   cursor:pointer;
-  display:flex;
-  align-items:baseline;
-  gap:10px;
 }
-.spine-num em{
-  color:#b8893a;
-  font-style:normal;
-  font-size:9px;
-  letter-spacing:.3em;
-  font-family:'Bricolage Grotesque',sans-serif;
-  font-weight:700;
-}
-.spine-num span{font-size:13px}
+.spine-num em{color:#b8893a;font-style:normal}
+.spine-numbers .spine-num:nth-child(1){top:8%}
+.spine-numbers .spine-num:nth-child(2){top:21%}
+.spine-numbers .spine-num:nth-child(3){top:34%}
+.spine-numbers .spine-num:nth-child(4){top:47%}
+.spine-numbers .spine-num:nth-child(5){top:60%}
+.spine-numbers .spine-num:nth-child(6){top:73%}
+.spine-numbers .spine-num:nth-child(7){top:86%}
+
 .spine-menu.hover .spine-num{
-  opacity:.45;
+  opacity:.35;
   transform:translateX(0);
   pointer-events:auto;
 }
@@ -2195,21 +2141,40 @@ let mouseGlobal = {x: window.innerWidth/2, y: window.innerHeight/2, vx: 0, vy: 0
 .spine-menu.hover .spine-num:nth-child(5){transition-delay:.2s}
 .spine-menu.hover .spine-num:nth-child(6){transition-delay:.25s}
 .spine-menu.hover .spine-num:nth-child(7){transition-delay:.3s}
-.spine-menu.hover .spine-num:nth-child(8){transition-delay:.35s}
 .spine-menu.hover .spine-num:hover{opacity:1;color:#b8893a}
 
 .spine-menu.open .spine-num{
   opacity:1!important;
-  transform:translateX(-200px)!important;
-  font-size:32px;
+  transform:translateX(-160px)!important;
+  font-size:72px;
   pointer-events:auto;
-  transition:opacity .8s,transform 1s cubic-bezier(.2,.6,.2,1),font-size .8s;
 }
-.spine-menu.open .spine-num em{font-size:11px}
-.spine-menu.open .spine-num span{font-size:32px}
+.spine-menu.open .spine-num em{color:#b8893a}
 .spine-menu.open .spine-num:hover{color:#b8893a}
 
-/* オーバーレイ - 開いた時の暗幕 */
+/* MENU文字:right:14px・縦書き・画面最右端・通常時白・ホバー金 */
+.spine-label-vert{
+  position:absolute;
+  top:50%;
+  right:14px;
+  transform:translateY(-50%) rotate(-90deg);
+  transform-origin:center;
+  font-family:'Bricolage Grotesque',sans-serif;
+  font-weight:700;
+  font-size:10px;
+  letter-spacing:.4em;
+  color:#fafaf6;
+  text-transform:uppercase;
+  z-index:53;
+  pointer-events:none;
+  transition:color .4s,letter-spacing .4s;
+  white-space:nowrap;
+  mix-blend-mode:difference;
+}
+.spine-menu.hover .spine-label-vert{color:#b8893a;letter-spacing:.6em;mix-blend-mode:normal}
+.spine-menu.open .spine-label-vert{color:#b8893a;letter-spacing:.8em;mix-blend-mode:normal}
+
+/* オーバーレイ:open時の暗幕 */
 .spine-overlay{
   position:fixed;
   inset:0;
@@ -2220,21 +2185,20 @@ let mouseGlobal = {x: window.innerWidth/2, y: window.innerHeight/2, vx: 0, vy: 0
   z-index:8500;
   transition:opacity .8s;
 }
-.spine-menu.open ~ .spine-overlay,
 body.spine-open .spine-overlay{
   opacity:1;
   pointer-events:auto;
 }
 
-/* スマホ:タップ専用(hover 不発火・章番号は open 時のみ表示) */
+/* スマホ:hover不発火・章番号は open 時のみ */
 @media (hover:none){
   .spine-menu.hover .spine-num{opacity:0!important;transform:translateX(20px)!important;pointer-events:none!important}
-  .spine-menu.hover .spine-axis{transform:translate(0,-50%) scaleY(0)!important}
-  .spine-menu.hover .spine-label{color:#ffffff!important;letter-spacing:.4em!important;mix-blend-mode:difference!important}
+  .spine-menu.hover .spine-axis{height:0!important}
+  .spine-menu.hover .spine-label-vert{color:#fafaf6!important;letter-spacing:.4em!important;mix-blend-mode:difference!important}
 }
 
 @media (prefers-reduced-motion:reduce){
-  .spine-axis,.spine-axis svg polygon,.spine-num,.spine-overlay,.spine-label{
+  .spine-axis,.spine-num,.spine-overlay,.spine-label-vert{
     transition-duration:.01ms!important;
     animation:none!important;
   }
@@ -2244,25 +2208,19 @@ html{scroll-behavior:smooth}
 section[id^="ch"]{scroll-margin-top:0}
 </style>
 
-
 <nav class="spine-menu" id="spineMenu" aria-label="目次メニュー">
-  <button class="spine-hot" id="spineHot" aria-label="メニューを開く" aria-expanded="false"></button>
-  <div class="spine-axis" aria-hidden="true">
-    <svg viewBox="0 0 2 1000" preserveAspectRatio="none">
-      <polygon points="1,0 2,500 1,1000 0,500"></polygon>
-    </svg>
-  </div>
+  <button class="spine-trigger" id="spineHot" aria-label="メニューを開く" aria-expanded="false"></button>
+  <div class="spine-axis" aria-hidden="true"></div>
   <div class="spine-numbers">
-    <a class="spine-num" data-target="ch01"><em>01</em><span>COVER</span></a>
-    <a class="spine-num" data-target="ch02"><em>02</em><span>PULSAR</span></a>
-    <a class="spine-num" data-target="ch03"><em>03</em><span>TYPO</span></a>
-    <a class="spine-num" data-target="ch04"><em>04</em><span>COUNTER</span></a>
-    <a class="spine-num" data-target="ch05"><em>05</em><span>FIELD</span></a>
-    <a class="spine-num" data-target="ch06"><em>06</em><span>PROJECTS</span></a>
-    <a class="spine-num" data-target="ch07"><em>07</em><span>GRADE</span></a>
-    <a class="spine-num" data-target="ch08"><em>08</em><span>TOC</span></a>
+    <div class="spine-num" data-target="ch01"><em>01</em> COVER</div>
+    <div class="spine-num" data-target="ch02"><em>02</em> PULSAR</div>
+    <div class="spine-num" data-target="ch03"><em>03</em> COUNTER</div>
+    <div class="spine-num" data-target="ch04"><em>04</em> BREATH</div>
+    <div class="spine-num" data-target="ch05"><em>05</em> ORBIT</div>
+    <div class="spine-num" data-target="ch06"><em>06</em> EVENTS</div>
+    <div class="spine-num" data-target="ch08"><em>07</em> COLOPHON</div>
   </div>
-  <div class="spine-label">MENU</div>
+  <div class="spine-label-vert">MENU</div>
 </nav>
 <div class="spine-overlay" id="spineOverlay"></div>
 
@@ -2274,7 +2232,6 @@ section[id^="ch"]{scroll-margin-top:0}
   var nums=menu.querySelectorAll('.spine-num');
   var isTouch='ontouchstart'in window||navigator.maxTouchPoints>0;
 
-  // PC: ホバーで hover クラス
   if(!isTouch){
     menu.addEventListener('mouseenter',function(){
       if(!menu.classList.contains('open'))menu.classList.add('hover');
@@ -2284,7 +2241,6 @@ section[id^="ch"]{scroll-margin-top:0}
     });
   }
 
-  // クリックで open トグル
   hot.addEventListener('click',function(e){
     e.stopPropagation();
     var willOpen=!menu.classList.contains('open');
@@ -2294,14 +2250,12 @@ section[id^="ch"]{scroll-margin-top:0}
     hot.setAttribute('aria-expanded',willOpen?'true':'false');
   });
 
-  // オーバーレイクリックで閉じる
   overlay.addEventListener('click',function(){
     menu.classList.remove('open');
     document.body.classList.remove('spine-open');
     hot.setAttribute('aria-expanded','false');
   });
 
-  // 章番号クリックでスムーススクロール
   nums.forEach(function(n){
     n.addEventListener('click',function(e){
       e.stopPropagation();
@@ -2318,7 +2272,6 @@ section[id^="ch"]{scroll-margin-top:0}
     });
   });
 
-  // ESC で閉じる
   document.addEventListener('keydown',function(e){
     if(e.key==='Escape'&&menu.classList.contains('open')){
       menu.classList.remove('open');
