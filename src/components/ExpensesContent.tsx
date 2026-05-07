@@ -384,7 +384,41 @@ export default function ExpensesContent() {
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <div className={`text-app-text ${isChild ? 'pl-3 text-sm' : ''}`}>{tx.store || '—'}</div>
+                          {/* 支払先(store)も経路集約対象 */}
+                          {(() => {
+                            const storeText = tx.store || '—';
+                            const storeParts = storeText.split(/\s*(?:→|⇄|->|⇒)\s*/).filter(s => s.trim().length > 0);
+                            const storeCollapsed = !expandedRoutes.has(tx.id);
+                            if (storeParts.length >= 3 && storeCollapsed) {
+                              const intermediate = storeParts.length - 2;
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); toggleRouteExpand(tx.id); }}
+                                  className={`text-app-text inline-flex items-center gap-1.5 hover:text-app-gold transition-colors text-left ${isChild ? 'pl-3 text-sm' : ''}`}
+                                  title="タップで全区間表示"
+                                >
+                                  <span>{storeParts[0]} → {storeParts[storeParts.length - 1]}</span>
+                                  <span className="px-1.5 py-0.5 bg-app-gold/10 text-app-gold rounded text-[9px] font-medium">
+                                    +{intermediate}区間
+                                  </span>
+                                </button>
+                              );
+                            }
+                            if (storeParts.length >= 3 && !storeCollapsed) {
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); toggleRouteExpand(tx.id); }}
+                                  className={`text-app-text text-left hover:text-app-gold transition-colors ${isChild ? 'pl-3 text-sm' : ''}`}
+                                  title="タップで集約"
+                                >
+                                  {storeText}
+                                </button>
+                              );
+                            }
+                            return <div className={`text-app-text ${isChild ? 'pl-3 text-sm' : ''}`}>{storeText}</div>;
+                          })()}
                           {tx.description && (() => {
                             // 経路集約: 「→」「⇄」「->」「-」 で3駅以上なら集約表示
                             const desc = tx.description;
