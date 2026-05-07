@@ -419,43 +419,6 @@ export default function ExpensesContent() {
                             }
                             return <div className={`text-app-text ${isChild ? 'pl-3 text-sm' : ''}`}>{storeText}</div>;
                           })()}
-                          {tx.description && (() => {
-                            // 経路集約: 「→」「⇄」「->」「-」 で3駅以上なら集約表示
-                            const desc = tx.description;
-                            const parts = desc.split(/\s*(?:→|⇄|->|⇒)\s*/).filter(s => s.trim().length > 0);
-                            const isCollapsed = !expandedRoutes.has(tx.id);
-                            if (parts.length >= 3 && isCollapsed) {
-                              const intermediate = parts.length - 2;
-                              return (
-                                <button
-                                  type="button"
-                                  onClick={(e) => { e.stopPropagation(); toggleRouteExpand(tx.id); }}
-                                  className={`text-xs text-app-text-mute mt-0.5 inline-flex items-center gap-1.5 hover:text-app-gold transition-colors ${isChild ? 'pl-3' : ''}`}
-                                  title="タップで全区間表示"
-                                >
-                                  <span>{parts[0]} → {parts[parts.length - 1]}</span>
-                                  <span className="px-1.5 py-0.5 bg-app-gold/10 text-app-gold rounded text-[9px] font-medium">
-                                    +{intermediate}区間
-                                  </span>
-                                </button>
-                              );
-                            }
-                            if (parts.length >= 3 && !isCollapsed) {
-                              return (
-                                <button
-                                  type="button"
-                                  onClick={(e) => { e.stopPropagation(); toggleRouteExpand(tx.id); }}
-                                  className={`text-xs text-app-text-mute mt-0.5 text-left hover:text-app-gold transition-colors ${isChild ? 'pl-3' : ''}`}
-                                  title="タップで集約"
-                                >
-                                  {desc}
-                                </button>
-                              );
-                            }
-                            return (
-                              <div className={`text-xs text-app-text-mute mt-0.5 ${isChild ? 'pl-3' : ''}`}>{desc}</div>
-                            );
-                          })()}
                         </td>
                         <td className="px-4 py-3 text-xs text-app-text-sub">
                           <div className="flex items-center gap-1.5">
