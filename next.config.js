@@ -8,6 +8,10 @@ const nextConfig = {
         source: '/themoneybook',
         destination: '/themoneybook.html',
       },
+      {
+        source: '/themoneybook-s94-archive',
+        destination: '/themoneybook-s94-archive.html',
+      },
     ];
   },
 };
