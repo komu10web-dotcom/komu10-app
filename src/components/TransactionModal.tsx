@@ -1664,13 +1664,24 @@ export default function TransactionModal({
       //   聞くのは不必要。既存の参照を使っただけで、DB に新規保存する必要はない。
       // v0.14.7: auto_reverse も対象に追加（2段構え: 逆順片道保存 + パッケージ保存）
       // v0.38.0: 更新時(editData あり)はモーダル全廃。
+      // v0.50.1: v0.14.6 の過剰ガード是正。「片道A+片道B を往路/復路に手動選択」は
+      //   業務SaaS の通常ユースケース。ペアリング未確定の片道2つを連結したケースは
+      //   パッケージ保存提案を出す。ガードは「ペアリング済(既存パッケージ参照 or
+      //   逆順ペア確定)」のみに絞る。
       const shouldSuggestMultiMode = (() => {
         if (editData) return false; // v0.38.0: 更新時はインラインUIのみ
         if (!usesTransportDetail(form.kamoku)) return false;
         if (transportData.round_trip !== 'round_trip') return false;
-        // 既存ルートで往路・復路両方埋まっていて、かつ既にパッケージ化済なら提案不要
-        // （※ パッケージ適用時は selectedOutboundRoute/selectedReturnRoute が両方セット）
-        if (selectedOutboundRoute && selectedReturnRoute) return false;
+        // v0.50.1: ペアリング済の組み合わせのみガード
+        //   - 既存パッケージ適用(outbound と return が同一 roundtrip_package を経由)
+        //   - 逆順ペア確定(片道A の paired_reverse_id が 片道B を指す or 逆)
+        //   片道2つを手動で別々に選んだ場合は提案ブロックへ進行する。
+        if (selectedOutboundRoute && selectedReturnRoute) {
+          const alreadyPaired =
+            selectedOutboundRoute.paired_reverse_id === selectedReturnRoute.id ||
+            selectedReturnRoute.paired_reverse_id === selectedOutboundRoute.id;
+          if (alreadyPaired) return false;
+        }
         const rm = transportData.return_mode || 'auto_reverse';
 
         if (rm === 'auto_reverse') {
