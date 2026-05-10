@@ -1698,10 +1698,12 @@ export default function TransactionModal({
         if (rLegs.length === 0) return false;
         const hasReturnContent = rLegs.some((l: any) => (l.from || '').trim() || (l.to || '').trim());
         if (!hasReturnContent) return false;
-        // 往路・復路のいずれかがテンプレ未選択（新規）なら提案対象
-        const outboundIsNew = !selectedOutboundRoute;
-        const returnIsNew = !selectedReturnRoute;
-        return outboundIsNew || returnIsNew;
+        // v0.50.2: alreadyPaired ガード通過 + 復路内容ありの時点で全て提案対象。
+        //   - 両方新規入力(片道+片道テンプレ化未経由)
+        //   - 片方既存 + 片方新規
+        //   - 両方既存だが未ペアリング(ボスケース:片道A往路+片道B復路を手動選択)
+        // ペアリング済の組み合わせは上の alreadyPaired ガードで既に除外済。
+        return true;
       })();
 
       if (shouldSuggestTemplate) {
