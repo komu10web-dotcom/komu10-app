@@ -1523,38 +1523,13 @@ export default function TransactionModal({
 
       onSaved();
 
-      // v0.41.0: 親登録成功直後の「追加領収書はありますか?」ポップアップ判定
-      // 条件: 新規登録(編集ではない)・travel/production/torizai・アップグレードモードでない
-      const shouldPromptAddon = !editData
-        && !upgradeForParent
-        && (form.kamoku === 'travel' || form.kamoku === 'production' || form.kamoku === 'torizai')
-        && usesTransportDetail(form.kamoku)
-        && txId;
-      if (shouldPromptAddon) {
-        // 親領収書情報(子取引で同じPDFを参照するため)
-        const parentReceiptFiles = receiptItems
-          .filter(r => r.staged && r.driveFileId && r.driveUrl)
-          .map(r => ({
-            fileName: r.fileName,
-            driveFileId: r.driveFileId!,
-            driveUrl: r.driveUrl!,
-          }));
-        setPendingAddonPrompt({
-          parentTxId: txId,
-          parentDate: form.date,
-          parentStore: form.store || null,
-          parentOwner: form.owner,
-          parentKamoku: form.kamoku,
-          parentSubCategory: form.sub_category || null,
-          parentDescription: form.description || null,
-          parentAllocRows: allocRows,
-          parentTransport: { ...transportData },
-          parentReceiptFiles,
-          detectedAddons: ocrAddonChargesRef.current,
-        });
-        // ポップアップ表示中はモーダルを閉じない(ポップアップで「閉じる」を押した時点で onClose)
-        return;
-      }
+      // v0.50.5: shouldPromptAddon の判定をテンプレ提案より後ろに移動。
+      //   v0.41.0 で追加された「追加領収書ありますか?」ポップアップが、
+      //   テンプレ提案ロジック(shouldSuggestTemplate / shouldSuggestMultiMode)
+      //   に到達する前に return していたため、ボス報告の「片道2つ手動選択
+      //   時に往復登録アナウンスが出ない」原因になっていた。
+      //   テンプレ提案が発火する場合は addon prompt を skip(片方のみ表示)。
+      //   両モーダルの同時表示は UX 競合を避ける。
 
       // v0.30.0: 経費入力中に「このルートをテンプレに保存」をONにしていた場合、
       // 別モーダルを経由せず即座に route_templates へ INSERT（逆順ペアも自動生成）。
@@ -1723,9 +1698,38 @@ export default function TransactionModal({
         setShowTemplateSave(true);
       } else {
         // v0.38.0: shouldSuggestRouteSave 単独でのモーダル発火は撤廃。
-        // ルート保存はインラインUIで完結（このルートをテンプレに保存する）。
-        // 経費テンプレ提案 or multiMode 提案のいずれにも該当しない場合は単純にクローズ。
-        onClose();
+        // v0.50.5: テンプレ提案が発火しない場合のみ、addon prompt を判定。
+        //   v0.41.0 の意図(travel/production/torizai 親登録後の追加領収書ポップアップ)
+        //   はテンプレ提案優先で実行する。両モーダルの競合を避けるため二者択一。
+        const shouldPromptAddon = !editData
+          && !upgradeForParent
+          && (form.kamoku === 'travel' || form.kamoku === 'production' || form.kamoku === 'torizai')
+          && usesTransportDetail(form.kamoku)
+          && txId;
+        if (shouldPromptAddon) {
+          const parentReceiptFiles = receiptItems
+            .filter(r => r.staged && r.driveFileId && r.driveUrl)
+            .map(r => ({
+              fileName: r.fileName,
+              driveFileId: r.driveFileId!,
+              driveUrl: r.driveUrl!,
+            }));
+          setPendingAddonPrompt({
+            parentTxId: txId,
+            parentDate: form.date,
+            parentStore: form.store || null,
+            parentOwner: form.owner,
+            parentKamoku: form.kamoku,
+            parentSubCategory: form.sub_category || null,
+            parentDescription: form.description || null,
+            parentAllocRows: allocRows,
+            parentTransport: { ...transportData },
+            parentReceiptFiles,
+            detectedAddons: ocrAddonChargesRef.current,
+          });
+        } else {
+          onClose();
+        }
       }
     } catch (err) {
       console.error('Save error:', err);
