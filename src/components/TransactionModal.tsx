@@ -2563,13 +2563,23 @@ export default function TransactionModal({
             const td = snap?.transportData || transportData;
             const isRoundTrip = td?.round_trip === 'round_trip';
             const returnMode = td?.return_mode || 'auto_reverse';
+            // v0.50.3: dispatch側 shouldSuggestMultiMode と同じ alreadyPaired ガードを
+            //   モーダル内 multiMode 判定にも適用する。これがないと TEMPLATE_BRANCH
+            //   (selectedTemplate=null)経由でモーダルが開いたときに、ペアリング済の
+            //   組み合わせでもパッケージ保存ブロックが再表示され、v0.14.6 で解決した
+            //   「既存パッケージ適用後の不要な提案」が再発する。
+            const alreadyPaired = !!(selectedOutboundRoute && selectedReturnRoute && (
+              selectedOutboundRoute.paired_reverse_id === selectedReturnRoute.id ||
+              selectedReturnRoute.paired_reverse_id === selectedOutboundRoute.id
+            ));
             // v0.14.7: multiMode = 往復全般（different_route/manual + auto_reverse）
-            const multiMode = isTransport && isRoundTrip && td && (
+            // v0.50.3: ペアリング済は multiMode=false でブロック全体を隠す
+            const multiMode = isTransport && isRoundTrip && td && !alreadyPaired && (
               ((returnMode === 'different_route' || returnMode === 'manual') &&
                 td.return_legs && td.return_legs.length > 0) ||
               (returnMode === 'auto_reverse')
             );
-            const isAutoReverse = isTransport && isRoundTrip && returnMode === 'auto_reverse';
+            const isAutoReverse = isTransport && isRoundTrip && returnMode === 'auto_reverse' && !alreadyPaired;
             // v0.38.0: routeOnlyMode 変数は撤廃（インラインUIで完結のためモーダルでは使わない）
             // 既存片道テンプレを往路/復路に適用中かどうか（二重保存防止）
             const outboundAlreadyLinked = !!selectedOutboundRoute;
