@@ -159,6 +159,13 @@ export default function TransactionModal({
   // v0.41.0: OCR で検出されたが「保留中」の追加課金リスト(親登録後にポップアップで提示)
   const ocrAddonChargesRef = useRef<NonNullable<ReceiptExtractedData['addon_charges']> | null>(null);
 
+  // v0.50.6: テンプレ提案モーダル発火時に addon prompt を予約しておく ref
+  //   テンプレ提案モーダルが閉じられた瞬間に setPendingAddonPrompt() で発火させる。
+  //   両モーダルの同時表示を避け、テンプレ提案 → 追加領収書ポップアップの順序で表示する。
+  //   v0.41.0 の addon prompt 機能の発火条件・タイミング(順番除く)・ペイロード・UI には
+  //   一切手を加えない。
+  const pendingAddonInfoRef = useRef<any>(null);
+
   // テンプレート取得（モーダルopen時 — transport + general 両方）
   useEffect(() => {
     if (!isOpen || !supabase) return;
@@ -418,6 +425,8 @@ export default function TransactionModal({
       setInitialReceiptItems(null);
       setPendingReceiptTrashIds([]);
       setPendingReceiptDeleteIds([]);
+      // v0.50.6: addon prompt 予約 ref をクリア
+      pendingAddonInfoRef.current = null;
     }
     setError(null);
     setDupWarning(null);
@@ -723,7 +732,15 @@ export default function TransactionModal({
     setSavePackageEnabled(false);
     setPackageTemplateName('');
     setSavedFormSnapshot(null);
-    onClose();
+    // v0.50.6: テンプレ提案発火時に予約された addon prompt があれば発火
+    if (pendingAddonInfoRef.current) {
+      const payload = pendingAddonInfoRef.current;
+      pendingAddonInfoRef.current = null;
+      setPendingAddonPrompt(payload);
+      // addon prompt が閉じる時点で onClose されるため、ここでは onClose しない
+    } else {
+      onClose();
+    }
   };
 
   // テンプレート適用（v0.7: 交通費テンプレは業務メタのみ、区間は別管理）
@@ -1668,6 +1685,38 @@ export default function TransactionModal({
         return hasReturnContent;
       })();
 
+      // v0.50.6: addon prompt 条件判定(v0.41.0 の発火条件と完全同一)
+      //   テンプレ提案がある場合: ref に予約 → テンプレ提案モーダル閉じ時に発火
+      //   テンプレ提案がない場合: 直接 setPendingAddonPrompt で発火
+      const shouldPromptAddon = !editData
+        && !upgradeForParent
+        && (form.kamoku === 'travel' || form.kamoku === 'production' || form.kamoku === 'torizai')
+        && usesTransportDetail(form.kamoku)
+        && txId;
+      // addon prompt のペイロード(v0.41.0 と完全同一)
+      const buildAddonPayload = () => {
+        const parentReceiptFiles = receiptItems
+          .filter(r => r.staged && r.driveFileId && r.driveUrl)
+          .map(r => ({
+            fileName: r.fileName,
+            driveFileId: r.driveFileId!,
+            driveUrl: r.driveUrl!,
+          }));
+        return {
+          parentTxId: txId,
+          parentDate: form.date,
+          parentStore: form.store || null,
+          parentOwner: form.owner,
+          parentKamoku: form.kamoku,
+          parentSubCategory: form.sub_category || null,
+          parentDescription: form.description || null,
+          parentAllocRows: allocRows,
+          parentTransport: { ...transportData },
+          parentReceiptFiles,
+          detectedAddons: ocrAddonChargesRef.current,
+        };
+      };
+
       if (shouldSuggestTemplate) {
         setSavedFormSnapshot({
           kamoku: form.kamoku,
@@ -1682,6 +1731,10 @@ export default function TransactionModal({
         setAlsoSaveRoute(false);
         setRouteTemplateName('');
         setShowTemplateSave(true);
+        // v0.50.6: addon prompt を予約(テンプレ提案モーダル閉じ時に発火)
+        if (shouldPromptAddon) {
+          pendingAddonInfoRef.current = buildAddonPayload();
+        }
       } else if (shouldSuggestMultiMode) {
         // v0.14.0 Phase 4: 往復 + different_route/manual → 3チェックボックスモーダル
         setSavedFormSnapshot({
@@ -1696,37 +1749,14 @@ export default function TransactionModal({
         setTemplateName('');
         setAlsoSaveRoute(false);
         setShowTemplateSave(true);
-      } else {
-        // v0.38.0: shouldSuggestRouteSave 単独でのモーダル発火は撤廃。
-        // v0.50.5: テンプレ提案が発火しない場合のみ、addon prompt を判定。
-        //   v0.41.0 の意図(travel/production/torizai 親登録後の追加領収書ポップアップ)
-        //   はテンプレ提案優先で実行する。両モーダルの競合を避けるため二者択一。
-        const shouldPromptAddon = !editData
-          && !upgradeForParent
-          && (form.kamoku === 'travel' || form.kamoku === 'production' || form.kamoku === 'torizai')
-          && usesTransportDetail(form.kamoku)
-          && txId;
+        // v0.50.6: addon prompt を予約(テンプレ提案モーダル閉じ時に発火)
         if (shouldPromptAddon) {
-          const parentReceiptFiles = receiptItems
-            .filter(r => r.staged && r.driveFileId && r.driveUrl)
-            .map(r => ({
-              fileName: r.fileName,
-              driveFileId: r.driveFileId!,
-              driveUrl: r.driveUrl!,
-            }));
-          setPendingAddonPrompt({
-            parentTxId: txId,
-            parentDate: form.date,
-            parentStore: form.store || null,
-            parentOwner: form.owner,
-            parentKamoku: form.kamoku,
-            parentSubCategory: form.sub_category || null,
-            parentDescription: form.description || null,
-            parentAllocRows: allocRows,
-            parentTransport: { ...transportData },
-            parentReceiptFiles,
-            detectedAddons: ocrAddonChargesRef.current,
-          });
+          pendingAddonInfoRef.current = buildAddonPayload();
+        }
+      } else {
+        // v0.50.6: テンプレ提案が発火しない場合は v0.41.0 と完全同じ挙動
+        if (shouldPromptAddon) {
+          setPendingAddonPrompt(buildAddonPayload());
         } else {
           onClose();
         }
@@ -2872,7 +2902,14 @@ export default function TransactionModal({
                     setReturnTemplateName('');
                     setSavePackageEnabled(false);
                     setPackageTemplateName('');
-                    onClose();
+                    // v0.50.6: 予約された addon prompt があれば発火
+                    if (pendingAddonInfoRef.current) {
+                      const payload = pendingAddonInfoRef.current;
+                      pendingAddonInfoRef.current = null;
+                      setPendingAddonPrompt(payload);
+                    } else {
+                      onClose();
+                    }
                   }}
                     className="flex-1 py-2.5 text-xs text-app-text-mute bg-app-surface-alt rounded-xl hover:bg-app-surface-hover transition-colors">
                     登録しない
