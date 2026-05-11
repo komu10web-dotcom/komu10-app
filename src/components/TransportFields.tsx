@@ -932,7 +932,7 @@ export default function TransportFields({ data, onChange, onAmountChange, mode =
                   onChange={() => setMode('different_route')}
                   className="w-4 h-4 accent-app-gold"
                 />
-                <span className="text-sm text-app-text">別の片道テンプレを選ぶ</span>
+                <span className="text-sm text-app-text">別の登録ルートを選ぶ</span>
               </label>
               <label className="flex items-center gap-2.5 cursor-pointer">
                 <input

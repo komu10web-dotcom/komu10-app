@@ -82,6 +82,12 @@ export default function TransactionModal({
   const [routeTemplates, setRouteTemplates] = useState<RouteTemplate[]>([]);
   const [selectedOutboundRoute, setSelectedOutboundRoute] = useState<RouteTemplate | null>(null);
   const [selectedReturnRoute, setSelectedReturnRoute] = useState<RouteTemplate | null>(null);
+  // v0.50.7: パッケージ経由で適用されたか
+  //   - true: roundtrip_package テンプレを apply した(=往復ルートとして登録済)
+  //   - false: 片道を個別 apply(=逆順ペアでも個別の片道2つでも、往復として未登録)
+  //   この state で「往復ルートをパッケージとして登録する」アナウンスの要否を判定する。
+  //   paired_reverse_id ベースの alreadyPaired 判定(〜v0.50.6)は誤判定の原因となったため撤廃。
+  const [appliedFromPackage, setAppliedFromPackage] = useState(false);
   const [greenMode, setGreenMode] = useState(false);
   const [showTemplateSave, setShowTemplateSave] = useState(false);
   const [templateName, setTemplateName] = useState('');
@@ -417,6 +423,7 @@ export default function TransactionModal({
       setSelectedTemplate(null);
       setSelectedOutboundRoute(null);
       setSelectedReturnRoute(null);
+      setAppliedFromPackage(false); // v0.50.7: モーダル開時にリセット
       setGreenMode(false);
       setShowTemplateSave(false);
       setTemplateName('');
@@ -806,6 +813,7 @@ export default function TransactionModal({
       })),
     }));
     setSelectedOutboundRoute(tpl);
+    setAppliedFromPackage(false); // v0.50.7: 個別の片道適用
     if (supabase) {
       await supabase
         .from('route_templates')
@@ -830,6 +838,7 @@ export default function TransactionModal({
       })),
     }));
     setSelectedReturnRoute(tpl);
+    setAppliedFromPackage(false); // v0.50.7: 個別の片道適用
     if (supabase) {
       await supabase
         .from('route_templates')
@@ -841,6 +850,7 @@ export default function TransactionModal({
   // v0.7: 往路ルート選択解除（手動入力に戻す）
   const clearOutboundRoute = () => {
     setSelectedOutboundRoute(null);
+    setAppliedFromPackage(false); // v0.50.7: 解除時もリセット
     setTransportData(prev => ({
       ...prev,
       route_legs: [{ from: '', to: '', method: '電車', carrier: '', amount: 0, green: false }],
@@ -888,6 +898,7 @@ export default function TransactionModal({
       }));
       setSelectedOutboundRoute(outbound);
       setSelectedReturnRoute(ret);
+      setAppliedFromPackage(true); // v0.50.7: パッケージ経由で適用 → 往復登録アナウンス不要
       // use_count インクリメント（パッケージと参照先両方）
       await supabase.from('route_templates').update({ use_count: (tpl.use_count || 0) + 1 }).eq('id', tpl.id);
     } else {
@@ -902,6 +913,7 @@ export default function TransactionModal({
         })),
       }));
       setSelectedOutboundRoute(tpl);
+      setAppliedFromPackage(false); // v0.50.7: 片道個別適用 → 復路と組み合わせると登録アナウンス対象
       await supabase.from('route_templates').update({ use_count: (tpl.use_count || 0) + 1 }).eq('id', tpl.id);
     }
   };
@@ -910,6 +922,7 @@ export default function TransactionModal({
   const clearRoute = () => {
     setSelectedOutboundRoute(null);
     setSelectedReturnRoute(null);
+    setAppliedFromPackage(false); // v0.50.7: 解除時もリセット
     setTransportData(prev => ({
       ...prev,
       route_legs: [{ from: '', to: '', method: '電車', carrier: '', amount: 0, green: false }],
@@ -933,6 +946,7 @@ export default function TransactionModal({
       })),
     }));
     setSelectedReturnRoute(tpl);
+    setAppliedFromPackage(false); // v0.50.7: 個別の片道適用(往復登録未済)
     await supabase.from('route_templates').update({ use_count: (tpl.use_count || 0) + 1 }).eq('id', tpl.id);
   };
 
@@ -1650,22 +1664,22 @@ export default function TransactionModal({
       })();
 
       // v0.14.0 Phase 4: multiMode の発火判定
-      // v0.50.4: ボス原則の絶対化
-      //   「どういうやり方であれ、往路と復路がテンプレから選択で、
-      //    その組み合わせが登録されてなければアナウンス出すべき」
-      //   → return_mode を問わず、両方テンプレ済 && 未ペアリング → 無条件 true
-      // 以降の return_mode 別ロジックは「片方のみ既存 or 両方新規入力」ケースのみ。
+      // v0.50.7: paired_reverse_id ベースの alreadyPaired 判定を撤廃。
+      //   理由: 片道テンプレ同士の逆順ペア紐付き(paired_reverse_id)と、
+      //         往復ルートとしてのパッケージ登録(roundtrip_package)は別概念。
+      //         逆順ペアでもパッケージ未登録なら「往復ルートをパッケージとして登録」アナウンス必要。
+      //   新判定: appliedFromPackage(パッケージ経由で適用されたか) で判定。
+      //         - true: roundtrip_package を apply 済 = 往復ルート登録済 → 提案不要
+      //         - false: 片道個別 apply or 新規入力 = 往復ルート未登録 → 提案対象
       const shouldSuggestMultiMode = (() => {
         if (editData) return false; // v0.38.0: 更新時はインラインUIのみ
         if (!usesTransportDetail(form.kamoku)) return false;
         if (transportData.round_trip !== 'round_trip') return false;
 
-        // v0.50.4: 最優先ルール - 両方テンプレ選択済の場合
+        // v0.50.7: 最優先ルール - 両方ルート選択済 && パッケージ未経由 → 無条件提案
         if (selectedOutboundRoute && selectedReturnRoute) {
-          const alreadyPaired =
-            selectedOutboundRoute.paired_reverse_id === selectedReturnRoute.id ||
-            selectedReturnRoute.paired_reverse_id === selectedOutboundRoute.id;
-          return !alreadyPaired; // ペア未登録 → 提案 / 登録済 → 提案しない
+          if (appliedFromPackage) return false; // パッケージ経由で適用済 = 登録済
+          return true; // 個別片道2つを組み合わせた状態 = 未登録 → 提案
         }
 
         // 以降は片方のみ既存 or 両方新規入力のケース
@@ -2121,7 +2135,7 @@ export default function TransactionModal({
                     >
                       <option value="">（手動入力）</option>
                       {packages.length > 0 && (
-                        <optgroup label="── 往復パッケージ ──">
+                        <optgroup label="── 往復（パッケージ）──">
                           {packages.map((tpl) => (
                             <option key={tpl.id} value={tpl.id}>
                               {tpl.name}
@@ -2220,13 +2234,13 @@ export default function TransactionModal({
                 if (onewayActives.length === 0) {
                   return (
                     <p className="text-[11px] text-app-text-mute">
-                      片道テンプレがまだありません。「手入力」を選んでください。
+                      登録ルートがまだありません。「手入力」を選んでください。
                     </p>
                   );
                 }
                 return (
                   <div>
-                    <label className="text-xs text-app-text-mute block mb-1">復路に使う片道テンプレ</label>
+                    <label className="text-xs text-app-text-mute block mb-1">復路に使う登録ルート</label>
                     <select
                       value={selectedReturnRoute?.id || ''}
                       onChange={(e) => {
@@ -2584,23 +2598,20 @@ export default function TransactionModal({
             const td = snap?.transportData || transportData;
             const isRoundTrip = td?.round_trip === 'round_trip';
             const returnMode = td?.return_mode || 'auto_reverse';
-            // v0.50.3: dispatch側 shouldSuggestMultiMode と同じ alreadyPaired ガードを
-            //   モーダル内 multiMode 判定にも適用する。
-            const alreadyPaired = !!(selectedOutboundRoute && selectedReturnRoute && (
-              selectedOutboundRoute.paired_reverse_id === selectedReturnRoute.id ||
-              selectedReturnRoute.paired_reverse_id === selectedOutboundRoute.id
-            ));
-            // v0.50.4: ボス原則 - 両方テンプレ済 && 未ペア → return_mode を問わず multiMode=true
-            const bothTemplatesUnpaired = !!(selectedOutboundRoute && selectedReturnRoute && !alreadyPaired);
+            // v0.50.7: paired_reverse_id ベースの alreadyPaired 判定を撤廃。
+            //   appliedFromPackage(パッケージ経由で適用されたか)で判定。
+            //   - true: roundtrip_package を apply 済 → 往復登録済 → multiMode 不要
+            //   - false: 片道個別 apply / 新規入力 → 往復未登録 → multiMode 対象
+            const bothRoutesUnpackaged = !!(selectedOutboundRoute && selectedReturnRoute && !appliedFromPackage);
             // v0.14.7: multiMode = 往復全般（different_route/manual + auto_reverse）
-            // v0.50.4: bothTemplatesUnpaired を最優先で OR 条件に統合
-            const multiMode = isTransport && isRoundTrip && td && !alreadyPaired && (
-              bothTemplatesUnpaired ||
+            // v0.50.7: bothRoutesUnpackaged を最優先で OR 条件に統合・appliedFromPackage で全体ガード
+            const multiMode = isTransport && isRoundTrip && td && !appliedFromPackage && (
+              bothRoutesUnpackaged ||
               ((returnMode === 'different_route' || returnMode === 'manual') &&
                 td.return_legs && td.return_legs.length > 0) ||
               (returnMode === 'auto_reverse')
             );
-            const isAutoReverse = isTransport && isRoundTrip && returnMode === 'auto_reverse' && !alreadyPaired && !bothTemplatesUnpaired;
+            const isAutoReverse = isTransport && isRoundTrip && returnMode === 'auto_reverse' && !appliedFromPackage && !bothRoutesUnpackaged;
             // v0.38.0: routeOnlyMode 変数は撤廃（インラインUIで完結のためモーダルでは使わない）
             // 既存片道テンプレを往路/復路に適用中かどうか（二重保存防止）
             const outboundAlreadyLinked = !!selectedOutboundRoute;
@@ -2695,7 +2706,7 @@ export default function TransactionModal({
                     {/* 往路 Yes/No — 既存テンプレ適用中は非表示 */}
                     {!outboundAlreadyLinked && (
                       <div>
-                        <p className="text-xs text-app-text font-medium">往路「{routeStr}」を片道テンプレ保存?</p>
+                        <p className="text-xs text-app-text font-medium">往路「{routeStr}」を登録ルートに保存?</p>
                         <p className="text-[10px] text-app-text-mute mt-0.5">逆順ペアも自動で保存されます</p>
                         {radioYesNo(
                           'saveOutbound',
@@ -2720,7 +2731,7 @@ export default function TransactionModal({
                     {/* 復路 Yes/No — 既存テンプレ適用中は非表示 */}
                     {!returnAlreadyLinked && (
                       <div>
-                        <p className="text-xs text-app-text font-medium">復路「{returnRouteStr}」を片道テンプレ保存?</p>
+                        <p className="text-xs text-app-text font-medium">復路「{returnRouteStr}」を登録ルートに保存?</p>
                         <p className="text-[10px] text-app-text-mute mt-0.5">逆順ペアも自動で保存されます</p>
                         {radioYesNo(
                           'saveReturn',
@@ -2751,7 +2762,7 @@ export default function TransactionModal({
                         return (
                           <>
                             <p className={`text-xs font-medium ${packageEnabled ? 'text-app-text' : 'text-app-text-mute'}`}>
-                              この往復セットをパッケージ保存?
+                              この往復ルートをパッケージとして登録する?
                             </p>
                             <p className="text-[10px] text-app-text-mute mt-0.5">
                               {packageEnabled
@@ -2771,7 +2782,7 @@ export default function TransactionModal({
                               <input
                                 value={packageTemplateName}
                                 onChange={e => setPackageTemplateName(e.target.value)}
-                                placeholder="パッケージ名（例: 自宅⇔四ツ谷）"
+                                placeholder="往復ルート名（例: 自宅⇔四ツ谷）"
                                 className="w-full mt-2 px-3 py-2.5 text-sm border border-app-line-medium rounded-xl focus:outline-none focus:border-app-text transition-colors"
                               />
                             )}
@@ -2790,7 +2801,7 @@ export default function TransactionModal({
                       <div>
                         {outboundAlreadyLinked ? (
                           <>
-                            <p className="text-xs text-app-text font-medium">復路「{autoReverseStr}」を片道テンプレ保存?</p>
+                            <p className="text-xs text-app-text font-medium">復路「{autoReverseStr}」を登録ルートに保存?</p>
                             <p className="text-[10px] text-app-text-mute mt-0.5">
                               次回、復路として選べるようになります
                             </p>
@@ -2807,14 +2818,14 @@ export default function TransactionModal({
                               <input
                                 value={returnTemplateName}
                                 onChange={e => setReturnTemplateName(e.target.value)}
-                                placeholder="復路テンプレ名（例: 四ツ谷→自宅）"
+                                placeholder="復路ルート名（例: 四ツ谷→自宅）"
                                 className="w-full mt-2 px-3 py-2.5 text-sm border border-app-line-medium rounded-xl focus:outline-none focus:border-app-text transition-colors"
                               />
                             )}
                           </>
                         ) : (
                           <>
-                            <p className="text-xs text-app-text font-medium">往路「{routeStr}」を片道テンプレ保存?</p>
+                            <p className="text-xs text-app-text font-medium">往路「{routeStr}」を登録ルートに保存?</p>
                             <p className="text-[10px] text-app-text-mute mt-0.5">
                               逆順ペアも自動で保存されます
                             </p>
@@ -2853,7 +2864,7 @@ export default function TransactionModal({
                       return (
                         <div>
                           <p className={`text-xs font-medium ${packageEnabled ? 'text-app-text' : 'text-app-text-mute'}`}>
-                            この往復をパッケージ保存?
+                            この往復ルートをパッケージとして登録する?
                           </p>
                           <p className="text-[10px] text-app-text-mute mt-0.5">
                             {packageEnabled
@@ -2875,7 +2886,7 @@ export default function TransactionModal({
                             <input
                               value={packageTemplateName}
                               onChange={e => setPackageTemplateName(e.target.value)}
-                              placeholder="パッケージ名（例: 自宅⇔四ツ谷）"
+                              placeholder="往復ルート名（例: 自宅⇔四ツ谷）"
                               className="w-full mt-2 px-3 py-2.5 text-sm border border-app-line-medium rounded-xl focus:outline-none focus:border-app-text transition-colors"
                             />
                           )}
