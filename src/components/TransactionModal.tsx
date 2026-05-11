@@ -1658,34 +1658,28 @@ export default function TransactionModal({
       })();
 
       // v0.14.0 Phase 4: multiMode の発火判定
-      // - 往復 + different_route/manual + 往路・復路いずれか新規入力あり
-      // v0.14.6: 既存パッケージ/既存片道2つを選択済みの場合は提案しない
-      //   ボス指摘: パッケージ適用後に『この往復セットをパッケージ保存しますか？』と
-      //   聞くのは不必要。既存の参照を使っただけで、DB に新規保存する必要はない。
-      // v0.14.7: auto_reverse も対象に追加（2段構え: 逆順片道保存 + パッケージ保存）
-      // v0.38.0: 更新時(editData あり)はモーダル全廃。
-      // v0.50.1: v0.14.6 の過剰ガード是正。「片道A+片道B を往路/復路に手動選択」は
-      //   業務SaaS の通常ユースケース。ペアリング未確定の片道2つを連結したケースは
-      //   パッケージ保存提案を出す。ガードは「ペアリング済(既存パッケージ参照 or
-      //   逆順ペア確定)」のみに絞る。
+      // v0.50.4: ボス原則の絶対化
+      //   「どういうやり方であれ、往路と復路がテンプレから選択で、
+      //    その組み合わせが登録されてなければアナウンス出すべき」
+      //   → return_mode を問わず、両方テンプレ済 && 未ペアリング → 無条件 true
+      // 以降の return_mode 別ロジックは「片方のみ既存 or 両方新規入力」ケースのみ。
       const shouldSuggestMultiMode = (() => {
         if (editData) return false; // v0.38.0: 更新時はインラインUIのみ
         if (!usesTransportDetail(form.kamoku)) return false;
         if (transportData.round_trip !== 'round_trip') return false;
-        // v0.50.1: ペアリング済の組み合わせのみガード
-        //   - 既存パッケージ適用(outbound と return が同一 roundtrip_package を経由)
-        //   - 逆順ペア確定(片道A の paired_reverse_id が 片道B を指す or 逆)
-        //   片道2つを手動で別々に選んだ場合は提案ブロックへ進行する。
+
+        // v0.50.4: 最優先ルール - 両方テンプレ選択済の場合
         if (selectedOutboundRoute && selectedReturnRoute) {
           const alreadyPaired =
             selectedOutboundRoute.paired_reverse_id === selectedReturnRoute.id ||
             selectedReturnRoute.paired_reverse_id === selectedOutboundRoute.id;
-          if (alreadyPaired) return false;
+          return !alreadyPaired; // ペア未登録 → 提案 / 登録済 → 提案しない
         }
+
+        // 以降は片方のみ既存 or 両方新規入力のケース
         const rm = transportData.return_mode || 'auto_reverse';
 
         if (rm === 'auto_reverse') {
-          // auto_reverse: 往路に何らかの入力/選択があればパッケージ提案対象
           const oLegs = transportData.route_legs || [];
           const hasOutbound = !!selectedOutboundRoute ||
             oLegs.some((l: any) => (l.from || '').trim() || (l.to || '').trim());
@@ -1693,17 +1687,10 @@ export default function TransactionModal({
         }
 
         if (rm !== 'different_route' && rm !== 'manual') return false;
-        // 復路に何らかの入力があるか
         const rLegs = transportData.return_legs || [];
         if (rLegs.length === 0) return false;
         const hasReturnContent = rLegs.some((l: any) => (l.from || '').trim() || (l.to || '').trim());
-        if (!hasReturnContent) return false;
-        // v0.50.2: alreadyPaired ガード通過 + 復路内容ありの時点で全て提案対象。
-        //   - 両方新規入力(片道+片道テンプレ化未経由)
-        //   - 片方既存 + 片方新規
-        //   - 両方既存だが未ペアリング(ボスケース:片道A往路+片道B復路を手動選択)
-        // ペアリング済の組み合わせは上の alreadyPaired ガードで既に除外済。
-        return true;
+        return hasReturnContent;
       })();
 
       if (shouldSuggestTemplate) {
@@ -2564,22 +2551,22 @@ export default function TransactionModal({
             const isRoundTrip = td?.round_trip === 'round_trip';
             const returnMode = td?.return_mode || 'auto_reverse';
             // v0.50.3: dispatch側 shouldSuggestMultiMode と同じ alreadyPaired ガードを
-            //   モーダル内 multiMode 判定にも適用する。これがないと TEMPLATE_BRANCH
-            //   (selectedTemplate=null)経由でモーダルが開いたときに、ペアリング済の
-            //   組み合わせでもパッケージ保存ブロックが再表示され、v0.14.6 で解決した
-            //   「既存パッケージ適用後の不要な提案」が再発する。
+            //   モーダル内 multiMode 判定にも適用する。
             const alreadyPaired = !!(selectedOutboundRoute && selectedReturnRoute && (
               selectedOutboundRoute.paired_reverse_id === selectedReturnRoute.id ||
               selectedReturnRoute.paired_reverse_id === selectedOutboundRoute.id
             ));
+            // v0.50.4: ボス原則 - 両方テンプレ済 && 未ペア → return_mode を問わず multiMode=true
+            const bothTemplatesUnpaired = !!(selectedOutboundRoute && selectedReturnRoute && !alreadyPaired);
             // v0.14.7: multiMode = 往復全般（different_route/manual + auto_reverse）
-            // v0.50.3: ペアリング済は multiMode=false でブロック全体を隠す
+            // v0.50.4: bothTemplatesUnpaired を最優先で OR 条件に統合
             const multiMode = isTransport && isRoundTrip && td && !alreadyPaired && (
+              bothTemplatesUnpaired ||
               ((returnMode === 'different_route' || returnMode === 'manual') &&
                 td.return_legs && td.return_legs.length > 0) ||
               (returnMode === 'auto_reverse')
             );
-            const isAutoReverse = isTransport && isRoundTrip && returnMode === 'auto_reverse' && !alreadyPaired;
+            const isAutoReverse = isTransport && isRoundTrip && returnMode === 'auto_reverse' && !alreadyPaired && !bothTemplatesUnpaired;
             // v0.38.0: routeOnlyMode 変数は撤廃（インラインUIで完結のためモーダルでは使わない）
             // 既存片道テンプレを往路/復路に適用中かどうか（二重保存防止）
             const outboundAlreadyLinked = !!selectedOutboundRoute;
