@@ -1594,7 +1594,7 @@ export default function SettingsContent() {
         return r.name.trim() === candidateName && existingNormalized === candidateNormalized;
       });
       if (duplicate) {
-        showFlash('warning', '同じ名前・同じ内容のルートが既にあります');
+        showFlash('warning', '同じ名前・同じ内容の登録ルートが既にあります');
         return;
       }
 
@@ -1656,7 +1656,7 @@ export default function SettingsContent() {
         route_legs: Array.isArray(r.route_legs) ? r.route_legs : [],
       })));
       // v0.14.1: 成功フラッシュ
-      showFlash('success', editingRoute ? 'ルートを更新しました' : 'ルートを登録しました');
+      showFlash('success', editingRoute ? '片道を更新しました' : '片道をルート登録しました');
     } catch (err) {
       console.error('ルートテンプレート保存エラー:', err);
       showFlash('error', '保存に失敗しました');
@@ -1764,7 +1764,7 @@ export default function SettingsContent() {
           && r.return_route_id === form.return_route_id;
       });
       if (duplicate) {
-        showFlash('warning', '同じ名前・同じ往路復路のパッケージが既にあります');
+        showFlash('warning', '同じ名前・同じ往路復路の往復パッケージが既にあります');
         return false;
       }
 
@@ -1805,8 +1805,8 @@ export default function SettingsContent() {
       })));
       // v0.14.1: 成功フラッシュ
       showFlash('success', editingRoute && editingRoute.template_kind === 'roundtrip_package'
-        ? 'パッケージを更新しました'
-        : 'パッケージを登録しました');
+        ? '往復パッケージを更新しました'
+        : '往復パッケージに登録しました');
       return true;
     } catch (err) {
       console.error('パッケージテンプレ保存エラー:', err);
@@ -3504,28 +3504,35 @@ export default function SettingsContent() {
           <div className="bg-white rounded-xl shadow-sm p-5 mb-4">
             <div className="flex items-start justify-between mb-4 gap-3">
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-app-text mb-0.5">ルート</p>
-                <p className="text-[10px] text-app-text-mute">片道＋逆順ペアの基本単位、または往復パッケージ</p>
+                <p className="text-xs font-medium text-app-text mb-0.5">登録ルート</p>
+                <p className="text-[10px] text-app-text-mute">片道、または往復パッケージ</p>
               </div>
               <div className="flex gap-1.5 shrink-0">
                 <button
                   onClick={() => { setEditingRoute(null); setRouteModalOpen(true); }}
                   className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] text-white bg-app-button rounded-lg hover:bg-app-button-hover transition-colors whitespace-nowrap"
-                  title="片道テンプレを追加"
+                  title="片道をルート登録"
                 >
                   <Plus className="w-3 h-3" />片道
                 </button>
-                <button
-                  onClick={() => { setEditingRoute(null); setPackageModalOpen(true); }}
-                  className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] text-app-text bg-app-gold/15 border border-app-gold/30 rounded-lg hover:bg-app-gold/25 transition-colors whitespace-nowrap"
-                  title="往復パッケージを追加（片道テンプレを2つ組み合わせ）"
-                >
-                  <Plus className="w-3 h-3" />パッケージ
-                </button>
+                {(() => {
+                  const onewayAvailableCount = routeTemplates.filter(r => r.template_kind !== 'roundtrip_package' && !r.archived_at).length;
+                  const pkgDisabled = onewayAvailableCount < 2;
+                  return (
+                    <button
+                      onClick={() => { setEditingRoute(null); setPackageModalOpen(true); }}
+                      disabled={pkgDisabled}
+                      className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] text-app-text bg-app-gold/15 border border-app-gold/30 rounded-lg hover:bg-app-gold/25 transition-colors whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-app-gold/15"
+                      title={pkgDisabled ? "登録ルートが2つ以上必要です" : "往復パッケージに登録"}
+                    >
+                      <Plus className="w-3 h-3" />往復パッケージ
+                    </button>
+                  );
+                })()}
               </div>
             </div>
             {routeTemplates.length === 0 ? (
-              <p className="text-xs text-app-text-fade text-center py-4">ルートテンプレートがまだありません</p>
+              <p className="text-xs text-app-text-fade text-center py-4">登録ルートがまだありません</p>
             ) : (() => {
               // v0.14.0 Phase 5-A: パッケージと片道を分離表示
               const packages = routeTemplates.filter(r => r.template_kind === 'roundtrip_package');
@@ -3677,7 +3684,7 @@ export default function SettingsContent() {
                     {showArchivedRoutes && (
                       <div className="mt-3 space-y-2">
                         {archivedRouteTemplates.length === 0 ? (
-                          <p className="text-[10px] text-app-text-fade text-center py-3">アーカイブ済みのルートテンプレはありません</p>
+                          <p className="text-[10px] text-app-text-fade text-center py-3">アーカイブ済みの登録ルートはありません</p>
                         ) : (
                           archivedRouteTemplates.map(route => {
                             const isPackage = route.template_kind === 'roundtrip_package';
@@ -3691,7 +3698,7 @@ export default function SettingsContent() {
                                   <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                                     <span className="text-[11px] text-app-text-mute line-through">{route.name}</span>
                                     <span className="text-[9px] px-1.5 py-0.5 bg-app-text-mute/10 text-app-text-sub rounded-full">
-                                      {isPackage ? 'パッケージ' : '片道'}
+                                      {isPackage ? '往復パッケージ' : '片道'}
                                     </span>
                                   </div>
                                   {!isPackage && routeLabel && (
@@ -5007,7 +5014,7 @@ export default function SettingsContent() {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/30" onClick={() => setRouteDeleteTarget(null)} />
           <div className="relative bg-white rounded-2xl p-6 max-w-sm mx-4" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
-            <p className="text-sm text-app-text mb-4">このルートテンプレートを削除しますか？</p>
+            <p className="text-sm text-app-text mb-4">この登録ルートを削除しますか？</p>
             <div className="flex gap-2">
               <button onClick={() => setRouteDeleteTarget(null)}
                 className="flex-1 py-2 text-xs text-app-text-mute bg-app-surface-alt rounded-lg hover:bg-app-surface-hover transition-colors">
@@ -6496,7 +6503,7 @@ function TemplateModal({
                 </select>
               </div>
               <p className="text-[10px] text-app-text-fade leading-relaxed">
-                ※ 区間は「ルート」テンプレで別管理します。経費登録時に業務メタ+ルートを独立選択。
+                ※ 区間は「登録ルート」で別管理します。経費登録時に業務メタ+登録ルートを独立選択。
               </p>
             </div>
           </>
@@ -6689,7 +6696,7 @@ function RouteTemplateModal({
         style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.12)' }}>
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-sm font-medium text-app-text">
-            {route ? 'ルートを編集' : 'ルートを追加'}
+            {route ? '片道を編集' : '片道をルート登録'}
           </h3>
           <button onClick={onClose} className="p-1 rounded hover:bg-app-surface-alt">
             <X className="w-4 h-4 text-app-text-mute" />
@@ -6698,7 +6705,7 @@ function RouteTemplateModal({
 
         {/* ルート名 */}
         <div className="mb-5">
-          <label className="text-[10px] font-medium tracking-wider text-app-text-mute block mb-1.5">ルート名</label>
+          <label className="text-[10px] font-medium tracking-wider text-app-text-mute block mb-1.5">登録ルート名</label>
           <input
             value={name}
             onChange={e => setName(e.target.value)}
@@ -6826,7 +6833,7 @@ function PackageTemplateModal({
       >
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-sm font-medium text-app-text">
-            {pkg ? '往復パッケージを編集' : '往復パッケージを追加'}
+            {pkg ? '往復パッケージを編集' : '往復パッケージに登録'}
           </h3>
           <button onClick={onClose} className="p-1 rounded hover:bg-app-surface-alt">
             <X className="w-4 h-4 text-app-text-mute" />
@@ -6835,15 +6842,15 @@ function PackageTemplateModal({
 
         {onewayOptions.length < 2 ? (
           <div className="mb-5 px-3 py-4 bg-state-warn-bg border border-app-gold/30 rounded-xl text-center">
-            <p className="text-xs text-app-text mb-1">片道テンプレが2つ以上必要です</p>
-            <p className="text-[10px] text-app-text-mute">先に片道テンプレを作成してください</p>
+            <p className="text-xs text-app-text mb-1">登録ルートが2つ以上必要です</p>
+            <p className="text-[10px] text-app-text-mute">先に片道をルート登録してください</p>
           </div>
         ) : (
           <>
             {/* パッケージ名 */}
             <div className="mb-5">
               <label className="text-[10px] font-medium tracking-wider text-app-text-mute block mb-1.5">
-                パッケージ名
+                往復パッケージ名
               </label>
               <input
                 value={name}
