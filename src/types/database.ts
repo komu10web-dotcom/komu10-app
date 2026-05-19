@@ -908,13 +908,12 @@ export const BANK_MATCH_STATUS = {
   ignored: '無視',
 } as const;
  
-// 請求書ステータス定義（v0.6.0で5種化）
+// 請求書ステータス定義（v0.51.0で3種化:発行/送付済/入金済）
+// 旧: draft/overdue は廃止。「作る=発行」が同義(ハンドオフs100§2.3)
 export const INVOICE_STATUS = {
-  draft: '下書き',
-  issued: '発行済',
+  issued: '発行',
   sent: '送付済',
   paid: '入金済',
-  overdue: '督促中',
 } as const;
  
 export type InvoiceStatusKey = keyof typeof INVOICE_STATUS;
@@ -938,10 +937,16 @@ export const FEE_BURDEN_LABEL: Record<FeeBurden, string> = {
   self: '自社負担',
 };
 
-export type PaymentTermsType = 'month_end_next_month_end' | 'other';
+// v0.51.0(s101): 経営企画チケットv2 リグレッション① 対応
+// 「お支払条件」を3種から選択可能に拡張
+// - contract_based: 「契約書記載の支払条件に準ずる」(従来デフォルト)
+// - month_end_next_month_end: 「月末締翌月末払い」(具体記載)
+// - custom: 自由入力(clients.payment_terms カラムを使用)
+export type PaymentTermsType = 'contract_based' | 'month_end_next_month_end' | 'custom';
 export const PAYMENT_TERMS_TYPE_LABEL: Record<PaymentTermsType, string> = {
+  contract_based: '契約書記載の支払条件に準ずる',
   month_end_next_month_end: '月末締翌月末払い',
-  other: 'その他（個別）',
+  custom: '自由入力',
 };
  
 // 請求書 + 明細行（結合型）

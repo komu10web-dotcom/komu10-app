@@ -5539,7 +5539,7 @@ function ClientModal({
     withholding_basis:  (client as any)?.withholding_basis  ?? 'tax_included',
     header_amount_type: (client as any)?.header_amount_type ?? 'total',
     fee_burden:         (client as any)?.fee_burden         ?? 'client',
-    payment_terms_type: (client as any)?.payment_terms_type ?? 'month_end_next_month_end',
+    payment_terms_type: (client as any)?.payment_terms_type ?? 'contract_based',
   });
 
   const [saving, setSaving] = useState(false);
@@ -5636,42 +5636,32 @@ function ClientModal({
             </div>
           </div>
 
-          {/* 支払いサイト */}
+          {/* v0.51.0(s101): 経営企画チケットv2 リグレッション① 対応
+              お支払条件をクライアント単位で3択化:
+              ・contract_based: 「契約書記載の支払条件に準ずる」(従来デフォルト)
+              ・month_end_next_month_end: 「月末締翌月末払い」(具体記載・期限自動算出)
+              ・custom: 自由入力(payment_terms カラムに保存) */}
           <div>
-            <label className="block text-xs text-app-text-mute mb-1">支払いサイト</label>
-            <div className="flex gap-1.5 mb-2">
-              {PAYMENT_TERMS_PRESETS.map((p) => (
-                <button key={p.label} type="button"
-                  onClick={() => setForm(prev => ({ ...prev, payment_terms: p.terms }))}
-                  className={`px-2.5 py-1 text-[11px] rounded-md transition-colors ${
-                    form.payment_terms === p.terms
-                      ? 'bg-app-button text-white'
-                      : 'bg-app-surface-alt text-app-text-sub hover:bg-app-button-disabled'
-                  }`}>
-                  {p.label}
-                </button>
-              ))}
-            </div>
-            <input type="text" value={form.payment_terms}
-              onChange={(e) => setForm({ ...form, payment_terms: e.target.value })}
-              placeholder="表示名（月末締翌月末 等）"
-              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50" />
+            <label className="block text-xs text-app-text-mute mb-1">お支払条件</label>
+            <select value={form.payment_terms_type}
+              onChange={(e) => setForm({ ...form, payment_terms_type: e.target.value })}
+              className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50 mb-2">
+              <option value="contract_based">契約書記載の支払条件に準ずる</option>
+              <option value="month_end_next_month_end">月末締翌月末払い（期限自動算出）</option>
+              <option value="custom">自由入力</option>
+            </select>
+            {/* 自由入力時のみ詳細欄を表示 */}
+            {form.payment_terms_type === 'custom' && (
+              <input type="text" value={form.payment_terms}
+                onChange={(e) => setForm({ ...form, payment_terms: e.target.value })}
+                placeholder="支払条件を自由記述（例:発行月翌月15日払い）"
+                className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50" />
+            )}
           </div>
 
           {/* v0.6.0 請求書設定 */}
           <div className="border-t border-app-line pt-4 space-y-3">
             <div className="text-xs font-medium text-app-text">請求書設定</div>
-
-            {/* 支払サイト種別（自動期限算出用） */}
-            <div>
-              <label className="block text-xs text-app-text-mute mb-1">支払サイト種別</label>
-              <select value={form.payment_terms_type}
-                onChange={(e) => setForm({ ...form, payment_terms_type: e.target.value })}
-                className="w-full px-3 py-2 bg-app-surface-alt rounded-lg text-sm border-none outline-none focus:ring-2 focus:ring-app-gold/50">
-                <option value="month_end_next_month_end">月末締翌月末払い（期限自動算出）</option>
-                <option value="other">その他（個別・手動入力）</option>
-              </select>
-            </div>
 
             {/* 源泉徴収 */}
             <div className="flex items-center gap-3">

@@ -277,7 +277,9 @@ async function fillInvoiceDataA(
   }
 
   updates.push({ range: '請求書!H27', values: [[calc.subtotal]] });
-  updates.push({ range: '請求書!H29', values: [[-calc.withholdingAmount]] });
+  // v0.51.0(s101): 経営企画チケットv2 リグレッション② 対応
+  // 源泉徴収額を符号なし正数固定(国税庁例示踏襲)
+  updates.push({ range: '請求書!H29', values: [[calc.withholdingAmount]] });
   updates.push({ range: '請求書!B30', values: [[calc.netPayment]] });
   updates.push({ range: '請求書!H30', values: [[calc.netPayment]] });
   updates.push({ range: '請求書!E17', values: [[calc.headerAmount]] });
@@ -289,7 +291,7 @@ async function fillInvoiceDataA(
   updates.push({ range: '請求書!D37', values: [[bank.accountNumber]] });
   updates.push({ range: '請求書!D38', values: [[bank.accountHolder]] });
 
-  updates.push({ range: '請求書!D41', values: [[paymentTermsLabel(client?.payment_terms_type) || invoice.payment_terms || '契約書記載の支払条件に準ずる']] });
+  updates.push({ range: '請求書!D41', values: [[paymentTermsLabel(client?.payment_terms_type, client?.payment_terms || invoice.payment_terms)]] });
   updates.push({ range: '請求書!B45', values: [[buildNotes(invoice)]] });
 
   await batchUpdate(token, spreadsheetId, updates);
@@ -343,7 +345,7 @@ async function fillInvoiceDataB(
   updates.push({ range: '請求書!D37', values: [[bank.accountHolder]] });
 
   // お支払条件・備考 (B: D40 / B44)
-  updates.push({ range: '請求書!D40', values: [[paymentTermsLabel(client?.payment_terms_type) || invoice.payment_terms || '契約書記載の支払条件に準ずる']] });
+  updates.push({ range: '請求書!D40', values: [[paymentTermsLabel(client?.payment_terms_type, client?.payment_terms || invoice.payment_terms)]] });
   updates.push({ range: '請求書!B44', values: [[buildNotes(invoice)]] });
 
   await batchUpdate(token, spreadsheetId, updates);

@@ -11,7 +11,7 @@ import {
   calculateInvoiceAmounts, calculateDueDate, isOverdue,
   feeBurdenLabel, formatYen,
 } from '@/lib/invoiceCalc';
-import { Plus, Pencil, Eye, Trash2, Loader2, X, ChevronLeft, Copy, Download } from 'lucide-react';
+import { Plus, Pencil, Eye, Trash2, Loader2, X, ChevronLeft, Copy, Download, Send, CheckCircle2 } from 'lucide-react';
 
 // ============================================================
 // 型定義
@@ -39,12 +39,11 @@ interface ItemForm {
 // ============================================================
 // ステータスバッジスタイル
 // ============================================================
+// v0.51.0: 3種化(issued/sent/paid)・draft/overdue 廃止
 const INV_STATUS_STYLES: Record<string, { bg: string; text: string }> = {
-  draft:   { bg: 'bg-app-surface-alt',    text: 'text-app-text-mute' },
   issued:  { bg: 'bg-app-gold/10', text: 'text-app-gold' },
   sent:    { bg: 'bg-app-green/10', text: 'text-app-green' },
   paid:    { bg: 'bg-app-green/20', text: 'text-app-green' },
-  overdue: { bg: 'bg-app-red/10', text: 'text-app-red' },
 };
 
 // ============================================================
@@ -130,6 +129,39 @@ export default function InvoiceTab({ owner, clients, initialTransactionId }: Inv
       fetchInvoices();
     } catch (err) {
       console.error('請求書削除エラー:', err);
+    }
+  };
+
+  // v0.51.0: ステータス遷移ハンドラ(一覧の行内アクションから呼ぶ)
+  // ハンドオフs100§2.3「ステータス変更 = 一覧の行内アクション」原則
+  const handleStatusChange = async (
+    invoiceId: string,
+    newStatus: 'sent' | 'paid',
+    txId: string | null,
+  ) => {
+    if (!supabase) return;
+    try {
+      const updates: any = { status: newStatus };
+      if (newStatus === 'sent') {
+        // 送付済: sent_at を初回のみ記録
+        const { data: cur } = await supabase
+          .from('invoices').select('sent_at').eq('id', invoiceId).single();
+        if (!cur?.sent_at) updates.sent_at = new Date().toISOString();
+      } else if (newStatus === 'paid') {
+        // 入金済: paid_at + 紐付き仕訳を settled
+        updates.paid_at = new Date().toISOString();
+        if (txId) {
+          await supabase.from('transactions').update({
+            status: 'settled',
+            actual_payment_date: new Date().toISOString().split('T')[0],
+          }).eq('id', txId);
+        }
+      }
+      await supabase.from('invoices').update(updates).eq('id', invoiceId);
+      fetchInvoices();
+    } catch (err) {
+      console.error('ステータス変更エラー:', err);
+      alert('ステータス変更に失敗しました');
     }
   };
 
@@ -277,7 +309,7 @@ export default function InvoiceTab({ owner, clients, initialTransactionId }: Inv
                 </thead>
                 <tbody>
                   {filtered.map((inv) => {
-                    const statusStyle = INV_STATUS_STYLES[inv.status] || INV_STATUS_STYLES.draft;
+                    const statusStyle = INV_STATUS_STYLES[inv.status] || INV_STATUS_STYLES.issued;
                     return (
                       <tr key={inv.id} className="border-b border-app-line hover:bg-app-surface-alt/50 transition-colors">
                         <td className="px-4 py-3 font-['Saira_Condensed'] text-xs tabular-nums text-app-text">
@@ -302,6 +334,20 @@ export default function InvoiceTab({ owner, clients, initialTransactionId }: Inv
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
+                            {/* v0.51.0: ステータス遷移ボタン(ハンドオフs100§2.3)
+                                issued → 送付済へ進める / sent → 入金済へ進める */}
+                            {inv.status === 'issued' && (
+                              <button onClick={() => handleStatusChange(inv.id, 'sent', inv.transaction_id)}
+                                className="flex items-center gap-1 px-2 py-1 hover:bg-app-green/10 rounded-md transition-colors text-[10px] text-app-green border border-app-green/30" title="送付済にする">
+                                <Send className="w-3 h-3" />送付済
+                              </button>
+                            )}
+                            {inv.status === 'sent' && (
+                              <button onClick={() => handleStatusChange(inv.id, 'paid', inv.transaction_id)}
+                                className="flex items-center gap-1 px-2 py-1 hover:bg-app-green/10 rounded-md transition-colors text-[10px] text-app-green border border-app-green/30" title="入金済にする">
+                                <CheckCircle2 className="w-3 h-3" />入金済
+                              </button>
+                            )}
                             <button onClick={() => openPreview(inv.id)}
                               className="p-1.5 hover:bg-black/5 rounded-md transition-colors" title="プレビュー">
                               <Eye className="w-3.5 h-3.5 text-app-text-mute" />
@@ -331,7 +377,7 @@ export default function InvoiceTab({ owner, clients, initialTransactionId }: Inv
           {/* フッター集計 */}
           {!loading && filtered.length > 0 && (
             <div className="flex items-center justify-end gap-4 px-4 py-3 border-t border-app-line bg-app-surface-alt/50">
-              {(['draft', 'issued', 'paid'] as const).map((s) => {
+              {(['issued', 'sent', 'paid'] as const).map((s) => {
                 const sum = filtered.filter(i => i.status === s).reduce((a, i) => a + i.total, 0);
                 if (sum === 0) return null;
                 const style = INV_STATUS_STYLES[s];
@@ -486,7 +532,8 @@ function InvoiceEditor({
   const [bankAccountId, setBankAccountId] = useState('');
   const DEFAULT_NOTES = ''; // v0.5.7: テンプレに固定2行を書き込むため、コード側のデフォルトは空文字に
   const [notes, setNotes] = useState(isNew ? DEFAULT_NOTES : '');
-  const [status, setStatus] = useState<string>('draft');
+  // v0.51.0: 初期 status を 'issued' に変更(作る=発行思想・ハンドオフs100§2.3)
+  const [status, setStatus] = useState<string>('issued');
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [existingTransactionId, setExistingTransactionId] = useState<string | null>(null);
 
@@ -826,43 +873,79 @@ function InvoiceEditor({
             amount: total,
           }).eq('id', existingTransactionId);
         } else {
-          // 経路B: 請求書タブから独立起動（売上紐付きなし）
-          // → 証跡不足の警告を出したうえで新規INSERT
-          const proceed = confirm(
-            '⚠️ この請求書は売上登録から紐づいていません。\n\n' +
-            '発行すると新しい売上が作成されますが、以下の経営分析項目が空のまま記録されます:\n' +
-            '  ・契約形態\n' +
-            '  ・事業領域\n' +
-            '  ・案件名\n\n' +
-            '売上タブの「売上入力」から登録し、請求書発行トグルON経由で作成することを推奨します。\n\n' +
-            'このまま発行しますか？'
-          );
-          if (!proceed) {
-            setSaving(false);
-            return;
-          }
+          // v0.51.0: 経路B(請求書タブから独立起動・売上紐付きなし)
+          // ハンドオフs100 二重計上修正:
+          // INSERT 前に「同顧客・同月の accrued/forecast 売上」を query で確認
+          // 存在する場合 → 既存tx を UPDATE(billed紐付け)
+          // 存在しない場合のみ INSERT(従来挙動)
 
-          const selectedClient = clients.find(c => c.id === clientId);
-          const txData = {
-            tx_type: 'revenue' as const,
-            date: issueDate,
-            amount: total,
-            kamoku: 'sales',
-            division: 'general', // 経路B: 分類未定のため general（後で編集可）
-            owner,
-            store: selectedClient?.name || null,
-            description: `請求書 ${isNew ? invoiceData.invoice_number : invoiceNumber}`,
-            source: 'manual',
-            confirmed: true,
-            status: 'billed',
-            accrual_date: issueDate,
-            client_id: clientId,
-          };
-          const { data: txInserted } = await supabase
-            .from('transactions').insert(txData).select('id').single();
-          if (txInserted) {
-            updates.transaction_id = txInserted.id;
-            setExistingTransactionId(txInserted.id);
+          // 同月範囲(発行月の1日〜末日)
+          const issueDateObj = new Date(issueDate);
+          const monthStart = `${issueDateObj.getFullYear()}-${String(issueDateObj.getMonth() + 1).padStart(2, '0')}-01`;
+          const monthEndDate = new Date(issueDateObj.getFullYear(), issueDateObj.getMonth() + 1, 0);
+          const monthEnd = `${monthEndDate.getFullYear()}-${String(monthEndDate.getMonth() + 1).padStart(2, '0')}-${String(monthEndDate.getDate()).padStart(2, '0')}`;
+
+          // 既存売上検索: 同顧客・同月・status in (accrued, forecast)・invoice_id NULL
+          const { data: existingTxs } = await supabase
+            .from('transactions')
+            .select('id, amount, status, accrual_date, description')
+            .eq('tx_type', 'revenue')
+            .eq('owner', owner)
+            .eq('client_id', clientId)
+            .in('status', ['accrued', 'forecast'])
+            .is('invoice_id', null)
+            .gte('accrual_date', monthStart)
+            .lte('accrual_date', monthEnd);
+
+          if (existingTxs && existingTxs.length > 0) {
+            // 既存売上あり → 最も古いものを billed に UPDATE して紐付け
+            const targetTx = existingTxs[0];
+            await supabase.from('transactions').update({
+              status: 'billed',
+              amount: total,
+              invoice_id: savedId,
+            }).eq('id', targetTx.id);
+            updates.transaction_id = targetTx.id;
+            setExistingTransactionId(targetTx.id);
+          } else {
+            // 既存売上なし → 警告confirm後にINSERT(従来挙動)
+            const proceed = confirm(
+              '⚠️ この請求書は売上登録から紐づいていません。\n\n' +
+              '発行すると新しい売上が作成されますが、以下の経営分析項目が空のまま記録されます:\n' +
+              '  ・契約形態\n' +
+              '  ・事業領域\n' +
+              '  ・案件名\n\n' +
+              '売上タブの「売上入力」から登録し、請求書発行トグルON経由で作成することを推奨します。\n\n' +
+              'このまま発行しますか？'
+            );
+            if (!proceed) {
+              setSaving(false);
+              return;
+            }
+
+            const selectedClient = clients.find(c => c.id === clientId);
+            const txData = {
+              tx_type: 'revenue' as const,
+              date: issueDate,
+              amount: total,
+              kamoku: 'sales',
+              division: 'general', // 経路B: 分類未定のため general（後で編集可）
+              owner,
+              store: selectedClient?.name || null,
+              description: `請求書 ${isNew ? invoiceData.invoice_number : invoiceNumber}`,
+              source: 'manual',
+              confirmed: true,
+              status: 'billed',
+              accrual_date: issueDate,
+              client_id: clientId,
+              invoice_id: savedId,
+            };
+            const { data: txInserted } = await supabase
+              .from('transactions').insert(txData).select('id').single();
+            if (txInserted) {
+              updates.transaction_id = txInserted.id;
+              setExistingTransactionId(txInserted.id);
+            }
           }
         }
 
@@ -932,7 +1015,14 @@ function InvoiceEditor({
         }
       }
 
-      onBack();
+      // v0.51.0: ハンドオフs100§2.3 プレビュー副作用バグ解消
+      // 「プレビューで確認」ボタン押下 → 内部で handleSave 実行 → プレビュー画面遷移
+      // プレビュー画面はDB直読のため、編集内容は確実に反映される
+      if (savedId) {
+        onPreview(savedId);
+      } else {
+        onBack();
+      }
     } catch (err) {
       console.error('請求書保存エラー:', err);
       alert('保存に失敗しました');
@@ -1047,29 +1137,10 @@ function InvoiceEditor({
             )}
           </div>
 
-          {/* ステータス */}
-          <div>
-            <label className="block text-xs text-app-text-mute mb-1">ステータス</label>
-            <div className="flex flex-wrap gap-1.5">
-              {(Object.keys(INVOICE_STATUS) as InvoiceStatusKey[]).map((key) => (
-                <button key={key} type="button"
-                  onClick={() => setStatus(key)}
-                  className={`px-2.5 py-1.5 text-[11px] rounded-lg transition-colors ${
-                    status === key ? 'bg-app-button text-white' : 'bg-app-surface-alt text-app-text-sub hover:bg-app-button-disabled'
-                  }`}>
-                  {INVOICE_STATUS[key]}
-                </button>
-              ))}
-            </div>
-            {/* issued 状態で送付済にする補助ボタン（v0.6.0） */}
-            {status === 'issued' && !isNew && (
-              <button type="button"
-                onClick={() => setStatus('sent')}
-                className="mt-2 text-[11px] text-app-green hover:underline">
-                → 送付済にする
-              </button>
-            )}
-          </div>
+          {/* v0.51.0: ステータス変更UIは完全削除。
+              ハンドオフs100§2.3「編集モーダル=内容修正のみ・ステータス変更=一覧の行内アクション」原則。
+              新規/編集とも保存時は status='issued' で固定確定。
+              送付済/入金済への遷移は請求書一覧の行内アクションから行う。 */}
         </div>
 
         {/* v0.6.0: 請求書設定パネル（折りたたみ・デフォルト閉じ） */}
@@ -1286,7 +1357,7 @@ function InvoiceEditor({
           <button onClick={handleSave} disabled={!canSave || saving}
             className="flex-1 py-2.5 text-xs text-white bg-app-button rounded-lg hover:bg-app-button-hover transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5">
             {saving && <Loader2 className="w-3 h-3 animate-spin" />}
-            {isNew ? '作成する' : '更新する'}
+            プレビューで確認
           </button>
         </div>
       </div>
@@ -1407,11 +1478,11 @@ function InvoicePreview({
           <button onClick={handleExport} disabled={exporting}
             className="flex items-center gap-1.5 px-4 py-2 bg-app-button text-white rounded-lg text-xs font-medium hover:bg-app-button-hover transition-colors disabled:opacity-50">
             {exporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-            {exporting ? '作成中...' : '請求書作成'}
+            {exporting ? '発行中...' : '発行'}
           </button>
           <button onClick={() => onEdit(invoiceId)}
             className="flex items-center gap-1.5 px-4 py-2 bg-white text-app-text rounded-lg text-xs border border-app-line-medium hover:bg-app-surface transition-colors">
-            <Pencil className="w-3.5 h-3.5" />編集
+            <Pencil className="w-3.5 h-3.5" />編集に戻る
           </button>
         </div>
       </div>

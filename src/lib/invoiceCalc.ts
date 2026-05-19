@@ -113,12 +113,18 @@ export function feeBurdenLabel(fb: FeeBurden | string | null | undefined): strin
 
 // -----------------------------------------------------------------------------
 // 支払条件ラベル
+// v0.51.0(s101): 経営企画チケットv2 リグレッション① 対応
+// 3種:契約書準拠 / 月末締翌月末払い / 自由入力
+// 'custom' の場合は customPaymentTerms(invoice.payment_terms 等)を呼び出し側で使う
 // -----------------------------------------------------------------------------
 export function paymentTermsLabel(
   termsType: PaymentTermsType | string | null | undefined,
+  customPaymentTerms?: string | null,
 ): string {
   if (termsType === 'month_end_next_month_end') return '月末締翌月末払い';
-  return 'その他（個別）';
+  if (termsType === 'custom') return customPaymentTerms?.trim() || '契約書記載の支払条件に準ずる';
+  // contract_based またはデフォルト
+  return '契約書記載の支払条件に準ずる';
 }
 
 // -----------------------------------------------------------------------------
