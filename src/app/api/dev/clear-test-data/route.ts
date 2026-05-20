@@ -29,6 +29,16 @@ export async function POST(req: NextRequest) {
       .select('id', { count: 'exact', head: true })
       .eq('is_test', true);
 
+    const { count: pjCount } = await supabase
+      .from('projects')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_test', true);
+
+    const { count: clCount } = await supabase
+      .from('clients')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_test', true);
+
     // 2. テスト invoices 削除(invoice_items は CASCADE)
     const { error: invErr } = await supabase
       .from('invoices')
@@ -43,7 +53,21 @@ export async function POST(req: NextRequest) {
       .eq('is_test', true);
     if (txErr) throw txErr;
 
-    // 4. テスト用採番カウンタもリセット
+    // 4. テスト projects 削除(sssas事件の修正・v0.53.0)
+    const { error: pjErr } = await supabase
+      .from('projects')
+      .delete()
+      .eq('is_test', true);
+    if (pjErr) throw pjErr;
+
+    // 5. テスト clients 削除(SEED取引先含む・v0.53.0)
+    const { error: clErr } = await supabase
+      .from('clients')
+      .delete()
+      .eq('is_test', true);
+    if (clErr) throw clErr;
+
+    // 6. テスト用採番カウンタもリセット
     const { error: counterErr } = await supabase
       .from('invoice_number_counters')
       .update({ last_number: 0 })
@@ -55,6 +79,8 @@ export async function POST(req: NextRequest) {
       deleted: {
         invoices: invCount || 0,
         transactions: txCount || 0,
+        projects: pjCount || 0,
+        clients: clCount || 0,
       },
     });
   } catch (err: any) {

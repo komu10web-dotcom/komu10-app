@@ -757,6 +757,7 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
                 owner: form.owner,
                 business_domain: form.business_domain,
                 status: 'active',
+                is_test: isTestMode,
               } as any)
               .select()
               .single();
@@ -774,6 +775,7 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
               owner: form.owner,
               business_domain: form.business_domain,
               status: 'active',
+              is_test: isTestMode,
             } as any)
             .select()
             .single();

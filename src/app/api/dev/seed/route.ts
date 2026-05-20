@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
       header_amount_type: 'net_payment',
       fee_burden: 'client',
       payment_terms_type: 'month_end_next_month_end',
+      is_test: true,
     }).select('id').single();
     if (errA) throw errA;
 
@@ -79,6 +80,7 @@ export async function POST(request: NextRequest) {
       header_amount_type: 'total',
       fee_burden: 'client',
       payment_terms_type: 'month_end_next_month_end',
+      is_test: true,
     }).select('id').single();
     if (errB) throw errB;
 
@@ -127,6 +129,7 @@ export async function POST(request: NextRequest) {
       net_payment: 89790,
       header_amount_type: 'net_payment',
       fee_burden: 'client',
+      is_test: true,
     }).select('id').single();
     if (iErrA) throw iErrA;
 
@@ -173,6 +176,7 @@ export async function POST(request: NextRequest) {
       net_payment: 50000,
       header_amount_type: 'total',
       fee_burden: 'client',
+      is_test: true,
     }).select('id').single();
     if (iErrB) throw iErrB;
 

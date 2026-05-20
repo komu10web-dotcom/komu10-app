@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { useTestMode } from '@/lib/useTestMode';
 import { KAMOKU, DIVISIONS, RECURRING_FREQUENCY, UNASSIGNED_PROJECT_LABEL } from '@/types/database';
 import type { AnbunSetting, Asset, RevenueType, RevenueTypeDivision, ContractType, BusinessDomain, BankAccount, Client, RecurringExpense, Project, EquipmentItem, SyncSource, ExpenseTemplate, RouteLeg, TemplateAllocation, RouteTemplate } from '@/types/database';
 import { Plus, Pencil, Trash2, Save, X, Loader2, ChevronDown, ChevronUp, HelpCircle, Cloud, CheckCircle2, RefreshCw, FolderOpen, Camera, StickyNote } from 'lucide-react';
@@ -134,6 +135,9 @@ export default function SettingsContent() {
   const owner = searchParams.get('owner') || (typeof window !== 'undefined' ? localStorage.getItem('komu10_owner') : null) || 'tomo';
   const effectiveOwner = owner === 'all' ? 'tomo' : owner;
   const ownerLabel = effectiveOwner === 'tomo' ? 'トモ' : 'トシキ';
+
+  // v0.53.0: テストモード(案件一覧のモード別フィルタ)
+  const { isTestMode } = useTestMode();
 
   const [loading, setLoading] = useState(true);
   const [settingsTab, setSettingsTab] = useState<'common' | 'personal'>('common');
@@ -381,9 +385,11 @@ export default function SettingsContent() {
         .order('created_at');
 
       // プロジェクト（共通：ownerフィルターなし）
+      // v0.53.0: テストモード時はテスト案件のみ・本番時は本番のみ
       const { data: projectData } = await supabase
         .from('projects')
         .select('*')
+        .eq('is_test', isTestMode)
         .order('created_at', { ascending: false });
 
       // 備品台帳
@@ -501,7 +507,7 @@ export default function SettingsContent() {
     } finally {
       setLoading(false);
     }
-  }, [effectiveOwner]);
+  }, [effectiveOwner, isTestMode]);
 
   useEffect(() => {
     fetchData();
