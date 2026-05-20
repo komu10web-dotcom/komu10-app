@@ -14,6 +14,7 @@ import { entertainmentToDescription } from '@/lib/entertainmentUtils';
 import ReceiptUploadSection, { commitReceiptsToDrive, trashReceiptsInDrive } from '@/components/ReceiptUploadSection';
 import type { ReceiptExtractedData, ReceiptItem } from '@/components/ReceiptUploadSection';
 import ConsultationModal from '@/components/ConsultationModal';
+import { useTestMode } from '@/lib/useTestMode';
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -69,6 +70,8 @@ export default function TransactionModal({
 }: TransactionModalProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // v0.52.0: テストモード(経費INSERTにis_test付与)
+  const { isTestMode } = useTestMode();
   // v0.14.4: 連打ガード（state更新遅延の隙間を埋める・モバイル二重タップ対策）
   const saveInProgressRef = useRef(false);
   const [dupWarning, setDupWarning] = useState<string | null>(null);
@@ -1421,6 +1424,7 @@ export default function TransactionModal({
       actual_payment_date: form.actual_payment_date || form.date,
       // v0.15.0: 内訳タグ（制作費・取材費のみ値あり、それ以外はnull）
       sub_category: requiresSubCategory(form.kamoku) ? (form.sub_category || null) : null,
+      is_test: isTestMode, // v0.52.0: テストモードフラグ
     });
 
     try {

@@ -149,6 +149,7 @@ export default function TaxReturnContentRenaissance() {
       const { data: txData } = await supabase
         .from('transactions').select('*')
         .eq('owner', effectiveOwner)
+        .eq('is_test', false) // v0.52.0: 確定申告は本番のみ
         .gte('date', `${year}-01-01`).lt('date', `${year + 1}-01-01`)
         .order('date', { ascending: true });
 
@@ -176,11 +177,13 @@ export default function TaxReturnContentRenaissance() {
       const { data: revCurrentData } = await supabase
         .from('transactions').select('amount')
         .eq('owner', effectiveOwner).eq('tx_type', 'revenue')
+        .eq('is_test', false) // v0.52.0: 確定申告は本番のみ
         .gte('date', `${year}-01-01`).lt('date', `${year + 1}-01-01`);
 
       const { data: rev2yData } = await supabase
         .from('transactions').select('amount')
         .eq('owner', effectiveOwner).eq('tx_type', 'revenue')
+        .eq('is_test', false) // v0.52.0: 確定申告は本番のみ
         .gte('date', `${year - 2}-01-01`).lt('date', `${year - 1}-01-01`);
 
       setTransactions(txData || []);

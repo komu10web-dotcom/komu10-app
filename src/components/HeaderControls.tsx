@@ -2,8 +2,9 @@
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FlaskConical } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useTestMode } from '@/lib/useTestMode';
 
 export const OWNER_CONFIG = {
   tomo:    { label: 'トモ',   color: '#81D8D0', bg: '#EAF6F6', dotColor: '#81D8D0' },
@@ -72,6 +73,9 @@ export default function HeaderControls() {
     if (typeof window === 'undefined') return;
     localStorage.setItem('komu10_owner', owner);
   }, [owner]);
+
+  // v0.52.0: テストモード(localStorage同期・ヘッダー右上トグル)
+  const { isTestMode, toggle: toggleTestMode } = useTestMode();
 
   // owner_colorをDBから取得 + 設定ページからの即時反映
   const [ownerColors, setOwnerColors] = useState<Record<string, string>>({});
@@ -258,6 +262,22 @@ export default function HeaderControls() {
           );
         })}
       </div>
+
+      {/* v0.52.0: テストモードトグル(担当者切替の隣に配置・常時表示)
+          仕様: ON時は赤背景・FlaskConicalアイコン・採番カウンタ別系統・集計除外
+          ハンドオフs101 ボス確定: 本番運用中に新機能を安全に検証する目的 */}
+      <button
+        onClick={toggleTestMode}
+        title={isTestMode ? 'テストモードON(本番データに影響しません)' : 'テストモードに切替'}
+        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all duration-200 ${
+          isTestMode
+            ? 'bg-app-red text-white shadow-sm'
+            : 'bg-app-surface-alt text-app-text-mute hover:text-app-text-sub'
+        }`}
+      >
+        <FlaskConical className="w-3 h-3" />
+        {isTestMode ? 'テスト中' : 'テスト'}
+      </button>
 
       {/* 期間バー */}
       <div className="flex items-center gap-1 bg-app-surface-alt rounded-lg p-0.5">

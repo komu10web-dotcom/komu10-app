@@ -101,12 +101,17 @@ export async function POST(request: NextRequest) {
     const token = tokenData.token;
 
     // 保存先フォルダ作成
+    // v0.52.0: テストモード時は 99_テスト 配下(本番フォルダを汚さない)
     const ownerFolder = invoice.owner === 'toshiki' ? '02_トシキ' : '01_トモ';
     const year = new Date(invoice.issue_date).getFullYear().toString();
     const clientFolder = client ? `${client.client_number}_${client.name}` : 'unknown';
 
     let folderId = INVOICE_ROOT_FOLDER_ID;
     if (folderId) {
+      // v0.52.0: テストデータは 99_テスト/{owner}/{year}/{client} に隔離
+      if (invoice.is_test) {
+        folderId = await getOrCreateFolder(token, folderId, '99_テスト');
+      }
       folderId = await getOrCreateFolder(token, folderId, ownerFolder);
       folderId = await getOrCreateFolder(token, folderId, year);
       folderId = await getOrCreateFolder(token, folderId, clientFolder);

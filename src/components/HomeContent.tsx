@@ -48,6 +48,7 @@ export default function HomeContent() {
       let summaryQuery = supabase
         .from('transactions')
         .select('amount, tx_type, confirmed')
+        .eq('is_test', false) // v0.52.0: 本番KPIはテストデータを除外
         .gte('date', startDate)
         .lt('date', endDate);
 
@@ -74,6 +75,7 @@ export default function HomeContent() {
       let recentQuery = supabase
         .from('transactions')
         .select('id, date, store, description, amount, tx_type, kamoku, confirmed')
+        .eq('is_test', false) // v0.52.0: 本番KPI
         .gte('date', startDate)
         .lt('date', endDate)
         .order('date', { ascending: false })
@@ -109,6 +111,7 @@ export default function HomeContent() {
         .select('amount')
         .eq('owner', effectiveOwner)
         .eq('tx_type', 'revenue')
+        .eq('is_test', false) // v0.52.0: 本番KPI
         .gte('date', `${currentYear}-01-01`)
         .lt('date', `${currentYear + 1}-01-01`);
       setRevenueCurrent((revCurrentData || []).reduce((s: number, r: any) => s + (r.amount || 0), 0));
@@ -119,6 +122,7 @@ export default function HomeContent() {
         .select('amount')
         .eq('owner', effectiveOwner)
         .eq('tx_type', 'revenue')
+        .eq('is_test', false) // v0.52.0: 本番KPI
         .gte('date', `${currentYear - 2}-01-01`)
         .lt('date', `${currentYear - 1}-01-01`);
       setRevenueTwoYearsAgo((rev2yData || []).reduce((s: number, r: any) => s + (r.amount || 0), 0));

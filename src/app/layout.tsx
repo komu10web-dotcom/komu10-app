@@ -3,6 +3,7 @@ import { Suspense } from 'react';
 import './globals.css';
 import Navigation from '@/components/Navigation';
 import HeaderControls from '@/components/HeaderControls';
+import TestModeBanner from '@/components/TestModeBanner';
 
 export const metadata: Metadata = {
   title: 'THE MONEY BOOK · komu10',
@@ -91,6 +92,9 @@ export default function RootLayout({
             </Suspense>
           </header>
           
+          {/* v0.52.0: テストモードバナー(ON時のみ表示) */}
+          <TestModeBanner />
+
           {/* メインコンテンツ */}
           <main className="flex-1">
             {children}

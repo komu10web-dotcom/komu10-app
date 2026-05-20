@@ -129,6 +129,7 @@ export default function ManagementContentRenaissance() {
     setFetchError(null);
     try {
       let txQ = supabase.from('transactions').select('*')
+        .eq('is_test', false) // v0.52.0: 経営ダッシュボードは本番のみ
         .gte('date', startDate).lt('date', endDate);
       if (owner !== 'all') txQ = txQ.eq('owner', owner);
       const { data: txData } = await txQ;
@@ -153,6 +154,7 @@ export default function ManagementContentRenaissance() {
 
       if (startDate !== `${year}-01-01` || endDate !== `${parseInt(year) + 1}-01-01`) {
         let cyQ = supabase.from('transactions').select('date, amount, tx_type, status, actual_payment_date')
+          .eq('is_test', false) // v0.52.0: 経営ダッシュボードは本番のみ
           .gte('date', `${year}-01-01`).lte('date', `${year}-12-31`);
         if (owner !== 'all') cyQ = cyQ.eq('owner', owner);
         const { data: cyData } = await cyQ;

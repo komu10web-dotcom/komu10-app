@@ -16,6 +16,7 @@ const STATUS_STYLES: Record<string, { bg: string; text: string }> = {
 };
 import { Plus, Upload, Pencil, Trash2, Search, Loader2, X } from 'lucide-react';
 import { usePeriodRange } from './HeaderControls';
+import { useTestMode } from '@/lib/useTestMode';
 
 // 売上で選択可能な事業
 const DIVISION_OPTIONS = Object.entries(DIVISIONS).map(([id, v]) => ({
@@ -28,6 +29,9 @@ const DIVISION_OPTIONS = Object.entries(DIVISIONS).map(([id, v]) => ({
 export default function IncomeContent() {
   const { owner, startDate, endDate } = usePeriodRange();
   const searchParams = useSearchParams();
+
+  // v0.52.0: テストモード(売上INSERTに is_test 付与)
+  const { isTestMode } = useTestMode();
 
   // タブ切り替え
   const [activeTab, setActiveTab] = useState<'sales' | 'invoices'>('sales');
@@ -99,6 +103,7 @@ export default function IncomeContent() {
         .from('transactions')
         .select('*')
         .eq('tx_type', 'revenue')
+        .eq('is_test', isTestMode) // v0.52.0: テストモード時はテストデータのみ・本番モード時は本番のみ
         .gte('date', startDate)
         .lt('date', endDate)
         .order('date', { ascending: false })
@@ -116,7 +121,7 @@ export default function IncomeContent() {
     } finally {
       setLoading(false);
     }
-  }, [owner, startDate, endDate]);
+  }, [owner, startDate, endDate, isTestMode]);
 
   useEffect(() => {
     fetchRevenueTypes();
@@ -541,6 +546,8 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // v0.52.0: テストモード(売上INSERTにis_test付与)
+  const { isTestMode } = useTestMode();
 
   const [form, setForm] = useState({
     date: editData?.date || new Date().toISOString().split('T')[0],
@@ -802,6 +809,7 @@ function IncomeModal({ editData, defaultOwner, revenueTypes, revenueTypeDivision
         accrual_date: form.date,
         expected_payment_date: form.expected_payment_date || null,
         actual_payment_date: form.actual_payment_date || null,
+        is_test: isTestMode, // v0.52.0: テストモードフラグ
       };
 
       let savedTxId: string | null = null;

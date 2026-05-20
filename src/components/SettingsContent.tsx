@@ -1267,6 +1267,24 @@ export default function SettingsContent() {
     }
   };
 
+  // v0.52.0: テストデータ一括削除(is_test=true のもの全部)
+  const handleClearTestData = async () => {
+    if (seedLoading) return;
+    if (!confirm('テストモードで作成した請求書・売上・経費を全て削除します。本番データには影響しません。\n\nテスト採番カウンタも 0 にリセットされます。実行しますか？')) return;
+    setSeedLoading(true);
+    setSeedMsg(null);
+    try {
+      const res = await fetch('/api/dev/clear-test-data', { method: 'POST' });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || '削除失敗');
+      setSeedMsg(`✓ テストデータ削除完了: 請求書${data.deleted.invoices}件・取引${data.deleted.transactions}件`);
+    } catch (err) {
+      setSeedMsg(`✕ 失敗: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setSeedLoading(false);
+    }
+  };
+
   // ============================================================
   // 固定契約 CRUD
   // ============================================================
@@ -3131,6 +3149,22 @@ export default function SettingsContent() {
                     シードデータを削除
                   </button>
                 </div>
+
+                {/* v0.52.0: テストモードで作成したデータの一括削除 */}
+                <div className="pt-3 mt-3 border-t border-app-line-light">
+                  <p className="text-[11px] text-app-text-mute leading-relaxed mb-2">
+                    テストモードで作成した請求書・売上・経費を一括削除します(<code className="bg-app-surface-alt px-1 rounded text-[10px]">is_test=true</code> のもの全部)。
+                    テスト用採番カウンタも 0 にリセットされ、本番データには影響しません。
+                  </p>
+                  <button
+                    onClick={handleClearTestData}
+                    disabled={seedLoading}
+                    className="flex items-center gap-1.5 px-3 py-2 text-[11px] bg-app-red text-white rounded-lg hover:bg-app-red-hover transition-colors disabled:opacity-50">
+                    {seedLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                    テストデータを一括削除
+                  </button>
+                </div>
+
                 {seedMsg && (
                   <p className={`text-[11px] ${seedMsg.startsWith('✓') ? 'text-app-green' : 'text-app-red'}`}>
                     {seedMsg}

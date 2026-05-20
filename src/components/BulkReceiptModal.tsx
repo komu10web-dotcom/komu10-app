@@ -12,6 +12,7 @@ import { supabase } from '@/lib/supabase';
 import { KAMOKU, DIVISIONS, KAMOKU_INPUT_GUIDE, UNASSIGNED_PROJECT_VALUE, UNASSIGNED_PROJECT_LABEL } from '@/types/database';
 import type { Project } from '@/types/database';
 import { commitReceiptsToDrive, type ReceiptItem } from './ReceiptUploadSection';
+import { useTestMode } from '@/lib/useTestMode';
 
 const MAX_FILES = 20;
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -76,6 +77,8 @@ export default function BulkReceiptModal({
   const [isDragging, setIsDragging] = useState(false);
   const [bulkSaving, setBulkSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // v0.52.0: テストモード(経費INSERTにis_test付与)
+  const { isTestMode } = useTestMode();
 
   // ── ファイル投入 → AI並列解析 ──
   const processFiles = useCallback(async (files: File[]) => {
@@ -260,6 +263,7 @@ export default function BulkReceiptModal({
           bank_account_id: null,
           invoice_id: null,
           sub_category: null,
+          is_test: isTestMode, // v0.52.0: テストモードフラグ
         };
 
         const { data: inserted, error: txErr } = await supabase

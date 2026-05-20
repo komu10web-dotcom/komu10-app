@@ -17,9 +17,11 @@ import TransactionModal from './TransactionModal';
 import BulkReceiptModal from './BulkReceiptModal';
 import ConsultationModal from './ConsultationModal';
 import { usePeriodRange } from './HeaderControls';
+import { useTestMode } from '@/lib/useTestMode';
 
 export default function ExpensesContent() {
   const { owner, startDate, endDate } = usePeriodRange();
+  const { isTestMode } = useTestMode(); // v0.52.0: モード別フィルタ
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,6 +84,7 @@ export default function ExpensesContent() {
         .from('transactions')
         .select('*')
         .eq('tx_type', 'expense')
+        .eq('is_test', isTestMode) // v0.52.0: モード別フィルタ
         .gte('date', startDate)
         .lt('date', endDate)
         .order('date', { ascending: false })
@@ -143,7 +146,7 @@ export default function ExpensesContent() {
     } finally {
       setLoading(false);
     }
-  }, [owner, startDate, endDate]);
+  }, [owner, startDate, endDate, isTestMode]);
 
   useEffect(() => {
     fetchTransactions();

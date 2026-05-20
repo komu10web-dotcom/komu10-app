@@ -12,6 +12,7 @@ import {
   feeBurdenLabel, formatYen,
 } from '@/lib/invoiceCalc';
 import { Plus, Pencil, Eye, Trash2, Loader2, X, ChevronLeft, Copy, Download, Send, CheckCircle2 } from 'lucide-react';
+import { useTestMode } from '@/lib/useTestMode';
 
 // ============================================================
 // 型定義
@@ -53,6 +54,9 @@ export default function InvoiceTab({ owner, clients, initialTransactionId }: Inv
   // 画面モード: list / edit / preview
   const [view, setView] = useState<'list' | 'edit' | 'preview'>('list');
 
+  // v0.52.0: テストモード(請求書一覧フィルタ用)
+  const { isTestMode } = useTestMode();
+
   // 一覧
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,7 +93,8 @@ export default function InvoiceTab({ owner, clients, initialTransactionId }: Inv
     if (!supabase) return;
     setLoading(true);
     try {
-      let query = supabase.from('invoices').select('*, clients(name, client_number)');
+      let query = supabase.from('invoices').select('*, clients(name, client_number)')
+        .eq('is_test', isTestMode); // v0.52.0: モード別フィルタ
       if (owner !== 'all') {
         query = query.eq('owner', owner);
       }
@@ -107,7 +112,7 @@ export default function InvoiceTab({ owner, clients, initialTransactionId }: Inv
     } finally {
       setLoading(false);
     }
-  }, [owner]);
+  }, [owner, isTestMode]);
 
   const fetchBankAccounts = useCallback(async () => {
     if (!supabase) return;
@@ -520,6 +525,9 @@ function InvoiceEditor({
 }) {
   const isNew = !invoiceId;
 
+  // v0.52.0: テストモード参照(採番カウンタ + is_test フラグ用)
+  const { isTestMode } = useTestMode();
+
   const [saving, setSaving] = useState(false);
   const [loadingData, setLoadingData] = useState(!isNew);
 
@@ -817,17 +825,18 @@ function InvoiceEditor({
       let savedId = invoiceId;
 
       if (isNew) {
-        // 採番: INV-{年度}-{4桁連番}
+        // v0.52.0: 採番カウンタ経由(永久連番・本番/テスト分離)
+        // ハンドオフs101 ボス確定:
+        //   - 削除しても番号再利用しない(電帳法・インボイス制度対応)
+        //   - テストモード時は TEST-INV-YYYY-XXXX(別カウンタ)
         const year = new Date(issueDate).getFullYear();
-        const { data: last } = await supabase
-          .from('invoices').select('invoice_number')
-          .like('invoice_number', `INV-${year}-%`)
-          .order('invoice_number', { ascending: false }).limit(1);
-        const lastNum = last?.[0]
-          ? parseInt(last[0].invoice_number.split('-')[2])
-          : 0;
-        const newNumber = `INV-${year}-${String(lastNum + 1).padStart(4, '0')}`;
+        const { data: nextNum, error: counterErr } = await supabase
+          .rpc('next_invoice_number', { p_year: year, p_is_test: isTestMode });
+        if (counterErr) throw counterErr;
+        const prefix = isTestMode ? 'TEST-INV' : 'INV';
+        const newNumber = `${prefix}-${year}-${String(nextNum).padStart(4, '0')}`;
         invoiceData.invoice_number = newNumber;
+        invoiceData.is_test = isTestMode;
 
         const { data: inserted, error } = await supabase
           .from('invoices').insert(invoiceData).select('id').single();
@@ -939,6 +948,7 @@ function InvoiceEditor({
               accrual_date: issueDate,
               client_id: clientId,
               invoice_id: savedId,
+              is_test: isTestMode, // v0.52.0: テストモードフラグ
             };
             const { data: txInserted } = await supabase
               .from('transactions').insert(txData).select('id').single();
@@ -1009,6 +1019,7 @@ function InvoiceEditor({
                 actual_payment_date: new Date().toISOString().split('T')[0],
                 client_id: clientId,
                 invoice_id: savedId,
+                is_test: isTestMode, // v0.52.0: テストモードフラグ
               });
             }
           }
